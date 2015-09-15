@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="ComfoBox MQTT Gateway" Language="1033" Version="1.0.0.0" Manufacturer="Rolf Fux" UpgradeCode="26559e4c-b543-4a8b-b279-7ac90f8e001d">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+		<MediaTemplate />
+
+		<Feature Id="ProductFeature" Title="ServiceInstaller" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFiles64Folder">
+				<Directory Id="INSTALLFOLDER" Name="ComfoBox" />
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
+      <Component Id="Charlotte.dll" Guid="8ACE962F-D2C0-4A37-BA35-169DC57ECED8">
+        <File Id="Charlotte.dll" Source="..\ComfoboxService\bin\Release\Charlotte.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoBoxLib.dll" Guid="8ACE962F-D2C0-4A37-BA35-269DC57ECED8">
+        <File Id="ComfoBoxLib.dll" Source="..\ComfoboxService\bin\Release\ComfoBoxLib.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoBoxMqtt.dll" Guid="8ACE962F-D2C0-4A37-BA35-369DC57ECED8">
+        <File Id="ComfoBoxMqtt.dll" Source="..\ComfoboxService\bin\Release\ComfoBoxMqtt.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoboxService.exe.config" Guid="8ACE962F-D2C0-4A37-BA35-569DC57ECED8">
+        <File Id="ComfoboxService.exe.config" Source="..\ComfoboxService\bin\Release\ComfoboxService.exe.config" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="Fasterflect.dll" Guid="8ACE962F-D2C0-4A37-BA35-669DC57ECED8">
+        <File Id="Fasterflect.dll" Source="..\ComfoboxService\bin\Release\Fasterflect.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="LibBacnet.dll" Guid="8ACE962F-D2C0-4A37-BA35-769DC57ECED8">
+        <File Id="LibBacnet.dll" Source="..\ComfoboxService\bin\Release\LibBacnet.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="log4net.dll" Guid="8ACE962F-D2C0-4A37-BA35-869DC57ECED8">
+        <File Id="log4net.dll" Source="..\ComfoboxService\bin\Release\log4net.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="Nito.AsyncEx.Concurrent.dll" Guid="8ACE962F-D2C0-4A37-BA35-A69DC57ECED8">
+        <File Id="Nito.AsyncEx.Concurrent.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.Concurrent.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="Nito.AsyncEx.dll" Guid="8ACE962F-D2C0-4A37-BA35-B69DC57ECED8">
+        <File Id="Nito.AsyncEx.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="Nito.AsyncEx.Enlightenment.dll" Guid="8ACE962F-D2C0-4A37-BA35-C69DC57ECED8">
+        <File Id="Nito.AsyncEx.Enlightenment.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.Enlightenment.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoboxService.exe" Guid="8ACE962F-D2C0-4A37-BA35-469DC57ECED8">
+        <File Id="ComfoboxService.exe" Source="..\ComfoboxService\bin\Release\ComfoboxService.exe" KeyPath="yes" Checksum="yes"/>
+        <ServiceInstall Id="ServiceInstaller"
+                        Type="ownProcess"
+                        Vital="yes"
+                        Name="ComfoBox MQTT Gateway"
+                        DisplayName="ComfoBox MQTT Gateway"
+                        Description="My Product Description"
+                        Start="auto"
+                        Account="LocalSystem"
+                        ErrorControl="ignore"
+                        Interactive="no" />
+        <ServiceControl Id="StartService"
+                Start="install"
+                Stop="both"
+                Remove="uninstall"
+                Name="ComfoBox MQTT Gateway"
+                Wait="no" />
+      </Component>
+
+
+    </ComponentGroup>
+	</Fragment>
+</Wix>
