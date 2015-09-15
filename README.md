@@ -1,4 +1,4 @@
-# comfobox-mqtt
+# ComfoBox MQTT client
 
 Connect to your Zehnder ComfoBox over RS485 and control it (read/write).
 
