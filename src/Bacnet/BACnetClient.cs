@@ -2225,7 +2225,7 @@ namespace System.IO.BACnet
 
         public void Dispose()
         {
-            m_client.Dispose();
+            m_client?.Dispose();
             m_client = null;
         }
     }

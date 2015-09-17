@@ -52,6 +52,9 @@
       <Component Id="Nito.AsyncEx.Enlightenment.dll" Guid="8ACE962F-D2C0-4A37-BA35-C69DC57ECED8" Win64="yes">
         <File Id="Nito.AsyncEx.Enlightenment.dll" Source="..\ComfoboxService\bin\x64\Release\Nito.AsyncEx.Enlightenment.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
+      <Component Id="HexMaster.ServiceHelper.dll" Guid="8ACE962F-D2C0-4A37-BA35-D69DC57ECED8" Win64="yes">
+        <File Id="HexMaster.ServiceHelper.dll" Source="..\ComfoboxService\bin\x64\Release\HexMaster.ServiceHelper.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
       <Component Id="ComfoboxService.exe" Guid="8ACE962F-D2C0-4A37-BA35-469DC57ECED8" Win64="yes">
         <File Id="ComfoboxService.exe" Source="..\ComfoboxService\bin\x64\Release\ComfoboxService.exe" KeyPath="yes" Checksum="yes"/>
         <ServiceInstall Id="ComfoBoxMqttServiceInstaller"

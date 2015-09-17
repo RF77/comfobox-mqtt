@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using ComfoBoxLib;
 using ComfoBoxMqtt;
 using log4net;
+using log4net.Config;
 using Nito.AsyncEx;
 
 namespace ComfoboxService
@@ -36,13 +37,15 @@ namespace ComfoboxService
             {
                 AsyncContext.Run(async () =>
                 {
+                    XmlConfigurator.Configure();
                     while (true)
                     {
                         try
                         {
-                            _client?.Disconnect();
+                            _client?.Stop();
                             _client = new ComfoBoxMqttClient("localhost", new ComfoBoxClient("COM4", 76800));
                             await _client.StartAsync();
+                            await _client.StartPollingAsync();
                         }
                         catch (OperationCanceledException)
                         {

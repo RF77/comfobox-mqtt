@@ -98,6 +98,7 @@ namespace ComfoBoxMqtt
 
         public void Stop()
         {
+            _comfoBoxClient.Stop();
             _cancellationTokenSource.Cancel();
         }
     }

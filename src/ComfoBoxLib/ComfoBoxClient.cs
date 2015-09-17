@@ -80,6 +80,7 @@ namespace ComfoBoxLib
 
         public void Stop()
         {
+            Logger.Info($"Stop(): ComfoClient is stopping...");
             Dispose();
         }
 

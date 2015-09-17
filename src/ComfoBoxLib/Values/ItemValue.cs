@@ -46,13 +46,11 @@ namespace ComfoBoxLib.Values
 
         public async Task ReadValueAsync(ComfoBoxClient client)
         {
-            //BacnetValue val = client.ReadValue(this);
-            BacnetValue val = new BacnetValue();
             await Task.Delay(1);
             object value = client.ReadValue(this);
             if (value != null)
             {
-                ConvertValue(val.Value);
+                ConvertValue(value);
             }
         }
 

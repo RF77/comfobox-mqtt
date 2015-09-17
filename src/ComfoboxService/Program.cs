@@ -25,7 +25,9 @@ namespace ComfoboxService
             {
                 new ComfoboxService()
             };
-            ServiceBase.Run(ServicesToRun);
+
+            //ServiceBase.Run(ServicesToRun);
+            HexMaster.Helper.Run(ServicesToRun);
         }
     }
 }
