@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
 	<Product Id="*" Name="ComfoBox MQTT Gateway" Language="1033" Version="0.2.0.0" Manufacturer="RF77" UpgradeCode="26559e4c-b543-4a8b-b279-7ac90f8e001d">
-		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64"/>
 
 		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-		<MediaTemplate />
+		<MediaTemplate EmbedCab="yes" />
 
-		<Feature Id="ProductFeature" Title="ServiceInstaller" Level="1">
+		<Feature Id="ProductFeature" Title="Comfobox MQTT Service Installer" Level="1">
 			<ComponentGroupRef Id="ProductComponents" />
 		</Feature>
 	</Product>
@@ -22,39 +22,39 @@
 	<Fragment>
 		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
 			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
-      <Component Id="Charlotte.dll" Guid="8ACE962F-D2C0-4A37-BA35-169DC57ECED8">
-        <File Id="Charlotte.dll" Source="..\ComfoboxService\bin\Release\Charlotte.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="Charlotte.dll" Guid="8ACE962F-D2C0-4A37-BA35-169DC57ECED8" Win64="yes">
+        <File Id="Charlotte.dll" Source="..\ComfoboxService\bin\x64\Release\Charlotte.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="ComfoBoxLib.dll" Guid="8ACE962F-D2C0-4A37-BA35-269DC57ECED8">
-        <File Id="ComfoBoxLib.dll" Source="..\ComfoboxService\bin\Release\ComfoBoxLib.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="ComfoBoxLib.dll" Guid="8ACE962F-D2C0-4A37-BA35-269DC57ECED8" Win64="yes">
+        <File Id="ComfoBoxLib.dll" Source="..\ComfoboxService\bin\x64\Release\ComfoBoxLib.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="ComfoBoxMqtt.dll" Guid="8ACE962F-D2C0-4A37-BA35-369DC57ECED8">
-        <File Id="ComfoBoxMqtt.dll" Source="..\ComfoboxService\bin\Release\ComfoBoxMqtt.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="ComfoBoxMqtt.dll" Guid="8ACE962F-D2C0-4A37-BA35-369DC57ECED8" Win64="yes">
+        <File Id="ComfoBoxMqtt.dll" Source="..\ComfoboxService\bin\x64\Release\ComfoBoxMqtt.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="ComfoboxService.exe.config" Guid="8ACE962F-D2C0-4A37-BA35-569DC57ECED8">
-        <File Id="ComfoboxService.exe.config" Source="..\ComfoboxService\bin\Release\ComfoboxService.exe.config" KeyPath="yes" Checksum="yes"/>
+      <Component Id="ComfoboxService.exe.config" Guid="8ACE962F-D2C0-4A37-BA35-569DC57ECED8" Win64="yes">
+        <File Id="ComfoboxService.exe.config" Source="..\ComfoboxService\bin\x64\Release\ComfoboxService.exe.config" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="Fasterflect.dll" Guid="8ACE962F-D2C0-4A37-BA35-669DC57ECED8">
-        <File Id="Fasterflect.dll" Source="..\ComfoboxService\bin\Release\Fasterflect.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="Fasterflect.dll" Guid="8ACE962F-D2C0-4A37-BA35-669DC57ECED8" Win64="yes">
+        <File Id="Fasterflect.dll" Source="..\ComfoboxService\bin\x64\Release\Fasterflect.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="LibBacnet.dll" Guid="8ACE962F-D2C0-4A37-BA35-769DC57ECED8">
-        <File Id="LibBacnet.dll" Source="..\ComfoboxService\bin\Release\LibBacnet.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="LibBacnet.dll" Guid="8ACE962F-D2C0-4A37-BA35-769DC57ECED8" Win64="yes">
+        <File Id="LibBacnet.dll" Source="..\ComfoboxService\bin\x64\Release\LibBacnet.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="log4net.dll" Guid="8ACE962F-D2C0-4A37-BA35-869DC57ECED8">
-        <File Id="log4net.dll" Source="..\ComfoboxService\bin\Release\log4net.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="log4net.dll" Guid="8ACE962F-D2C0-4A37-BA35-869DC57ECED8" Win64="yes">
+        <File Id="log4net.dll" Source="..\ComfoboxService\bin\x64\Release\log4net.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="Nito.AsyncEx.Concurrent.dll" Guid="8ACE962F-D2C0-4A37-BA35-A69DC57ECED8">
-        <File Id="Nito.AsyncEx.Concurrent.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.Concurrent.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="Nito.AsyncEx.Concurrent.dll" Guid="8ACE962F-D2C0-4A37-BA35-A69DC57ECED8" Win64="yes">
+        <File Id="Nito.AsyncEx.Concurrent.dll" Source="..\ComfoboxService\bin\x64\Release\Nito.AsyncEx.Concurrent.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="Nito.AsyncEx.dll" Guid="8ACE962F-D2C0-4A37-BA35-B69DC57ECED8">
-        <File Id="Nito.AsyncEx.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="Nito.AsyncEx.dll" Guid="8ACE962F-D2C0-4A37-BA35-B69DC57ECED8" Win64="yes">
+        <File Id="Nito.AsyncEx.dll" Source="..\ComfoboxService\bin\x64\Release\Nito.AsyncEx.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="Nito.AsyncEx.Enlightenment.dll" Guid="8ACE962F-D2C0-4A37-BA35-C69DC57ECED8">
-        <File Id="Nito.AsyncEx.Enlightenment.dll" Source="..\ComfoboxService\bin\Release\Nito.AsyncEx.Enlightenment.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="Nito.AsyncEx.Enlightenment.dll" Guid="8ACE962F-D2C0-4A37-BA35-C69DC57ECED8" Win64="yes">
+        <File Id="Nito.AsyncEx.Enlightenment.dll" Source="..\ComfoboxService\bin\x64\Release\Nito.AsyncEx.Enlightenment.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="ComfoboxService.exe" Guid="8ACE962F-D2C0-4A37-BA35-469DC57ECED8">
-        <File Id="ComfoboxService.exe" Source="..\ComfoboxService\bin\Release\ComfoboxService.exe" KeyPath="yes" Checksum="yes"/>
-        <ServiceInstall Id="ServiceInstaller"
+      <Component Id="ComfoboxService.exe" Guid="8ACE962F-D2C0-4A37-BA35-469DC57ECED8" Win64="yes">
+        <File Id="ComfoboxService.exe" Source="..\ComfoboxService\bin\x64\Release\ComfoboxService.exe" KeyPath="yes" Checksum="yes"/>
+        <ServiceInstall Id="ComfoBoxMqttServiceInstaller"
                         Type="ownProcess"
                         Vital="yes"
                         Name="ComfoBox MQTT Gateway"
