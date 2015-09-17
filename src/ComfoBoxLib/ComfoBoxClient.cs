@@ -17,6 +17,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using ComfoBoxLib.Properties;
+using ComfoBoxLib.Values;
 using log4net;
 
 namespace ComfoBoxLib
@@ -141,6 +142,22 @@ namespace ComfoBoxLib
             return true;
         }
 
+        public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property, BacnetValue value)
+        {
+            value = new BacnetValue(value);
+
+            // Looking for the device
+            var adr = DeviceAddr((uint)deviceId);
+            if (adr == null) return false; // not found
+
+            // Property Read
+            if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] { value }) == false)
+                return false;
+
+            return true;
+        }
+
+
         private BacnetAddress DeviceAddr(uint deviceId)
         {
             BacnetAddress ret;
@@ -172,11 +189,30 @@ namespace ComfoBoxLib
                 // Not already in the list
                 _devicesList.Add(new BacNode(adr, deviceId)); // add it
                 Initialized = true;
-                if (deviceId == 1)
+                if (deviceId == Settings.Default.BacnetMasterId)
                 {
                     _starTaskCompletionSource.TrySetResult(true);
                 }
             }
+        }
+
+        public object ReadValue<T>(ItemValue<T> itemValue)
+        {
+            BacnetValue val;
+            ReadScalarValue(Settings.Default.BacnetMasterId,
+                itemValue.BacnetObjectId,
+                BacnetPropertyIds.PROP_PRESENT_VALUE,
+                out val);
+            return val.Value;
+        }
+
+        public bool WriteValue(ItemValue<object> itemValue)
+        {
+            BacnetValue val = new BacnetValue(itemValue.Value);
+            return WriteScalarValue(Settings.Default.BacnetMasterId,
+                itemValue.BacnetObjectId,
+                BacnetPropertyIds.PROP_PRESENT_VALUE,
+                val);
         }
     }
 }
