@@ -12,9 +12,11 @@
 using System;
 using System.Reflection;
 using System.ServiceProcess;
+using System.Threading.Tasks;
 using ComfoBoxLib;
 using ComfoBoxMqtt;
 using log4net;
+using Nito.AsyncEx;
 
 namespace ComfoboxService
 {
@@ -28,26 +30,33 @@ namespace ComfoboxService
             InitializeComponent();
         }
 
-        protected override async void OnStart(string[] args)
+        protected override void OnStart(string[] args)
         {
-            while (true)
+            Task.Run(() =>
             {
-                try
+                AsyncContext.Run(async () =>
                 {
-                    _client = new ComfoBoxMqttClient("localhost", new ComfoBoxClient("COM4", 76800));
-                    await _client.StartAsync();
-                }
-                catch (OperationCanceledException)
-                {
-                    Logger.Info($"OnStart(): Received Cancel");
-                    return;
-                }
-                catch (Exception ex)
-                {
-                    string message = $"ComfoBoxService(): Excpetion {ex.Message},\r\n{ex.StackTrace}}}";
-                    Logger.Error(message);
-                }
-            }
+                    while (true)
+                    {
+                        try
+                        {
+                            _client?.Disconnect();
+                            _client = new ComfoBoxMqttClient("localhost", new ComfoBoxClient("COM4", 76800));
+                            await _client.StartAsync();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            Logger.Info($"OnStart(): Received Cancel");
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            string message = $"ComfoBoxService(): Excpetion {ex.Message},\r\n{ex.StackTrace}}}";
+                            Logger.Error(message);
+                        }
+                    }
+                });
+            });
         }
 
         protected override void OnStop()
