@@ -55,6 +55,21 @@
       <Component Id="HexMaster.ServiceHelper.dll" Guid="8ACE962F-D2C0-4A37-BA35-D69DC57ECED8" Win64="yes">
         <File Id="HexMaster.ServiceHelper.dll" Source="..\ComfoboxService\bin\x64\Release\HexMaster.ServiceHelper.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
+      <Component Id="M2Mqtt.dll" Guid="8ACE962F-D2C0-4A37-BA35-E69DC57ECED8" Win64="yes">
+        <File Id="M2Mqtt.dll" Source="..\ComfoboxService\bin\x64\Release\M2Mqtt.dll" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoBoxMqttConsole.exe" Guid="8ACE962F-D2C0-4A37-BA35-F69DC57ECED8" Win64="yes">
+        <File Id="ComfoBoxMqttConsole.exe" Source="..\ComfoBoxMqttConsole\bin\x64\Release\ComfoBoxMqttConsole.exe" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="ComfoBoxMqttConsole.exe.config" Guid="8ACE962F-D2C0-4A37-BA35-F99DC57ECED8" Win64="yes">
+        <File Id="ComfoBoxMqttConsole.exe.config" Source="..\ComfoBoxMqttConsole\bin\x64\Release\ComfoBoxMqttConsole.exe.config" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="DemoClient.exe" Guid="8ACE962F-D2C0-4A37-BA35-F79DC57ECED8" Win64="yes">
+        <File Id="DemoClient.exe" Source="..\DemoClient\bin\x64\Release\DemoClient.exe" KeyPath="yes" Checksum="yes"/>
+      </Component>
+      <Component Id="DemoClient.exe.config" Guid="8ACE962F-D2C0-4A37-BA35-F79EC57ECED8" Win64="yes">
+        <File Id="DemoClient.exe.config" Source="..\DemoClient\bin\x64\Release\DemoClient.exe.config" KeyPath="yes" Checksum="yes"/>
+      </Component>
       <Component Id="ComfoboxService.exe" Guid="8ACE962F-D2C0-4A37-BA35-469DC57ECED8" Win64="yes">
         <File Id="ComfoboxService.exe" Source="..\ComfoboxService\bin\x64\Release\ComfoboxService.exe" KeyPath="yes" Checksum="yes"/>
         <ServiceInstall Id="ComfoBoxMqttServiceInstaller"
@@ -62,7 +77,7 @@
                         Vital="yes"
                         Name="ComfoBox MQTT Gateway"
                         DisplayName="ComfoBox MQTT Gateway"
-                        Description="My Product Description"
+                        Description="Access your ComfoBox over MQTT"
                         Start="auto"
                         Account="LocalSystem"
                         ErrorControl="ignore"

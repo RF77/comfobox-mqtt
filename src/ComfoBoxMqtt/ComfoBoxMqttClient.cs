@@ -65,14 +65,6 @@ namespace ComfoBoxMqtt
             {
                 try
                 {
-                    //if (reconnect)
-                    //{
-                    //    reconnect = false;
-                    //    _comfoBoxClient.Dispose();
-                    //    _comfoBoxClient = new ComfoBoxClient(_comfoBoxClient.PortName, _comfoBoxClient.Baudrate, _comfoBoxClient.SourceAddress);
-                    //    await _comfoBoxClient.StartAsync();
-                    //    await Task.Delay(1000);
-                    //}
                     Logger.Info($"StartPolling(): Read all values");
                     foreach (var mqttItem in _items)
                     {
@@ -99,6 +91,7 @@ namespace ComfoBoxMqtt
         public void Stop()
         {
             _comfoBoxClient.Stop();
+            Disconnect();
             _cancellationTokenSource.Cancel();
         }
     }

@@ -10,8 +10,10 @@
 //  *******************************************************************************/ 
 
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.ServiceProcess;
+using System.Threading;
 using System.Threading.Tasks;
 using ComfoBoxLib;
 using ComfoBoxMqtt;
@@ -25,6 +27,8 @@ namespace ComfoboxService
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private ComfoBoxMqttClient _client;
+        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+        private bool _stop;
 
         public ComfoboxService()
         {
@@ -38,7 +42,7 @@ namespace ComfoboxService
                 AsyncContext.Run(async () =>
                 {
                     XmlConfigurator.Configure();
-                    while (true)
+                    while (!_stop)
                     {
                         try
                         {
@@ -56,15 +60,20 @@ namespace ComfoboxService
                         {
                             string message = $"ComfoBoxService(): Excpetion {ex.Message},\r\n{ex.StackTrace}}}";
                             Logger.Error(message);
+                            await Task.Delay(1000);
                         }
                     }
                 });
-            });
+            }, _cancellationTokenSource.Token);
+            base.OnStart(args);
         }
 
         protected override void OnStop()
         {
             _client.Stop();
+            _stop = true;
+            _cancellationTokenSource.Cancel();
+            base.OnStop();
         }
     }
 }
