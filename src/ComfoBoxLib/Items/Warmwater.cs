@@ -49,24 +49,5 @@ namespace ComfoBoxLib.Items
         [Secondary]
         public AnalogValue SetPointLegio => new AnalogValue(73, "°C", 5);
 
-        /// <summary>
-        ///     Read only values
-        /// </summary>
-        public class States
-        {
-            /// <summary>
-            ///     Istwert Warmwasser
-            /// </summary>
-            [Primary]
-            public AnalogValue Temperature => new AnalogValue(3, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Aktuell gültiger WW-Sollwert
-            /// </summary>
-            [Primary]
-            public AnalogValue CurrentTargetTemperature => new AnalogValue(207, "°C") {IsReadOnly = true};
-
-            // Other values?: 2598, 397, 2599
-        }
     }
 }

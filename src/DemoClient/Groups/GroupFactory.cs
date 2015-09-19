@@ -25,11 +25,8 @@ namespace DemoClient.Groups
             var root = new GroupViewModel("ComfoBox");
             CreateGroupFromClass(root, typeof (Zone));
             CreateGroupFromClass(root, typeof (Warmwater));
-            CreateGroupFromClass(root, typeof (HeatPump));
-            CreateGroupFromClass(root, typeof (Counters));
-            CreateGroupFromClass(root, typeof (Controller));
+            CreateGroupFromClass(root, typeof (States));
             CreateGroupFromClass(root, typeof (Time));
-            CreateGroupFromClass(root, typeof (Outputs));
             CreateGroupFromClass(root, typeof (Config));
 
             return new[] {root};

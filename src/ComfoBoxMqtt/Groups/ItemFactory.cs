@@ -30,11 +30,8 @@ namespace ComfoBoxMqtt.Groups
 
             CreateItemsFromClass(items, typeof (Zone), topicName, client);
             CreateItemsFromClass(items, typeof (Warmwater), topicName, client);
-            CreateItemsFromClass(items, typeof (HeatPump), topicName, client);
-            CreateItemsFromClass(items, typeof (Counters), topicName, client);
-            CreateItemsFromClass(items, typeof (Controller), topicName, client);
+            CreateItemsFromClass(items, typeof (States), topicName, client);
             CreateItemsFromClass(items, typeof (Time), topicName, client);
-            CreateItemsFromClass(items, typeof (Outputs), topicName, client);
             CreateItemsFromClass(items, typeof (Config), topicName, client);
 
             return items;

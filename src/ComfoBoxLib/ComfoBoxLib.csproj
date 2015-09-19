@@ -66,7 +66,9 @@
     <Compile Include="Attributes\PrimaryAttribute.cs" />
     <Compile Include="Attributes\PriorityAttribute.cs" />
     <Compile Include="Attributes\SecondaryAttribute.cs" />
-    <Compile Include="Items\Outputs.cs" />
+    <Compile Include="Items\Enums\HeatingCoolingModes.cs" />
+    <Compile Include="Items\Enums\OperationModes.cs" />
+    <Compile Include="Items\States.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
@@ -77,14 +79,12 @@
     <Compile Include="BacNode.cs" />
     <Compile Include="ComfoBoxClient.cs" />
     <Compile Include="Items\Config.cs" />
-    <Compile Include="Items\Controller.cs" />
     <Compile Include="Values\DateValue.cs" />
     <Compile Include="Values\EnumValue.cs" />
-    <Compile Include="Items\Counters.cs" />
     <Compile Include="Values\IItemValue.cs" />
     <Compile Include="Values\ItemValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Items\HeatPump.cs" />
+    <Compile Include="Items\Enums\HeatPumpStatusEnums.cs" />
     <Compile Include="Values\SpecialAnalogValue.cs" />
     <Compile Include="Items\Time.cs" />
     <Compile Include="Items\Warmwater.cs" />

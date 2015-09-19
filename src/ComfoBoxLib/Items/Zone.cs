@@ -10,6 +10,7 @@
 //  *******************************************************************************/ 
 
 using ComfoBoxLib.Attributes;
+using ComfoBoxLib.Items.Enums;
 using ComfoBoxLib.Values;
 
 namespace ComfoBoxLib.Items
@@ -75,68 +76,5 @@ namespace ComfoBoxLib.Items
         /// </summary>
         [Secondary]
         public AnalogValue SetPointFrost => new AnalogValue(60, "°C", 5, 30);
-
-        /// <summary>
-        ///     Read only values
-        /// </summary>
-        public class States
-        {
-            /// <summary>
-            ///     Istwert Raum
-            /// </summary>
-            [Primary]
-            public AnalogValue RoomTemperature => new AnalogValue(12, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Aktueller Sollwert Raum
-            /// </summary>
-            [Primary]
-            public AnalogValue CurrentSetPoint => new AnalogValue(208, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Aktuell gemessene Vorlauftemperatur
-            /// </summary>
-            [Primary]
-            public AnalogValue FlowTemperature => new AnalogValue(14, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Berchnete Soll - Vorlauftemperatur
-            /// </summary>
-            [Primary]
-            public AnalogValue CalculatedFlowTemperature => new AnalogValue(209, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Aussentemperatur
-            /// </summary>
-            [Primary]
-            public AnalogValue OutdoorTemperature => new AnalogValue(10, "°C") {IsReadOnly = true};
-
-            /// <summary>
-            ///     Gebäudebezogene Aussentemperatur
-            /// </summary>
-            [Primary]
-            public AnalogValue OutdoorTemperatureBuilding => new AnalogValue(205, "°C") {IsReadOnly = true};
-
-            // Other values?: 59, 398, 676
-        }
-    }
-
-    public enum OperationModes : uint
-    {
-        Manual = 1,
-        Standby,
-        OnlyWarmwater,
-        NormalAndFrost,
-        NormalAndReduced,
-        Normal,
-        Reduced
-    }
-
-    public enum HeatingCoolingModes : uint
-    {
-        Auto = 1,
-        OnlyCooling,
-        OnlyHeating,
-        Neutral = 5
     }
 }
