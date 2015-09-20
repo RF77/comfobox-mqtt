@@ -50,7 +50,7 @@ namespace DemoClient.Groups
                 {
                     group.Add(new ReadOnlyItemViewModel(propertyInfo.Name) {Item = propertyValue});
                 }
-                else if (propertyValue is AnalogValue || propertyValue is SpecialAnalogValue)
+                else if (propertyValue is AnalogValue || propertyValue is AnalogValue)
                 {
                     group.Add(new AnalogValueItemViewModel(propertyInfo.Name) {Item = propertyValue});
                 }

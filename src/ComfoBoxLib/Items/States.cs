@@ -127,37 +127,37 @@ namespace ComfoBoxLib.Items
                 ///     Sollwert der WP-Regelung
                 /// </summary>
                 [Secondary]
-                public SpecialAnalogValue HeatPumpSetPoint => new SpecialAnalogValue(210, "°C") { IsReadOnly = true };
+                public AnalogValue HeatPumpSetPoint => new AnalogValue(210, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     Kühlvorlauftemp: Istwert Kühlvorlauf bei stetiger Primärpumpe
                 /// </summary>
                 [Primary]
-                public SpecialAnalogValue CoolingFlowTemperature => new SpecialAnalogValue(3098, "°C") { IsReadOnly = true };
+                public AnalogValue CoolingFlowTemperature => new AnalogValue(3098, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     Primärtemperatur: Temperatur im Primärkreis
                 /// </summary>
                 [Primary]
-                public SpecialAnalogValue PrimaryTemperature => new SpecialAnalogValue(602, "°C") { IsReadOnly = true };
+                public AnalogValue PrimaryTemperature => new AnalogValue(602, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     WP-Vorlauftemp: Istwert des WP-Vorlauffühlers
                 /// </summary>
                 [Primary]
-                public SpecialAnalogValue CurrentFlowTemperature => new SpecialAnalogValue(600, "°C") { IsReadOnly = true };
+                public AnalogValue CurrentFlowTemperature => new AnalogValue(600, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     WP-Vor’temp Min/Max: Min/Max-Begrenzung auf WP-Vorlauffühler
                 /// </summary>
                 [Secondary]
-                public SpecialAnalogValue MaxFlowTemperature => new SpecialAnalogValue(648, "°C") { IsReadOnly = true };
+                public AnalogValue MaxFlowTemperature => new AnalogValue(648, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     Ansauglufttemp Aktuelle Ansauglufttemperatur
                 /// </summary>
                 [Primary]
-                public SpecialAnalogValue Ansauglufttemp => new SpecialAnalogValue(3222, "°C") { IsReadOnly = true };
+                public AnalogValue Ansauglufttemp => new AnalogValue(3222, "°C") { IsReadOnly = true };
 
                 /// <summary>
                 ///     Anzeige des Betriebszustandes der Stufe 1

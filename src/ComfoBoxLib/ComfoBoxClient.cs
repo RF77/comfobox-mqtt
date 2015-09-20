@@ -207,7 +207,7 @@ namespace ComfoBoxLib
             return val.Value;
         }
 
-        public bool WriteValue(ItemValue<object> itemValue)
+        public bool WriteValue<T>(ItemValue<T> itemValue)
         {
             BacnetValue val = new BacnetValue(itemValue.Value);
             return WriteScalarValue(Settings.Default.BacnetMasterId,

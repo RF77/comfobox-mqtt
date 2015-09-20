@@ -86,7 +86,6 @@
     <Compile Include="Values\ItemValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Items\Enums\HeatPumpStatusEnums.cs" />
-    <Compile Include="Values\SpecialAnalogValue.cs" />
     <Compile Include="Items\Time.cs" />
     <Compile Include="Items\Warmwater.cs" />
     <Compile Include="Items\Zone.cs" />

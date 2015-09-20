@@ -24,6 +24,9 @@ namespace ComfoBoxLib.Values
         }
 
         public float? Min { get; private set; }
-        public float? Max { get; private set; }
+        public float? Max { get; private set; }protected internal override float ConvertValueBack()
+        {
+            return Value;
+        }
     }
 }

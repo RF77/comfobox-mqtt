@@ -19,7 +19,7 @@ using log4net;
 
 namespace ComfoBoxLib.Values
 {
-    public class ItemValue<TValue> : INotifyPropertyChanged, IItemValue
+    public abstract class ItemValue<TValue> : IItemValue
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private TValue _value;
@@ -34,8 +34,14 @@ namespace ComfoBoxLib.Values
                 {
                     _value = value;
                     OnPropertyChanged();
+                    OnValueChanged();
                 }
             }
+        }
+
+        private void OnValueChanged()
+        {
+            var f = ConvertValueBack();
         }
 
         object IItemValue.Value => _value;
@@ -46,6 +52,7 @@ namespace ComfoBoxLib.Values
 
         public async Task ReadValueAsync(ComfoBoxClient client)
         {
+            //Temp: as long there is no async client.ReadValue
             await Task.Delay(1);
             object value = client.ReadValue(this);
             if (value != null)
@@ -53,6 +60,17 @@ namespace ComfoBoxLib.Values
                 ConvertValue(value);
             }
         }
+
+        public async Task WriteValueAsync(ComfoBoxClient client)
+        {
+            //Temp: as long there is no async client.ReadValue
+            await Task.Delay(1);
+            float value = ConvertValueBack();
+            client.WriteValue(new EnumValue<float>(BacnetObjectId.Instance) {Value = value});
+        }
+
+        protected internal abstract float ConvertValueBack();
+
 
         public event PropertyChangedEventHandler PropertyChanged;
 
