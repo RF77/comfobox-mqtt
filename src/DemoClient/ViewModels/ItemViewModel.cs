@@ -17,11 +17,28 @@ namespace DemoClient.ViewModels
 {
     public class ItemViewModel : TreeItemViewModel
     {
+        private IItemValue _item;
+
         public ItemViewModel(string name) : base(name)
         {
         }
 
-        public IItemValue Item { get; set; }
+        public IItemValue Item
+        {
+            get { return _item; }
+            set
+            {
+                if (_item != value)
+                {
+                    _item = value;
+                    OnItemChanged();
+                }
+            }
+        }
+
+        protected internal virtual void OnItemChanged()
+        {
+        }
 
         public override async Task ReadAllValuesAsync(ComfoBoxClient client)
         {

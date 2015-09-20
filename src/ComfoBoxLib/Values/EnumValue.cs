@@ -9,11 +9,12 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
 using System.IO.BACnet;
 
 namespace ComfoBoxLib.Values
 {
-    public class EnumValue<TValue> : ItemValue<TValue>
+    public class EnumValue<TValue> : ItemValue<TValue>, IEnumValue
     {
         public EnumValue(uint id)
         {
@@ -22,8 +23,15 @@ namespace ComfoBoxLib.Values
 
         protected override void ConvertValue(object readValue)
         {
-            //var enumType = typeof(TValue);
-            //var test = Enum.ToObject(enumType, (uint)readValue);
+            var enumType = typeof(TValue);
+            int val = (int) (float)readValue;
+            var enumVal = (TValue)Enum.ToObject(enumType, val);
+            Value = enumVal;
+        }
+
+        public void SetValueFromString(string value)
+        {
+            Value = (TValue) Enum.Parse(typeof (TValue), value);
         }
     }
 }

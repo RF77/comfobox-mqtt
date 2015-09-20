@@ -10,6 +10,8 @@
 //  *******************************************************************************/ 
 
 using System;
+using System.Collections.Generic;
+using ComfoBoxLib.Values;
 
 namespace DemoClient.ViewModels
 {
@@ -17,11 +19,48 @@ namespace DemoClient.ViewModels
     {
         public EnumItemViewModel(string name) : base(name)
         {
+            
         }
 
-        public Array EnumValues
+        private void Item_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
-            get { return Enum.GetValues(Item.Value.GetType()); }
+            if (e.PropertyName == nameof(Item.Value))
+            {
+                EnumValue = Item.Value.ToString();
+            }
+        }
+
+        public string[] EnumValues
+        {
+            get
+            {
+                return Enum.GetNames(Item.Value.GetType());
+            }
+        }
+
+        private string _enumValue;
+
+        public string EnumValue
+        {
+            get { return _enumValue; }
+            set
+            {
+                if (_enumValue != value)
+                {
+                    _enumValue = value;
+                    OnPropertyChanged();
+                    var enumItem = Item as IEnumValue;
+                    if (enumItem != null && _enumValue != Item.Value.ToString())
+                    {
+                        enumItem.SetValueFromString(value);
+                    }
+                }
+            }
+        }
+
+        protected internal override void OnItemChanged()
+        {
+            Item.PropertyChanged += Item_PropertyChanged;
         }
     }
 }

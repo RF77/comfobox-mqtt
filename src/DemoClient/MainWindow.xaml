@@ -86,7 +86,7 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Name}"/>
-                        <ComboBox SelectedItem="{Binding Item.Value, Mode=TwoWay}" ItemsSource="{Binding EnumValues}" MinWidth="150" HorizontalAlignment="Right" Grid.Column="1"/>
+                        <ComboBox SelectedValue="{Binding EnumValue, Mode=TwoWay}" ItemsSource="{Binding EnumValues}" MinWidth="150" HorizontalAlignment="Right" Grid.Column="1"/>
                     </Grid>
                 </DataTemplate>
             </TreeView.Resources>

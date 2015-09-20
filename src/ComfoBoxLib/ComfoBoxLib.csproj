@@ -81,6 +81,7 @@
     <Compile Include="Items\Config.cs" />
     <Compile Include="Values\DateValue.cs" />
     <Compile Include="Values\EnumValue.cs" />
+    <Compile Include="Values\IEnumValue.cs" />
     <Compile Include="Values\IItemValue.cs" />
     <Compile Include="Values\ItemValue.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

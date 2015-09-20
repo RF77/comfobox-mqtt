@@ -349,7 +349,7 @@ public $PropertyReturnType$ $PropertyName$&#xD;
 		if(_$MemberName$ != value)&#xD;
 		{&#xD;
 			_$MemberName$ = value;&#xD;
-			NotifyChanged("$PropertyName$");&#xD;
+			OnPropertyChanged();&#xD;
 		}&#xD;
 	}&#xD;
 }&#xD;
