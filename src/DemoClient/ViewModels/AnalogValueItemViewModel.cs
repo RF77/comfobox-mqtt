@@ -9,11 +9,14 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
+using ComfoBoxLib;
+
 namespace DemoClient.ViewModels
 {
     public class AnalogValueItemViewModel : ItemViewModel
     {
-        public AnalogValueItemViewModel(string name) : base(name)
+        public AnalogValueItemViewModel(string name, Func<ComfoBoxClient> clientFunc) : base(name, clientFunc)
         {
         }
     }

@@ -9,6 +9,7 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
 using System.ComponentModel;
 using System.IO.BACnet;
 using System.Reflection;
@@ -23,7 +24,10 @@ namespace ComfoBoxLib.Values
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private TValue _value;
+        private BacnetApplicationTags _tag;
         internal BacnetObjectId BacnetObjectId { get; set; }
+
+        public event Action<object, float> InitializedValueChanged;
 
         public TValue Value
         {
@@ -32,16 +36,21 @@ namespace ComfoBoxLib.Values
             {
                 if (!Equals(value, _value))
                 {
+                    bool isInitialized = _value != null;
                     _value = value;
                     OnPropertyChanged();
-                    OnValueChanged();
+                    if (isInitialized)
+                    {
+                        OnInitializedValueChanged();
+                    }
                 }
             }
         }
 
-        private void OnValueChanged()
+        private void OnInitializedValueChanged()
         {
             var f = ConvertValueBack();
+            if (f != null) InitializedValueChanged?.Invoke(this, f.Value);
         }
 
         object IItemValue.Value => _value;
@@ -50,14 +59,20 @@ namespace ComfoBoxLib.Values
 
         public bool IsReadOnly { get; internal set; }
 
+        public BacnetApplicationTags Tag
+        {
+            get { return _tag; }
+        }
+
         public async Task ReadValueAsync(ComfoBoxClient client)
         {
             //Temp: as long there is no async client.ReadValue
             await Task.Delay(1);
-            object value = client.ReadValue(this);
-            if (value != null)
+            BacnetValue value = client.ReadValue(this);
+            _tag = value.Tag;
+            if (value.Value != null)
             {
-                ConvertValue(value);
+                ConvertValue(value.Value);
             }
         }
 
@@ -68,7 +83,7 @@ namespace ComfoBoxLib.Values
             float? value = ConvertValueBack();
             if (value != null)
             {
-                client.WriteValue(new EnumValue<float>(BacnetObjectId.Instance) {Value = value.Value});
+                client.WriteValue(this);
             }
         }
 

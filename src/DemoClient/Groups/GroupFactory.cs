@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using ComfoBoxLib;
 using ComfoBoxLib.Items;
 using ComfoBoxLib.Values;
 using DemoClient.ViewModels;
@@ -20,25 +21,25 @@ namespace DemoClient.Groups
 {
     public class GroupFactory
     {
-        public static IEnumerable<GroupViewModel> CreateGroups()
+        public static IEnumerable<GroupViewModel> CreateGroups(Func<ComfoBoxClient> clientFunc)
         {
             var root = new GroupViewModel("ComfoBox");
-            CreateGroupFromClass(root, typeof (Zone));
-            CreateGroupFromClass(root, typeof (Warmwater));
-            CreateGroupFromClass(root, typeof (States));
-            CreateGroupFromClass(root, typeof (Time));
-            CreateGroupFromClass(root, typeof (Config));
+            CreateGroupFromClass(root, typeof (Zone), clientFunc);
+            CreateGroupFromClass(root, typeof (Warmwater), clientFunc);
+            CreateGroupFromClass(root, typeof (States), clientFunc);
+            CreateGroupFromClass(root, typeof (Time), clientFunc);
+            CreateGroupFromClass(root, typeof (Config), clientFunc);
 
             return new[] {root};
         }
 
-        private static GroupViewModel CreateGroupFromClass(GroupViewModel parent, Type classType)
+        private static GroupViewModel CreateGroupFromClass(GroupViewModel parent, Type classType, Func<ComfoBoxClient> clientFunc)
         {
             var group = new GroupViewModel(classType.Name);
             parent.Add(group);
             foreach (var subType in classType.GetNestedTypes())
             {
-                CreateGroupFromClass(group, subType);
+                CreateGroupFromClass(group, subType, clientFunc);
             }
 
             var instance = classType.CreateInstance();
@@ -48,20 +49,20 @@ namespace DemoClient.Groups
                 var propertyValue = instance.GetPropertyValue(propertyInfo.Name) as IItemValue;
                 if (propertyValue != null && propertyValue.IsReadOnly)
                 {
-                    group.Add(new ReadOnlyItemViewModel(propertyInfo.Name) {Item = propertyValue});
+                    group.Add(new ReadOnlyItemViewModel(propertyInfo.Name, clientFunc) {Item = propertyValue});
                 }
                 else if (propertyValue is AnalogValue || propertyValue is AnalogValue)
                 {
-                    group.Add(new AnalogValueItemViewModel(propertyInfo.Name) {Item = propertyValue});
+                    group.Add(new AnalogValueItemViewModel(propertyInfo.Name, clientFunc) {Item = propertyValue});
                 }
                 else if (propertyValue is DateValue)
                 {
-                    group.Add(new ReadOnlyItemViewModel(propertyInfo.Name) {Item = propertyValue});
+                    group.Add(new ReadOnlyItemViewModel(propertyInfo.Name, clientFunc) {Item = propertyValue});
                 }
                 else
                 {
                     var enumItem = propertyValue as IEnumValue;
-                    group.Add(new EnumItemViewModel(propertyInfo.Name) {Item = propertyValue});
+                    group.Add(new EnumItemViewModel(propertyInfo.Name, clientFunc) {Item = propertyValue});
                 }
             }
 

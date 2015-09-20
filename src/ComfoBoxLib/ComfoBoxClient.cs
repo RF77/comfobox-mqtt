@@ -145,8 +145,6 @@ namespace ComfoBoxLib
 
         public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property, BacnetValue value)
         {
-            value = new BacnetValue(value);
-
             // Looking for the device
             var adr = DeviceAddr((uint)deviceId);
             if (adr == null) return false; // not found
@@ -197,19 +195,19 @@ namespace ComfoBoxLib
             }
         }
 
-        public object ReadValue<T>(ItemValue<T> itemValue)
+        public BacnetValue ReadValue<T>(ItemValue<T> itemValue)
         {
             BacnetValue val;
             ReadScalarValue(Settings.Default.BacnetMasterId,
                 itemValue.BacnetObjectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 out val);
-            return val.Value;
+            return val;
         }
 
         public bool WriteValue<T>(ItemValue<T> itemValue)
         {
-            BacnetValue val = new BacnetValue(itemValue.Value);
+            BacnetValue val = new BacnetValue(itemValue.Tag, itemValue.ConvertValueBack());
             return WriteScalarValue(Settings.Default.BacnetMasterId,
                 itemValue.BacnetObjectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,

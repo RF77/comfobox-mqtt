@@ -45,7 +45,7 @@ namespace ComfoBoxLib.Values
 
         public void SetValueFromString(string value)
         {
-            Value = (TValue) Enum.Parse(typeof (TValue), value);
+            Value = (TValue) Enum.Parse(GetEnumType(), value);
         }
 
         public Type GetEnumType()

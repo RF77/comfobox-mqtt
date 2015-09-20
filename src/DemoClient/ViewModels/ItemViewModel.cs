@@ -9,6 +9,7 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
 using System.Threading.Tasks;
 using ComfoBoxLib;
 using ComfoBoxLib.Values;
@@ -17,10 +18,12 @@ namespace DemoClient.ViewModels
 {
     public class ItemViewModel : TreeItemViewModel
     {
+        private readonly Func<ComfoBoxClient> _clientFunc;
         private IItemValue _item;
 
-        public ItemViewModel(string name) : base(name)
+        public ItemViewModel(string name, Func<ComfoBoxClient> clientFunc) : base(name)
         {
+            _clientFunc = clientFunc;
         }
 
         public IItemValue Item
@@ -32,8 +35,17 @@ namespace DemoClient.ViewModels
                 {
                     _item = value;
                     OnItemChanged();
+                    if (_item != null)
+                    {
+                        _item.InitializedValueChanged += _item_InitializedValueChanged;
+                    }
                 }
             }
+        }
+
+        private void _item_InitializedValueChanged(object sender, float newValue)
+        {
+            if (_clientFunc != null) Item.WriteValueAsync(_clientFunc());
         }
 
         protected internal virtual void OnItemChanged()

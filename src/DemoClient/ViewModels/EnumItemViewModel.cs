@@ -12,13 +12,14 @@
 using System;
 using System.Collections.Generic;
 using System.Windows.Controls.Primitives;
+using ComfoBoxLib;
 using ComfoBoxLib.Values;
 
 namespace DemoClient.ViewModels
 {
     public class EnumItemViewModel : ItemViewModel
     {
-        public EnumItemViewModel(string name) : base(name)
+        public EnumItemViewModel(string name, Func<ComfoBoxClient> clientFunc) : base(name, clientFunc)
         {
             
         }

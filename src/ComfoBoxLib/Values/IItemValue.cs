@@ -9,6 +9,7 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
 
@@ -16,9 +17,11 @@ namespace ComfoBoxLib.Values
 {
     public interface IItemValue : INotifyPropertyChanged
     {
+        event Action<object, float> InitializedValueChanged;
         object Value { get; }
         string Unit { get; }
         bool IsReadOnly { get; }
         Task ReadValueAsync(ComfoBoxClient client);
+        Task WriteValueAsync(ComfoBoxClient client);
     }
 }

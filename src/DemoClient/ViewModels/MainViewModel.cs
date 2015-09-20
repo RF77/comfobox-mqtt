@@ -46,7 +46,7 @@ namespace DemoClient.ViewModels
             XmlConfigurator.Configure();
             Logger.Info($"Starting {WindowTitle}");
             ConnectButtonText = "Connect";
-            Groups = GroupFactory.CreateGroups();
+            Groups = GroupFactory.CreateGroups(() => _client);
             Groups.First().ExpandAll();
             Baudrate = 76800;
             AvailablePorts = new ObservableCollection<string>(SerialPort.GetPortNames());

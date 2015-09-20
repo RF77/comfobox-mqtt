@@ -9,11 +9,14 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
+using ComfoBoxLib;
+
 namespace DemoClient.ViewModels
 {
     public class ReadOnlyItemViewModel : ItemViewModel
     {
-        public ReadOnlyItemViewModel(string name) : base(name)
+        public ReadOnlyItemViewModel(string name, Func<ComfoBoxClient> clientFunc) : base(name, clientFunc)
         {
         }
     }
