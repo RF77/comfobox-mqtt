@@ -18,9 +18,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Charlotte;
 using ComfoBoxLib;
+using ComfoBoxLib.Properties;
 using ComfoBoxMqtt.Groups;
 using ComfoBoxMqtt.Models;
 using log4net;
+using Settings = ComfoBoxMqtt.Properties.Settings;
 
 namespace ComfoBoxMqtt
 {
@@ -53,14 +55,18 @@ namespace ComfoBoxMqtt
             _cancellationTokenSource = new CancellationTokenSource();
             await Task.Delay(1);
             _items = ItemFactory.CreateItems(this);
-            File.WriteAllText(@"c:\temp\topics.txt", string.Join("\r\n", _items.SelectMany(i => i.Topics)));
+#if DEBUG
+            if (Settings.Default.WriteTopicsToFile)
+            {
+                File.WriteAllText(Settings.Default.WriteTopicsFilePath, string.Join("\r\n", _items.SelectMany(i => i.Topics)));
+            }
+#endif
             Connect();
             await _comfoBoxClient.StartAsync();
         }
 
         public async Task StartPollingAsync()
         {
-            //bool reconnect = false;
             while (true)
             {
                 try

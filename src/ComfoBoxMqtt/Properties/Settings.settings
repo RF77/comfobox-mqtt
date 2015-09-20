@@ -23,5 +23,11 @@
     <Setting Name="BaseTopic" Type="System.String" Scope="Application">
       <Value Profile="(Default)">ComfoBox</Value>
     </Setting>
+    <Setting Name="WriteTopicsToFile" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="WriteTopicsFilePath" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">c:\temp\topics.txt</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

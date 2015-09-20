@@ -85,5 +85,23 @@ namespace ComfoBoxMqtt.Properties {
                 return ((string)(this["BaseTopic"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool WriteTopicsToFile {
+            get {
+                return ((bool)(this["WriteTopicsToFile"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("c:\\temp\\topics.txt")]
+        public string WriteTopicsFilePath {
+            get {
+                return ((string)(this["WriteTopicsFilePath"]));
+            }
+        }
     }
 }
