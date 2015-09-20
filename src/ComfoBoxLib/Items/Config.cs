@@ -61,13 +61,13 @@ namespace ComfoBoxLib.Items
             ///     Energieerz’temp im Auslegep
             /// </summary>
             [Secondary]
-            public AnalogValue EnergieerzeugerTempImAuslegepunkt => new AnalogValue(163, "°C", 20, 99);
+            public AnalogValue EnergieerzeugerTempImAuslegepunkt => new AnalogValue(163, "°C", 20, 99) {IsReadOnly = true};
 
             /// <summary>
             ///     Adapt. Energieerz’temp im Auslegep
             /// </summary>
             [Secondary]
-            public AnalogValue AdaptEnergieerzeugerTempImAuslegepunkt => new AnalogValue(166, "°C", 20, 99);
+            public AnalogValue AdaptEnergieerzeugerTempImAuslegepunkt => new AnalogValue(166, "°C", 20, 99) { IsReadOnly = true };
 
             /// <summary>
             ///     Anlagenfrostschutz
