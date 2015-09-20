@@ -65,11 +65,14 @@ namespace ComfoBoxLib.Values
         {
             //Temp: as long there is no async client.ReadValue
             await Task.Delay(1);
-            float value = ConvertValueBack();
-            client.WriteValue(new EnumValue<float>(BacnetObjectId.Instance) {Value = value});
+            float? value = ConvertValueBack();
+            if (value != null)
+            {
+                client.WriteValue(new EnumValue<float>(BacnetObjectId.Instance) {Value = value.Value});
+            }
         }
 
-        protected internal abstract float ConvertValueBack();
+        protected internal abstract float? ConvertValueBack();
 
 
         public event PropertyChangedEventHandler PropertyChanged;

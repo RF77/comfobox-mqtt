@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Windows.Controls.Primitives;
 using ComfoBoxLib.Values;
 
 namespace DemoClient.ViewModels
@@ -34,7 +35,7 @@ namespace DemoClient.ViewModels
         {
             get
             {
-                return Enum.GetNames(Item.Value.GetType());
+                return Enum.GetNames(EnumItem.GetEnumType());
             }
         }
 
@@ -49,12 +50,20 @@ namespace DemoClient.ViewModels
                 {
                     _enumValue = value;
                     OnPropertyChanged();
-                    var enumItem = Item as IEnumValue;
-                    if (enumItem != null && _enumValue != Item.Value.ToString())
+                    if (EnumItem != null && _enumValue != Item.Value.ToString())
                     {
-                        enumItem.SetValueFromString(value);
+                        EnumItem.SetValueFromString(value);
                     }
                 }
+            }
+        }
+
+        private IEnumValue EnumItem
+        {
+            get
+            {
+                var enumItem = Item as IEnumValue;
+                return enumItem;
             }
         }
 

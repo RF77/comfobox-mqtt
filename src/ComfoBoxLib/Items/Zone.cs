@@ -21,13 +21,13 @@ namespace ComfoBoxLib.Items
         ///     Betriebsart
         /// </summary>
         [Primary]
-        public EnumValue<OperationModes> OperationMode => new EnumValue<OperationModes>(830);
+        public EnumValue<OperationModes?> OperationMode => new EnumValue<OperationModes?>(830);
 
         /// <summary>
         ///     Betriebsart Heizen und Kühlen
         /// </summary>
         [Primary]
-        public EnumValue<HeatingCoolingModes> HeatingCoolingMode => new EnumValue<HeatingCoolingModes>(3078);
+        public EnumValue<HeatingCoolingModes?> HeatingCoolingMode => new EnumValue<HeatingCoolingModes?>(3078);
 
         /// <summary>
         ///     Die Funktion wird gestartet, indem die gewünschte Dauer eingestellt wird. Während der

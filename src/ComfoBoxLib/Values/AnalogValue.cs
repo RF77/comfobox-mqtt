@@ -13,7 +13,7 @@ using System.IO.BACnet;
 
 namespace ComfoBoxLib.Values
 {
-    public class AnalogValue : ItemValue<float>
+    public class AnalogValue : ItemValue<float?>
     {
         public AnalogValue(uint id, string unit, float? min = null, float? max = null)
         {
@@ -24,7 +24,8 @@ namespace ComfoBoxLib.Values
         }
 
         public float? Min { get; private set; }
-        public float? Max { get; private set; }protected internal override float ConvertValueBack()
+        public float? Max { get; private set; }
+        protected internal override float? ConvertValueBack()
         {
             return Value;
         }

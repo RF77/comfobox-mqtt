@@ -163,8 +163,8 @@ namespace ComfoBoxLib.Items
                 ///     Anzeige des Betriebszustandes der Stufe 1
                 /// </summary>
                 [Primary]
-                public EnumValue<HeatPumpStatusEnums> HeatPumpStatus
-                    => new EnumValue<HeatPumpStatusEnums>(662) { IsReadOnly = true };
+                public EnumValue<HeatPumpStatusEnums?> HeatPumpStatus
+                    => new EnumValue<HeatPumpStatusEnums?>(662) { IsReadOnly = true };
 
         }
 

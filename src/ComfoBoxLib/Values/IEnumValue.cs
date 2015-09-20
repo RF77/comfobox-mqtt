@@ -9,10 +9,13 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System;
+
 namespace ComfoBoxLib.Values
 {
     public interface IEnumValue
     {
         void SetValueFromString(string value);
+        Type GetEnumType();
     }
 }

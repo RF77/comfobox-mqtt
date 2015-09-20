@@ -60,6 +60,7 @@ namespace DemoClient.Groups
                 }
                 else
                 {
+                    var enumItem = propertyValue as IEnumValue;
                     group.Add(new EnumItemViewModel(propertyInfo.Name) {Item = propertyValue});
                 }
             }
