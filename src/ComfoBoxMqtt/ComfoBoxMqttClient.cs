@@ -53,7 +53,7 @@ namespace ComfoBoxMqtt
             _cancellationTokenSource = new CancellationTokenSource();
             await Task.Delay(1);
             _items = ItemFactory.CreateItems(this);
-            File.WriteAllText(@"c:\temp\topics.txt", string.Join("\r\n", _items.Select(i => i.Topic)));
+            File.WriteAllText(@"c:\temp\topics.txt", string.Join("\r\n", _items.SelectMany(i => i.Topics)));
             Connect();
             await _comfoBoxClient.StartAsync();
         }

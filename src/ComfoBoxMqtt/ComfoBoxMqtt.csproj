@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="ComfoBoxMqttClient.cs" />
     <Compile Include="Groups\ItemFactory.cs" />
+    <Compile Include="Models\EnumMqttItem.cs" />
     <Compile Include="Models\MqttItem.cs" />
     <Compile Include="Models\RefreshPriority.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

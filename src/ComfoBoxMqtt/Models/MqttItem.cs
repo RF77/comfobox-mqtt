@@ -9,6 +9,7 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
@@ -34,20 +35,31 @@ namespace ComfoBoxMqtt.Models
             ItemValue.PropertyChanged += ItemValue_PropertyChanged;
         }
 
-        private IItemValue ItemValue { get; set; }
+        protected IItemValue ItemValue { get; set; }
         internal RefreshPriority Priority { get; private set; }
 
-        private ComfoBoxMqttClient MqttClient { get; set; }
+        protected ComfoBoxMqttClient MqttClient { get; set; }
 
         public string Topic { get; private set; }
+
+        public virtual IEnumerable<string> Topics
+        {
+            get { return new string[] {Topic}; }
+        }
 
         private void ItemValue_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(ItemValue.Value))
             {
-                Logger.Debug($"ItemValue_PropertyChanged(): {Topic} = {ItemValue.Value}");
+                Logger.Debug($"ValueChanged: {Topic} = {ItemValue.Value}");
                 PublishValue();
+                AdditionalActionForValueChanged();
             }
+        }
+
+        protected virtual void AdditionalActionForValueChanged()
+        {
+            
         }
 
         private void PublishValue()

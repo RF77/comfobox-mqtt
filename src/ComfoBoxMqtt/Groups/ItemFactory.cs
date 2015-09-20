@@ -62,7 +62,14 @@ namespace ComfoBoxMqtt.Groups
                     //if (prioAttribute == )
                 }
 
-                list.Add(new MqttItem(propertyValue, RefreshPriority.None, client, topic));
+                if (propertyValue is IEnumValue)
+                {
+                    list.Add(new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic));
+                }
+                else
+                {
+                    list.Add(new MqttItem(propertyValue, RefreshPriority.None, client, topic));
+                }
             }
         }
     }
