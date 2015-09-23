@@ -68,6 +68,7 @@
     <Compile Include="Attributes\SecondaryAttribute.cs" />
     <Compile Include="Items\Enums\HeatingCoolingModes.cs" />
     <Compile Include="Items\Enums\OperationModes.cs" />
+    <Compile Include="Items\KondensatFrostschutzEnum.cs" />
     <Compile Include="Items\States.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
