@@ -9,24 +9,29 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System.ComponentModel;
 using ComfoBoxLib.Attributes;
 using ComfoBoxLib.Items.Enums;
 using ComfoBoxLib.Values;
 
 namespace ComfoBoxLib.Items
 {
+
+    [Description(@"Zone")]
     public class Zone
     {
         /// <summary>
         ///     Betriebsart
         /// </summary>
         [Primary]
+        [Description(@"Betriebsart")]
         public EnumValue<OperationModes?> OperationMode => new EnumValue<OperationModes?>(830);
 
         /// <summary>
         ///     Betriebsart Heizen und Kühlen
         /// </summary>
         [Primary]
+        [Description(@"Betriebsart Heizen und Kühlen")]
         public EnumValue<HeatingCoolingModes?> HeatingCoolingMode => new EnumValue<HeatingCoolingModes?>(3078);
 
         /// <summary>
@@ -34,6 +39,7 @@ namespace ComfoBoxLib.Items
         ///     eingestellten Zeit ist dann unabhängig der Schaltuhr der Raumsollwert „Normal“ gültig.
         /// </summary>
         [Secondary]
+        [Description(@"Die Funktion wird gestartet, indem die gewünschte Dauer eingestellt wird. Während der eingestellten Zeit ist dann unabhängig der Schaltuhr der Raumsollwert „Normal“ gültig.")]
         public AnalogValue PartyTime => new AnalogValue(674, "h");
 
         /// <summary>
@@ -42,6 +48,7 @@ namespace ComfoBoxLib.Items
         ///     „Frostschutz“ gültig(abhängig von der Betriebsart).
         /// </summary>
         [Secondary]
+        [Description(@"Die Funktion wird gestartet, indem die gewünschte Dauer eingestellt wird. Während der eingestellten Zeit ist dann unabhängig der Schaltuhr der Raumsollwert „Reduziert“ bzw. „Frostschutz“ gültig(abhängig von der Betriebsart).")]
         public AnalogValue EcoTime => new AnalogValue(675, "h");
 
         /// <summary>
@@ -49,6 +56,7 @@ namespace ComfoBoxLib.Items
         ///     ermittelte Raumtemperatur eingestellt werden.
         /// </summary>
         [Secondary]
+        [Description(@"Um eine genauere Regelung zu ermöglichen, kann hier die reale, mit einem genauen Messgerät ermittelte Raumtemperatur eingestellt werden.")]
         public AnalogValue CalibrateTemprature => new AnalogValue(75, "°C");
 
         /// <summary>
@@ -57,24 +65,28 @@ namespace ComfoBoxLib.Items
         ///     Funktion kann nur einmal täglich aufgerufen werden.
         /// </summary>
         [Secondary]
+        [Description(@"Die Adaption der Heizkennlinie korrigiert die Heizkurve bei der aktuellen Aussentemperatur. Die Korrektur sollte jeweils bei tiefer und bei hoher Aussentemperatur durchgeführt werden. Diese Funktion kann nur einmal täglich aufgerufen werden.")]
         public AnalogValue ManualAdoption => new AnalogValue(679, "K");
 
         /// <summary>
         ///     Raumsollwert normal 5.0..30.0
         /// </summary>
         [Primary]
+        [Description(@"Raumsollwert normal 5.0..30.0")]
         public AnalogValue SetPointNormal => new AnalogValue(62, "°C", 5, 30);
 
         /// <summary>
         ///     Raumsollwert reduziert 5.0..30.0
         /// </summary>
         [Secondary]
+        [Description(@"Raumsollwert reduziert 5.0..30.0")]
         public AnalogValue SetPointReduced => new AnalogValue(61, "°C", 5, 30);
 
         /// <summary>
         ///     Raumsollwert Frost 5.0..30.0
         /// </summary>
         [Secondary]
+        [Description(@"Raumsollwert Frost 5.0..30.0")]
         public AnalogValue SetPointFrost => new AnalogValue(60, "°C", 5, 30);
     }
 }

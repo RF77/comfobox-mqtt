@@ -50,48 +50,24 @@ namespace ComfoBoxLib.Items.Enums
         [Description("Frostgefahr in WP, WP ist ausgeschaltet")] Frostgefahr = 41,
         [Description("Absauggfunktion aktiv")] Absaugung = 42,
         [Description("Entlastungsfunktion aktiv")] Entlastung = 43,
-        [Description("MOP-Funktion aktiv")] MOP = 44
-        //[Description("Energieerzeugung")]
-        //WpVorlaufZuHoch = 2,
-
-        //MOP MOP-Funktion aktiv 44
-        //Stillstand Umschaltung Stillstand während Umschaltung von Heizen
-        //auf Abtauen resp. Kühlen
-        //45
-        //Kondensat‘frostschutz Kondensatortemperatur während Abtauung
-        //unter Frostschutzstörgrenze
-        //46
-        //Taupunktwächter Taugefahr, Mischerkreis schliesst, direkte
-        //Kreispumpe schaltet ab
-        //47
-        //Vent‘sperre durch Verd‘t Ventilator gesperrt aufgrund der
-        //Verdampfertemperatur
-        //48
-        //Erfolglose Abtauung Abtauung nicht erfolgreich, zyklisches Abtauen
-        //aktiv
-        //49
-        //Schwimmbad laden Schwimmbadladung aktiv 50
-        //Vorlaufzeit Kond‘pumpe Vorlaufzeit Kondensatorpumpe 51
-        //Kond’frostwarnung Kondensatortemperatur während Abtauung
-        //unter Frostschutzwarngrenze
-        //52
-        //            Heissgas Warn Heissgaswarnschelle überschritten 53
-        //Heissgas Stör Heissgasstörschwelle überschritten 54
-        //Entlüftung Primärkreis Primärkreispumpe aktiv während
-        //Entlüftungsfunktion
-        //55
-        //Nur Zusatzheizung Heizen nur mit Zusatzheizung 56
-        //Offzeit Abtauen Abtauung mit Ventilator während Ruhephase
-        //Kompressor
-        //57
-        //Verdi’min‘t Umsch Abt/K Minimale Laufzeit Verdichter während der
-        //Umschaltung auf Abtauen resp. Kühlen
-        //58
-        //Kein Differenzdruck Differenzdruck zu klein für Umschaltung
-        //Abtauen resp. Kühlen
-        //59
-        //WW nur mit Zusatzheizung Warmwasser nur mit Zusatzheizung 60
-        //Hochdr’warnung Hochdruckwarnschwelle überchritten 61
-        //Verdapferfüh defekt Verdampferfühler defekt 62
+        [Description("MOP-Funktion aktiv")] MOP = 44,
+        [Description("Stillstand Umschaltung: Stillstand während Umschaltung von Heizen auf Abtauen resp. Kühlen")] StillstandUmschaltung = 45,
+        [Description("Kondensat‘frostschutz: Kondensatortemperatur während Abtauung unter Frostschutzstörgrenze")] KondensatFrostschutz = 46,
+        [Description("Taupunktwächter Taugefahr, Mischerkreis schliesst, direkte Kreispumpe schaltet ab")] TaupunktwaechterTaugefahr = 47,
+        [Description("Ventilator gesperrt aufgrund der Verdampfertemperatur")] VentSperreDurchVerdampferTemp = 48,
+        [Description("Abtauung nicht erfolgreich, zyklisches Abtauen aktiv")] ErfolgloseAbtauung = 49,
+        [Description("Schwimmbadladung aktiv")] SchwimmbadLaden = 50,
+        [Description("Vorlaufzeit Kondensatorpumpe")] VorlaufzeitKondPumpe = 51,
+        [Description("Kondensatortemperatur während Abtauung unter Frostschutzwarngrenze")] KondFrostWarnung = 52,
+        [Description("Heissgaswarnschelle überschritten")] HeissgasWarn = 53,
+        [Description("Heissgasstörschwelle überschritten")] HeissgasStoer = 54,
+        [Description("Primärkreispumpe aktiv während Entlüftungsfunktion")] EntlueftungPrimaerkreis = 55,
+        [Description("Heizen nur mit Zusatzheizung")] NurZusatzheizung = 56,
+        [Description("Abtauung mit Ventilator während Ruhephase Kompressor")] OffzeitAbtauen = 57,
+        [Description("Minimale Laufzeit Verdichter während der Umschaltung auf Abtauen resp. Kühlen")] VerdiMinTUmschAbtK = 58,
+        [Description("Differenzdruck zu klein für Umschaltung Abtauen resp. Kühlen")] KeinDifferenzdruck = 59,
+        [Description("Warmwasser nur mit Zusatzheizung")] WwNurMitZusatzheizung = 60,
+        [Description("Hochdruckwarnschwelle überchritten")] HochdruckWarnung = 61,
+        [Description("Energieerzeugung")] VerdampferfuehlerDefekt = 62
     }
 }

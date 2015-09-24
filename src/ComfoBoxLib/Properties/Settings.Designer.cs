@@ -67,5 +67,14 @@ namespace ComfoBoxLib.Properties {
                 return ((global::System.TimeSpan)(this["MqttNoResponseTimeout"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ExpertMode {
+            get {
+                return ((bool)(this["ExpertMode"]));
+            }
+        }
     }
 }

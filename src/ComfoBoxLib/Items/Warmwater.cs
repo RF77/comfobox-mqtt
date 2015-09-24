@@ -9,11 +9,14 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
+using System.ComponentModel;
 using ComfoBoxLib.Attributes;
 using ComfoBoxLib.Values;
 
 namespace ComfoBoxLib.Items
 {
+
+    [Description(@"")]
     public class Warmwater
     {
         /// <summary>
@@ -23,30 +26,35 @@ namespace ComfoBoxLib.Items
         /// </summary>
 
         //TODO: Wie steurt man diesen Punkt an?
+        [Description(@"Einmalige Ladung des WW-Speichers. Ungeachtet der Schaltuhr kann durch aktivieren dieser Funktion eine Ladung des WW-Speichers erzwungen werden.")]
         public AnalogValue DoHeatWaterNow => new AnalogValue(2590, null) {IsReadOnly = true};
 
         /// <summary>
         ///     WW Sollwert normal
         /// </summary>
         [Secondary]
+        [Description(@"WW Sollwert normal")]
         public AnalogValue SetPointNormal => new AnalogValue(72, "°C", 5);
 
         /// <summary>
         ///     WW Sollwert reduziert
         /// </summary>
         [Secondary]
+        [Description(@"WW Sollwert reduziert")]
         public AnalogValue SetPointReduced => new AnalogValue(71, "°C", 5);
 
         /// <summary>
         ///     WW Sollwert Frost
         /// </summary>
         [Secondary]
+        [Description(@"WW Sollwert Frost")]
         public AnalogValue SetPointFrost => new AnalogValue(70, "°C", 5);
 
         /// <summary>
         ///     WW Sollwert Legionellen
         /// </summary>
         [Secondary]
+        [Description(@"WW Sollwert Legionellen")]
         public AnalogValue SetPointLegio => new AnalogValue(73, "°C", 5);
 
     }

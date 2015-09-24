@@ -32,18 +32,21 @@ namespace ComfoBoxLib.Items
             ///     Genauer Reglertyp
             /// </summary>
             [Once]
+            [Description(@"Genauer Reglertyp")]
             public AnalogValue ControllerType => new AnalogValue(203, null) {IsReadOnly = true};
 
             /// <summary>
             ///     Angeschlossener Erweiterungstyp
             /// </summary>
             [Once]
+            [Description(@"Angeschlossener Erweiterungstyp")]
             public AnalogValue ExtensionType => new AnalogValue(2044, null) {IsReadOnly = true};
 
             /// <summary>
-            ///     Sofwareversion
+            ///     Softwareversion
             /// </summary>
             [Once]
+            [Description(@"Softwareversion")]
             public AnalogValue SoftwareVersion => new AnalogValue(2043, null) {IsReadOnly = true};
 
             /// <summary>
@@ -51,18 +54,21 @@ namespace ComfoBoxLib.Items
             ///     beim Laden der Applikation gesetzt
             /// </summary>
             [Once]
+            [Description(@"Das Inbetriebnahme-Datum der Reglers wird beim Laden der Applikation gesetzt")]
             public DateValue InitialOperationDate => new DateValue(3353, null) {IsReadOnly = true};
 
             /// <summary>
             ///     Betriebsstunden des Reglers
             /// </summary>
             [Secondary]
+            [Description(@"Betriebsstunden des Reglers")]
             public AnalogValue OperatingHours => new AnalogValue(211, "h") {IsReadOnly = true};
 
             /// <summary>
             ///     Anzahl Einschaltungen Regler-Speisung
             /// </summary>
             [Secondary]
+            [Description(@"Anzahl Einschaltungen Regler-Speisung")]
             public AnalogValue NumberOfStartUps => new AnalogValue(212, null) {IsReadOnly = true};
 
             /// <summary>
@@ -70,12 +76,14 @@ namespace ComfoBoxLib.Items
             ///     „Applikation laden…“
             /// </summary>
             [Secondary]
+            [Description(@"Anzahl der geänderten Parameter seit „Applikation laden…“")]
             public AnalogValue NumberOfParameterChanges => new AnalogValue(617, null) {IsReadOnly = true};
 
             /// <summary>
             ///     Datum der letzten Parameteränderung
             /// </summary>
             [Secondary]
+            [Description(@"Datum der letzten Parameteränderung")]
             public DateValue LastParameterChangeDate => new DateValue(618, null) {IsReadOnly = true};
         }
 
@@ -89,112 +97,123 @@ namespace ComfoBoxLib.Items
             ///     Betriebsstunden Stufe 1
             /// </summary>
             [Secondary]
+            [Description(@"Betriebsstunden Stufe 1")]
             public AnalogValue HeatPumpOperatingHours => new AnalogValue(30, "h") {IsReadOnly = true};
 
             /// <summary>
             ///     Anzahl Einschaltungen Stufe 1
             /// </summary>
             [Secondary]
+            [Description(@"Anzahl Einschaltungen Stufe 1")]
             public AnalogValue HeatPumpOperatingCycles => new AnalogValue(40, null) {IsReadOnly = true};
 
             /// <summary>
             ///     Betriebsstunden WW-elektrisch
             /// </summary>
             [Secondary]
+            [Description(@"Betriebsstunden WW-elektrisch")]
             public AnalogValue ElectricalWarmWaterOperatingHours => new AnalogValue(37, "h") {IsReadOnly = true};
 
             /// <summary>
             ///     Anzahl Einschaltungen WW-elektrisch
             /// </summary>
             [Secondary]
+            [Description(@"Anzahl Einschaltungen WW-elektrisch")]
             public AnalogValue ElectricalWarmWaterCycles => new AnalogValue(47, null) {IsReadOnly = true};
         }
 
         /// <summary>
-        /// Wärmepumpe
+        ///     Wärmepumpe
         /// </summary>
         [Description("Wärmepumpe")]
         public class HeatPump
         {
-            
-                /// <summary>
-                ///     Aktuelle WP-Leistung
-                /// </summary>
-                [Secondary]
-                public AnalogValue CurrentPower => new AnalogValue(45, "%") { IsReadOnly = true };
+            /// <summary>
+            ///     Aktuelle WP-Leistung
+            /// </summary>
+            [Secondary]
+            [Description(@"Aktuelle WP-Leistung")]
+            public AnalogValue CurrentPower => new AnalogValue(45, "%") {IsReadOnly = true};
 
-                /// <summary>
-                ///     Sollwert der WP-Regelung
-                /// </summary>
-                [Secondary]
-                public AnalogValue HeatPumpSetPoint => new AnalogValue(210, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     Sollwert der WP-Regelung
+            /// </summary>
+            [Secondary]
+            [Description(@"Sollwert der WP-Regelung")]
+            public AnalogValue HeatPumpSetPoint => new AnalogValue(210, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     Kühlvorlauftemp: Istwert Kühlvorlauf bei stetiger Primärpumpe
-                /// </summary>
-                [Primary]
-                public AnalogValue CoolingFlowTemperature => new AnalogValue(3098, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     Kühlvorlauftemp: Istwert Kühlvorlauf bei stetiger Primärpumpe
+            /// </summary>
+            [Primary]
+            [Description(@"Kühlvorlauftemp: Istwert Kühlvorlauf bei stetiger Primärpumpe")]
+            public AnalogValue CoolingFlowTemperature => new AnalogValue(3098, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     Primärtemperatur: Temperatur im Primärkreis
-                /// </summary>
-                [Primary]
-                public AnalogValue PrimaryTemperature => new AnalogValue(602, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     Primärtemperatur: Temperatur im Primärkreis
+            /// </summary>
+            [Primary]
+            [Description(@"Primärtemperatur: Temperatur im Primärkreis/Solekreis")]
+            public AnalogValue PrimaryTemperature => new AnalogValue(602, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     WP-Vorlauftemp: Istwert des WP-Vorlauffühlers
-                /// </summary>
-                [Primary]
-                public AnalogValue CurrentFlowTemperature => new AnalogValue(600, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     WP-Vorlauftemp: Istwert des WP-Vorlauffühlers
+            /// </summary>
+            [Primary]
+            [Description(@"WP-Vorlauftemp: Istwert des WP-Vorlauffühlers")]
+            public AnalogValue CurrentFlowTemperature => new AnalogValue(600, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     WP-Vor’temp Min/Max: Min/Max-Begrenzung auf WP-Vorlauffühler
-                /// </summary>
-                [Secondary]
-                public AnalogValue MaxFlowTemperature => new AnalogValue(648, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     WP-Vor’temp Min/Max: Min/Max-Begrenzung auf WP-Vorlauffühler
+            /// </summary>
+            [Secondary]
+            [Description(@"WP-Vor’temp Min/Max: Min/Max-Begrenzung auf WP-Vorlauffühler")]
+            public AnalogValue MaxFlowTemperature => new AnalogValue(648, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     Ansauglufttemp Aktuelle Ansauglufttemperatur
-                /// </summary>
-                [Primary]
-                public AnalogValue Ansauglufttemp => new AnalogValue(3222, "°C") { IsReadOnly = true };
+            /// <summary>
+            ///     Ansauglufttemp Aktuelle Ansauglufttemperatur
+            /// </summary>
+            [Primary]
+            [Description(@"Ansauglufttemp Aktuelle Ansauglufttemperatur")]
+            public AnalogValue Ansauglufttemp => new AnalogValue(3222, "°C") {IsReadOnly = true};
 
-                /// <summary>
-                ///     Anzeige des Betriebszustandes der Stufe 1
-                /// </summary>
-                [Primary]
-                public EnumValue<HeatPumpStatusEnums?> HeatPumpStatus
-                    => new EnumValue<HeatPumpStatusEnums?>(662) { IsReadOnly = true };
-
+            /// <summary>
+            ///     Anzeige des Betriebszustandes der Stufe 1
+            /// </summary>
+            [Primary]
+            [Description(@"Anzeige des Betriebszustandes der Stufe 1")]
+            public EnumValue<HeatPumpStatusEnums?> HeatPumpStatus
+                => new EnumValue<HeatPumpStatusEnums?>(662) {IsReadOnly = true};
         }
 
         /// <summary>
-        /// Ausgänge
+        ///     Ausgänge
         /// </summary>
+        [Description(@"Ausgänge")]
         public class Outputs
         {
             [Description("Primärpumpe Y1")]
             [Primary]
-            public AnalogValue PrimaryPump => new AnalogValue(2634, "%") { IsReadOnly = true };
+            public AnalogValue PrimaryPump => new AnalogValue(2634, "%") {IsReadOnly = true};
 
             [Description("Passivkühlen R1")]
             [Primary]
-            public AnalogValue FreeCooling => new AnalogValue(2624, null) { IsReadOnly = true };
+            public AnalogValue FreeCooling => new AnalogValue(2624, null) {IsReadOnly = true};
 
             //[Description("Passivkühlen inv")]
             //public AnalogValue R2 => new AnalogValue(2625, null);
 
             [Description("Verdichter R3")]
             [Primary]
-            public AnalogValue Verdichter => new AnalogValue(2626, null) { IsReadOnly = true };
+            public AnalogValue Verdichter => new AnalogValue(2626, null) {IsReadOnly = true};
 
             [Description("Heizkreispumpe R4")]
             [Primary]
-            public AnalogValue ZonePump => new AnalogValue(2627, null) { IsReadOnly = true };
+            public AnalogValue ZonePump => new AnalogValue(2627, null) {IsReadOnly = true};
 
             [Description("Warmwasser R5")]
             [Primary]
-            public AnalogValue WarmWater => new AnalogValue(2628, null) { IsReadOnly = true };
+            public AnalogValue WarmWater => new AnalogValue(2628, null) {IsReadOnly = true};
 
             //[Description("Warmwasser invers")]
             //[Primary]
@@ -202,7 +221,7 @@ namespace ComfoBoxLib.Items
 
             [Description("Warmwasser elektrisch R7")]
             [Primary]
-            public AnalogValue ElectricalWarmWater => new AnalogValue(2630, null) { IsReadOnly = true };
+            public AnalogValue ElectricalWarmWater => new AnalogValue(2630, null) {IsReadOnly = true};
 
             //[Description("Kein Funktion")]
             //public AnalogValue R8 => new AnalogValue(2631, null);
@@ -213,72 +232,77 @@ namespace ComfoBoxLib.Items
 
             [Description("Zusatzheizung R10")]
             [Primary]
-            public AnalogValue AdditionalHeater => new AnalogValue(2633, null) { IsReadOnly = true };
+            public AnalogValue AdditionalHeater => new AnalogValue(2633, null) {IsReadOnly = true};
         }
 
         /// <summary>
         ///     Warmwasser
         /// </summary>
+        [Description(@"Warmwasser")]
         public class WarmWater
         {
             /// <summary>
             ///     Istwert Warmwasser
             /// </summary>
             [Primary]
-            public AnalogValue Temperature => new AnalogValue(3, "°C") { IsReadOnly = true };
+            [Description(@"Istwert Warmwasser")]
+            public AnalogValue Temperature => new AnalogValue(3, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Aktuell gültiger WW-Sollwert
             /// </summary>
             [Primary]
-            public AnalogValue CurrentTargetTemperature => new AnalogValue(207, "°C") { IsReadOnly = true };
-
-            // Other values?: 2598, 397, 2599
+            [Description(@"Aktuell gültiger WW-Sollwert")]
+            public AnalogValue CurrentTargetTemperature => new AnalogValue(207, "°C") {IsReadOnly = true};
         }
 
         /// <summary>
         ///     Zone
         /// </summary>
+        [Description(@"Zone")]
         public class Zone
         {
             /// <summary>
             ///     Istwert Raum
             /// </summary>
             [Primary]
-            public AnalogValue RoomTemperature => new AnalogValue(12, "°C") { IsReadOnly = true };
+            [Description(@"Istwert Raum")]
+            public AnalogValue RoomTemperature => new AnalogValue(12, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Aktueller Sollwert Raum
             /// </summary>
             [Primary]
-            public AnalogValue CurrentSetPoint => new AnalogValue(208, "°C") { IsReadOnly = true };
+            [Description(@"Aktueller Sollwert Raum")]
+            public AnalogValue CurrentSetPoint => new AnalogValue(208, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Aktuell gemessene Vorlauftemperatur
             /// </summary>
             [Primary]
-            public AnalogValue FlowTemperature => new AnalogValue(14, "°C") { IsReadOnly = true };
+            [Description(@"Aktuell gemessene Vorlauftemperatur")]
+            public AnalogValue FlowTemperature => new AnalogValue(14, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Berchnete Soll - Vorlauftemperatur
             /// </summary>
             [Primary]
-            public AnalogValue CalculatedFlowTemperature => new AnalogValue(209, "°C") { IsReadOnly = true };
+            [Description(@"Berchnete Soll - Vorlauftemperatur")]
+            public AnalogValue CalculatedFlowTemperature => new AnalogValue(209, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Aussentemperatur
             /// </summary>
             [Primary]
-            public AnalogValue OutdoorTemperature => new AnalogValue(10, "°C") { IsReadOnly = true };
+            [Description(@"Aussentemperatur")]
+            public AnalogValue OutdoorTemperature => new AnalogValue(10, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Gebäudebezogene Aussentemperatur
             /// </summary>
             [Primary]
-            public AnalogValue OutdoorTemperatureBuilding => new AnalogValue(205, "°C") { IsReadOnly = true };
-
-            // Other values?: 59, 398, 676
+            [Description(@"ebäudebezogene Aussentemperatur")]
+            public AnalogValue OutdoorTemperatureBuilding => new AnalogValue(205, "°C") {IsReadOnly = true};
         }
-
     }
 }
