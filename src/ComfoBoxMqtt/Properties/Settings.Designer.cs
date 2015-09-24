@@ -103,5 +103,23 @@ namespace ComfoBoxMqtt.Properties {
                 return ((string)(this["WriteTopicsFilePath"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public int PollSpecialValuesIntervalInMs {
+            get {
+                return ((int)(this["PollSpecialValuesIntervalInMs"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Special")]
+        public string SpecialSubTopic {
+            get {
+                return ((string)(this["SpecialSubTopic"]));
+            }
+        }
     }
 }

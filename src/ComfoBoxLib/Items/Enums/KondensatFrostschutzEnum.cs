@@ -9,18 +9,15 @@
 //  *    RF77 - initial API and implementation and/or initial documentation
 //  *******************************************************************************/ 
 
-using System;
-
-namespace ComfoBoxLib.Values
+namespace ComfoBoxLib.Items.Enums
 {
-    public interface IEnumValue
+    public enum KondensatFrostschutzEnum
     {
-        void SetValueFromString(string value);
-        Type GetEnumType();
-    }
-
-    public interface IChangeableValue
-    {
-        
+        KeineFunktion = 0,
+        MitWpVorlauftemperatur = 31,
+        MitSauggastemperatur = 37,
+        MitKondensatortemperatur = 39,
+        MitKondFrostchPressost = 63,
+        KondWpFrostmitTKond = 80
     }
 }

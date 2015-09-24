@@ -12,6 +12,7 @@
 using System;
 using System.ComponentModel;
 using ComfoBoxLib.Attributes;
+using ComfoBoxLib.Items.Enums;
 using ComfoBoxLib.Properties;
 using ComfoBoxLib.Values;
 
@@ -142,7 +143,7 @@ namespace ComfoBoxLib.Items
                 /// </summary>
                 [Secondary]
                 [Description(@"Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen. Parameter „Kondensat’frostschutz“ definiert, welcher Fühler für die Schutzfunktion zuständig ist.")]
-                public EnumValue<KondensatFrostschutzEnum> KondensatFrostschutz => new EnumValue<KondensatFrostschutzEnum>(494) { IsReadOnly = !Settings.Default.ExpertMode };
+                public EnumValue<KondensatFrostschutzEnum?> KondensatFrostschutz => new EnumValue<KondensatFrostschutzEnum?>(494) { IsReadOnly = !Settings.Default.ExpertMode };
 
                 //TODO: 1984
 

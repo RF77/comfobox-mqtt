@@ -23,8 +23,8 @@ namespace ComfoBoxLib.Values
 
         public override float? ConvertValueBack(object value)
         {
-            if (Value == null) return null;
-            var convertValueBack = Convert.ToInt32(Value);
+            if (value == null) return null;
+            var convertValueBack = Convert.ToInt32(value);
             return convertValueBack;
         }
 

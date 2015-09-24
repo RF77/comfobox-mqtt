@@ -21,6 +21,7 @@ using ComfoBoxLib;
 using ComfoBoxLib.Properties;
 using ComfoBoxMqtt.Groups;
 using ComfoBoxMqtt.Models;
+using ComfoBoxMqtt.Models.Items;
 using log4net;
 using Settings = ComfoBoxMqtt.Properties.Settings;
 
@@ -32,6 +33,8 @@ namespace ComfoBoxMqtt
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ComfoBoxClient _comfoBoxClient;
         private IEnumerable<MqttItem> _items;
+        private IEnumerable<ISpecialItem> _specialItems;
+        private SpecialMqttItem<int?> _numberOfWritePer24hMqttItem;
 
         public ComfoBoxMqttClient(string brokerHostName, int brokerPort, string username, string password,
             ComfoBoxClient comfoBoxClient) : base(brokerHostName, brokerPort, username, password)
@@ -55,6 +58,7 @@ namespace ComfoBoxMqtt
             _cancellationTokenSource = new CancellationTokenSource();
             await Task.Delay(1);
             _items = ItemFactory.CreateItems(this, () => _comfoBoxClient);
+            _specialItems = CreateSpecialItems();
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
@@ -62,7 +66,33 @@ namespace ComfoBoxMqtt
             }
 #endif
             Connect();
+            PollSpecialItems();
             await _comfoBoxClient.StartAsync();
+        }
+
+        private IEnumerable<ISpecialItem> CreateSpecialItems()
+        {
+            List<ISpecialItem> items = new List<ISpecialItem>();
+            _numberOfWritePer24hMqttItem = new SpecialMqttItem<int?>(this, "NumberOfWritesPer24h");
+            items.Add(_numberOfWritePer24hMqttItem);
+            return items;
+        }
+
+        private async void PollSpecialItems()
+        {
+            while (!_cancellationTokenSource.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    _numberOfWritePer24hMqttItem.Value = ComfoBoxClient.CurrentNumberOfWrites;
+                    await Task.Delay(Settings.Default.PollSpecialValuesIntervalInMs);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"PollSpecialItems() has thrown an exception: {ex.Message}");
+                    await Task.Delay(Settings.Default.PollSpecialValuesIntervalInMs);
+                }
+            }
         }
 
         public new Mqtt On => base.On;

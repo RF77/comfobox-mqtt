@@ -50,8 +50,11 @@ namespace ComfoBoxLib
 
         public bool Initialized { get; set; }
 
+        public event Action ValuesChanged;
+
         public void Dispose()
         {
+            ValuesChanged = null;
             _bacnetClient?.Dispose();
         }
 
@@ -172,19 +175,19 @@ namespace ComfoBoxLib
         {
             lock (this)
             {
-                if (!WriteProtectionEnabled || CurrentNumberOfWrites++ <= Settings.Default.MaxNumberOfWritesPer24h)
+                if (!WriteProtectionEnabled || CurrentNumberOfWrites < Settings.Default.MaxNumberOfWritesPer24h)
                 {
+
                     // Looking for the device
                     var adr = DeviceAddr((uint) deviceId);
                     if (adr == null) return false; // not found
 
                     Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
 
-                    // Property Read
-                    if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] {value}) == false)
-                        return false;
-
-                    return true;
+                    bool retValue = _bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] {value});
+                    CurrentNumberOfWrites++;
+                    ValuesChanged?.Invoke();
+                    return retValue;
                 }
                 Logger.Error(
                     $"WriteScalarValue(): Number of Writes per 24h exceeded. Change the number MaxNumberOfWritesPer24h if requried.");

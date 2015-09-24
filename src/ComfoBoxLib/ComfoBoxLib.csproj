@@ -68,7 +68,7 @@
     <Compile Include="Attributes\SecondaryAttribute.cs" />
     <Compile Include="Items\Enums\HeatingCoolingModes.cs" />
     <Compile Include="Items\Enums\OperationModes.cs" />
-    <Compile Include="Items\KondensatFrostschutzEnum.cs" />
+    <Compile Include="Items\Enums\KondensatFrostschutzEnum.cs" />
     <Compile Include="Items\States.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
@@ -76,6 +76,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="Settings.cs" />
     <Compile Include="Values\AnalogValue.cs" />
     <Compile Include="BacNode.cs" />
     <Compile Include="ComfoBoxClient.cs" />

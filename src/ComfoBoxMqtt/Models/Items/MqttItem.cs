@@ -20,7 +20,7 @@ using ComfoBoxLib.Values;
 using ComfoBoxMqtt.Properties;
 using log4net;
 
-namespace ComfoBoxMqtt.Models
+namespace ComfoBoxMqtt.Models.Items
 {
     [DebuggerDisplay("{Topic}: {ItemValue.Value}")]
     public class MqttItem
