@@ -12,6 +12,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ComfoBoxLib;
 using ComfoBoxLib.Attributes;
 using ComfoBoxLib.Items;
 using ComfoBoxLib.Values;
@@ -23,29 +24,28 @@ namespace ComfoBoxMqtt.Groups
 {
     public class ItemFactory
     {
-        public static IEnumerable<MqttItem> CreateItems(ComfoBoxMqttClient client)
+        public static IEnumerable<MqttItem> CreateItems(ComfoBoxMqttClient client, Func<ComfoBoxClient> comfoBoxClientFunc)
         {
             string topicName = Settings.Default.BaseTopic;
             List<MqttItem> items = new List<MqttItem>();
 
-            CreateItemsFromClass(items, typeof (Zone), topicName, client);
-            CreateItemsFromClass(items, typeof (Warmwater), topicName, client);
-            CreateItemsFromClass(items, typeof (States), topicName, client);
-            CreateItemsFromClass(items, typeof (Time), topicName, client);
-            CreateItemsFromClass(items, typeof (Config), topicName, client);
+            CreateItemsFromClass(items, typeof (Zone), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof (Warmwater), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof (States), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof (Time), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof (Config), topicName, client, comfoBoxClientFunc);
 
             return items;
         }
 
-        private static void CreateItemsFromClass(List<MqttItem> list, Type classType, string topicName,
-            ComfoBoxMqttClient client)
+        private static void CreateItemsFromClass(List<MqttItem> list, Type classType, string topicName, ComfoBoxMqttClient client, Func<ComfoBoxClient> comfoBoxClientFunc)
         {
             var topicSubName = classType.Name;
             var newTopicName = $"{topicName}/{topicSubName}";
 
             foreach (var subType in classType.GetNestedTypes())
             {
-                CreateItemsFromClass(list, subType, newTopicName, client);
+                CreateItemsFromClass(list, subType, newTopicName, client, comfoBoxClientFunc);
             }
 
             var instance = classType.CreateInstance();
@@ -64,11 +64,11 @@ namespace ComfoBoxMqtt.Groups
 
                 if (propertyValue is IEnumValue)
                 {
-                    list.Add(new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic));
+                    list.Add(new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc));
                 }
                 else
                 {
-                    list.Add(new MqttItem(propertyValue, RefreshPriority.None, client, topic));
+                    list.Add(new MqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc));
                 }
             }
         }

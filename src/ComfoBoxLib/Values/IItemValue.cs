@@ -11,6 +11,7 @@
 
 using System;
 using System.ComponentModel;
+using System.IO.BACnet;
 using System.Threading.Tasks;
 
 namespace ComfoBoxLib.Values
@@ -21,7 +22,11 @@ namespace ComfoBoxLib.Values
         object Value { get; }
         string Unit { get; }
         bool IsReadOnly { get; }
+        BacnetApplicationTags Tag { get; }
+        BacnetObjectId BacnetObjectId { get; }
         Task ReadValueAsync(ComfoBoxClient client);
         Task WriteValueAsync(ComfoBoxClient client);
+        float? ConvertValueBack();
+        void SetNewValue(object newValue);
     }
 }

@@ -25,7 +25,7 @@ namespace ComfoBoxLib.Values
             BacnetObjectId = new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, id);
         }
 
-        protected internal override float? ConvertValueBack()
+        public override float? ConvertValueBack()
         {
             //TODO #15
             throw new NotImplementedException("Dates cannot written so far");

@@ -21,11 +21,17 @@ namespace ComfoBoxLib.Values
             BacnetObjectId = new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, id);
         }
 
-        protected internal override float? ConvertValueBack()
+        public override float? ConvertValueBack()
         {
             if (Value == null) return null;
             var convertValueBack = Convert.ToInt32(Value);
             return convertValueBack;
+        }
+
+        public override void SetNewValue(object newValue)
+        {
+            int val = (int)(float)newValue;
+            Value = (TValue) Enum.ToObject(GetEnumType(), val);
         }
 
         protected override void ConvertValue(object readValue)

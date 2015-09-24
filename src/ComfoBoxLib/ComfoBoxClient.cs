@@ -149,6 +149,8 @@ namespace ComfoBoxLib
             var adr = DeviceAddr((uint)deviceId);
             if (adr == null) return false; // not found
 
+            Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
+
             // Property Read
             if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] { value }) == false)
                 return false;
@@ -205,7 +207,7 @@ namespace ComfoBoxLib
             return val;
         }
 
-        public bool WriteValue<T>(ItemValue<T> itemValue)
+        public bool WriteValue(IItemValue itemValue)
         {
             BacnetValue val = new BacnetValue(itemValue.Tag, itemValue.ConvertValueBack());
             return WriteScalarValue(Settings.Default.BacnetMasterId,
@@ -213,5 +215,7 @@ namespace ComfoBoxLib
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 val);
         }
+
+    
     }
 }

@@ -54,7 +54,7 @@ namespace ComfoBoxMqtt
         {
             _cancellationTokenSource = new CancellationTokenSource();
             await Task.Delay(1);
-            _items = ItemFactory.CreateItems(this);
+            _items = ItemFactory.CreateItems(this, () => _comfoBoxClient);
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
@@ -64,6 +64,8 @@ namespace ComfoBoxMqtt
             Connect();
             await _comfoBoxClient.StartAsync();
         }
+
+        public new Mqtt On => base.On;
 
         public async Task StartPollingAsync()
         {

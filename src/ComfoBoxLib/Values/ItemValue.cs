@@ -25,7 +25,7 @@ namespace ComfoBoxLib.Values
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private TValue _value;
         private BacnetApplicationTags _tag;
-        internal BacnetObjectId BacnetObjectId { get; set; }
+        public BacnetObjectId BacnetObjectId { get; set; }
 
         public event Action<object, float> InitializedValueChanged;
 
@@ -87,7 +87,11 @@ namespace ComfoBoxLib.Values
             }
         }
 
-        protected internal abstract float? ConvertValueBack();
+        public abstract float? ConvertValueBack();
+        public virtual void SetNewValue(object newValue)
+        {
+            Value = (TValue) newValue;
+        }
 
 
         public event PropertyChangedEventHandler PropertyChanged;
