@@ -61,7 +61,11 @@ namespace ComfoBoxMqtt.Models
             base.SubscribeValues();
             if (!ItemValue.IsReadOnly)
             {
-                MqttClient.On[SetAsNumberTopic] = _ => { WriteValueIfChanged(_.Message); };
+                MqttClient.On[SetAsNumberTopic] = async _ =>
+                {
+                    WriteValueIfChanged(_.Message);
+                    await ReadAsync(_comfoBoxClientFunc());
+                };
             }
         }
 
@@ -71,7 +75,7 @@ namespace ComfoBoxMqtt.Models
             {
                 return;
             }
-            float? currentVal = ItemValue.ConvertValueBack();
+            float? currentVal = ItemValue.ConvertValueBack(ItemValue.Value);
             IEnumValue enumValue = ItemValue as IEnumValue;
             float newValue;
             if (!float.TryParse(message, out newValue))
@@ -84,8 +88,7 @@ namespace ComfoBoxMqtt.Models
                 var comfoBoxClient = _comfoBoxClientFunc?.Invoke();
                 if (comfoBoxClient != null)
                 {
-                    ItemValue.SetNewValue(newValue);
-                    comfoBoxClient.WriteValue(ItemValue);
+                    comfoBoxClient.WriteValue(ItemValue, newValue);
                 }
                 else
                 {

@@ -26,7 +26,6 @@ namespace ComfoBoxLib.Values
         BacnetObjectId BacnetObjectId { get; }
         Task ReadValueAsync(ComfoBoxClient client);
         Task WriteValueAsync(ComfoBoxClient client);
-        float? ConvertValueBack();
-        void SetNewValue(object newValue);
+        float? ConvertValueBack(object value);
     }
 }

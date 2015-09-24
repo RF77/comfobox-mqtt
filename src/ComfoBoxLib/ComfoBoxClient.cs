@@ -127,6 +127,9 @@ namespace ComfoBoxLib
         public bool ReadScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property,
             out BacnetValue value)
         {
+            lock (this)
+            {
+                
             IList<BacnetValue> noScalarValue;
 
             value = new BacnetValue(null);
@@ -141,21 +144,25 @@ namespace ComfoBoxLib
 
             value = noScalarValue[0];
             return true;
+            }
         }
 
         public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property, BacnetValue value)
         {
-            // Looking for the device
-            var adr = DeviceAddr((uint)deviceId);
-            if (adr == null) return false; // not found
+            lock (this)
+            {
+                // Looking for the device
+                var adr = DeviceAddr((uint) deviceId);
+                if (adr == null) return false; // not found
 
-            Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
+                Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
 
-            // Property Read
-            if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] { value }) == false)
-                return false;
+                // Property Read
+                if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] {value}) == false)
+                    return false;
 
-            return true;
+                return true;
+            }
         }
 
 
@@ -197,21 +204,21 @@ namespace ComfoBoxLib
             }
         }
 
-        public BacnetValue ReadValue<T>(ItemValue<T> itemValue)
+        public BacnetValue ReadValue(IItemValue item)
         {
             BacnetValue val;
             ReadScalarValue(Settings.Default.BacnetMasterId,
-                itemValue.BacnetObjectId,
+                item.BacnetObjectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 out val);
             return val;
         }
 
-        public bool WriteValue(IItemValue itemValue)
+        public bool WriteValue(IItemValue item, object newItemValue)
         {
-            BacnetValue val = new BacnetValue(itemValue.Tag, itemValue.ConvertValueBack());
+            BacnetValue val = new BacnetValue(item.Tag, item.ConvertValueBack(newItemValue));
             return WriteScalarValue(Settings.Default.BacnetMasterId,
-                itemValue.BacnetObjectId,
+                item.BacnetObjectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 val);
         }

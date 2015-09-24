@@ -72,7 +72,11 @@ namespace ComfoBoxMqtt.Models
         {
             if (!ItemValue.IsReadOnly)
             {
-                MqttClient.On[SetTopic] = _ => { WriteValueIfChanged(_.Message); };
+                MqttClient.On[SetTopic] = async _ =>
+                {
+                    WriteValueIfChanged(_.Message);
+                    await ReadAsync(_comfoBoxClientFunc());
+                };
             }
         }
 
@@ -92,8 +96,7 @@ namespace ComfoBoxMqtt.Models
                     var comfoBoxClient = _comfoBoxClientFunc?.Invoke();
                     if (comfoBoxClient != null)
                     {
-                        ItemValue.SetNewValue(val);
-                        comfoBoxClient.WriteValue(ItemValue);
+                        comfoBoxClient.WriteValue(ItemValue, val);
                     }
                     else
                     {

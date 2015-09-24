@@ -49,7 +49,7 @@ namespace ComfoBoxLib.Values
 
         private void OnInitializedValueChanged()
         {
-            var f = ConvertValueBack();
+            var f = ConvertValueBack(Value);
             if (f != null) InitializedValueChanged?.Invoke(this, f.Value);
         }
 
@@ -80,18 +80,14 @@ namespace ComfoBoxLib.Values
         {
             //Temp: as long there is no async client.ReadValue
             await Task.Delay(1);
-            float? value = ConvertValueBack();
+            float? value = ConvertValueBack(Value);
             if (value != null)
             {
-                client.WriteValue(this);
+                client.WriteValue(this, Value);
             }
         }
 
-        public abstract float? ConvertValueBack();
-        public virtual void SetNewValue(object newValue)
-        {
-            Value = (TValue) newValue;
-        }
+        public abstract float? ConvertValueBack(object value);
 
 
         public event PropertyChangedEventHandler PropertyChanged;
