@@ -30,7 +30,7 @@ Configuration: ComfoboxService.exe.config. Please change the port name to your p
 
 ## MQTT Topics
 
-[Here](Added the [Mono compatibility test](https://rawgit.com/RF77/comfobox-mqtt/master/docs/topics.txt) is a list of all MQTT topics.
+[Here](https://rawgit.com/RF77/comfobox-mqtt/master/docs/topics.txt) is a list of all MQTT topics.
 
 ### Write values
 Use ../Set topics to write a value to your ComfoBox. In the topics.txt you can see the writable topics
