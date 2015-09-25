@@ -78,7 +78,7 @@
                         Name="ComfoBox MQTT Gateway"
                         DisplayName="ComfoBox MQTT Gateway"
                         Description="Access your ComfoBox over MQTT"
-                        Start="auto"
+                        Start="demand"
                         Account="LocalSystem"
                         ErrorControl="ignore"
                         Interactive="no" />
