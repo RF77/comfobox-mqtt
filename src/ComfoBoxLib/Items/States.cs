@@ -175,7 +175,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [Primary]
             [Description(@"Ansauglufttemp Aktuelle Ansauglufttemperatur")]
-            public AnalogValue Ansauglufttemp => new AnalogValue(3222, "°C") {IsReadOnly = true};
+            public AnalogValue SuctionAirTemp => new AnalogValue(3222, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Anzeige des Betriebszustandes der Stufe 1
