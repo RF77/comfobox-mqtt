@@ -16,7 +16,6 @@ using ComfoBoxLib.Values;
 
 namespace ComfoBoxLib.Items
 {
-
     [Description(@"Zone")]
     public class Zone
     {

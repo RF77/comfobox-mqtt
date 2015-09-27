@@ -30,7 +30,8 @@ namespace ComfoBoxMqtt.Groups
             string topicName = Settings.Default.BaseTopic;
             List<MqttItem> items = new List<MqttItem>();
 
-            CreateItemsFromClass(items, typeof (Zone), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof(Zone), topicName, client, comfoBoxClientFunc);
+            CreateItemsFromClass(items, typeof(Tests), topicName, client, comfoBoxClientFunc);
             CreateItemsFromClass(items, typeof (Warmwater), topicName, client, comfoBoxClientFunc);
             CreateItemsFromClass(items, typeof (States), topicName, client, comfoBoxClientFunc);
             CreateItemsFromClass(items, typeof (Time), topicName, client, comfoBoxClientFunc);

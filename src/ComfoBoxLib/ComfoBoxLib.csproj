@@ -70,6 +70,7 @@
     <Compile Include="Items\Enums\OperationModes.cs" />
     <Compile Include="Items\Enums\KondensatFrostschutzEnum.cs" />
     <Compile Include="Items\States.cs" />
+    <Compile Include="Items\Tests.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>

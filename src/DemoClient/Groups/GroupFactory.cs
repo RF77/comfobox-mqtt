@@ -24,7 +24,8 @@ namespace DemoClient.Groups
         public static IEnumerable<GroupViewModel> CreateGroups(Func<ComfoBoxClient> clientFunc)
         {
             var root = new GroupViewModel("ComfoBox");
-            CreateGroupFromClass(root, typeof (Zone), clientFunc);
+            CreateGroupFromClass(root, typeof(Zone), clientFunc);
+            CreateGroupFromClass(root, typeof(Tests), clientFunc);
             CreateGroupFromClass(root, typeof (Warmwater), clientFunc);
             CreateGroupFromClass(root, typeof (States), clientFunc);
             CreateGroupFromClass(root, typeof (Time), clientFunc);
