@@ -166,10 +166,44 @@ namespace ComfoBoxLib.Items
 
         }
 
-        //TODO: Begrenzungen
+        /// <summary>
+        /// Wärmepumpe Stufe 1
+        /// </summary>
+        [Description(@"Wärmepumpe Stufe 1: Die „Schaltdifferenz Stufe 1“ liegt symmetrisch zum aktiven Energieerzeugersollwert. Die minimale Energieerzeugerlaufzeit wirkt auf den Energieerzeuger, wenn eine Energieanforderung vorhanden ist.Nach Abschaltung des Kompressors sperrt die Wiedereinschaltverzögerung eine erneute Zuschaltung. Beim Überschreiten der „WP - Vorlauf Maximal“-Begrenzung(444) schaltet den Kompressor ab, die Kondensatorpumpe läuft weiter, die Wiedereinschaltverzögerung wird um die Hälfte reduziert")]
+        public class HeatPump
+        {
+            /// <summary>
+            ///     Schaltdifferenz Stufe 1
+            /// </summary>
+            [Secondary]
+            [Description(@"Schaltdifferenz Stufe 1")]
+            public AnalogValue SwitchingDifferenceStage1 => new AnalogValue(140, "K", 2, 20) { IsReadOnly = !Settings.Default.ExpertMode };
 
-        //TODO: Stufe 1
-        //TODO: Kühlen
+            /// <summary>
+            ///     Min WP-Laufzeit
+            /// </summary>
+            [Secondary]
+            [Description(@"Min WP-Laufzeit")]
+            public AnalogValue MinHeatpumpRunningTime => new AnalogValue(143, "min", 0, 30) { IsReadOnly = false };
+
+
+            /// <summary>
+            ///     Wiedereinschaltverzögerung 1
+            /// </summary>
+            [Secondary]
+            [Description(@"Wiedereinschaltverzögerung")]
+            public AnalogValue RestartDelay => new AnalogValue(864, "min", 0, 60) { IsReadOnly = false };
+
+
+            /// <summary>
+            ///    WP-Vorlauf Maximal
+            /// </summary>
+            [Secondary]
+            [Description(@"WP-Vorlauf Maximal")]
+            public AnalogValue FlowMaxTemperature => new AnalogValue(444, "°C", 0, 150) { IsReadOnly = false };
+        }
+
+        //TODO: Kühlen?  Soweit kein Interesse
         //TODO: Energieabn parametrieren
         //TODO: Heizkurve Zone
         //TODO: Heizen Zone
