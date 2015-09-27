@@ -24,6 +24,8 @@ namespace ComfoBoxLib
 {
     public class ComfoBoxClient : IDisposable
     {
+        public static int CurrentNumberOfWrites;
+        public static bool TimerIsRunning;
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private readonly List<BacNode> _devicesList = new List<BacNode>();
         private BacnetClient _bacnetClient;
@@ -34,6 +36,12 @@ namespace ComfoBoxLib
             PortName = portName;
             Baudrate = baudrate;
             SourceAddress = sourceAddress;
+            StartTimer();
+        }
+
+        private static bool WriteProtectionEnabled
+        {
+            get { return Settings.Default.MaxNumberOfWritesPer24h > 0; }
         }
 
         public string PortName { get; }
@@ -42,9 +50,25 @@ namespace ComfoBoxLib
 
         public bool Initialized { get; set; }
 
+        public event Action ValuesChanged;
+
         public void Dispose()
         {
+            ValuesChanged = null;
             _bacnetClient?.Dispose();
+        }
+
+        private async void StartTimer()
+        {
+            if (!TimerIsRunning && WriteProtectionEnabled)
+            {
+                while (true)
+                {
+                    TimerIsRunning = true;
+                    await Task.Delay(24*60*60*1000); //24h
+                    CurrentNumberOfWrites = 0;
+                }
+            }
         }
 
         public async Task StartAsync()
@@ -129,39 +153,45 @@ namespace ComfoBoxLib
         {
             lock (this)
             {
-                
-            IList<BacnetValue> noScalarValue;
+                IList<BacnetValue> noScalarValue;
 
-            value = new BacnetValue(null);
+                value = new BacnetValue(null);
 
-            // Looking for the device
-            var adr = DeviceAddr((uint) deviceId);
-            if (adr == null) return false; // not found
-
-            // Property Read
-            if (_bacnetClient.ReadPropertyRequest(adr, bacnetObjet, property, out noScalarValue) == false)
-                return false;
-
-            value = noScalarValue[0];
-            return true;
-            }
-        }
-
-        public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property, BacnetValue value)
-        {
-            lock (this)
-            {
                 // Looking for the device
                 var adr = DeviceAddr((uint) deviceId);
                 if (adr == null) return false; // not found
 
-                Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
-
                 // Property Read
-                if (_bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] {value}) == false)
+                if (_bacnetClient.ReadPropertyRequest(adr, bacnetObjet, property, out noScalarValue) == false)
                     return false;
 
+                value = noScalarValue[0];
                 return true;
+            }
+        }
+
+        public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property,
+            BacnetValue value)
+        {
+            lock (this)
+            {
+                if (!WriteProtectionEnabled || CurrentNumberOfWrites < Settings.Default.MaxNumberOfWritesPer24h)
+                {
+
+                    // Looking for the device
+                    var adr = DeviceAddr((uint) deviceId);
+                    if (adr == null) return false; // not found
+
+                    Logger.Debug($"WriteScalarValue(): {bacnetObjet.Instance} = {value}");
+
+                    bool retValue = _bacnetClient.WritePropertyRequest(adr, bacnetObjet, property, new[] {value});
+                    CurrentNumberOfWrites++;
+                    ValuesChanged?.Invoke();
+                    return retValue;
+                }
+                Logger.Error(
+                    $"WriteScalarValue(): Number of Writes per 24h exceeded. Change the number MaxNumberOfWritesPer24h if requried.");
+                return false;
             }
         }
 
@@ -222,7 +252,5 @@ namespace ComfoBoxLib
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 val);
         }
-
-    
     }
 }

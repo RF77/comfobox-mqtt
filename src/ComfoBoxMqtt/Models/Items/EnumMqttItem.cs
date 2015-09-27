@@ -18,7 +18,7 @@ using ComfoBoxLib.Values;
 using ComfoBoxMqtt.Properties;
 using log4net;
 
-namespace ComfoBoxMqtt.Models
+namespace ComfoBoxMqtt.Models.Items
 {
     public class EnumMqttItem : MqttItem
     {
@@ -71,29 +71,36 @@ namespace ComfoBoxMqtt.Models
 
         protected override void WriteValueIfChanged(string message)
         {
-            if (ItemValue.Value == null)
+            try
             {
-                return;
-            }
-            float? currentVal = ItemValue.ConvertValueBack(ItemValue.Value);
-            IEnumValue enumValue = ItemValue as IEnumValue;
-            float newValue;
-            if (!float.TryParse(message, out newValue))
-            {
-                newValue = Convert.ToInt32(Enum.Parse(enumValue.GetEnumType(), message));
-            }
-            double TOLERANCE = 0.000001;
-            if (currentVal != null && Math.Abs(newValue - currentVal.Value) > TOLERANCE)
-            {
-                var comfoBoxClient = _comfoBoxClientFunc?.Invoke();
-                if (comfoBoxClient != null)
+                if (ItemValue.Value == null)
                 {
-                    comfoBoxClient.WriteValue(ItemValue, newValue);
+                    return;
                 }
-                else
+                float? currentVal = ItemValue.ConvertValueBack(ItemValue.Value);
+                IEnumValue enumValue = ItemValue as IEnumValue;
+                float newValue;
+                if (!float.TryParse(message, out newValue))
                 {
-                    Logger.Error($"Couldn't write item {Topic}: {message}");
+                    newValue = Convert.ToInt32(Enum.Parse(enumValue.GetEnumType(), message));
                 }
+                double TOLERANCE = 0.000001;
+                if (currentVal != null && Math.Abs(newValue - currentVal.Value) > TOLERANCE)
+                {
+                    var comfoBoxClient = _comfoBoxClientFunc?.Invoke();
+                    if (comfoBoxClient != null)
+                    {
+                        comfoBoxClient.WriteValue(ItemValue, newValue);
+                    }
+                    else
+                    {
+                        Logger.Error($"Couldn't write item {Topic}: {message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"WriteValueIfChanged() has thrown an exception: {ex.Message}");
             }
         }
 

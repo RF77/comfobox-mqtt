@@ -17,6 +17,7 @@ using ComfoBoxLib.Attributes;
 using ComfoBoxLib.Items;
 using ComfoBoxLib.Values;
 using ComfoBoxMqtt.Models;
+using ComfoBoxMqtt.Models.Items;
 using ComfoBoxMqtt.Properties;
 using Fasterflect;
 

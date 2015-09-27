@@ -76,5 +76,14 @@ namespace ComfoBoxLib.Properties {
                 return ((bool)(this["ExpertMode"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("200")]
+        public int MaxNumberOfWritesPer24h {
+            get {
+                return ((int)(this["MaxNumberOfWritesPer24h"]));
+            }
+        }
     }
 }

@@ -28,7 +28,7 @@ namespace ComfoBoxLib.Values
 
         public override float? ConvertValueBack(object value)
         {
-            return Value;
+            return (float?)value;
         }
     }
 }
