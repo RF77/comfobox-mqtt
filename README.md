@@ -4,9 +4,10 @@ Connect to your Zehnder ComfoBox with an ELESTA controller over RS485/BACnet MST
 
 ## Hardware
 You need an RS485 port on your PC (tested with a USB2RS485 Adapter with a CH340 chip).
-Afterwards connect it parallel to your ComfoBox controlling unit (marked red in image).
+Afterwards connect the RS485 **parallel** to your ComfoBox controlling unit.
 
-
+![Connect to the red marked pins](/docs/images/Elesta.png)
+Red is the ComfoBox controlling unit - Green the RS485 port
 
 ## Installation
 
