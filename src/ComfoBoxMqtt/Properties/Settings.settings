@@ -27,7 +27,7 @@
       <Value Profile="(Default)">True</Value>
     </Setting>
     <Setting Name="WriteTopicsFilePath" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">c:\temp\topics.txt</Value>
+      <Value Profile="(Default)">..\..\..\..\..\docs\topics.txt</Value>
     </Setting>
     <Setting Name="PollSpecialValuesIntervalInMs" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">1000</Value>

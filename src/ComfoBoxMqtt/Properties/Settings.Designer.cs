@@ -97,7 +97,7 @@ namespace ComfoBoxMqtt.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("c:\\temp\\topics.txt")]
+        [global::System.Configuration.DefaultSettingValueAttribute("..\\..\\..\\..\\..\\docs\\topics.txt")]
         public string WriteTopicsFilePath {
             get {
                 return ((string)(this["WriteTopicsFilePath"]));

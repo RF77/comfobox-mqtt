@@ -192,11 +192,14 @@ namespace ComfoBoxLib.Items
         [Description(@"Eingänge")]
         public class Inputs
         {
+            [Description("Raumtemperatur 2 E6")]
+            [Primary]
+            public AnalogValue E6SecondRoomTemperature => new AnalogValue(2619, "°C") { IsReadOnly = true };
+
+
             [Description("WP Rücklauftemperatur E7")]
             [Primary]
-            public AnalogValue E7HpFlowBackTemp => new AnalogValue(2624, null) { IsReadOnly = true };
-
-
+            public AnalogValue E7HpFlowBackTemp => new AnalogValue(2620, "°C") { IsReadOnly = true };
         }
 
         /// <summary>
