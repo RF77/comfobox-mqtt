@@ -108,46 +108,6 @@ namespace ComfoBoxLib
             Dispose();
         }
 
-        internal void ReadWriteExample()
-        {
-            BacnetValue Value;
-            bool ret;
-
-            StringBuilder sb = new StringBuilder(1000000);
-            // Read Present_Value property on the object ANALOG_INPUT:1 provided by the device 1026
-            // Scalar value only
-            for (uint dp = 1; dp < 4100; dp++)
-            {
-                try
-                {
-                    Logger.Debug($"ReadWriteExample(): Try getting dp {dp}");
-                    ret = ReadScalarValue(1, new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, dp),
-                        BacnetPropertyIds.PROP_PRESENT_VALUE, out Value);
-
-                    if (ret)
-                    {
-                        string value = $"Read value {dp}: {Value.Value}";
-
-                        sb.AppendLine(value);
-                        Logger.Debug($"ReadWriteExample(): {value}");
-
-                        // Write Present_Value property on the object ANALOG_OUTPUT:0 provided by the device 4000
-                        //BacnetValue newValue = new BacnetValue(Convert.ToSingle(2));   // expect it's a float
-                        //ret = WriteScalarValue(1, new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, 3078), BacnetPropertyIds.PROP_PRESENT_VALUE, newValue);
-
-                        //Console.WriteLine("Write feedback : " + ret.ToString());
-                    }
-                    else
-                        Logger.Debug($"ReadWriteExample(): Error somewhere for {dp} !");
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"ReadWriteExample() has thrown an exception: {ex.Message} \r\n{ex.StackTrace}");
-                }
-            }
-        }
-
-
         public bool ReadScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property,
             out BacnetValue value)
         {
@@ -169,6 +129,8 @@ namespace ComfoBoxLib
                 return true;
             }
         }
+
+
 
         public bool WriteScalarValue(int deviceId, BacnetObjectId bacnetObjet, BacnetPropertyIds property,
             BacnetValue value)
@@ -231,6 +193,31 @@ namespace ComfoBoxLib
                 {
                     _starTaskCompletionSource.TrySetResult(true);
                 }
+            }
+        }
+
+        public void ReadMultipleValues()
+        {
+            lock (this)
+            {
+                throw new NotImplementedException();
+                //IList<BacnetValue> noScalarValue;
+
+                //value = new BacnetValue(null);
+
+                //// Looking for the device
+                //var adr = DeviceAddr((uint)deviceId);
+                //if (adr == null) return false; // not found
+
+                //List<BacnetReadAccessSpecification> items = new List<BacnetReadAccessSpecification>();
+
+
+                //// Property Read
+                //if (_bacnetClient.ReadPropertyMultipleRequest(adr, bacnetObjet, property, out noScalarValue) == false)
+                //    return false;
+
+                //value = noScalarValue[0];
+                //return true;
             }
         }
 
