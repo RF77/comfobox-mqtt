@@ -31,7 +31,7 @@ namespace ComfoBoxLib
         private BacnetClient _bacnetClient;
         private TaskCompletionSource<bool> _starTaskCompletionSource;
 
-        public ComfoBoxClient(string portName, int baudrate, short sourceAddress = 3)
+        public ComfoBoxClient(string portName, int baudrate, short sourceAddress)
         {
             PortName = portName;
             Baudrate = baudrate;

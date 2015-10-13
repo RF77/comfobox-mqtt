@@ -16,6 +16,7 @@ using System.ServiceProcess;
 using System.Threading;
 using System.Threading.Tasks;
 using ComfoBoxLib;
+using ComfoBoxLib.Properties;
 using ComfoBoxMqtt;
 using log4net;
 using log4net.Config;
@@ -47,7 +48,7 @@ namespace ComfoboxService
                         try
                         {
                             _client?.Stop();
-                            _client = new ComfoBoxMqttClient("localhost", new ComfoBoxClient("COM4", 76800));
+                            _client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddress, new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
                             await _client.StartAsync();
                             await _client.StartPollingAsync();
                         }

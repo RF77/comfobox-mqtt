@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using ComfoBoxLib;
 using ComfoBoxLib.Annotations;
+using ComfoBoxLib.Properties;
 using DemoClient.Groups;
 using log4net;
 using log4net.Config;
@@ -171,7 +172,7 @@ namespace DemoClient.ViewModels
                 else
                 {
                     //Connect
-                    _client = new ComfoBoxClient(Port, Baudrate);
+                    _client = new ComfoBoxClient(Port, Baudrate, Settings.Default.BacnetClientId);
                     Logger.Info($"Connecting to Port={Port} with Baudrate={Baudrate}");
                     ConnectButtonText = "Disconnect";
                     CurrentState = "Connecting...";

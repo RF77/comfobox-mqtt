@@ -18,12 +18,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Charlotte;
 using ComfoBoxLib;
-using ComfoBoxLib.Properties;
 using ComfoBoxMqtt.Groups;
-using ComfoBoxMqtt.Models;
 using ComfoBoxMqtt.Models.Items;
+using ComfoBoxMqtt.Properties;
 using log4net;
-using Settings = ComfoBoxMqtt.Properties.Settings;
 
 namespace ComfoBoxMqtt
 {

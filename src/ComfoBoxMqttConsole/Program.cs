@@ -12,6 +12,7 @@
 using System;
 using System.Reflection;
 using ComfoBoxLib;
+using ComfoBoxLib.Properties;
 using ComfoBoxMqtt;
 using log4net;
 using log4net.Config;
@@ -37,7 +38,7 @@ namespace ComfoBoxMqttConsole
                 {
                     try
                     {
-                        var client = new ComfoBoxMqttClient("localhost", new ComfoBoxClient("COM4", 76800));
+                        var client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddress, new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
                         await client.StartAsync();
                         await client.StartPollingAsync();
                     }
