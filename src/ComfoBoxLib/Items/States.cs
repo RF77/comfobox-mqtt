@@ -297,13 +297,6 @@ namespace ComfoBoxLib.Items
             public AnalogValue CurrentSetPoint => new AnalogValue(208, "°C") {IsReadOnly = true};
 
             /// <summary>
-            ///     Aktuell gemessene Vorlauftemperatur
-            /// </summary>
-            [Primary]
-            [Description(@"Aktuell gemessene Vorlauftemperatur")]
-            public AnalogValue FlowTemperature => new AnalogValue(14, "°C") {IsReadOnly = true};
-
-            /// <summary>
             ///     Berchnete Soll - Vorlauftemperatur
             /// </summary>
             [Primary]
