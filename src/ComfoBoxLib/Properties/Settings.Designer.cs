@@ -44,18 +44,18 @@ namespace ComfoBoxLib.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("3")]
-        public int BacnetClientId {
+        public short BacnetClientId {
             get {
-                return ((int)(this["BacnetClientId"]));
+                return ((short)(this["BacnetClientId"]));
             }
         }
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public int BacnetMasterId {
+        public short BacnetMasterId {
             get {
-                return ((int)(this["BacnetMasterId"]));
+                return ((short)(this["BacnetMasterId"]));
             }
         }
         
@@ -83,6 +83,15 @@ namespace ComfoBoxLib.Properties {
         public int MaxNumberOfWritesPer24h {
             get {
                 return ((int)(this["MaxNumberOfWritesPer24h"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("localhost")]
+        public string MqttBrokerAddress {
+            get {
+                return ((string)(this["MqttBrokerAddress"]));
             }
         }
     }
