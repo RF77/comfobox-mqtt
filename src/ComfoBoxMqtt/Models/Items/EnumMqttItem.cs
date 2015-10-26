@@ -66,6 +66,20 @@ namespace ComfoBoxMqtt.Models.Items
                     WriteValueIfChanged(_.Message);
                     await ReadAsync(_comfoBoxClientFunc());
                 };
+                MqttClient.On[SetTopic] = async _ =>
+                {
+                    try
+                    {
+                        var parsedEnum = Enum.Parse(((IEnumValue) ItemValue).GetEnumType(), _.Message);
+                        WriteValueIfChanged(Convert.ToInt32(parsedEnum).ToString());
+                        await ReadAsync(_comfoBoxClientFunc());
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error($"Excpetion: {ex.Message}");
+                    }
+                    
+                };
             }
         }
 
@@ -80,7 +94,7 @@ namespace ComfoBoxMqtt.Models.Items
                 float? currentVal = ItemValue.ConvertValueBack(ItemValue.Value);
                 IEnumValue enumValue = ItemValue as IEnumValue;
                 float newValue;
-                if (!float.TryParse(message, out newValue))
+                if (float.TryParse(message, out newValue))
                 {
                     newValue = Convert.ToInt32(Enum.Parse(enumValue.GetEnumType(), message));
                 }
