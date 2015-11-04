@@ -68,6 +68,6 @@ namespace ComfoBoxLib.Items.Enums
         [Description("Differenzdruck zu klein für Umschaltung Abtauen resp. Kühlen")] KeinDifferenzdruck = 59,
         [Description("Warmwasser nur mit Zusatzheizung")] WwNurMitZusatzheizung = 60,
         [Description("Hochdruckwarnschwelle überchritten")] HochdruckWarnung = 61,
-        [Description("Energieerzeugung")] VerdampferfuehlerDefekt = 62
+        [Description("Verdampferfühler defekt")] VerdampferfuehlerDefekt = 62
     }
 }

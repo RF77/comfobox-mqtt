@@ -35,5 +35,8 @@
     <Setting Name="SpecialSubTopic" Type="System.String" Scope="Application">
       <Value Profile="(Default)">Special</Value>
     </Setting>
+    <Setting Name="VirtualTopic" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Virtual</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -18,6 +18,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Charlotte;
 using ComfoBoxLib;
+using ComfoBoxLib.Items.Enums;
 using ComfoBoxMqtt.Groups;
 using ComfoBoxMqtt.Models.Items;
 using ComfoBoxMqtt.Properties;
@@ -31,6 +32,7 @@ namespace ComfoBoxMqtt
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ComfoBoxClient _comfoBoxClient;
         private IEnumerable<MqttItem> _items;
+        private IEnumerable<VirtualMqttItem> _virtualItems;
         private IEnumerable<ISpecialItem> _specialItems;
         private SpecialMqttItem<int?> _numberOfWritePer24hMqttItem;
 
@@ -57,6 +59,7 @@ namespace ComfoBoxMqtt
             await Task.Delay(1);
             _items = ItemFactory.CreateItems(this, () => _comfoBoxClient);
             _specialItems = CreateSpecialItems();
+            _virtualItems = CreateVirtualItems();
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
@@ -66,6 +69,50 @@ namespace ComfoBoxMqtt
             Connect();
             PollSpecialItems();
             await _comfoBoxClient.StartAsync();
+        }
+
+        private IEnumerable<VirtualMqttItem> CreateVirtualItems()
+        {
+            List<VirtualMqttItem> items = new List<VirtualMqttItem>();
+            items.Add(new VirtualMqttItem("IsHeatingMode", _items.First(i => i.Topic.Contains("HeatingCoolingMode")).Topic,
+                (vi, m) =>
+                {
+                    if (HeatingCoolingModes.OnlyHeating.ToString() == m)
+                    {
+                        vi.SendValue(1);
+                    }
+                    else
+                    {
+                        vi.SendValue(0);
+                    }
+                }));
+            items.Add(new VirtualMqttItem("IsCoolingMode", _items.First(i => i.Topic.Contains("HeatingCoolingMode")).Topic,
+            (vi, m) =>
+            {
+                if (HeatingCoolingModes.OnlyCooling.ToString() == m)
+                {
+                    vi.SendValue(1);
+                }
+                else
+                {
+                    vi.SendValue(0);
+                }
+            }));
+
+            items.Add(new VirtualMqttItem("IsHeatingWithHeatPump", _items.First(i => i.Topic.Contains("HeatingCoolingMode")).Topic,
+            (vi, m) =>
+            {
+                if (HeatingCoolingModes.OnlyCooling.ToString() == m)
+                {
+                    vi.SendValue(1);
+                }
+                else
+                {
+                    vi.SendValue(0);
+                }
+            }));
+
+            return items;
         }
 
         private IEnumerable<ISpecialItem> CreateSpecialItems()

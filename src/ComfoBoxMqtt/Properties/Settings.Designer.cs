@@ -121,5 +121,14 @@ namespace ComfoBoxMqtt.Properties {
                 return ((string)(this["SpecialSubTopic"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Virtual")]
+        public string VirtualTopic {
+            get {
+                return ((string)(this["VirtualTopic"]));
+            }
+        }
     }
 }

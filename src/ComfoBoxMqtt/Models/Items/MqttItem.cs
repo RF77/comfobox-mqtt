@@ -23,7 +23,7 @@ using log4net;
 namespace ComfoBoxMqtt.Models.Items
 {
     [DebuggerDisplay("{Topic}: {ItemValue.Value}")]
-    public class MqttItem
+    public class MqttItem : MqttItemBase
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         protected readonly Func<ComfoBoxClient> _comfoBoxClientFunc;
@@ -42,10 +42,6 @@ namespace ComfoBoxMqtt.Models.Items
 
         protected IItemValue ItemValue { get; set; }
         internal RefreshPriority Priority { get; private set; }
-
-        protected ComfoBoxMqttClient MqttClient { get; set; }
-
-        public string Topic { get; private set; }
 
         public string SetTopic
         {
