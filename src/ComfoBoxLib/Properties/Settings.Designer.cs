@@ -34,7 +34,7 @@ namespace ComfoBoxLib.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("COM4")]
+        [global::System.Configuration.DefaultSettingValueAttribute("COM8")]
         public string Port {
             get {
                 return ((string)(this["Port"]));

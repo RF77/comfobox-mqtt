@@ -56,7 +56,7 @@ namespace ComfoBoxLib.Items
         /// </summary>
         [Secondary]
         [Description(@"Um eine genauere Regelung zu ermöglichen, kann hier die reale, mit einem genauen Messgerät ermittelte Raumtemperatur eingestellt werden.")]
-        public AnalogValue CalibrateTemprature => new AnalogValue(75, "°C");
+        public AnalogValue CalibrateTemperature => new AnalogValue(75, "°C");
 
         /// <summary>
         ///     Die Adaption der Heizkennlinie korrigiert die Heizkurve bei der aktuellen Aussentemperatur. Die
