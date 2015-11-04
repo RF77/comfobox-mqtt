@@ -173,9 +173,15 @@ namespace ComfoBoxMqtt
 
         public void Stop()
         {
-            _comfoBoxClient.Stop();
-            Disconnect();
-            _cancellationTokenSource.Cancel();
+            try
+            {
+                _comfoBoxClient.Stop();
+                Disconnect();
+            }
+            finally 
+            {
+                _cancellationTokenSource.Cancel();
+            }
         }
     }
 }

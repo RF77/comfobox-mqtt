@@ -47,6 +47,7 @@ namespace ComfoboxService
                     {
                         try
                         {
+                            _cancellationTokenSource.Token.ThrowIfCancellationRequested();
                             _client?.Stop();
                             _client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddress, new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
                             await _client.StartAsync();
