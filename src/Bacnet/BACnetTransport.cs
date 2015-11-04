@@ -414,7 +414,7 @@ namespace System.IO.BACnet
 
         public override string ToString()
         {
-            return m_port_name.ToString();
+            return m_port_name;
         }
 
         public void Open()

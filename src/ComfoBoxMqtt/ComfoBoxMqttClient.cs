@@ -59,7 +59,6 @@ namespace ComfoBoxMqtt
             await Task.Delay(1);
             _items = ItemFactory.CreateItems(this, () => _comfoBoxClient);
             _specialItems = CreateSpecialItems();
-            _virtualItems = CreateVirtualItems();
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
@@ -69,6 +68,7 @@ namespace ComfoBoxMqtt
             Connect();
             PollSpecialItems();
             await _comfoBoxClient.StartAsync();
+            _virtualItems = CreateVirtualItems();
         }
 
         private IEnumerable<VirtualMqttItem> CreateVirtualItems()

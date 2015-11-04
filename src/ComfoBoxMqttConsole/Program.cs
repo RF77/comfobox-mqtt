@@ -11,6 +11,8 @@
 
 using System;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using ComfoBoxLib;
 using ComfoBoxLib.Properties;
 using ComfoBoxMqtt;
@@ -45,6 +47,7 @@ namespace ComfoBoxMqttConsole
                     catch (Exception ex)
                     {
                         Logger.Error($"Run() has thrown an exception: {ex.Message}");
+                        Thread.Sleep(5000);
                     }
                 }
             });
