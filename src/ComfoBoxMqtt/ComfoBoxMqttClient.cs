@@ -99,10 +99,22 @@ namespace ComfoBoxMqtt
                 }
             }));
 
-            items.Add(new VirtualMqttItem("IsHeatingWithHeatPump", _items.First(i => i.Topic.Contains("HeatingCoolingMode")).Topic,
+            items.Add(new VirtualMqttItem("IsHeatingWithHeatPump", _items.First(i => i.Topic.Contains("HeatPumpStatus")).Topic,
             (vi, m) =>
             {
-                if (HeatingCoolingModes.OnlyCooling.ToString() == m)
+                if (HeatPumpStatusEnums.HeatingWithHeatPump.ToString() == m)
+                {
+                    vi.SendValue(1);
+                }
+                else
+                {
+                    vi.SendValue(0);
+                }
+            }));
+            items.Add(new VirtualMqttItem("WarmWater", _items.First(i => i.Topic.Contains("HeatPumpStatus")).Topic,
+            (vi, m) =>
+            {
+                if (HeatPumpStatusEnums.WarmWater.ToString() == m)
                 {
                     vi.SendValue(1);
                 }
