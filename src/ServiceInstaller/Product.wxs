@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
-	<Product Id="*" Name="ComfoBox MQTT Gateway" Language="1033" Version="0.3.1.0" Manufacturer="RF77" UpgradeCode="26559e4c-b543-4a8b-b279-7ac90f8e001d">
+	<Product Id="*" Name="ComfoBox MQTT Gateway" Language="1033" Version="0.3.2.0" Manufacturer="RF77" UpgradeCode="26559e4c-b543-4a8b-b279-7ac90f8e001d">
 		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Platform="x64"/>
 
 		<MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
