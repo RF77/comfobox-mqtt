@@ -32,7 +32,7 @@ namespace ComfoBoxMqtt
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ComfoBoxClient _comfoBoxClient;
         private IEnumerable<MqttItem> _items;
-        private IEnumerable<VirtualMqttItem> _virtualItems;
+        //private IEnumerable<VirtualMqttItem> _virtualItems;
         private IEnumerable<ISpecialItem> _specialItems;
         private SpecialMqttItem<int?> _numberOfWritePer24hMqttItem;
 
@@ -68,7 +68,7 @@ namespace ComfoBoxMqtt
             Connect();
             PollSpecialItems();
             await _comfoBoxClient.StartAsync();
-            _virtualItems = CreateVirtualItems();
+            //_virtualItems = CreateVirtualItems();
         }
 
         private IEnumerable<VirtualMqttItem> CreateVirtualItems()
