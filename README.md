@@ -48,6 +48,16 @@ Use ../AsNumber topics to read enums as number. Use the /AsNumber/Set topics to 
 ### Special topics
 All topics under ComfoBox/Special are not ComfoBox values, but special values calculated by the MQTT service itself
 
+## Usage Scenarios
+
+Your ComfoBox can be controlled by any MQTT client/smart home system with MQTT capabilities.
+
+e.g. openHab
+![openHAB](/docs/images/openHAB.png)
+
+Add an InfluxDB persistence to openHAB and use Grafana for live charting
+![Grafana](/docs/images/Grafana.png)
+
 ## Platforms
 * Windows Vista and higher
 * probably Linux and Mac over the Mono Framework (small changes required, see #11)
