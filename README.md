@@ -1,5 +1,5 @@
 # ComfoBox MQTT client
-
+ 
 Connect to your Zehnder ComfoBox with an ELESTA controller over RS485/BACnet MSTP and control it (read/write).
 
 ## Hardware
