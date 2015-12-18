@@ -61,16 +61,17 @@ namespace ComfoBoxMqtt.Models.Items
             base.SubscribeValues();
             if (!ItemValue.IsReadOnly)
             {
-                MqttClient.On[SetAsNumberTopic] = async _ =>
+                MqttClient.On(SetAsNumberTopic, async msg =>
                 {
-                    WriteValueIfChanged(_.Message);
+                    WriteValueIfChanged(msg);
                     await ReadAsync(_comfoBoxClientFunc());
-                };
-                MqttClient.On[SetTopic] = async _ =>
+                });
+
+                MqttClient.On(SetTopic, async msg =>
                 {
                     try
                     {
-                        var parsedEnum = Enum.Parse(((IEnumValue) ItemValue).GetEnumType(), _.Message);
+                        var parsedEnum = Enum.Parse(((IEnumValue) ItemValue).GetEnumType(), msg);
                         WriteValueIfChanged(Convert.ToInt32(parsedEnum).ToString());
                         await ReadAsync(_comfoBoxClientFunc());
                     }
@@ -79,7 +80,7 @@ namespace ComfoBoxMqtt.Models.Items
                         Logger.Error($"Excpetion: {ex.Message}");
                     }
                     
-                };
+                });
             }
         }
 

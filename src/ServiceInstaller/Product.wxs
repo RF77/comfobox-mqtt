@@ -22,9 +22,6 @@
 	<Fragment>
 		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
 			<!-- TODO: Remove the comments around this Component element and the ComponentRef below in order to add resources to this installer. -->
-      <Component Id="Charlotte.dll" Guid="8ACE962F-D2C0-4A37-BA35-169DC57ECED8" Win64="yes">
-        <File Id="Charlotte.dll" Source="..\ComfoboxService\bin\x64\Release\Charlotte.dll" KeyPath="yes" Checksum="yes"/>
-      </Component>
       <Component Id="ComfoBoxLib.dll" Guid="8ACE962F-D2C0-4A37-BA35-269DC57ECED8" Win64="yes">
         <File Id="ComfoBoxLib.dll" Source="..\ComfoboxService\bin\x64\Release\ComfoBoxLib.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
@@ -55,8 +52,8 @@
       <Component Id="HexMaster.ServiceHelper.dll" Guid="8ACE962F-D2C0-4A37-BA35-D69DC57ECED8" Win64="yes">
         <File Id="HexMaster.ServiceHelper.dll" Source="..\ComfoboxService\bin\x64\Release\HexMaster.ServiceHelper.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
-      <Component Id="M2Mqtt.dll" Guid="8ACE962F-D2C0-4A37-BA35-E69DC57ECED8" Win64="yes">
-        <File Id="M2Mqtt.dll" Source="..\ComfoboxService\bin\x64\Release\M2Mqtt.dll" KeyPath="yes" Checksum="yes"/>
+      <Component Id="M2Mqtt.NET.dll" Guid="8ACE962F-D2C0-4A37-BA35-E69DC57ECED8" Win64="yes">
+        <File Id="M2Mqtt.NET.dll" Source="..\ComfoboxService\bin\x64\Release\M2Mqtt.NET.dll" KeyPath="yes" Checksum="yes"/>
       </Component>
       <Component Id="ComfoBoxMqttConsole.exe" Guid="8ACE962F-D2C0-4A37-BA35-F69DC57ECED8" Win64="yes">
         <File Id="ComfoBoxMqttConsole.exe" Source="..\ComfoBoxMqttConsole\bin\x64\Release\ComfoBoxMqttConsole.exe" KeyPath="yes" Checksum="yes"/>

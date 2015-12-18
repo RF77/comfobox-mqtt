@@ -68,11 +68,11 @@ namespace ComfoBoxMqtt.Models.Items
         {
             if (!ItemValue.IsReadOnly)
             {
-                MqttClient.On[SetTopic] = async _ =>
+                MqttClient.On(SetTopic, async m =>
                 {
-                    WriteValueIfChanged(_.Message);
+                    WriteValueIfChanged(m);
                     await ReadAsync(_comfoBoxClientFunc());
-                };
+                });
             }
         }
 

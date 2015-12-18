@@ -14,19 +14,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Charlotte;
 using ComfoBoxLib;
 using ComfoBoxLib.Items.Enums;
 using ComfoBoxMqtt.Groups;
 using ComfoBoxMqtt.Models.Items;
 using ComfoBoxMqtt.Properties;
 using log4net;
+using uPLibrary.Networking.M2Mqtt;
+using uPLibrary.Networking.M2Mqtt.Messages;
 
 namespace ComfoBoxMqtt
 {
-    public class ComfoBoxMqttClient : MqttModule
+    public class ComfoBoxMqttClient
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private CancellationTokenSource _cancellationTokenSource;
@@ -35,22 +37,35 @@ namespace ComfoBoxMqtt
         //private IEnumerable<VirtualMqttItem> _virtualItems;
         private IEnumerable<ISpecialItem> _specialItems;
         private SpecialMqttItem<int?> _numberOfWritePer24hMqttItem;
+        private MqttClient _mqttClient;
+
 
         public ComfoBoxMqttClient(string brokerHostName, int brokerPort, string username, string password,
-            ComfoBoxClient comfoBoxClient) : base(brokerHostName, brokerPort, username, password)
+            ComfoBoxClient comfoBoxClient)
         {
             _comfoBoxClient = comfoBoxClient;
+
+            InitMqttClient(brokerHostName, brokerPort, username, password);
+        }
+
+        private void InitMqttClient(string brokerHostName, int brokerPort, string username, string password)
+        {
+            _mqttClient = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
+            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}", username, password);
         }
 
         public ComfoBoxMqttClient(string brokerHostName, int brokerPort, ComfoBoxClient comfoBoxClient)
-            : base(brokerHostName, brokerPort)
         {
             _comfoBoxClient = comfoBoxClient;
+            _mqttClient = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
+            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}");
         }
 
-        public ComfoBoxMqttClient(string brokerHostName, ComfoBoxClient comfoBoxClient) : base(brokerHostName)
+        public ComfoBoxMqttClient(string brokerHostName, ComfoBoxClient comfoBoxClient) 
         {
             _comfoBoxClient = comfoBoxClient;
+            _mqttClient = new MqttClient(brokerHostName);
+            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}");
         }
 
         public async Task StartAsync()
@@ -65,11 +80,30 @@ namespace ComfoBoxMqtt
                 File.WriteAllText(Settings.Default.WriteTopicsFilePath, string.Join("\r\n", _items.SelectMany(i => i.Topics).OrderBy(i => i)));
             }
 #endif
-            Connect();
             PollSpecialItems();
             await _comfoBoxClient.StartAsync();
+            _mqttClient.MqttMsgPublishReceived += MqttClientOnMqttMsgPublishReceived;
             //_virtualItems = CreateVirtualItems();
         }
+
+        private void MqttClientOnMqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs mqttMsgPublishEventArgs)
+        {
+            Action<string> action;
+            if (_subscriptions.TryGetValue(mqttMsgPublishEventArgs.Topic, out action))
+            {
+                try
+                {
+                    var message = Encoding.UTF8.GetString(mqttMsgPublishEventArgs.Message);
+                    Logger.Info($"Received for topic {mqttMsgPublishEventArgs.Topic}: {message}");
+                    action(message);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception while received value for topic {mqttMsgPublishEventArgs.Topic}: {ex.Message}");
+                }
+            }
+        }
+
 
         private IEnumerable<VirtualMqttItem> CreateVirtualItems()
         {
@@ -152,8 +186,6 @@ namespace ComfoBoxMqtt
             }
         }
 
-        public new Mqtt On => base.On;
-
         public async Task StartPollingAsync()
         {
             while (true)
@@ -183,17 +215,32 @@ namespace ComfoBoxMqtt
             }
         }
 
+        private Dictionary<string, Action<string>> _subscriptions = new Dictionary<string, Action<string>>(); 
+
+        public void On(string topic, Action<string> action)
+        {
+            _subscriptions[topic] = action;
+            _mqttClient.Subscribe(new[] {topic}, new[] {MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE});
+        }
+
         public void Stop()
         {
             try
             {
                 _comfoBoxClient.Stop();
-                Disconnect();
+                _mqttClient.Disconnect();
+                _mqttClient.MqttMsgPublishReceived -= MqttClientOnMqttMsgPublishReceived;
+                _subscriptions.Clear();
             }
             finally 
             {
                 _cancellationTokenSource.Cancel();
             }
+        }
+
+        public void Publish(string topic, string message, bool useMqttRetain)
+        {
+            _mqttClient.Publish(topic, Encoding.UTF8.GetBytes(message), 0, useMqttRetain);
         }
     }
 }

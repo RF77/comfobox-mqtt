@@ -14,17 +14,17 @@ namespace ComfoBoxMqtt.Models.Items
         public VirtualMqttItem(string topic, string topicToSubscribe, Action<VirtualMqttItem, string> messageHandler)
         {
             Topic = $"{Settings.Default.BaseTopic}/{Settings.Default.VirtualTopic}/{topic}";
-            MqttClient.On[topicToSubscribe] = _ =>
+            MqttClient.On(topicToSubscribe, m =>
             {
                 try
                 {
-                    messageHandler(this, _.Message);
+                    messageHandler(this, m);
                 }
                 catch (Exception ex)
                 {
                     Logger.Error(ex.Message);
                 }
-            };
+            });
         }
 
         public void SendValue(object message)
