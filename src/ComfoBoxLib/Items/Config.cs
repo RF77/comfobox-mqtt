@@ -21,6 +21,49 @@ namespace ComfoBoxLib.Items
     [Description(@"Konfiguration")]
     public class Config
     {
+        [Description(@"Generelle Anlageeinstellungen")]
+        public class General
+        {
+            /// <summary>
+            /// Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der
+            /// Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
+            /// 0: Funktion deaktiviert
+            /// 1: Sommerkick täglich um 16:00
+            /// </summary>
+            [Secondary]
+            [Description(@"Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
+0: deaktiviert
+1: Sommerkick täglich um 16:00")]
+            public AnalogValue Sommerknick => new AnalogValue(185, "", 0, 1);
+
+            /// <summary>
+            ///     Entlüftung Primärkreis:
+            ///     Die Funktion definiert eine Zeit zur Entlüftung des Primärkreises(Energiequellen-Kreis). Während
+            ///     der eingestellten Zeit läuft die Primärpumpe(resp.die Primärpumpen bei mehrstufigen
+            ///     Wärmepumpen).
+            /// </summary>
+            [Secondary]
+            [Description(@"Entlüftung Primärkreis:
+Die Funktion definiert eine Zeit zur Entlüftung des Primärkreises (Energiequellen-Kreis). Während
+der eingestellten Zeit läuft die Primärpumpe (resp. die Primärpumpen bei mehrstufigen
+Wärmepumpen).")]
+            public AnalogValue EntlueftungPrimaerkreis => new AnalogValue(3398, "h");
+
+            /// <summary>
+            ///     Entlüftung Sek’kreis
+            ///Die Funktion definiert eine Zeit zur Entlüftung des Sekundärkreises(Energieabnahme). Während
+           ///der eingestellten Zeit laufen alle Zonenpumpen, sowie die Pufferladepumpe(resp.
+           ///Kondensatorpumpe).
+            /// </summary>
+            [Secondary]
+            [Description(@"Entlüftung Sek’kreis:
+Die Funktion definiert eine Zeit zur Entlüftung des Sekundärkreises (Energieabnahme). Während
+der eingestellten Zeit laufen alle Zonenpumpen, sowie die Pufferladepumpe (resp.
+Kondensatorpumpe).")]
+            public AnalogValue EntlueftungSekundaerkreis => new AnalogValue(3400, "h");
+        }
+
+
         [Description(@"Comfofond-L Einstellungen")]
         public class Comfofond
         {

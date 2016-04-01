@@ -27,7 +27,7 @@ namespace ComfoBoxLib.Items
 
         //TODO: Wie steurt man diesen Punkt an?
         [Description(@"Einmalige Ladung des WW-Speichers. Ungeachtet der Schaltuhr kann durch aktivieren dieser Funktion eine Ladung des WW-Speichers erzwungen werden.")]
-        public AnalogValue DoHeatWaterNow => new AnalogValue(2590, null) {IsReadOnly = true};
+        public AnalogValue DoHeatWaterNow => new AnalogValue(2590, null);
 
         /// <summary>
         ///     WW Sollwert normal
