@@ -12,17 +12,14 @@
 using System;
 using System.ComponentModel;
 using System.IO.BACnet;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using ComfoBoxLib.Annotations;
-using log4net;
 
 namespace ComfoBoxLib.Values
 {
     public abstract class ItemValue<TValue> : IItemValue
     {
-        private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private TValue _value;
         private BacnetApplicationTags _tag;
         public BacnetObjectId BacnetObjectId { get; set; }
@@ -34,7 +31,7 @@ namespace ComfoBoxLib.Values
             get { return _value; }
             set
             {
-                if (!Equals(value, _value))
+                if (!Equals(value, _value) && CheckSetValueConditions(value))
                 {
                     bool isInitialized = _value != null;
                     _value = value;
@@ -45,6 +42,11 @@ namespace ComfoBoxLib.Values
                     }
                 }
             }
+        }
+
+        protected virtual bool CheckSetValueConditions(TValue value)
+        {
+            return true;
         }
 
         private void OnInitializedValueChanged()
@@ -59,10 +61,7 @@ namespace ComfoBoxLib.Values
 
         public bool IsReadOnly { get; internal set; }
 
-        public BacnetApplicationTags Tag
-        {
-            get { return _tag; }
-        }
+        public BacnetApplicationTags Tag => _tag;
 
         public async Task ReadValueAsync(ComfoBoxClient client)
         {

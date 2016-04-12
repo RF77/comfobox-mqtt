@@ -23,8 +23,19 @@ namespace ComfoBoxLib.Values
             BacnetObjectId = new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, id);
         }
 
-        public float? Min { get; private set; }
-        public float? Max { get; private set; }
+        public float? Min { get; }
+        public float? Max { get; }
+
+        protected override bool CheckSetValueConditions(float? value)
+        {
+            if (value == null) return false;
+            if (Min != null && value.Value < Min.Value)
+            {
+                return false;
+            }
+
+            return Max == null || !(value.Value > Max.Value);
+        }
 
         public override float? ConvertValueBack(object value)
         {
