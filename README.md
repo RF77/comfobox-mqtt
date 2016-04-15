@@ -29,7 +29,8 @@ Configuration: DemoClient.exe.config
 This is The MQTT client as console application. Usefull to see the logs directly.
 Configuration: ComfoBoxMqttConsole.exe.config. Please change the port name to your port which is attached with the ComfoBox.
 
-![Use this in Linux: Here with a Raspberry PI](/docs/images/Raspberry.png)
+Use this in Linux. Here with a Raspberry PI:
+![](/docs/Mono/Raspberry.png)
 
 ### ComfoBox MQTT Windows Service
 
