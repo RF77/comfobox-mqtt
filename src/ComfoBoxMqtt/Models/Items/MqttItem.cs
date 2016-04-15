@@ -52,6 +52,8 @@ namespace ComfoBoxMqtt.Models.Items
             }
         }
 
+        public string Description { get; set; }
+
         public virtual IEnumerable<string> Topics
         {
             get
@@ -63,6 +65,17 @@ namespace ComfoBoxMqtt.Models.Items
                 return new[] {Topic};
             }
         }
+
+        public string DescriptionString()
+        {
+            return $@"{string.Join(";", Topics)}
+=====================
+{Description}
+
+";
+        }
+
+        public virtual string MinMaxDescription => "\r\n";
 
         protected virtual void SubscribeValues()
         {

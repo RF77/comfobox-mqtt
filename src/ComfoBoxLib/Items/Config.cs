@@ -646,7 +646,7 @@ Legionellenschutz täglich = 8
                 [Description(@"WW-Zwangsladung
 Keine Funktion = 0
 Täglich bei erster WW-Ladung = 1")]
-                public AnalogValue WarmwasserZwangsladung
+                public AnalogValue Zwangsladung
                     => new AnalogValue(199, "", 0, 1);
 
                 /// <summary>
@@ -658,7 +658,7 @@ Kein Vorrang = 0
 Teilvorrang = 1
 Voller Vorrang = 2
 ")]
-                public AnalogValue WarmwasserVorrang
+                public AnalogValue Vorrang
                     => new AnalogValue(196, "", 0, 2);
 
                 /// <summary>
@@ -682,7 +682,7 @@ Voller Vorrang = 2
                 /// </summary>
                 [Secondary]
                 [Description(@"WW-Nachlaufzeit")]
-                public AnalogValue WarmwasserNachlaufzeit => new AnalogValue(197, "min", 0, 10);
+                public AnalogValue Nachlaufzeit => new AnalogValue(197, "min", 0, 10);
 
                 /// <summary>
                 ///     WW-Freigabe
@@ -693,7 +693,7 @@ Nach Schaltuhr = 0
 1h vor Zonenbeginn = 1
 WW dauernd = 2
 ")]
-                public AnalogValue WarmwasserFreigabe => new AnalogValue(175, "", 0, 2);
+                public AnalogValue Freigabe => new AnalogValue(175, "", 0, 2);
 
                 /// <summary>
                 ///     WW-Sollwert Maximal

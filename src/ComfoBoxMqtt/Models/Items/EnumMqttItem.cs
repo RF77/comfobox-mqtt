@@ -56,6 +56,8 @@ namespace ComfoBoxMqtt.Models.Items
             }
         }
 
+       
+
         protected override void SubscribeValues()
         {
             base.SubscribeValues();

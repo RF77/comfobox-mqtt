@@ -11,6 +11,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using ComfoBoxLib;
 using ComfoBoxLib.Attributes;
@@ -64,14 +65,24 @@ namespace ComfoBoxMqtt.Groups
                     //if (prioAttribute == )
                 }
 
+                MqttItem item;
+
                 if (propertyValue is IEnumValue)
                 {
-                    list.Add(new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc));
+                    item = new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
                 }
                 else
                 {
-                    list.Add(new MqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc));
+                    item = new MqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
                 }
+
+                var desc = propertyInfo.GetCustomAttributes(typeof(DescriptionAttribute), false).FirstOrDefault() as DescriptionAttribute;
+                if (desc != null)
+                {
+                    item.Description = desc.Description;
+                }
+
+                list.Add(item);
             }
         }
     }

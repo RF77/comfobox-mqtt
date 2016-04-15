@@ -77,7 +77,7 @@ namespace ComfoBoxMqtt
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
-                File.WriteAllText(Settings.Default.WriteTopicsFilePath, string.Join("\r\n", _items.SelectMany(i => i.Topics).OrderBy(i => i)));
+                File.WriteAllText(Settings.Default.WriteTopicsFilePath, string.Join("\r\n", _items.Select(i => i.DescriptionString())));
             }
 #endif
             PollSpecialItems();
