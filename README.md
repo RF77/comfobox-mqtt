@@ -29,6 +29,8 @@ Configuration: DemoClient.exe.config
 This is The MQTT client as console application. Usefull to see the logs directly.
 Configuration: ComfoBoxMqttConsole.exe.config. Please change the port name to your port which is attached with the ComfoBox.
 
+![Use this in Linux: Here with a Raspberry PI](/docs/images/Raspberry.png)
+
 ### ComfoBox MQTT Windows Service
 
 The same as the console application but as windows service. After the installation the service will be started on demand. At first change the configuration and start the service afterwards. Optionally change the the service startup from demand to auto.
@@ -60,7 +62,7 @@ Add an InfluxDB persistence to openHAB and use Grafana for live charting
 
 ## Platforms
 * Windows Vista and higher
-* probably Linux and Mac over the Mono Framework (small changes required, see #11)
+* Linux and Mac over the Mono Framework (small changes required, see #11)
 
 >Try with care and on your **own risk**. You also may loose your warranty.
 >Keep in mind that you write the values to an EEPROM (1'000'000 writing cycles).
