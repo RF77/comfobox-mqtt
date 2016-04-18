@@ -76,6 +76,7 @@ namespace ComfoBoxMqtt.Models.Items
                 if (analogValue.Min != null && analogValue.Max != null)
                 {
                     minMax = $@"Min: {analogValue.Min.Value}, Max: {analogValue.Max.Value}
+
 ";
                 }
             }

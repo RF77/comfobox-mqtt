@@ -10,6 +10,7 @@ I'm sorry about the english/german mix. Finally only german names would be bette
 
 ### Description
 Min: 2, Max: 20
+
 Hysterese beim Ein- und Ausschalten der Kühlung über das Comfofond-L. z.B. Sollwert ist bei 22°C
 -> falls Kühlung aus, wird sie erst >24°C eingeschaltet
 -> falls Kühlung ein, wird sie erst kleiner 20°C ausgeschaltet
@@ -22,6 +23,7 @@ Hysterese beim Ein- und Ausschalten der Kühlung über das Comfofond-L. z.B. Sol
 
 ### Description
 Min: -50, Max: 999
+
 Sollwert Kühlung: Ab dieser Temperatur wird die Luft über das Comfofond-L gekühlt, falls der Raumsollwert der Lüftung tiefer liegt
 
 
@@ -32,6 +34,7 @@ Sollwert Kühlung: Ab dieser Temperatur wird die Luft über das Comfofond-L gek�
 
 ### Description
 Min: 2, Max: 20
+
 Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollwert ist bei 2°C;
 -> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
 -> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet
@@ -44,6 +47,7 @@ Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollw
 
 ### Description
 Min: -50, Max: 999
+
 Sollwert Heizung: Ab dieser Temperatur wird die Luft über das Comfofond-L im Winter gewärmt
 
 
@@ -54,6 +58,7 @@ Sollwert Heizung: Ab dieser Temperatur wird die Luft über das Comfofond-L im Wi
 
 ### Description
 Min: 0, Max: 99
+
 Abs min Vorlauftemp Kühlen
 
 
@@ -64,6 +69,7 @@ Abs min Vorlauftemp Kühlen
 
 ### Description
 Min: 0, Max: 3
+
 Kühlen:
 Keine Funktion = 0
 Kühlen = 1
@@ -77,6 +83,7 @@ Nur Kühlen = 3
 
 ### Description
 Min: 10, Max: 30
+
 Fixpunkt Raumsoll Küh (20°C)
 
 
@@ -87,6 +94,7 @@ Fixpunkt Raumsoll Küh (20°C)
 
 ### Description
 Min: 0, Max: 10
+
 Kühlraumsoll’abst normal
 
 
@@ -97,6 +105,7 @@ Kühlraumsoll’abst normal
 
 ### Description
 Min: 0, Max: 10
+
 Kühlraumsoll’abst reduziert
 
 
@@ -107,6 +116,7 @@ Kühlraumsoll’abst reduziert
 
 ### Description
 Min: 0, Max: 10
+
 Kühlraumsoll’abst standby
 
 
@@ -117,6 +127,7 @@ Kühlraumsoll’abst standby
 
 ### Description
 Min: 0, Max: 99
+
 Min Vorl’temp Kühlen (20°C)
 
 
@@ -127,6 +138,7 @@ Min Vorl’temp Kühlen (20°C)
 
 ### Description
 Min: 0, Max: 99
+
 Min Vorl’temp Kühlen (40°C)
 
 
@@ -137,6 +149,7 @@ Min Vorl’temp Kühlen (40°C)
 
 ### Description
 Min: 100, Max: 999
+
 Raumeinfluss bei Kühlen
 
 
@@ -147,6 +160,7 @@ Raumeinfluss bei Kühlen
 
 ### Description
 Min: -10, Max: 10
+
 Sommerkühlgrenze
 
 
@@ -157,6 +171,7 @@ Sommerkühlgrenze
 
 ### Description
 Min: 0, Max: 5
+
 Steilheit Raumsoll-Schiebung
 
 
@@ -167,6 +182,7 @@ Steilheit Raumsoll-Schiebung
 
 ### Description
 Min: 0, Max: 2
+
 Umschaltung Raumfühler:
 Keine Funktion = 0
 Heiz'n mit Tr1, Kühl'n mit Tr2 = 1
@@ -181,6 +197,7 @@ Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
 
 ### Description
 Min: 0, Max: 58
+
 WP-Vorlauf Maximal
 
 
@@ -191,6 +208,7 @@ WP-Vorlauf Maximal
 
 ### Description
 Min: 0, Max: 30
+
 Min WP-Laufzeit
 
 
@@ -201,6 +219,7 @@ Min WP-Laufzeit
 
 ### Description
 Min: 20, Max: 60
+
 Wiedereinschaltverzögerung
 
 
@@ -211,6 +230,7 @@ Wiedereinschaltverzögerung
 
 ### Description
 Min: 2, Max: 20
+
 Schaltdifferenz Stufe 1
 
 
@@ -221,6 +241,7 @@ Schaltdifferenz Stufe 1
 
 ### Description
 Min: 0, Max: 120
+
 Max Vorhaltezeit Absenken
 
 
@@ -231,6 +252,7 @@ Max Vorhaltezeit Absenken
 
 ### Description
 Min: 0, Max: 180
+
 Max Vorhaltezeit Heizen
 
 
@@ -241,6 +263,7 @@ Max Vorhaltezeit Heizen
 
 ### Description
 Min: 0, Max: 1
+
 Optimierung Heizschaltzeiten:
 Keine Funktion = 0
 EIN = 1
@@ -254,6 +277,7 @@ EIN = 1
 
 ### Description
 Min: 0, Max: 150
+
 Raumeinfluss
 
 
@@ -264,6 +288,7 @@ Raumeinfluss
 
 ### Description
 Min: -5, Max: 5
+
 Raumsoll-Korr Zo
 
 
@@ -274,6 +299,7 @@ Raumsoll-Korr Zo
 
 ### Description
 Min: 0, Max: 1
+
 Tagesheizgrenze:
 AUS = 0
 EIN = 1
@@ -293,6 +319,7 @@ mit sehr tiefem Energiebedarf den Ausschaltpunkt zu definieren.
 
 ### Description
 Min: -5, Max: 5
+
 Tagesheizgrenze Offset
 
 
@@ -303,6 +330,7 @@ Tagesheizgrenze Offset
 
 ### Description
 Min: 0, Max: 125
+
 Vorlauf Maximal
 
 
@@ -313,6 +341,7 @@ Vorlauf Maximal
 
 ### Description
 Min: 0, Max: 99
+
 Vorlauf Minimal
 
 
@@ -323,6 +352,7 @@ Vorlauf Minimal
 
 ### Description
 Min: 0, Max: 10
+
 Winterheizgrenze:
 Die Sommer/Winter-Heizgrenzenautomatik ist eine mittelfristig einsetzende Sparfunktion. Wenn
 der Raumtemperatursollwert nur noch um den hier eingestellten Wert grösser ist als die
@@ -338,6 +368,7 @@ ausgeführt.
 
 ### Description
 Min: 10, Max: 40
+
 Adaptierter Fixpunkt
 
 
@@ -348,6 +379,7 @@ Adaptierter Fixpunkt
 
 ### Description
 Min: 20, Max: 99
+
 Adapt Vorl’temp im Auslegep
 
 
@@ -358,6 +390,7 @@ Adapt Vorl’temp im Auslegep
 
 ### Description
 Min: -30, Max: 0
+
 Aussentemp im Auslegepunkt
 
 
@@ -368,6 +401,7 @@ Aussentemp im Auslegepunkt
 
 ### Description
 Min: 10, Max: 40
+
 Fixpunkt
 
 
@@ -378,6 +412,7 @@ Fixpunkt
 
 ### Description
 Min: 0, Max: 2
+
 Heizkennlinienadaption:
 Keine Funktion = 0
 Manuell, auto mit Raum'füh = 1
@@ -391,6 +426,7 @@ Manuell, Korrektureingabe = 2
 
 ### Description
 Min: 20, Max: 99
+
 Vorlauftemp im Auslegepunkt
 
 
@@ -412,6 +448,7 @@ Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen
 
 ### Description
 Min: 2, Max: 10
+
 Kond’frostschutztemp
 
 
@@ -422,6 +459,7 @@ Kond’frostschutztemp
 
 ### Description
 Min: -20, Max: 30
+
 Kond’frostschutztemp
 
 
@@ -432,6 +470,7 @@ Kond’frostschutztemp
 
 ### Description
 Min: 2, Max: 60
+
 Energieerz’anhebung (Fühler)
 
 
@@ -442,6 +481,7 @@ Energieerz’anhebung (Fühler)
 
 ### Description
 Min: 0, Max: 99
+
 Energieerz’soll (Thermostat)
 
 
@@ -452,6 +492,7 @@ Energieerz’soll (Thermostat)
 
 ### Description
 Min: 0, Max: 1
+
 WW-Entladeschutz:
 Keine Funktion = 0
 EIN = 1
@@ -465,6 +506,7 @@ EIN = 1
 
 ### Description
 Min: 0, Max: 2
+
 WW-Freigabe:
 Nach Schaltuhr = 0
 1h vor Zonenbeginn = 1
@@ -479,6 +521,7 @@ WW dauernd = 2
 
 ### Description
 Min: 0, Max: 8
+
 Legionellenschutzfunktion:
 Keine Funktion = 0
 Legionellenschutz am Mo = 1
@@ -500,6 +543,7 @@ Legionellenschutz täglich = 8
 
 ### Description
 Min: 0, Max: 10
+
 WW-Nachlaufzeit
 
 
@@ -510,6 +554,7 @@ WW-Nachlaufzeit
 
 ### Description
 Min: 1, Max: 10
+
 WW-Schaltdifferenz
 
 
@@ -520,6 +565,7 @@ WW-Schaltdifferenz
 
 ### Description
 Min: 5, Max: 99
+
 WW-Sollwert Maximal
 
 
@@ -530,6 +576,7 @@ WW-Sollwert Maximal
 
 ### Description
 Min: 0, Max: 58
+
 WW-Sollwert Maximal WP
 
 
@@ -540,6 +587,7 @@ WW-Sollwert Maximal WP
 
 ### Description
 Min: 0, Max: 2
+
 WW-Vorrang:
 Kein Vorrang = 0
 Teilvorrang = 1
@@ -554,6 +602,7 @@ Voller Vorrang = 2
 
 ### Description
 Min: 0, Max: 1
+
 WW-Zwangsladung
 Keine Funktion = 0
 Täglich bei erster WW-Ladung = 1
@@ -566,6 +615,7 @@ Täglich bei erster WW-Ladung = 1
 
 ### Description
 Min: 0, Max: 3
+
 Gebäudeträgheit:
 Ohne Trägheit (Testzwecke) = 0
 Leichte Bauweise = 1
@@ -581,6 +631,7 @@ Schwere Bauweise = 3
 
 ### Description
 Min: 1, Max: 30
+
 Mischerlaufzeit
 
 
@@ -591,6 +642,7 @@ Mischerlaufzeit
 
 ### Description
 Min: 0, Max: 30
+
 Nachlaufzeit Zonenpumpe
 
 
@@ -601,6 +653,7 @@ Nachlaufzeit Zonenpumpe
 
 ### Description
 Min: 0, Max: 6
+
 Raumsoll’überh Sol
 
 
@@ -611,6 +664,7 @@ Raumsoll’überh Sol
 
 ### Description
 Min: 0, Max: 30
+
 Überhöh Vorlauf/Energieerz
 
 
@@ -621,6 +675,7 @@ Min: 0, Max: 30
 
 ### Description
 Min: 0, Max: 99
+
 Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primärpumpe bzw. der Ventilator erst nach der Nachlaufzeit ausgeschaltet.
 
 
@@ -631,6 +686,7 @@ Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primär
 
 ### Description
 Min: 0, Max: 99
+
 Vorlaufzeit Primär: Bei einer Energieanforderung wird die Primärpumpe bzw. der Ventilator aktiviert und der Energieerzeuger(Verdichter) erst nach der Vorlaufzeit freigegeben
 
 
@@ -641,6 +697,7 @@ Vorlaufzeit Primär: Bei einer Energieanforderung wird die Primärpumpe bzw. der
 
 ### Description
 Min: 0, Max: 20
+
 DeltaT für Umsch Pas’kühlen
 
 
@@ -651,6 +708,7 @@ DeltaT für Umsch Pas’kühlen
 
 ### Description
 Min: 2, Max: 10
+
 Schaltdiff Umsch Pas’kühlen
 
 
@@ -661,6 +719,7 @@ Schaltdiff Umsch Pas’kühlen
 
 ### Description
 Min: 6, Max: 99
+
 Temp min bei Kühlen
 
 
@@ -695,6 +754,7 @@ Kondensatorpumpe).
 
 ### Description
 Min: 0, Max: 1
+
 Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
 0: deaktiviert
 1: Sommerkick täglich um 16:00
@@ -707,6 +767,7 @@ Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der He
 
 ### Description
 Min: 20, Max: 99
+
 Adapt. Energieerz’temp im Auslegep
 
 
@@ -717,6 +778,7 @@ Adapt. Energieerz’temp im Auslegep
 
 ### Description
 Min: -15, Max: 20
+
 Anlagenfrostschutz: Wenn die gebäudebezogene Aussentemperatur unter den „Anlagefrostschutz“ (187) fällt, werden die Heizkreispumpen aktiviert.
 
 
@@ -727,6 +789,7 @@ Anlagenfrostschutz: Wenn die gebäudebezogene Aussentemperatur unter den „Anla
 
 ### Description
 Min: 20, Max: 99
+
 Energieerz’temp im Auslegep
 
 
@@ -737,6 +800,7 @@ Energieerz’temp im Auslegep
 
 ### Description
 Min: 0, Max: 100
+
 Maximale Pumpenleistung in %
 
 
@@ -747,6 +811,7 @@ Maximale Pumpenleistung in %
 
 ### Description
 Min: 0, Max: 100
+
 Maximale Kühl-Pumpenleistung in %
 
 
@@ -757,6 +822,7 @@ Maximale Kühl-Pumpenleistung in %
 
 ### Description
 Min: 0, Max: 1
+
 Y1 Max Mode:
 Die Maximalbegrenzung (412, 3614) kann in speziellen Zuständen übersteuert werden (z.B. bei
 Frostschutz). Wenn dies nicht erwünscht ist, kann mit diesem Parameter die Maximalbegrenzung
@@ -772,6 +838,7 @@ als „Immer aktiv“ definiert werden.
 
 ### Description
 Min: 0, Max: 100
+
 Minimale Pumpenleistung in %
 
 
@@ -782,6 +849,7 @@ Minimale Pumpenleistung in %
 
 ### Description
 Min: 0, Max: 100
+
 Minimale Kühl-Pumpenleistung in %
 
 
@@ -792,6 +860,7 @@ Minimale Kühl-Pumpenleistung in %
 
 ### Description
 Min: 0, Max: 1
+
 Stopp Mode:
 Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
 0: 0V
@@ -1243,6 +1312,7 @@ Die Funktion wird gestartet, indem die gewünschte Dauer eingestellt wird. Währ
 
 ### Description
 Min: 5, Max: 30
+
 Raumsollwert Frost 5.0..30.0
 
 
@@ -1253,6 +1323,7 @@ Raumsollwert Frost 5.0..30.0
 
 ### Description
 Min: 5, Max: 30
+
 Raumsollwert normal 5.0..30.0
 
 
@@ -1263,5 +1334,6 @@ Raumsollwert normal 5.0..30.0
 
 ### Description
 Min: 5, Max: 30
+
 Raumsollwert reduziert 5.0..30.0
 
