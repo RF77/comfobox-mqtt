@@ -11,17 +11,14 @@ Red is the ComfoBox controlling unit - Green the RS485 port
 
 ## Installation
 
-### Windows
-Download [here](https://github.com/RF77/comfobox-mqtt/releases) the installer and install it.
-
-The files are installed in your %ProgramFiles%/ComfoBox and contains the following components:
-
 ### Linux
 
 Tried with Raspbian:
  * Install Mono: `sudo apt-get install mono-complete`
- * Copy ComfoBoxMqtt Files to your device
- * change baudrate and port in the config file `ComfoBoxMqttConsole.exe.config`
+ * If required, install zip/unzip: `sudo apt-get install zip unzip`
+ * Copy ComfoBoxMqtt Files from [ZIP File](https://github.com/RF77/comfobox-mqtt/releases) to your device and unzip
+ * if required, change baudrate and port in the config file `ComfoBoxMqttConsole.exe.config` (e.g. /dev/ttyUSB0)
+   * On my Raspberry only a baudraute of 38400 was working. -> Comfobox needs to be reconfigured with 38400 instead of 76800 and must be rebooted
  * call `mono ComfoBoxMqttConsole.exe`
  
 I know it's a short description. It will be extended on request. Just open an issue.
@@ -29,6 +26,11 @@ I know it's a short description. It will be extended on request. Just open an is
 ### Mac
 
 Should work with Mono too.
+
+### Windows
+Download [here](https://github.com/RF77/comfobox-mqtt/releases) the installer and install it.
+
+The files are installed in your %ProgramFiles%/ComfoBox and contains the following components:
 
 ## Components
 
