@@ -1,6 +1,6 @@
 #Topics
 
-Writable items have a /Set topic. Take care and write only values you exactly know!
+Writable items have a /Set topic. Take care and write only values you exactly know! Some of the values cannot be changed until the config value ExpertMode is set to true.
 I'm sorry about the english/german mix. Finally only german names would be better due to german source documents.
 
 ## ComfoBox.Config.Comfofond.CoolingHysteresis
@@ -54,7 +54,6 @@ Sollwert Heizung: Ab dieser Temperatur wird die Luft über das Comfofond-L im Wi
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.AbsMinVorlauftemp
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/AbsMinVorlauftemp
-* ComfoBox/Config/EnergyComsumer/CoolingZone/AbsMinVorlauftemp/Set
 
 ### Description
 Min: 0, Max: 99
@@ -65,7 +64,6 @@ Abs min Vorlauftemp Kühlen
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.Cooling
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/Cooling
-* ComfoBox/Config/EnergyComsumer/CoolingZone/Cooling/Set
 
 ### Description
 Min: 0, Max: 3
@@ -90,7 +88,6 @@ Fixpunkt Raumsoll Küh (20°C)
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.KühlraumsollAbstNormal
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstNormal
-* ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstNormal/Set
 
 ### Description
 Min: 0, Max: 10
@@ -101,7 +98,6 @@ Kühlraumsoll’abst normal
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.KühlraumsollAbstReduziert
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstReduziert
-* ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstReduziert/Set
 
 ### Description
 Min: 0, Max: 10
@@ -112,7 +108,6 @@ Kühlraumsoll’abst reduziert
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.KühlraumsollAbstStandby
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstStandby
-* ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstStandby/Set
 
 ### Description
 Min: 0, Max: 10
@@ -123,7 +118,6 @@ Kühlraumsoll’abst standby
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.MinVorlTemp20
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp20
-* ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp20/Set
 
 ### Description
 Min: 0, Max: 99
@@ -134,7 +128,6 @@ Min Vorl’temp Kühlen (20°C)
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.MinVorlTemp40
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp40
-* ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp40/Set
 
 ### Description
 Min: 0, Max: 99
@@ -156,7 +149,6 @@ Raumeinfluss bei Kühlen
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.Sommerkühlgrenze
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/CoolingZone/Sommerkühlgrenze
-* ComfoBox/Config/EnergyComsumer/CoolingZone/Sommerkühlgrenze/Set
 
 ### Description
 Min: -10, Max: 10
@@ -226,7 +218,6 @@ Wiedereinschaltverzögerung
 ## ComfoBox.Config.EnergyComsumer.HeatPump.SwitchingDifferenceStage1
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/HeatPump/SwitchingDifferenceStage1
-* ComfoBox/Config/EnergyComsumer/HeatPump/SwitchingDifferenceStage1/Set
 
 ### Description
 Min: 2, Max: 20
@@ -237,7 +228,6 @@ Schaltdifferenz Stufe 1
 ## ComfoBox.Config.EnergyComsumer.HeizenZone.MaxVorhaltezeitAbsenken
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitAbsenken
-* ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitAbsenken/Set
 
 ### Description
 Min: 0, Max: 120
@@ -248,7 +238,6 @@ Max Vorhaltezeit Absenken
 ## ComfoBox.Config.EnergyComsumer.HeizenZone.MaxVorhaltezeitHeizen
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitHeizen
-* ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitHeizen/Set
 
 ### Description
 Min: 0, Max: 180
@@ -259,7 +248,6 @@ Max Vorhaltezeit Heizen
 ## ComfoBox.Config.EnergyComsumer.HeizenZone.OptimierungHeizschaltzeiten
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/HeizenZone/OptimierungHeizschaltzeiten
-* ComfoBox/Config/EnergyComsumer/HeizenZone/OptimierungHeizschaltzeiten/Set
 
 ### Description
 Min: 0, Max: 1
@@ -433,9 +421,7 @@ Vorlauftemp im Auslegepunkt
 ## ComfoBox.Config.EnergyComsumer.Protection.KondensatorFrostschutz.KondensatFrostschutz
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondensatFrostschutz
-* ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondensatFrostschutz/Set
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondensatFrostschutz/AsNumber
-* ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondensatFrostschutz/AsNumber/Set
 
 ### Description
 Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen. Parameter „Kondensat’frostschutz“ definiert, welcher Fühler für die Schutzfunktion zuständig ist.
@@ -444,7 +430,6 @@ Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen
 ## ComfoBox.Config.EnergyComsumer.Protection.KondensatorFrostschutz.KondFrostschutzSchatdiff
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzSchatdiff
-* ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzSchatdiff/Set
 
 ### Description
 Min: 2, Max: 10
@@ -455,7 +440,6 @@ Kond’frostschutztemp
 ## ComfoBox.Config.EnergyComsumer.Protection.KondensatorFrostschutz.KondFrostschutzTemp
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzTemp
-* ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzTemp/Set
 
 ### Description
 Min: -20, Max: 30
@@ -466,7 +450,6 @@ Kond’frostschutztemp
 ## ComfoBox.Config.EnergyComsumer.Warmwater.EnergieerzAnhebungFühler
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzAnhebungFühler
-* ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzAnhebungFühler/Set
 
 ### Description
 Min: 2, Max: 60
@@ -477,7 +460,6 @@ Energieerz’anhebung (Fühler)
 ## ComfoBox.Config.EnergyComsumer.Warmwater.EnergieerzSollThermostat
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzSollThermostat
-* ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzSollThermostat/Set
 
 ### Description
 Min: 0, Max: 99
@@ -572,7 +554,6 @@ WW-Sollwert Maximal
 ## ComfoBox.Config.EnergyComsumer.Warmwater.SollwertMaximalWP
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Warmwater/SollwertMaximalWP
-* ComfoBox/Config/EnergyComsumer/Warmwater/SollwertMaximalWP/Set
 
 ### Description
 Min: 0, Max: 58
@@ -627,7 +608,6 @@ Schwere Bauweise = 3
 ## ComfoBox.Config.EnergyComsumer.Zone.Mischerlaufzeit
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Zone/Mischerlaufzeit
-* ComfoBox/Config/EnergyComsumer/Zone/Mischerlaufzeit/Set
 
 ### Description
 Min: 1, Max: 30
@@ -638,7 +618,6 @@ Mischerlaufzeit
 ## ComfoBox.Config.EnergyComsumer.Zone.NachlaufzeitZonenpumpe
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Zone/NachlaufzeitZonenpumpe
-* ComfoBox/Config/EnergyComsumer/Zone/NachlaufzeitZonenpumpe/Set
 
 ### Description
 Min: 0, Max: 30
@@ -649,7 +628,6 @@ Nachlaufzeit Zonenpumpe
 ## ComfoBox.Config.EnergyComsumer.Zone.RaumsollüberhSol
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Zone/RaumsollüberhSol
-* ComfoBox/Config/EnergyComsumer/Zone/RaumsollüberhSol/Set
 
 ### Description
 Min: 0, Max: 6
@@ -660,7 +638,6 @@ Raumsoll’überh Sol
 ## ComfoBox.Config.EnergyComsumer.Zone.ÜberhöhVorlaufEnergieerz
 ### MQTT Topics
 * ComfoBox/Config/EnergyComsumer/Zone/ÜberhöhVorlaufEnergieerz
-* ComfoBox/Config/EnergyComsumer/Zone/ÜberhöhVorlaufEnergieerz/Set
 
 ### Description
 Min: 0, Max: 30
@@ -671,7 +648,6 @@ Min: 0, Max: 30
 ## ComfoBox.Config.EnergyProducer.PrimaryPumpPostRunningTime
 ### MQTT Topics
 * ComfoBox/Config/EnergyProducer/PrimaryPumpPostRunningTime
-* ComfoBox/Config/EnergyProducer/PrimaryPumpPostRunningTime/Set
 
 ### Description
 Min: 0, Max: 99
@@ -682,7 +658,6 @@ Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primär
 ## ComfoBox.Config.EnergyProducer.PrimaryPumpPreRunningTime
 ### MQTT Topics
 * ComfoBox/Config/EnergyProducer/PrimaryPumpPreRunningTime
-* ComfoBox/Config/EnergyProducer/PrimaryPumpPreRunningTime/Set
 
 ### Description
 Min: 0, Max: 99
@@ -715,7 +690,6 @@ Schaltdiff Umsch Pas’kühlen
 ## ComfoBox.Config.Freecooling.MinTemperature
 ### MQTT Topics
 * ComfoBox/Config/Freecooling/MinTemperature
-* ComfoBox/Config/Freecooling/MinTemperature/Set
 
 ### Description
 Min: 6, Max: 99
@@ -750,7 +724,6 @@ Kondensatorpumpe).
 ## ComfoBox.Config.General.Sommerknick
 ### MQTT Topics
 * ComfoBox/Config/General/Sommerknick
-* ComfoBox/Config/General/Sommerknick/Set
 
 ### Description
 Min: 0, Max: 1
@@ -763,7 +736,6 @@ Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der He
 ## ComfoBox.Config.HeatingSystem.AdaptEnergieerzeugerTempImAuslegepunkt
 ### MQTT Topics
 * ComfoBox/Config/HeatingSystem/AdaptEnergieerzeugerTempImAuslegepunkt
-* ComfoBox/Config/HeatingSystem/AdaptEnergieerzeugerTempImAuslegepunkt/Set
 
 ### Description
 Min: 20, Max: 99
@@ -785,7 +757,6 @@ Anlagenfrostschutz: Wenn die gebäudebezogene Aussentemperatur unter den „Anla
 ## ComfoBox.Config.HeatingSystem.EnergieerzeugerTempImAuslegepunkt
 ### MQTT Topics
 * ComfoBox/Config/HeatingSystem/EnergieerzeugerTempImAuslegepunkt
-* ComfoBox/Config/HeatingSystem/EnergieerzeugerTempImAuslegepunkt/Set
 
 ### Description
 Min: 20, Max: 99
@@ -796,7 +767,6 @@ Energieerz’temp im Auslegep
 ## ComfoBox.Config.PrimaryPump.Max
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/Max
-* ComfoBox/Config/PrimaryPump/Max/Set
 
 ### Description
 Min: 0, Max: 100
@@ -807,7 +777,6 @@ Maximale Pumpenleistung in %
 ## ComfoBox.Config.PrimaryPump.MaxCooling
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/MaxCooling
-* ComfoBox/Config/PrimaryPump/MaxCooling/Set
 
 ### Description
 Min: 0, Max: 100
@@ -818,7 +787,6 @@ Maximale Kühl-Pumpenleistung in %
 ## ComfoBox.Config.PrimaryPump.MaxMode
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/MaxMode
-* ComfoBox/Config/PrimaryPump/MaxMode/Set
 
 ### Description
 Min: 0, Max: 1
@@ -834,7 +802,6 @@ als „Immer aktiv“ definiert werden.
 ## ComfoBox.Config.PrimaryPump.Min
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/Min
-* ComfoBox/Config/PrimaryPump/Min/Set
 
 ### Description
 Min: 0, Max: 100
@@ -845,7 +812,6 @@ Minimale Pumpenleistung in %
 ## ComfoBox.Config.PrimaryPump.MinCooling
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/MinCooling
-* ComfoBox/Config/PrimaryPump/MinCooling/Set
 
 ### Description
 Min: 0, Max: 100
@@ -856,7 +822,6 @@ Minimale Kühl-Pumpenleistung in %
 ## ComfoBox.Config.PrimaryPump.StoppedMode
 ### MQTT Topics
 * ComfoBox/Config/PrimaryPump/StoppedMode
-* ComfoBox/Config/PrimaryPump/StoppedMode/Set
 
 ### Description
 Min: 0, Max: 1

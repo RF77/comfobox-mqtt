@@ -80,7 +80,7 @@ namespace ComfoBoxMqtt
                 var contents = string.Join("\r\n", _items.OrderBy(i => i.Topics.First()).Select(i => i.DescriptionString()));
                 File.WriteAllText(Settings.Default.WriteTopicsFilePath, $@"#Topics
 
-Writable items have a /Set topic. Take care and write only values you exactly know!
+Writable items have a /Set topic. Take care and write only values you exactly know! Some of the values cannot be changed until the config value ExpertMode is set to true.
 I'm sorry about the english/german mix. Finally only german names would be better due to german source documents.
 
 {contents}");
