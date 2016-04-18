@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using ComfoBoxLib;
@@ -68,9 +69,23 @@ namespace ComfoBoxMqtt.Models.Items
 
         public string DescriptionString()
         {
-            return $@"{string.Join(";", Topics)}
-=====================
-{Description}
+            var analogValue = ItemValue as AnalogValue;
+            string minMax = string.Empty;
+            if (analogValue != null)
+            {
+                if (analogValue.Min != null && analogValue.Max != null)
+                {
+                    minMax = $@"Min: {analogValue.Min.Value}, Max: {analogValue.Max.Value}
+";
+                }
+            }
+
+            return $@"## {Topics.First().Replace("/",".")}
+### MQTT Topics (read/write)
+{string.Join("\r\n", Topics)}
+
+### Description
+{minMax}{Description}
 
 ";
         }

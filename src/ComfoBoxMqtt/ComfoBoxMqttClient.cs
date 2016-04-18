@@ -77,7 +77,13 @@ namespace ComfoBoxMqtt
 #if DEBUG
             if (Settings.Default.WriteTopicsToFile)
             {
-                File.WriteAllText(Settings.Default.WriteTopicsFilePath, string.Join("\r\n", _items.Select(i => i.DescriptionString())));
+                var contents = string.Join("\r\n", _items.OrderBy(i => i.Topics.First()).Select(i => i.DescriptionString()));
+                File.WriteAllText(Settings.Default.WriteTopicsFilePath, $@"#Topics
+
+Writable items have a /Set topic. Take care and write only values you exactly know!
+I'm sorry about the english/german mix. Finally only german names would be better due to german source documents.
+
+{contents}");
             }
 #endif
             PollSpecialItems();
