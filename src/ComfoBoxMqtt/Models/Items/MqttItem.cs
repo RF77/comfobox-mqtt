@@ -81,8 +81,8 @@ namespace ComfoBoxMqtt.Models.Items
             }
 
             return $@"## {Topics.First().Replace("/",".")}
-### MQTT Topics (read/write)
-{string.Join("\r\n", Topics)}
+### MQTT Topics
+{string.Join("\r\n", Topics.Select(t => $"* {t}"))}
 
 ### Description
 {minMax}{Description}
