@@ -11,11 +11,6 @@ Red is the ComfoBox controlling unit - Green the RS485 port
 
 ## Installation
 
-### Windows
-Download [here](https://github.com/RF77/comfobox-mqtt/releases) the installer and install it.
-
-The files are installed in your %ProgramFiles%/ComfoBox and contains the following components:
-
 ### Linux
 
 Tried with Raspbian:
@@ -31,6 +26,11 @@ I know it's a short description. It will be extended on request. Just open an is
 ### Mac
 
 Should work with Mono too.
+
+### Windows
+Download [here](https://github.com/RF77/comfobox-mqtt/releases) the installer and install it.
+
+The files are installed in your %ProgramFiles%/ComfoBox and contains the following components:
 
 ## Components
 
