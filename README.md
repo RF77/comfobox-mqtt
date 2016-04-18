@@ -3,7 +3,7 @@
 Connect to your Zehnder ComfoBox Series 5 with an ELESTA controller over RS485/BACnet MSTP and control it (read/write).
 
 ## Hardware
-You need an RS485 port on your PC (tested with a USB2RS485 Adapter with a CH340 chip).
+You need an RS485 port on your PC / Raspberry Pi (tested with a USB2RS485 Adapter with a CH340 chip).
 Afterwards connect the RS485 **parallel** to your ComfoBox controlling unit.
 
 ![Connect to the red marked pins](/docs/images/Elesta.png)
@@ -11,9 +11,26 @@ Red is the ComfoBox controlling unit - Green the RS485 port
 
 ## Installation
 
+### Windows
 Download [here](https://github.com/RF77/comfobox-mqtt/releases) the installer and install it.
 
 The files are installed in your %ProgramFiles%/ComfoBox and contains the following components:
+
+### Linux
+
+Tried with Raspbian:
+ * Install Mono: `sudo apt-get install mono-complete`
+ * Copy ComfoBoxMqtt Files to your device
+ * change baudrate and port in the config file `ComfoBoxMqttConsole.exe.config`
+ * call `mono ComfoBoxMqttConsole.exe`
+ 
+I know it's a short description. It will be extended on request. Just open an issue.
+ 
+### Mac
+
+Should work with Mono too.
+
+## Components
 
 ### ComfoBoxLib
 
@@ -40,7 +57,7 @@ Configuration: ComfoboxService.exe.config. Please change the port name to your p
 
 ## MQTT Topics
 
-[Here](https://rawgit.com/RF77/comfobox-mqtt/master/docs/topics.txt) is a list of all MQTT topics.
+[Here](https://rawgit.com/RF77/comfobox-mqtt/master/docs/topics.md) is a list of all MQTT topics with a description.
 
 ### Write values
 Use ../Set topics to write a value to your ComfoBox. In the topics.txt you can see the writable topics
@@ -67,3 +84,5 @@ Add an InfluxDB persistence to openHAB and use Grafana for live charting
 
 >Try with care and on your **own risk**. You also may loose your warranty.
 >Keep in mind that you write the values to an EEPROM (1'000'000 writing cycles).
+
+Feedback is welcomed. Open an issue, if you have any questions.
