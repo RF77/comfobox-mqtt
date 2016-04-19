@@ -85,14 +85,5 @@ namespace ComfoBoxLib.Properties {
                 return ((int)(this["MaxNumberOfWritesPer24h"]));
             }
         }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("localhost")]
-        public string MqttBrokerAddress {
-            get {
-                return ((string)(this["MqttBrokerAddress"]));
-            }
-        }
     }
 }

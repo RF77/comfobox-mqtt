@@ -37,7 +37,7 @@ namespace ComfoBoxMqtt
         //private IEnumerable<VirtualMqttItem> _virtualItems;
         private IEnumerable<ISpecialItem> _specialItems;
         private SpecialMqttItem<int?> _numberOfWritePer24hMqttItem;
-        private MqttClient _mqttClient;
+        private MqttClient[] _mqttClients;
 
 
         public ComfoBoxMqttClient(string brokerHostName, int brokerPort, string username, string password,
@@ -50,22 +50,36 @@ namespace ComfoBoxMqtt
 
         private void InitMqttClient(string brokerHostName, int brokerPort, string username, string password)
         {
-            _mqttClient = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
-            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}", username, password);
+            var client = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
+            client.Connect($"ComfoBox{DateTime.Now.Ticks}", username, password);
+            _mqttClients = new[] {client};
         }
 
         public ComfoBoxMqttClient(string brokerHostName, int brokerPort, ComfoBoxClient comfoBoxClient)
         {
             _comfoBoxClient = comfoBoxClient;
-            _mqttClient = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
-            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}");
+            var client = new MqttClient(brokerHostName, brokerPort, false, MqttSslProtocols.None, null, null);
+            client.Connect($"ComfoBox{DateTime.Now.Ticks}");
+            _mqttClients = new[] { client };
         }
 
         public ComfoBoxMqttClient(string brokerHostName, ComfoBoxClient comfoBoxClient) 
         {
             _comfoBoxClient = comfoBoxClient;
-            _mqttClient = new MqttClient(brokerHostName);
-            _mqttClient.Connect($"ComfoBox{DateTime.Now.Ticks}");
+            var client = new MqttClient(brokerHostName);
+            client.Connect($"ComfoBox{DateTime.Now.Ticks}");
+            _mqttClients = new[] { client };
+        }
+
+        public ComfoBoxMqttClient(string[] brokerHostNames, ComfoBoxClient comfoBoxClient)
+        {
+            _comfoBoxClient = comfoBoxClient;
+
+            _mqttClients = brokerHostNames.Select(i => new MqttClient(i)).ToArray();
+            foreach (var client in _mqttClients)
+            {
+                client.Connect($"ComfoBox{DateTime.Now.Ticks}");
+            }
         }
 
         public async Task StartAsync()
@@ -88,7 +102,11 @@ I'm sorry about the english/german mix. Finally only german names would be bette
 #endif
             PollSpecialItems();
             await _comfoBoxClient.StartAsync();
-            _mqttClient.MqttMsgPublishReceived += MqttClientOnMqttMsgPublishReceived;
+
+            foreach (var mqttClient in _mqttClients)
+            {
+                mqttClient.MqttMsgPublishReceived += MqttClientOnMqttMsgPublishReceived;
+            }
             //_virtualItems = CreateVirtualItems();
         }
 
@@ -226,7 +244,10 @@ I'm sorry about the english/german mix. Finally only german names would be bette
         public void On(string topic, Action<string> action)
         {
             _subscriptions[topic] = action;
-            _mqttClient.Subscribe(new[] {topic}, new[] {MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE});
+            foreach (var mqttClient in _mqttClients)
+            {
+                mqttClient.Subscribe(new[] {topic}, new[] {MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE});
+            }
         }
 
         public void Stop()
@@ -234,8 +255,11 @@ I'm sorry about the english/german mix. Finally only german names would be bette
             try
             {
                 _comfoBoxClient.Stop();
-                _mqttClient.Disconnect();
-                _mqttClient.MqttMsgPublishReceived -= MqttClientOnMqttMsgPublishReceived;
+                foreach (var mqttClient in _mqttClients)
+                {
+                    mqttClient.Disconnect();
+                    mqttClient.MqttMsgPublishReceived -= MqttClientOnMqttMsgPublishReceived;
+                }
                 _subscriptions.Clear();
             }
             finally 
@@ -246,7 +270,10 @@ I'm sorry about the english/german mix. Finally only german names would be bette
 
         public void Publish(string topic, string message, bool useMqttRetain)
         {
-            _mqttClient.Publish(topic, Encoding.UTF8.GetBytes(message), 0, useMqttRetain);
+            foreach (var mqttClient in _mqttClients)
+            {
+                mqttClient.Publish(topic, Encoding.UTF8.GetBytes(message), 0, useMqttRetain);
+            }
         }
     }
 }

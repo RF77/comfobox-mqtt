@@ -10,15 +10,16 @@
 //  *******************************************************************************/ 
 
 using System;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using ComfoBoxLib;
-using ComfoBoxLib.Properties;
 using ComfoBoxMqtt;
+using ComfoBoxMqtt.Properties;
 using log4net;
 using log4net.Config;
 using Nito.AsyncEx;
+using LibSettings = ComfoBoxLib.Properties.Settings;
 
 namespace ComfoBoxMqttConsole
 {
@@ -40,7 +41,7 @@ namespace ComfoBoxMqttConsole
                 {
                     try
                     {
-                        var client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddress, new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
+                        var client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddresses.OfType<string>().ToArray(), new ComfoBoxClient(LibSettings.Default.Port, LibSettings.Default.Baudrate, LibSettings.Default.BacnetClientId));
                         await client.StartAsync();
                         await client.StartPollingAsync();
                     }

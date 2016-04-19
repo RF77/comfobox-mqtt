@@ -23,8 +23,5 @@
     <Setting Name="MaxNumberOfWritesPer24h" Type="System.Int32" Scope="Application">
       <Value Profile="(Default)">200</Value>
     </Setting>
-    <Setting Name="MqttBrokerAddress" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">localhost</Value>
-    </Setting>
   </Settings>
 </SettingsFile>

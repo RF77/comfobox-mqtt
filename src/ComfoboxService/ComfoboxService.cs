@@ -11,6 +11,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.ServiceProcess;
 using System.Threading;
@@ -49,7 +50,7 @@ namespace ComfoboxService
                         {
                             _cancellationTokenSource.Token.ThrowIfCancellationRequested();
                             _client?.Stop();
-                            _client = new ComfoBoxMqttClient(Settings.Default.MqttBrokerAddress, new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
+                            _client = new ComfoBoxMqttClient(ComfoBoxMqtt.Properties.Settings.Default.MqttBrokerAddresses.OfType<string>().ToArray(), new ComfoBoxClient(Settings.Default.Port, Settings.Default.Baudrate, Settings.Default.BacnetClientId));
                             await _client.StartAsync();
                             await _client.StartPollingAsync();
                         }

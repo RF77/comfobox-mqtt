@@ -13,7 +13,7 @@ namespace ComfoBoxMqtt.Properties {
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "14.0.0.0")]
-    internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
+    public sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
         
@@ -128,6 +128,26 @@ namespace ComfoBoxMqtt.Properties {
         public string VirtualTopic {
             get {
                 return ((string)(this["VirtualTopic"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfString xmlns:xsi=\"http://www.w3." +
+            "org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n  <s" +
+            "tring>localhost</string>\r\n  <string>10.10.1.20</string>\r\n</ArrayOfString>")]
+        public global::System.Collections.Specialized.StringCollection MqttBrokerAddresses {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["MqttBrokerAddresses"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("00:00:30")]
+        public global::System.TimeSpan MqttNoResponseTimeout {
+            get {
+                return ((global::System.TimeSpan)(this["MqttNoResponseTimeout"]));
             }
         }
     }
