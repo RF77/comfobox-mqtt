@@ -54,6 +54,7 @@ namespace ComfoBoxMqtt.Models.Items
         }
 
         public string Description { get; set; }
+        public bool ExpertMode { get; set; }
 
         public virtual IEnumerable<string> Topics
         {
@@ -75,9 +76,9 @@ namespace ComfoBoxMqtt.Models.Items
             {
                 if (analogValue.Min != null && analogValue.Max != null)
                 {
-                    minMax = $@"Min: {analogValue.Min.Value}, Max: {analogValue.Max.Value}
+                    minMax = $@"Min: {analogValue.Min.Value}, Max: {analogValue.Max.Value}, Needs Expert Mode: {ExpertMode}
 
-";
+"; 
                 }
             }
 

@@ -9,11 +9,11 @@ I'm sorry about the english/german mix. Finally only german names would be bette
 * ComfoBox/Config/Comfofond/CoolingHysteresis/Set
 
 ### Description
-Min: 2, Max: 20
+Min: 2, Max: 20, Needs Expert Mode: False
 
 Hysterese beim Ein- und Ausschalten der Kühlung über das Comfofond-L. z.B. Sollwert ist bei 22°C
--> falls Kühlung aus, wird sie erst >24°C eingeschaltet
--> falls Kühlung ein, wird sie erst kleiner 20°C ausgeschaltet
+* -> falls Kühlung aus, wird sie erst >24°C eingeschaltet
+* -> falls Kühlung ein, wird sie erst kleiner 20°C ausgeschaltet
 
 
 ## ComfoBox.Config.Comfofond.CoolingSetPoint
@@ -22,7 +22,7 @@ Hysterese beim Ein- und Ausschalten der Kühlung über das Comfofond-L. z.B. Sol
 * ComfoBox/Config/Comfofond/CoolingSetPoint/Set
 
 ### Description
-Min: -50, Max: 999
+Min: -50, Max: 999, Needs Expert Mode: False
 
 Sollwert Kühlung: Ab dieser Temperatur wird die Luft über das Comfofond-L gekühlt, falls der Raumsollwert der Lüftung tiefer liegt
 
@@ -33,11 +33,11 @@ Sollwert Kühlung: Ab dieser Temperatur wird die Luft über das Comfofond-L gek�
 * ComfoBox/Config/Comfofond/HeatingHysteresis/Set
 
 ### Description
-Min: 2, Max: 20
+Min: 2, Max: 20, Needs Expert Mode: False
 
 Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollwert ist bei 2°C;
--> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
--> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet
+* -> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
+* -> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet
 
 
 ## ComfoBox.Config.Comfofond.HeatingSetPoint
@@ -46,7 +46,7 @@ Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollw
 * ComfoBox/Config/Comfofond/HeatingSetPoint/Set
 
 ### Description
-Min: -50, Max: 999
+Min: -50, Max: 999, Needs Expert Mode: False
 
 Sollwert Heizung: Ab dieser Temperatur wird die Luft über das Comfofond-L im Winter gewärmt
 
@@ -56,7 +56,7 @@ Sollwert Heizung: Ab dieser Temperatur wird die Luft über das Comfofond-L im Wi
 * ComfoBox/Config/EnergyComsumer/CoolingZone/AbsMinVorlauftemp
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Abs min Vorlauftemp Kühlen
 
@@ -66,12 +66,12 @@ Abs min Vorlauftemp Kühlen
 * ComfoBox/Config/EnergyComsumer/CoolingZone/Cooling
 
 ### Description
-Min: 0, Max: 3
+Min: 0, Max: 3, Needs Expert Mode: True
 
 Kühlen:
-Keine Funktion = 0
-Kühlen = 1
-Nur Kühlen = 3
+* Keine Funktion = 0
+* Kühlen = 1
+* Nur Kühlen = 3
 
 
 ## ComfoBox.Config.EnergyComsumer.CoolingZone.FixpunktRaumsoll
@@ -80,7 +80,7 @@ Nur Kühlen = 3
 * ComfoBox/Config/EnergyComsumer/CoolingZone/FixpunktRaumsoll/Set
 
 ### Description
-Min: 10, Max: 30
+Min: 10, Max: 30, Needs Expert Mode: False
 
 Fixpunkt Raumsoll Küh (20°C)
 
@@ -90,7 +90,7 @@ Fixpunkt Raumsoll Küh (20°C)
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstNormal
 
 ### Description
-Min: 0, Max: 10
+Min: 0, Max: 10, Needs Expert Mode: True
 
 Kühlraumsoll’abst normal
 
@@ -100,7 +100,7 @@ Kühlraumsoll’abst normal
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstReduziert
 
 ### Description
-Min: 0, Max: 10
+Min: 0, Max: 10, Needs Expert Mode: True
 
 Kühlraumsoll’abst reduziert
 
@@ -110,7 +110,7 @@ Kühlraumsoll’abst reduziert
 * ComfoBox/Config/EnergyComsumer/CoolingZone/KühlraumsollAbstStandby
 
 ### Description
-Min: 0, Max: 10
+Min: 0, Max: 10, Needs Expert Mode: True
 
 Kühlraumsoll’abst standby
 
@@ -120,7 +120,7 @@ Kühlraumsoll’abst standby
 * ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp20
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Min Vorl’temp Kühlen (20°C)
 
@@ -130,7 +130,7 @@ Min Vorl’temp Kühlen (20°C)
 * ComfoBox/Config/EnergyComsumer/CoolingZone/MinVorlTemp40
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Min Vorl’temp Kühlen (40°C)
 
@@ -141,7 +141,7 @@ Min Vorl’temp Kühlen (40°C)
 * ComfoBox/Config/EnergyComsumer/CoolingZone/RaumeinflussBeiKühlen/Set
 
 ### Description
-Min: 100, Max: 999
+Min: 100, Max: 999, Needs Expert Mode: False
 
 Raumeinfluss bei Kühlen
 
@@ -151,7 +151,7 @@ Raumeinfluss bei Kühlen
 * ComfoBox/Config/EnergyComsumer/CoolingZone/Sommerkühlgrenze
 
 ### Description
-Min: -10, Max: 10
+Min: -10, Max: 10, Needs Expert Mode: True
 
 Sommerkühlgrenze
 
@@ -162,7 +162,7 @@ Sommerkühlgrenze
 * ComfoBox/Config/EnergyComsumer/CoolingZone/SteilheitRaumsollSchiebung/Set
 
 ### Description
-Min: 0, Max: 5
+Min: 0, Max: 5, Needs Expert Mode: False
 
 Steilheit Raumsoll-Schiebung
 
@@ -173,12 +173,12 @@ Steilheit Raumsoll-Schiebung
 * ComfoBox/Config/EnergyComsumer/CoolingZone/UmschaltungRaumfühler/Set
 
 ### Description
-Min: 0, Max: 2
+Min: 0, Max: 2, Needs Expert Mode: False
 
 Umschaltung Raumfühler:
-Keine Funktion = 0
-Heiz'n mit Tr1, Kühl'n mit Tr2 = 1
-Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
+* Keine Funktion = 0
+* Heiz'n mit Tr1, Kühl'n mit Tr2 = 1
+* Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
 
 
 
@@ -188,7 +188,7 @@ Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
 * ComfoBox/Config/EnergyComsumer/HeatPump/FlowMaxTemperature/Set
 
 ### Description
-Min: 0, Max: 58
+Min: 0, Max: 58, Needs Expert Mode: False
 
 WP-Vorlauf Maximal
 
@@ -199,7 +199,7 @@ WP-Vorlauf Maximal
 * ComfoBox/Config/EnergyComsumer/HeatPump/MinHeatpumpRunningTime/Set
 
 ### Description
-Min: 0, Max: 30
+Min: 0, Max: 30, Needs Expert Mode: False
 
 Min WP-Laufzeit
 
@@ -210,7 +210,7 @@ Min WP-Laufzeit
 * ComfoBox/Config/EnergyComsumer/HeatPump/RestartDelay/Set
 
 ### Description
-Min: 20, Max: 60
+Min: 20, Max: 60, Needs Expert Mode: False
 
 Wiedereinschaltverzögerung
 
@@ -220,7 +220,7 @@ Wiedereinschaltverzögerung
 * ComfoBox/Config/EnergyComsumer/HeatPump/SwitchingDifferenceStage1
 
 ### Description
-Min: 2, Max: 20
+Min: 2, Max: 20, Needs Expert Mode: True
 
 Schaltdifferenz Stufe 1
 
@@ -230,7 +230,7 @@ Schaltdifferenz Stufe 1
 * ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitAbsenken
 
 ### Description
-Min: 0, Max: 120
+Min: 0, Max: 120, Needs Expert Mode: True
 
 Max Vorhaltezeit Absenken
 
@@ -240,7 +240,7 @@ Max Vorhaltezeit Absenken
 * ComfoBox/Config/EnergyComsumer/HeizenZone/MaxVorhaltezeitHeizen
 
 ### Description
-Min: 0, Max: 180
+Min: 0, Max: 180, Needs Expert Mode: True
 
 Max Vorhaltezeit Heizen
 
@@ -250,11 +250,11 @@ Max Vorhaltezeit Heizen
 * ComfoBox/Config/EnergyComsumer/HeizenZone/OptimierungHeizschaltzeiten
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: True
 
 Optimierung Heizschaltzeiten:
-Keine Funktion = 0
-EIN = 1
+* Keine Funktion = 0
+* EIN = 1
 
 
 
@@ -264,7 +264,7 @@ EIN = 1
 * ComfoBox/Config/EnergyComsumer/HeizenZone/Raumeinfluss/Set
 
 ### Description
-Min: 0, Max: 150
+Min: 0, Max: 150, Needs Expert Mode: False
 
 Raumeinfluss
 
@@ -275,7 +275,7 @@ Raumeinfluss
 * ComfoBox/Config/EnergyComsumer/HeizenZone/RaumsollKorrZone/Set
 
 ### Description
-Min: -5, Max: 5
+Min: -5, Max: 5, Needs Expert Mode: False
 
 Raumsoll-Korr Zo
 
@@ -286,11 +286,11 @@ Raumsoll-Korr Zo
 * ComfoBox/Config/EnergyComsumer/HeizenZone/Tagesheizgrenze/Set
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: False
 
 Tagesheizgrenze:
-AUS = 0
-EIN = 1
+* AUS = 0
+* EIN = 1
 
 Die Tages-Heizgrenzenautomatik ist eine kurzfristig einsetzende Sparfunktion. Wenn bei
 Mischerkreisen der Vorlauftemperatursollwert nur noch ca. 3K (Wert gerechnet aus Steilheit der
@@ -306,7 +306,7 @@ mit sehr tiefem Energiebedarf den Ausschaltpunkt zu definieren.
 * ComfoBox/Config/EnergyComsumer/HeizenZone/TagesheizgrenzeOffset/Set
 
 ### Description
-Min: -5, Max: 5
+Min: -5, Max: 5, Needs Expert Mode: False
 
 Tagesheizgrenze Offset
 
@@ -317,7 +317,7 @@ Tagesheizgrenze Offset
 * ComfoBox/Config/EnergyComsumer/HeizenZone/VorlaufMaximal/Set
 
 ### Description
-Min: 0, Max: 125
+Min: 0, Max: 125, Needs Expert Mode: False
 
 Vorlauf Maximal
 
@@ -328,7 +328,7 @@ Vorlauf Maximal
 * ComfoBox/Config/EnergyComsumer/HeizenZone/VorlaufMinimal/Set
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: False
 
 Vorlauf Minimal
 
@@ -339,7 +339,7 @@ Vorlauf Minimal
 * ComfoBox/Config/EnergyComsumer/HeizenZone/Winterheizgrenze/Set
 
 ### Description
-Min: 0, Max: 10
+Min: 0, Max: 10, Needs Expert Mode: False
 
 Winterheizgrenze:
 Die Sommer/Winter-Heizgrenzenautomatik ist eine mittelfristig einsetzende Sparfunktion. Wenn
@@ -355,7 +355,7 @@ ausgeführt.
 * ComfoBox/Config/EnergyComsumer/Heizkurve/AdaptierterFixpunkt/Set
 
 ### Description
-Min: 10, Max: 40
+Min: 10, Max: 40, Needs Expert Mode: False
 
 Adaptierter Fixpunkt
 
@@ -366,7 +366,7 @@ Adaptierter Fixpunkt
 * ComfoBox/Config/EnergyComsumer/Heizkurve/AdaptVorlauftempImAuslegepunkt/Set
 
 ### Description
-Min: 20, Max: 99
+Min: 20, Max: 99, Needs Expert Mode: False
 
 Adapt Vorl’temp im Auslegep
 
@@ -377,7 +377,7 @@ Adapt Vorl’temp im Auslegep
 * ComfoBox/Config/EnergyComsumer/Heizkurve/AussentempImAuslegepunkt/Set
 
 ### Description
-Min: -30, Max: 0
+Min: -30, Max: 0, Needs Expert Mode: False
 
 Aussentemp im Auslegepunkt
 
@@ -388,7 +388,7 @@ Aussentemp im Auslegepunkt
 * ComfoBox/Config/EnergyComsumer/Heizkurve/Fixpunkt/Set
 
 ### Description
-Min: 10, Max: 40
+Min: 10, Max: 40, Needs Expert Mode: False
 
 Fixpunkt
 
@@ -399,12 +399,12 @@ Fixpunkt
 * ComfoBox/Config/EnergyComsumer/Heizkurve/Heizkennlinienadaption/Set
 
 ### Description
-Min: 0, Max: 2
+Min: 0, Max: 2, Needs Expert Mode: False
 
 Heizkennlinienadaption:
-Keine Funktion = 0
-Manuell, auto mit Raum'füh = 1
-Manuell, Korrektureingabe = 2
+* Keine Funktion = 0
+* Manuell, auto mit Raum'füh = 1
+* Manuell, Korrektureingabe = 2
 
 
 ## ComfoBox.Config.EnergyComsumer.Heizkurve.VorlauftempImAuslegepunkt
@@ -413,7 +413,7 @@ Manuell, Korrektureingabe = 2
 * ComfoBox/Config/EnergyComsumer/Heizkurve/VorlauftempImAuslegepunkt/Set
 
 ### Description
-Min: 20, Max: 99
+Min: 20, Max: 99, Needs Expert Mode: False
 
 Vorlauftemp im Auslegepunkt
 
@@ -432,7 +432,7 @@ Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzSchatdiff
 
 ### Description
-Min: 2, Max: 10
+Min: 2, Max: 10, Needs Expert Mode: True
 
 Kond’frostschutztemp
 
@@ -442,7 +442,7 @@ Kond’frostschutztemp
 * ComfoBox/Config/EnergyComsumer/Protection/KondensatorFrostschutz/KondFrostschutzTemp
 
 ### Description
-Min: -20, Max: 30
+Min: -20, Max: 30, Needs Expert Mode: True
 
 Kond’frostschutztemp
 
@@ -452,7 +452,7 @@ Kond’frostschutztemp
 * ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzAnhebungFühler
 
 ### Description
-Min: 2, Max: 60
+Min: 2, Max: 60, Needs Expert Mode: True
 
 Energieerz’anhebung (Fühler)
 
@@ -462,7 +462,7 @@ Energieerz’anhebung (Fühler)
 * ComfoBox/Config/EnergyComsumer/Warmwater/EnergieerzSollThermostat
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Energieerz’soll (Thermostat)
 
@@ -473,11 +473,11 @@ Energieerz’soll (Thermostat)
 * ComfoBox/Config/EnergyComsumer/Warmwater/Entladeschutz/Set
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: False
 
 WW-Entladeschutz:
-Keine Funktion = 0
-EIN = 1
+* Keine Funktion = 0
+* EIN = 1
 
 
 
@@ -487,12 +487,12 @@ EIN = 1
 * ComfoBox/Config/EnergyComsumer/Warmwater/Freigabe/Set
 
 ### Description
-Min: 0, Max: 2
+Min: 0, Max: 2, Needs Expert Mode: False
 
 WW-Freigabe:
-Nach Schaltuhr = 0
-1h vor Zonenbeginn = 1
-WW dauernd = 2
+* Nach Schaltuhr = 0
+* 1h vor Zonenbeginn = 1
+* WW dauernd = 2
 
 
 
@@ -502,18 +502,18 @@ WW dauernd = 2
 * ComfoBox/Config/EnergyComsumer/Warmwater/Legionellenschutzfunktion/Set
 
 ### Description
-Min: 0, Max: 8
+Min: 0, Max: 8, Needs Expert Mode: False
 
 Legionellenschutzfunktion:
-Keine Funktion = 0
-Legionellenschutz am Mo = 1
-Legionellenschutz am Di = 2
-Legionellenschutz am Mi = 3
-Legionellenschutz am Do = 4
-Legionellenschutz am Fr = 5
-Legionellenschutz am Sa = 6
-Legionellenschutz am So = 7
-Legionellenschutz täglich = 8
+* Keine Funktion = 0
+* Legionellenschutz am Mo = 1
+* Legionellenschutz am Di = 2
+* Legionellenschutz am Mi = 3
+* Legionellenschutz am Do = 4
+* Legionellenschutz am Fr = 5
+* Legionellenschutz am Sa = 6
+* Legionellenschutz am So = 7
+* Legionellenschutz täglich = 8
 
 
 
@@ -524,7 +524,7 @@ Legionellenschutz täglich = 8
 * ComfoBox/Config/EnergyComsumer/Warmwater/Nachlaufzeit/Set
 
 ### Description
-Min: 0, Max: 10
+Min: 0, Max: 10, Needs Expert Mode: False
 
 WW-Nachlaufzeit
 
@@ -535,7 +535,7 @@ WW-Nachlaufzeit
 * ComfoBox/Config/EnergyComsumer/Warmwater/Schaltdifferenz/Set
 
 ### Description
-Min: 1, Max: 10
+Min: 1, Max: 10, Needs Expert Mode: False
 
 WW-Schaltdifferenz
 
@@ -546,7 +546,7 @@ WW-Schaltdifferenz
 * ComfoBox/Config/EnergyComsumer/Warmwater/SollwertMaximal/Set
 
 ### Description
-Min: 5, Max: 99
+Min: 5, Max: 99, Needs Expert Mode: False
 
 WW-Sollwert Maximal
 
@@ -556,7 +556,7 @@ WW-Sollwert Maximal
 * ComfoBox/Config/EnergyComsumer/Warmwater/SollwertMaximalWP
 
 ### Description
-Min: 0, Max: 58
+Min: 0, Max: 58, Needs Expert Mode: True
 
 WW-Sollwert Maximal WP
 
@@ -567,12 +567,12 @@ WW-Sollwert Maximal WP
 * ComfoBox/Config/EnergyComsumer/Warmwater/Vorrang/Set
 
 ### Description
-Min: 0, Max: 2
+Min: 0, Max: 2, Needs Expert Mode: False
 
 WW-Vorrang:
-Kein Vorrang = 0
-Teilvorrang = 1
-Voller Vorrang = 2
+* Kein Vorrang = 0
+* Teilvorrang = 1
+* Voller Vorrang = 2
 
 
 
@@ -582,11 +582,11 @@ Voller Vorrang = 2
 * ComfoBox/Config/EnergyComsumer/Warmwater/Zwangsladung/Set
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: False
 
 WW-Zwangsladung
-Keine Funktion = 0
-Täglich bei erster WW-Ladung = 1
+* Keine Funktion = 0
+* Täglich bei erster WW-Ladung = 1
 
 
 ## ComfoBox.Config.EnergyComsumer.Zone.Gebäudeträgheit
@@ -595,13 +595,13 @@ Täglich bei erster WW-Ladung = 1
 * ComfoBox/Config/EnergyComsumer/Zone/Gebäudeträgheit/Set
 
 ### Description
-Min: 0, Max: 3
+Min: 0, Max: 3, Needs Expert Mode: False
 
 Gebäudeträgheit:
-Ohne Trägheit (Testzwecke) = 0
-Leichte Bauweise = 1
-Normale Bauweise = 2
-Schwere Bauweise = 3
+* Ohne Trägheit (Testzwecke) = 0
+* Leichte Bauweise = 1
+* Normale Bauweise = 2
+* Schwere Bauweise = 3
 
 
 
@@ -610,7 +610,7 @@ Schwere Bauweise = 3
 * ComfoBox/Config/EnergyComsumer/Zone/Mischerlaufzeit
 
 ### Description
-Min: 1, Max: 30
+Min: 1, Max: 30, Needs Expert Mode: True
 
 Mischerlaufzeit
 
@@ -620,7 +620,7 @@ Mischerlaufzeit
 * ComfoBox/Config/EnergyComsumer/Zone/NachlaufzeitZonenpumpe
 
 ### Description
-Min: 0, Max: 30
+Min: 0, Max: 30, Needs Expert Mode: True
 
 Nachlaufzeit Zonenpumpe
 
@@ -630,7 +630,7 @@ Nachlaufzeit Zonenpumpe
 * ComfoBox/Config/EnergyComsumer/Zone/RaumsollüberhSol
 
 ### Description
-Min: 0, Max: 6
+Min: 0, Max: 6, Needs Expert Mode: True
 
 Raumsoll’überh Sol
 
@@ -640,7 +640,7 @@ Raumsoll’überh Sol
 * ComfoBox/Config/EnergyComsumer/Zone/ÜberhöhVorlaufEnergieerz
 
 ### Description
-Min: 0, Max: 30
+Min: 0, Max: 30, Needs Expert Mode: True
 
 Überhöh Vorlauf/Energieerz
 
@@ -650,7 +650,7 @@ Min: 0, Max: 30
 * ComfoBox/Config/EnergyProducer/PrimaryPumpPostRunningTime
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primärpumpe bzw. der Ventilator erst nach der Nachlaufzeit ausgeschaltet.
 
@@ -660,7 +660,7 @@ Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primär
 * ComfoBox/Config/EnergyProducer/PrimaryPumpPreRunningTime
 
 ### Description
-Min: 0, Max: 99
+Min: 0, Max: 99, Needs Expert Mode: True
 
 Vorlaufzeit Primär: Bei einer Energieanforderung wird die Primärpumpe bzw. der Ventilator aktiviert und der Energieerzeuger(Verdichter) erst nach der Vorlaufzeit freigegeben
 
@@ -671,7 +671,7 @@ Vorlaufzeit Primär: Bei einer Energieanforderung wird die Primärpumpe bzw. der
 * ComfoBox/Config/Freecooling/DeltaTempForSwitching/Set
 
 ### Description
-Min: 0, Max: 20
+Min: 0, Max: 20, Needs Expert Mode: False
 
 DeltaT für Umsch Pas’kühlen
 
@@ -682,7 +682,7 @@ DeltaT für Umsch Pas’kühlen
 * ComfoBox/Config/Freecooling/DiffForSwitching/Set
 
 ### Description
-Min: 2, Max: 10
+Min: 2, Max: 10, Needs Expert Mode: False
 
 Schaltdiff Umsch Pas’kühlen
 
@@ -692,7 +692,7 @@ Schaltdiff Umsch Pas’kühlen
 * ComfoBox/Config/Freecooling/MinTemperature
 
 ### Description
-Min: 6, Max: 99
+Min: 6, Max: 99, Needs Expert Mode: True
 
 Temp min bei Kühlen
 
@@ -726,11 +726,11 @@ Kondensatorpumpe).
 * ComfoBox/Config/General/Sommerknick
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: True
 
 Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
-0: deaktiviert
-1: Sommerkick täglich um 16:00
+* 0: deaktiviert
+* 1: Sommerkick täglich um 16:00
 
 
 ## ComfoBox.Config.HeatingSystem.AdaptEnergieerzeugerTempImAuslegepunkt
@@ -738,7 +738,7 @@ Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der He
 * ComfoBox/Config/HeatingSystem/AdaptEnergieerzeugerTempImAuslegepunkt
 
 ### Description
-Min: 20, Max: 99
+Min: 20, Max: 99, Needs Expert Mode: True
 
 Adapt. Energieerz’temp im Auslegep
 
@@ -749,7 +749,7 @@ Adapt. Energieerz’temp im Auslegep
 * ComfoBox/Config/HeatingSystem/Anlagenfrostschutz/Set
 
 ### Description
-Min: -15, Max: 20
+Min: -15, Max: 20, Needs Expert Mode: False
 
 Anlagenfrostschutz: Wenn die gebäudebezogene Aussentemperatur unter den „Anlagefrostschutz“ (187) fällt, werden die Heizkreispumpen aktiviert.
 
@@ -759,7 +759,7 @@ Anlagenfrostschutz: Wenn die gebäudebezogene Aussentemperatur unter den „Anla
 * ComfoBox/Config/HeatingSystem/EnergieerzeugerTempImAuslegepunkt
 
 ### Description
-Min: 20, Max: 99
+Min: 20, Max: 99, Needs Expert Mode: True
 
 Energieerz’temp im Auslegep
 
@@ -769,7 +769,7 @@ Energieerz’temp im Auslegep
 * ComfoBox/Config/PrimaryPump/Max
 
 ### Description
-Min: 0, Max: 100
+Min: 0, Max: 100, Needs Expert Mode: True
 
 Maximale Pumpenleistung in %
 
@@ -779,7 +779,7 @@ Maximale Pumpenleistung in %
 * ComfoBox/Config/PrimaryPump/MaxCooling
 
 ### Description
-Min: 0, Max: 100
+Min: 0, Max: 100, Needs Expert Mode: True
 
 Maximale Kühl-Pumpenleistung in %
 
@@ -789,14 +789,14 @@ Maximale Kühl-Pumpenleistung in %
 * ComfoBox/Config/PrimaryPump/MaxMode
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: True
 
 Y1 Max Mode:
 Die Maximalbegrenzung (412, 3614) kann in speziellen Zuständen übersteuert werden (z.B. bei
 Frostschutz). Wenn dies nicht erwünscht ist, kann mit diesem Parameter die Maximalbegrenzung
 als „Immer aktiv“ definiert werden.
-0: Nicht aktiv bei übersteuer
-1: Immer aktiv
+* 0: Nicht aktiv bei übersteuer
+* 1: Immer aktiv
 
 
 ## ComfoBox.Config.PrimaryPump.Min
@@ -804,7 +804,7 @@ als „Immer aktiv“ definiert werden.
 * ComfoBox/Config/PrimaryPump/Min
 
 ### Description
-Min: 0, Max: 100
+Min: 0, Max: 100, Needs Expert Mode: True
 
 Minimale Pumpenleistung in %
 
@@ -814,7 +814,7 @@ Minimale Pumpenleistung in %
 * ComfoBox/Config/PrimaryPump/MinCooling
 
 ### Description
-Min: 0, Max: 100
+Min: 0, Max: 100, Needs Expert Mode: True
 
 Minimale Kühl-Pumpenleistung in %
 
@@ -824,12 +824,12 @@ Minimale Kühl-Pumpenleistung in %
 * ComfoBox/Config/PrimaryPump/StoppedMode
 
 ### Description
-Min: 0, Max: 1
+Min: 0, Max: 1, Needs Expert Mode: True
 
 Stopp Mode:
 Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
-0: 0V
-1: 1V
+* 0: 0V
+* 1: 1V
 
 
 ## ComfoBox.States.Controller.ControllerType
@@ -1276,7 +1276,7 @@ Die Funktion wird gestartet, indem die gewünschte Dauer eingestellt wird. Währ
 * ComfoBox/Zone/SetPointFrost/Set
 
 ### Description
-Min: 5, Max: 30
+Min: 5, Max: 30, Needs Expert Mode: False
 
 Raumsollwert Frost 5.0..30.0
 
@@ -1287,7 +1287,7 @@ Raumsollwert Frost 5.0..30.0
 * ComfoBox/Zone/SetPointNormal/Set
 
 ### Description
-Min: 5, Max: 30
+Min: 5, Max: 30, Needs Expert Mode: False
 
 Raumsollwert normal 5.0..30.0
 
@@ -1298,7 +1298,7 @@ Raumsollwert normal 5.0..30.0
 * ComfoBox/Zone/SetPointReduced/Set
 
 ### Description
-Min: 5, Max: 30
+Min: 5, Max: 30, Needs Expert Mode: False
 
 Raumsollwert reduziert 5.0..30.0
 

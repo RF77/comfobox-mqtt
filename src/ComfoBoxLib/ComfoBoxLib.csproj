@@ -62,6 +62,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Attributes\ExpertModeAttribute.cs" />
     <Compile Include="Attributes\OnceAttribute.cs" />
     <Compile Include="Attributes\PrimaryAttribute.cs" />
     <Compile Include="Attributes\PriorityAttribute.cs" />

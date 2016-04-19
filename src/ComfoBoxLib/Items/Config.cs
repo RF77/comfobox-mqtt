@@ -30,10 +30,11 @@ namespace ComfoBoxLib.Items
             ///     1: Sommerkick täglich um 16:00
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(
                 @"Sommerknick: Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
-0: deaktiviert
-1: Sommerkick täglich um 16:00")]
+* 0: deaktiviert
+* 1: Sommerkick täglich um 16:00")]
             public AnalogValue Sommerknick => new AnalogValue(185, "", 0, 1) {IsReadOnly = !Settings.Default.ExpertMode}
                 ;
 
@@ -71,6 +72,7 @@ Kondensatorpumpe).")]
             ///     Minimale Pumpenleistung in %
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Minimale Pumpenleistung in %")]
             public AnalogValue Min => new AnalogValue(411, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
 
@@ -78,6 +80,7 @@ Kondensatorpumpe).")]
             ///     Maximale Pumpenleistung in %
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Maximale Pumpenleistung in %")]
             public AnalogValue Max => new AnalogValue(412, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
 
@@ -85,6 +88,7 @@ Kondensatorpumpe).")]
             ///     Minimale Kühl-Pumpenleistung in %
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Minimale Kühl-Pumpenleistung in %")]
             public AnalogValue MinCooling
                 => new AnalogValue(3613, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -93,6 +97,7 @@ Kondensatorpumpe).")]
             ///     Maximale Kühl-Pumpenleistung in %
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Maximale Kühl-Pumpenleistung in %")]
             public AnalogValue MaxCooling
                 => new AnalogValue(3614, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -106,12 +111,13 @@ Kondensatorpumpe).")]
             ///     1: Immer aktiv
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Y1 Max Mode:
 Die Maximalbegrenzung (412, 3614) kann in speziellen Zuständen übersteuert werden (z.B. bei
 Frostschutz). Wenn dies nicht erwünscht ist, kann mit diesem Parameter die Maximalbegrenzung
 als „Immer aktiv“ definiert werden.
-0: Nicht aktiv bei übersteuer
-1: Immer aktiv")]
+* 0: Nicht aktiv bei übersteuer
+* 1: Immer aktiv")]
             public AnalogValue MaxMode => new AnalogValue(3232, "", 0, 1) {IsReadOnly = !Settings.Default.ExpertMode};
 
             /// <summary>
@@ -121,10 +127,11 @@ als „Immer aktiv“ definiert werden.
             ///     1: 1V
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Stopp Mode:
 Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
-0: 0V
-1: 1V")]
+* 0: 0V
+* 1: 1V")]
             public AnalogValue StoppedMode
                 => new AnalogValue(3096, "", 0, 1) {IsReadOnly = !Settings.Default.ExpertMode};
         }
@@ -155,6 +162,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             ///     Temp min bei Kühlen
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(
                 @"Temp min bei Kühlen"
                 )]
@@ -186,8 +194,8 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             [Secondary]
             [Description(
                 @"Hysterese beim Ein- und Ausschalten der Kühlung über das Comfofond-L. z.B. Sollwert ist bei 22°C
--> falls Kühlung aus, wird sie erst >24°C eingeschaltet
--> falls Kühlung ein, wird sie erst kleiner 20°C ausgeschaltet")]
+* -> falls Kühlung aus, wird sie erst >24°C eingeschaltet
+* -> falls Kühlung ein, wird sie erst kleiner 20°C ausgeschaltet")]
             public AnalogValue CoolingHysteresis => new AnalogValue(3431, "K", 2, 20);
 
             /// <summary>
@@ -208,8 +216,8 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             [Secondary]
             [Description(
                 @"Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollwert ist bei 2°C;
--> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
--> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet")]
+* -> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
+* -> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet")]
             public AnalogValue HeatingHysteresis => new AnalogValue(3452, "K", 2, 20);
         }
 
@@ -223,6 +231,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             ///     Energieerz’temp im Auslegep
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Energieerz’temp im Auslegep")]
             public AnalogValue EnergieerzeugerTempImAuslegepunkt
                 => new AnalogValue(163, "°C", 20, 99) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -231,6 +240,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             ///     Adapt. Energieerz’temp im Auslegep
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(@"Adapt. Energieerz’temp im Auslegep")]
             public AnalogValue AdaptEnergieerzeugerTempImAuslegepunkt
                 => new AnalogValue(166, "°C", 20, 99) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -260,6 +270,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             ///     Energieerzeuger(Verdichter) erst nach der Vorlaufzeit freigegeben
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(
                 @"Vorlaufzeit Primär: Bei einer Energieanforderung wird die Primärpumpe bzw. der Ventilator aktiviert und der Energieerzeuger(Verdichter) erst nach der Vorlaufzeit freigegeben"
                 )]
@@ -272,6 +283,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
             ///     nach der Nachlaufzeit ausgeschaltet.
             /// </summary>
             [Secondary]
+            [ExpertMode]
             [Description(
                 @"Nachlaufzeit Primär: Nach dem Ausschalten des Energieerzeugers wird die Primärpumpe bzw. der Ventilator erst nach der Nachlaufzeit ausgeschaltet."
                 )]
@@ -295,10 +307,10 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
                 [Secondary]
                 [Description(
                     @"Gebäudeträgheit:
-Ohne Trägheit (Testzwecke) = 0
-Leichte Bauweise = 1
-Normale Bauweise = 2
-Schwere Bauweise = 3
+* Ohne Trägheit (Testzwecke) = 0
+* Leichte Bauweise = 1
+* Normale Bauweise = 2
+* Schwere Bauweise = 3
 "
                     )]
                 public AnalogValue Gebäudeträgheit => new AnalogValue(170, "", 0, 3);
@@ -307,6 +319,7 @@ Schwere Bauweise = 3
                 ///     Mischerlaufzeit
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Mischerlaufzeit")]
                 public AnalogValue Mischerlaufzeit
                     => new AnalogValue(113, "min", 1, 30) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -315,6 +328,7 @@ Schwere Bauweise = 3
                 ///     Überhöh Vorlauf/Energieerz
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Überhöh Vorlauf/Energieerz")]
                 public AnalogValue ÜberhöhVorlaufEnergieerz
                     => new AnalogValue(168, "K", 0, 30) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -323,6 +337,7 @@ Schwere Bauweise = 3
                 ///     Nachlaufzeit Zonenpumpe
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Nachlaufzeit Zonenpumpe")]
                 public AnalogValue NachlaufzeitZonenpumpe
                     => new AnalogValue(186, "min", 0.0f, 30.0f) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -331,6 +346,7 @@ Schwere Bauweise = 3
                 ///     Raumsoll’überh Sol
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Raumsoll’überh Sol")]
                 public AnalogValue RaumsollüberhSol
                     => new AnalogValue(462, "K", 0, 6) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -395,9 +411,9 @@ ersichtlich.")]
                 /// </summary>
                 [Secondary]
                 [Description(@"Heizkennlinienadaption:
-Keine Funktion = 0
-Manuell, auto mit Raum'füh = 1
-Manuell, Korrektureingabe = 2")]
+* Keine Funktion = 0
+* Manuell, auto mit Raum'füh = 1
+* Manuell, Korrektureingabe = 2")]
                 public AnalogValue Heizkennlinienadaption => new AnalogValue(167, "", 0, 2);
 
             }
@@ -410,8 +426,8 @@ Manuell, Korrektureingabe = 2")]
                 /// </summary>
                 [Secondary]
                 [Description(@"Tagesheizgrenze:
-AUS = 0
-EIN = 1
+* AUS = 0
+* EIN = 1
 
 Die Tages-Heizgrenzenautomatik ist eine kurzfristig einsetzende Sparfunktion. Wenn bei
 Mischerkreisen der Vorlauftemperatursollwert nur noch ca. 3K (Wert gerechnet aus Steilheit der
@@ -451,9 +467,10 @@ ausgeführt.")]
                 ///     Optimierung Heizschaltzeiten
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Optimierung Heizschaltzeiten:
-Keine Funktion = 0
-EIN = 1
+* Keine Funktion = 0
+* EIN = 1
 ")]
                 public AnalogValue OptimierungHeizschaltzeiten
                     => new AnalogValue(172, "", 0, 1) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -462,6 +479,7 @@ EIN = 1
                 ///     Max Vorhaltezeit Heizen
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Max Vorhaltezeit Heizen")]
                 public AnalogValue MaxVorhaltezeitHeizen
                     => new AnalogValue(173, "min", 0, 180) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -471,6 +489,7 @@ EIN = 1
                 ///     Max Vorhaltezeit Absenken
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Max Vorhaltezeit Absenken")]
                 public AnalogValue MaxVorhaltezeitAbsenken
                     => new AnalogValue(174, "min", 0, 120) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -523,10 +542,11 @@ Zuordnung erfolgt über „Umschaltung Raumfühler“ (3085).")]
                 ///     Kühlen
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Kühlen:
-Keine Funktion = 0
-Kühlen = 1
-Nur Kühlen = 3")]
+* Keine Funktion = 0
+* Kühlen = 1
+* Nur Kühlen = 3")]
                 public AnalogValue Cooling => new AnalogValue(470, "", 0, 3) {IsReadOnly = !Settings.Default.ExpertMode}
                     ;
 
@@ -534,6 +554,7 @@ Nur Kühlen = 3")]
                 ///     Sommerkühlgrenze
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Sommerkühlgrenze")]
                 public AnalogValue Sommerkühlgrenze
                     => new AnalogValue(473, "K", -10, 10) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -542,6 +563,7 @@ Nur Kühlen = 3")]
                 ///     Kühlraumsoll’abst normal
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Kühlraumsoll’abst normal")]
                 public AnalogValue KühlraumsollAbstNormal
                     => new AnalogValue(3562, "K", 0, 10) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -550,6 +572,7 @@ Nur Kühlen = 3")]
                 ///     Kühlraumsoll’abst reduziert
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Kühlraumsoll’abst reduziert")]
                 public AnalogValue KühlraumsollAbstReduziert
                     => new AnalogValue(863, "K", 0, 10) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -558,6 +581,7 @@ Nur Kühlen = 3")]
                 ///     Kühlraumsoll’abst standby
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Kühlraumsoll’abst standby")]
                 public AnalogValue KühlraumsollAbstStandby
                     => new AnalogValue(864, "K", 0, 10) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -580,6 +604,7 @@ Nur Kühlen = 3")]
                 ///     Min Vorl’temp Kühlen (20°C)
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Min Vorl’temp Kühlen (20°C)")]
                 public AnalogValue MinVorlTemp20
                     => new AnalogValue(477, "°C", 0, 99) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -588,6 +613,7 @@ Nur Kühlen = 3")]
                 ///     Min Vorl’temp Kühlen (40°C)
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Min Vorl’temp Kühlen (40°C)")]
                 public AnalogValue MinVorlTemp40
                     => new AnalogValue(478, "°C", 0, 99) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -596,6 +622,7 @@ Nur Kühlen = 3")]
                 ///     Abs min Vorlauftemp Kühlen
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Abs min Vorlauftemp Kühlen")]
                 public AnalogValue AbsMinVorlauftemp
                     => new AnalogValue(479, "°C", 0, 99) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -612,9 +639,9 @@ Nur Kühlen = 3")]
                 /// </summary>
                 [Secondary]
                 [Description(@"Umschaltung Raumfühler:
-Keine Funktion = 0
-Heiz'n mit Tr1, Kühl'n mit Tr2 = 1
-Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
+* Keine Funktion = 0
+* Heiz'n mit Tr1, Kühl'n mit Tr2 = 1
+* Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
 ")]
                 public AnalogValue UmschaltungRaumfühler => new AnalogValue(3085, "", 0, 2);
             }
@@ -626,15 +653,15 @@ Heiz'n mit Tr2, Kühl'n mit Tr1 = 2
                 /// </summary>
                 [Secondary]
                 [Description(@"Legionellenschutzfunktion:
-Keine Funktion = 0
-Legionellenschutz am Mo = 1
-Legionellenschutz am Di = 2
-Legionellenschutz am Mi = 3
-Legionellenschutz am Do = 4
-Legionellenschutz am Fr = 5
-Legionellenschutz am Sa = 6
-Legionellenschutz am So = 7
-Legionellenschutz täglich = 8
+* Keine Funktion = 0
+* Legionellenschutz am Mo = 1
+* Legionellenschutz am Di = 2
+* Legionellenschutz am Mi = 3
+* Legionellenschutz am Do = 4
+* Legionellenschutz am Fr = 5
+* Legionellenschutz am Sa = 6
+* Legionellenschutz am So = 7
+* Legionellenschutz täglich = 8
 
 ")]
                 public AnalogValue Legionellenschutzfunktion => new AnalogValue(192, "", 0, 8);
@@ -644,8 +671,8 @@ Legionellenschutz täglich = 8
                 /// </summary>
                 [Secondary]
                 [Description(@"WW-Zwangsladung
-Keine Funktion = 0
-Täglich bei erster WW-Ladung = 1")]
+* Keine Funktion = 0
+* Täglich bei erster WW-Ladung = 1")]
                 public AnalogValue Zwangsladung
                     => new AnalogValue(199, "", 0, 1);
 
@@ -654,9 +681,9 @@ Täglich bei erster WW-Ladung = 1")]
                 /// </summary>
                 [Secondary]
                 [Description(@"WW-Vorrang:
-Kein Vorrang = 0
-Teilvorrang = 1
-Voller Vorrang = 2
+* Kein Vorrang = 0
+* Teilvorrang = 1
+* Voller Vorrang = 2
 ")]
                 public AnalogValue Vorrang
                     => new AnalogValue(196, "", 0, 2);
@@ -665,6 +692,7 @@ Voller Vorrang = 2
                 ///     Energieerz’anhebung (Fühler)
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Energieerz’anhebung (Fühler)")]
                 public AnalogValue EnergieerzAnhebungFühler
                     => new AnalogValue(193, "K", 2, 60) { IsReadOnly = !Settings.Default.ExpertMode };
@@ -673,6 +701,7 @@ Voller Vorrang = 2
                 ///     Energieerz’soll (Thermostat)
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Energieerz’soll (Thermostat)")]
                 public AnalogValue EnergieerzSollThermostat
                     => new AnalogValue(194, "°C", 0, 99) { IsReadOnly = !Settings.Default.ExpertMode };
@@ -689,9 +718,9 @@ Voller Vorrang = 2
                 /// </summary>
                 [Secondary]
                 [Description(@"WW-Freigabe:
-Nach Schaltuhr = 0
-1h vor Zonenbeginn = 1
-WW dauernd = 2
+* Nach Schaltuhr = 0
+* 1h vor Zonenbeginn = 1
+* WW dauernd = 2
 ")]
                 public AnalogValue Freigabe => new AnalogValue(175, "", 0, 2);
 
@@ -707,6 +736,7 @@ WW dauernd = 2
                 ///     WW-Sollwert Maximal WP
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"WW-Sollwert Maximal WP")]
                 public AnalogValue SollwertMaximalWP
                     => new AnalogValue(447, "°C", 0, 58) { IsReadOnly = !Settings.Default.ExpertMode };
@@ -724,8 +754,8 @@ WW dauernd = 2
                 /// </summary>
                 [Secondary]
                 [Description(@"WW-Entladeschutz:
-Keine Funktion = 0
-EIN = 1
+* Keine Funktion = 0
+* EIN = 1
 ")]
                 public AnalogValue Entladeschutz => new AnalogValue(157, "", 0, 1);
                
@@ -756,6 +786,7 @@ EIN = 1
                     ///     definiert, welcher Fühler für die Schutzfunktion zuständig ist.
                     /// </summary>
                     [Secondary]
+                    [ExpertMode]
                     [Description(
                         @"Der Kondensatorfrostschutz schützt die Wärmepumpe während Abtauen und Kühlen. Parameter „Kondensat’frostschutz“ definiert, welcher Fühler für die Schutzfunktion zuständig ist."
                         )]
@@ -769,6 +800,7 @@ EIN = 1
                     ///     Kond’frostschutztemp
                     /// </summary>
                     [Secondary]
+                    [ExpertMode]
                     [Description(@"Kond’frostschutztemp")]
                     public AnalogValue KondFrostschutzTemp
                         => new AnalogValue(495, "°C", -20, 30) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -777,6 +809,7 @@ EIN = 1
                     ///     Kond’frostschutztemp
                     /// </summary>
                     [Secondary]
+                    [ExpertMode]
                     [Description(@"Kond’frostschutztemp")]
                     public AnalogValue KondFrostschutzSchatdiff
                         => new AnalogValue(496, "K", 2, 10) {IsReadOnly = !Settings.Default.ExpertMode};
@@ -795,6 +828,7 @@ EIN = 1
                 ///     Schaltdifferenz Stufe 1
                 /// </summary>
                 [Secondary]
+                [ExpertMode]
                 [Description(@"Schaltdifferenz Stufe 1")]
                 public AnalogValue SwitchingDifferenceStage1
                     => new AnalogValue(140, "K", 2, 20) {IsReadOnly = !Settings.Default.ExpertMode};

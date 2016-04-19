@@ -82,6 +82,12 @@ namespace ComfoBoxMqtt.Groups
                     item.Description = desc.Description;
                 }
 
+                var expMode = propertyInfo.GetCustomAttributes(typeof(ExpertModeAttribute), false).FirstOrDefault() as ExpertModeAttribute;
+                if (expMode != null)
+                {
+                    item.ExpertMode = true;
+                }
+
                 list.Add(item);
             }
         }
