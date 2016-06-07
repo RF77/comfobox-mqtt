@@ -115,7 +115,7 @@ namespace System.IO.BACnet
             {
                 /* We need a shared broadcast "listen" port. This is the 0xBAC0 port */
                 /* This will enable us to have more than 1 client, on the same machine. Perhaps it's not that important though. */
-                /* We (might) only recieve the broadcasts on this. Any unicasts to this might be eaten by another local client */
+                /* We (might) only receive the broadcasts on this. Any unicasts to this might be eaten by another local client */
                 if (m_shared_conn == null)
                 {
                     m_shared_conn = new Net.Sockets.UdpClient();
@@ -126,7 +126,7 @@ namespace System.IO.BACnet
                     m_shared_conn.Client.Bind(ep);
                     m_shared_conn.DontFragment = m_dont_fragment;
                 }
-                /* This is our own exclusive port. We'll recieve everything sent to this. */
+                /* This is our own exclusive port. We'll receive everything sent to this. */
                 /* So this is how we'll present our selves to the world */
                 if (m_exclusive_conn == null)
                 {
@@ -207,7 +207,7 @@ namespace System.IO.BACnet
                     }
                     else
                     {
-                        // Basic Header lenght
+                        // Basic Header length
                         int HEADER_LENGTH = bvlc.Decode(local_buffer, 0, out function, out msg_length, ep);
 
                         if (HEADER_LENGTH == -1)
@@ -241,7 +241,7 @@ namespace System.IO.BACnet
                 }
                 catch (Exception ex)
                 {
-                    Trace.TraceError("Exception in udp recieve: " + ex.Message);
+                    Trace.TraceError("Exception in udp receive: " + ex.Message);
                 }
                 finally
                 {
@@ -1391,7 +1391,7 @@ namespace System.IO.BACnet
         #region " Sniffer mode "
 
         // Used in Sniffer only mode
-        public delegate void RawMessageReceivedHandler(byte[] buffer, int offset, int lenght);
+        public delegate void RawMessageReceivedHandler(byte[] buffer, int offset, int length);
         public event RawMessageReceivedHandler RawMessageRecieved;
 
         public void Start_SpyMode()

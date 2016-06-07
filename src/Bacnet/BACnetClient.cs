@@ -559,7 +559,7 @@ namespace System.IO.BACnet
             if (OnSegment != null)
                 OnSegment(this, adr, type, service, invoke_id, max_segments, max_adpu, sequence_number, first, more_follows, buffer, offset, length);
 
-            //default segment assembly. We run this seperately from the above handler, to make sure that it comes after!
+            //default segment assembly. We run this separately from the above handler, to make sure that it comes after!
             if (m_default_segmentation_handling)
                 PerformDefaultSegmentHandling(this, adr, type, service, invoke_id, max_segments, max_adpu, sequence_number, first, more_follows, buffer, offset, length);
         }
@@ -727,7 +727,7 @@ namespace System.IO.BACnet
         {
             try
             {
-                //finish recieve
+                //finish receive
                 if (m_client == null) return;   //we're disposed 
 
                 //parse
@@ -832,7 +832,7 @@ namespace System.IO.BACnet
             BacnetAddress receiver;
 
             // _receiver could be an unicast @ : for direct acces 
-            // usefull for Lonworks nodes under the so bugy Echelon Izot (Izbug) ! Router (fw 1.1.7 !)
+            // useful for Lonworks nodes under the so bugy Echelon Izot (Izbug) ! Router (fw 1.1.7 !)
             if (_receiver !=null)
                 receiver = _receiver; 
             else
@@ -2339,7 +2339,7 @@ namespace System.IO.BACnet
         }
 
         /// <summary>
-        /// Will continue waiting until all segments are recieved
+        /// Will continue waiting until all segments are received
         /// </summary>
         public bool WaitForDone(int timeout)
         {
