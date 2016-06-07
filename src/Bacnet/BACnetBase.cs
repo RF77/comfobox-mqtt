@@ -1607,7 +1607,7 @@ namespace System.IO.BACnet
     public struct BacnetweekNDay : ASN1.IASN1encode
     {
         public byte month;  /* 1 January, 13 Odd, 14 Even, 255 Any */
-        public byte week;   /* Don't realy understand ??? 1 for day 1 to 7, 2 for ... what's the objective ?  boycott it*/
+        public byte week;   /* Don't really understand ??? 1 for day 1 to 7, 2 for ... what's the objective ?  boycott it*/
         public byte wday;   /* 1=Monday-7=Sunday, 255 any */
 
         public BacnetweekNDay(byte day, byte month, byte week = 255)
@@ -1912,7 +1912,7 @@ namespace System.IO.BACnet
     public enum BacnetTrendLogValueType : byte
     {
         // Copyright (C) 2009 Peter Mc Shane in Steve Karg Stack, trendlog.h
-        // Thank's to it's encoding sample, very usefull for this decoding work
+        // Thank's to it's encoding sample, very useful for this decoding work
         TL_TYPE_STATUS = 0,
         TL_TYPE_BOOL = 1,
         TL_TYPE_REAL = 2,
@@ -2902,7 +2902,7 @@ namespace System.IO.BACnet.Serialize
                     messages are forward directly to 192.168.0.1
                remote BBMD 192.168.0.1 - mask 255.255.255.0
                     messages are forward to 192.168.0.255, ie certainly the local broadcast
-                    address, but these datagrams are generaly destroy by the final IP router
+                    address, but these datagrams are generally destroy by the final IP router
              */
 
             for (int i = 0; i < bm.Length; i++)
@@ -2935,7 +2935,7 @@ namespace System.IO.BACnet.Serialize
         private void Forward_NPDU(byte[] buffer, int msg_length, bool ToGlobalBroadcast, Net.IPEndPoint EPsender)
         {
             // Forms the forwarded NPDU from the original one, and send it to all
-            // orignal     - 4 bytes BVLC -  NPDU  - APDU
+            // original     - 4 bytes BVLC -  NPDU  - APDU
             // change to   -  10 bytes BVLC  -  NPDU  - APDU
 
             // copy, 6 bytes shifted
@@ -3059,7 +3059,7 @@ namespace System.IO.BACnet.Serialize
                     }
                     return -1;  // not for the upper layers
 
-                // We don't care about Read/Write operation in the BBMD/FDR tables (who realy use it ?)
+                // We don't care about Read/Write operation in the BBMD/FDR tables (who really use it ?)
                 case BacnetBvlcFunctions.BVLC_READ_FOREIGN_DEVICE_TABLE:
                     //SendResult(sender, BacnetBvlcResults.BVLC_RESULT_READ_FOREIGN_DEVICE_TABLE_NAK);
                     return -1;
@@ -3270,7 +3270,7 @@ namespace System.IO.BACnet.Serialize
                     vendor_id = (ushort)((buffer[offset++] << 8) | (buffer[offset++] << 0));
                 }
                 else if (network_msg_type == BacnetNetworkMessageTypes.NETWORK_MESSAGE_WHO_IS_ROUTER_TO_NETWORK)
-                    offset += 2;  // Don't care about destination network adress
+                    offset += 2;  // Don't care about destination network address
             }
 
             if (buffer[org_offset + 0] != BACNET_PROTOCOL_VERSION) return -1;
