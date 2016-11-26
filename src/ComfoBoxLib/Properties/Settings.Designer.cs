@@ -25,7 +25,7 @@ namespace ComfoBoxLib.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("76800")]
+        [global::System.Configuration.DefaultSettingValueAttribute("38400")]
         public int Baudrate {
             get {
                 return ((int)(this["Baudrate"]));
@@ -34,7 +34,7 @@ namespace ComfoBoxLib.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("COM8")]
+        [global::System.Configuration.DefaultSettingValueAttribute("/dev/ttyUSB0")]
         public string Port {
             get {
                 return ((string)(this["Port"]));
@@ -61,15 +61,6 @@ namespace ComfoBoxLib.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("00:00:30")]
-        public global::System.TimeSpan MqttNoResponseTimeout {
-            get {
-                return ((global::System.TimeSpan)(this["MqttNoResponseTimeout"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool ExpertMode {
             get {
@@ -83,6 +74,15 @@ namespace ComfoBoxLib.Properties {
         public int MaxNumberOfWritesPer24h {
             get {
                 return ((int)(this["MaxNumberOfWritesPer24h"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("00:00:30")]
+        public global::System.TimeSpan MqttNoResponseTimeout {
+            get {
+                return ((global::System.TimeSpan)(this["MqttNoResponseTimeout"]));
             }
         }
     }
