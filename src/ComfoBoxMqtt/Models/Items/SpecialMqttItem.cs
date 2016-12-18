@@ -38,6 +38,7 @@ namespace ComfoBoxMqtt.Models.Items
             {
                 if (!Equals(value, _value))
                 {
+                    //Logger.Debug($"value = {value}, _value = {_value}");
                     _value = value;
                     PublishValue();
                 }
