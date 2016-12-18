@@ -42,10 +42,7 @@ namespace ComfoBoxMqtt.Models.Items
             }
         }
 
-        private string AsNumberTopic
-        {
-            get { return Topic + "/AsNumber"; }
-        }
+        private string AsNumberTopic => Topic + "/AsNumber";
 
         private string SetAsNumberTopic
         {

@@ -39,10 +39,7 @@ namespace ComfoBoxLib
             StartTimer();
         }
 
-        private static bool WriteProtectionEnabled
-        {
-            get { return Settings.Default.MaxNumberOfWritesPer24h > 0; }
-        }
+        private static bool WriteProtectionEnabled => Settings.Default.MaxNumberOfWritesPer24h > 0;
 
         public string PortName { get; }
         public int Baudrate { get; }

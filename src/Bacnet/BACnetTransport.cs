@@ -66,20 +66,17 @@ namespace System.IO.BACnet
         private int m_max_payload;
         private string m_local_endpoint;
 
-        public BacnetAddressTypes Type { get { return BacnetAddressTypes.IP; } }
+        public BacnetAddressTypes Type => BacnetAddressTypes.IP;
         public event MessageRecievedHandler MessageRecieved;
-        public int SharedPort { get { return m_port; } }
-        public int ExclusivePort { get { return ((Net.IPEndPoint)m_exclusive_conn.Client.LocalEndPoint).Port; } }
+        public int SharedPort => m_port;
+        public int ExclusivePort => ((Net.IPEndPoint)m_exclusive_conn.Client.LocalEndPoint).Port;
 
-        public int HeaderLength { get { return BVLC.BVLC_HEADER_LENGTH; } }
-        public BacnetMaxAdpu MaxAdpuLength { get { return BVLC.BVLC_MAX_APDU; } }
+        public int HeaderLength => BVLC.BVLC_HEADER_LENGTH;
+        public BacnetMaxAdpu MaxAdpuLength => BVLC.BVLC_MAX_APDU;
         public byte MaxInfoFrames { get { return 0xff; } set { /* ignore */ } }     //the udp doesn't have max info frames
-        public int MaxBufferLength { get { return m_max_payload; } }
+        public int MaxBufferLength => m_max_payload;
 
-        public BVLC Bvlc
-        {
-            get { return bvlc; }
-        }
+        public BVLC Bvlc => bvlc;
 
         public BacnetIpUdpProtocolTransport(int port, bool use_exclusive_port = false, bool dont_fragment = false, int max_payload = 1472, string local_endpoint_ip = "")
         {
@@ -355,14 +352,7 @@ namespace System.IO.BACnet
             return broadcast;
         }
 
-        public System.Net.IPEndPoint LocalEndPoint
-        {
-            get
-            {
-                // give 0.0.0.0:xxxx if the socket is open with System.Net.IPAddress.Any
-                return (System.Net.IPEndPoint)m_exclusive_conn.Client.LocalEndPoint;
-            }
-        }
+        public System.Net.IPEndPoint LocalEndPoint => (System.Net.IPEndPoint)m_exclusive_conn.Client.LocalEndPoint;
 
         public void Dispose()
         {
@@ -453,10 +443,7 @@ namespace System.IO.BACnet
             m_port.Close();
         }
 
-        public int BytesToRead
-        {
-            get { return m_port == null ? 0 : m_port.BytesToRead; }
-        }
+        public int BytesToRead => m_port == null ? 0 : m_port.BytesToRead;
 
         public void Dispose()
         {
@@ -472,7 +459,7 @@ namespace System.IO.BACnet
         private IAsyncResult m_current_connect;
         private bool m_is_server;
 
-        public string Name { get { return m_name; } }
+        public string Name => m_name;
 
         public BacnetPipeTransport(string name, bool is_server = false)
         {
@@ -637,13 +624,7 @@ namespace System.IO.BACnet
             m_conn = null;
         }
 
-        public int BytesToRead
-        {
-            get
-            {
-                return PeekPipe();
-            }
-        }
+        public int BytesToRead => PeekPipe();
 
         public static string[] AvailablePorts
         {
@@ -743,10 +724,10 @@ namespace System.IO.BACnet
         private string m_password;
 
         public event MessageRecievedHandler MessageRecieved;
-        public BacnetAddressTypes Type { get { return BacnetAddressTypes.PTP; } }
-        public int HeaderLength { get { return PTP.PTP_HEADER_LENGTH; } }
-        public int MaxBufferLength { get { return 502; } }
-        public BacnetMaxAdpu MaxAdpuLength { get { return PTP.PTP_MAX_APDU; } }
+        public BacnetAddressTypes Type => BacnetAddressTypes.PTP;
+        public int HeaderLength => PTP.PTP_HEADER_LENGTH;
+        public int MaxBufferLength => 502;
+        public BacnetMaxAdpu MaxAdpuLength => PTP.PTP_MAX_APDU;
         public byte MaxInfoFrames { get { return 0xff; } set { /* ignore */ } }     //the PTP doesn't have max info frames
         public string Password { get { return m_password; } set { m_password = value; } }
         public bool StateLogging { get; set; }
@@ -1374,15 +1355,15 @@ namespace System.IO.BACnet
         public const int T_REPLY_DELAY = 250;       //ms    The maximum time a node may wait after reception of a frame that expects a reply before sending the first octet of a reply or Reply Postponed frame
         public const int ETIMEDOUT = 110;
 
-        public BacnetAddressTypes Type { get { return BacnetAddressTypes.MSTP; } }
+        public BacnetAddressTypes Type => BacnetAddressTypes.MSTP;
         public short SourceAddress { get { return m_TS; } set { m_TS = value; } }
         public byte MaxMaster { get { return m_max_master; } set { m_max_master = value; } }
         public byte MaxInfoFrames { get { return m_max_info_frames; } set { m_max_info_frames = value; } }
         public bool StateLogging { get; set; }
 
-        public int HeaderLength { get { return MSTP.MSTP_HEADER_LENGTH; } }
-        public int MaxBufferLength { get { return 502; } }
-        public BacnetMaxAdpu MaxAdpuLength { get { return MSTP.MSTP_MAX_APDU; } }
+        public int HeaderLength => MSTP.MSTP_HEADER_LENGTH;
+        public int MaxBufferLength => 502;
+        public BacnetMaxAdpu MaxAdpuLength => MSTP.MSTP_MAX_APDU;
 
         public delegate void FrameRecievedHandler(BacnetMstpProtocolTransport sender, BacnetMstpFrameTypes frame_type, byte destination_address, byte source_address, int msg_length);
         public event MessageRecievedHandler MessageRecieved;

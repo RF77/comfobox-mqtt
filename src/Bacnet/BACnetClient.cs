@@ -54,7 +54,7 @@ namespace System.IO.BACnet
 
         public static byte DEFAULT_HOP_COUNT = 0xFF;
 
-        public IBacnetTransport Transport { get { return m_client; } }
+        public IBacnetTransport Transport => m_client;
         public int Timeout { get { return m_timeout; } set { m_timeout = value; } }
         public int TransmitTimeout { get { return m_transmit_timeout; } set { m_transmit_timeout = value; } }
         public int Retries { get { return m_retries; } set { m_retries = value; } }
@@ -2244,7 +2244,8 @@ namespace System.IO.BACnet
         private bool m_wait_for_transmit;
         private int m_transmit_timeout;
 
-        public byte[] Result { get { return m_result; } }
+        public byte[] Result => m_result;
+
         public Exception Error
         {
             get { return m_error; }
@@ -2260,7 +2261,7 @@ namespace System.IO.BACnet
         public object AsyncState { get; set; }
         public Threading.WaitHandle AsyncWaitHandle { get; private set; }
         public bool CompletedSynchronously { get; private set; }
-        public bool IsCompleted { get { return AsyncWaitHandle.WaitOne(0); } }
+        public bool IsCompleted => AsyncWaitHandle.WaitOne(0);
 
         public BacnetAsyncResult(BacnetClient comm, BacnetAddress adr, byte invoke_id, byte[] transmit_buffer, int transmit_length, bool wait_for_transmit, int transmit_timeout)
         {

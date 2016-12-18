@@ -46,10 +46,7 @@ namespace ComfoBoxMqtt.Models.Items
 
         public string Topic { get; private set; }
 
-        public virtual IEnumerable<string> Topics
-        {
-            get { return new[] {Topic}; }
-        }
+        public virtual IEnumerable<string> Topics => new[] {Topic};
 
         private void PublishValue()
         {

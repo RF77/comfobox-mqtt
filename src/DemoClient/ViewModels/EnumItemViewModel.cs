@@ -32,13 +32,7 @@ namespace DemoClient.ViewModels
             }
         }
 
-        public string[] EnumValues
-        {
-            get
-            {
-                return Enum.GetNames(EnumItem.GetEnumType());
-            }
-        }
+        public string[] EnumValues => Enum.GetNames(EnumItem.GetEnumType());
 
         private string _enumValue;
 

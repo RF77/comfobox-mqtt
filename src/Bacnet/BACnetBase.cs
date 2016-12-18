@@ -1457,10 +1457,7 @@ namespace System.IO.BACnet
 
             return 4;
         }
-        public bool IsPeriodic
-        {
-            get { return (year == 255) || (month > 12) || (day == 255); }
-        }
+        public bool IsPeriodic => (year == 255) || (month > 12) || (day == 255);
 
         public bool IsAFittingDate(DateTime date)
         {

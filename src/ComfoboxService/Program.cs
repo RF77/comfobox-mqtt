@@ -20,14 +20,12 @@ namespace ComfoboxService
         /// </summary>
         private static void Main()
         {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
+            var servicesToRun = new ServiceBase[]
             {
                 new ComfoboxService()
             };
 
-            //ServiceBase.Run(ServicesToRun);
-            HexMaster.Helper.Run(ServicesToRun);
+            ServiceBase.Run(servicesToRun);
         }
     }
 }
