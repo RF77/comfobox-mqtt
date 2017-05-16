@@ -228,7 +228,7 @@ namespace ComfoBoxLib
             return val;
         }
 
-        public bool WriteValue(IItemValue item, object newItemValue)
+        public bool WriteValue(IItemValue item, object newItemValue, BacnetPropertyIds propertyType = BacnetPropertyIds.PROP_PRESENT_VALUE)
         {
             BacnetValue val = new BacnetValue(item.Tag, item.ConvertValueBack(newItemValue));
             return WriteScalarValue(Settings.Default.BacnetMasterId,
@@ -236,5 +236,16 @@ namespace ComfoBoxLib
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 val);
         }
-    }
+
+	    public bool WriteValueObj(IItemValue item, object newItemValue, BacnetPropertyIds propertyType = BacnetPropertyIds.PROP_PRESENT_VALUE)
+	    {
+		    BacnetValue val = new BacnetValue(item.Tag, newItemValue);
+		    var result = WriteScalarValue(Settings.Default.BacnetMasterId,
+			    item.BacnetObjectId,
+			    BacnetPropertyIds.PROP_PRESENT_VALUE,
+			    val);
+			Logger.Info($"WriteValueObj success = {result}, value = {newItemValue}");
+		    return result;
+	    }
+	}
 }

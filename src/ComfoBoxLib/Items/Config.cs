@@ -454,7 +454,7 @@ der Raumtemperatursollwert nur noch um den hier eingestellten Wert grösser ist a
 gedämpfte Aussentemperatur (Zeitkonstante 21 Std.), schaltet der Heizbetrieb aus. Die Funktion
 wird nur in den automatischen Betriebsarten („Normal/Reduziert“ und „Normal/Frostschutz“)
 ausgeführt.")]
-                public AnalogValue Winterheizgrenze => new AnalogValue(181, "k", 0.0f, 10.0f);
+                public AnalogValue Winterheizgrenze => new AnalogValue(181, "K", 0.0f, 10.0f);
 
                 /// <summary>
                 ///     Raumeinfluss

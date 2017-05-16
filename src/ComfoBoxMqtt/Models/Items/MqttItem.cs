@@ -41,7 +41,7 @@ namespace ComfoBoxMqtt.Models.Items
             SubscribeValues();
         }
 
-        protected IItemValue ItemValue { get; set; }
+        public IItemValue ItemValue { get; set; }
         internal RefreshPriority Priority { get; private set; }
 
         public string SetTopic

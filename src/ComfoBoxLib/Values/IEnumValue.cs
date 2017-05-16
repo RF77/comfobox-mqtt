@@ -19,7 +19,11 @@ namespace ComfoBoxLib.Values
         Type GetEnumType();
     }
 
-    public interface IChangeableValue
+	public interface ICommandValue
+	{
+	}
+
+	public interface IChangeableValue
     {
         
     }

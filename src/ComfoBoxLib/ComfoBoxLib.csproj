@@ -83,6 +83,7 @@
     <Compile Include="BacNode.cs" />
     <Compile Include="ComfoBoxClient.cs" />
     <Compile Include="Items\Config.cs" />
+    <Compile Include="Values\CommandValue.cs" />
     <Compile Include="Values\DateValue.cs" />
     <Compile Include="Values\EnumValue.cs" />
     <Compile Include="Values\IEnumValue.cs" />

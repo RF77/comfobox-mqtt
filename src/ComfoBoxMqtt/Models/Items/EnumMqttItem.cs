@@ -20,7 +20,7 @@ using log4net;
 
 namespace ComfoBoxMqtt.Models.Items
 {
-    public class EnumMqttItem : MqttItem
+	public class EnumMqttItem : MqttItem
     {
         private static readonly ILog Logger = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 

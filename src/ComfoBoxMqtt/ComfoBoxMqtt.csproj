@@ -60,6 +60,9 @@
       <HintPath>..\packages\M2Mqtt.4.3.0.0\lib\net45\M2Mqtt.Net.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -72,6 +75,8 @@
   <ItemGroup>
     <Compile Include="ComfoBoxMqttClient.cs" />
     <Compile Include="Groups\ItemFactory.cs" />
+    <Compile Include="ItemMetadata.cs" />
+    <Compile Include="Models\Items\CommandMqttItem.cs" />
     <Compile Include="Models\Items\EnumMqttItem.cs" />
     <Compile Include="Models\Items\ISpecialItem.cs" />
     <Compile Include="Models\Items\MqttItemBase.cs" />
@@ -95,6 +100,10 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Bacnet\BacnetLib.csproj">
+      <Project>{66832876-01FC-4B7C-8D92-54195773FABF}</Project>
+      <Name>BacnetLib</Name>
+    </ProjectReference>
     <ProjectReference Include="..\ComfoBoxLib\ComfoBoxLib.csproj">
       <Project>{C6CC6079-F1C0-40CD-B4F5-1A89594D414C}</Project>
       <Name>ComfoBoxLib</Name>

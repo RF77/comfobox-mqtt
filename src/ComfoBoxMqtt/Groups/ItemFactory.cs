@@ -67,12 +67,16 @@ namespace ComfoBoxMqtt.Groups
 
                 MqttItem item;
 
-                if (propertyValue is IEnumValue)
-                {
-                    item = new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
-                }
+	            if (propertyValue is ICommandValue)
+	            {
+		            item = new CommandMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
+	            }
+				else if (propertyValue is IEnumValue)
+				{
+					item = new EnumMqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
+				}
                 else
-                {
+				{
                     item = new MqttItem(propertyValue, RefreshPriority.None, client, topic, comfoBoxClientFunc);
                 }
 
