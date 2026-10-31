@@ -4,6 +4,7 @@
 **Braucht:** Phase 1
 **Spec:** [datenmodell-und-api §1–2](../02-modernisierung/datenmodell-und-api.md) ·
 [uebersicht-und-zielbild](../02-modernisierung/uebersicht-und-zielbild.md)
+**Prompt:** [prompts/Prompt-Phase-2.md](prompts/Prompt-Phase-2.md) – kopierfertig starten
 
 > **Warum zuerst die Domäne?** Weil sie **framework-frei** sein muss. Alles, was
 > hier hineingehört, ist später ohne Container testbar.

@@ -34,11 +34,11 @@
 | 1.1 | Golden-Frames extrahieren (Oracle über den Legacy-Codec) | ✅ | 0.5 |
 | 1.2 | Golden-Tests gegen den **alten** Code (Oracle) | ✅ | 1.0 |
 | 1.3 | `ComfoBox.Bacnet` anlegen, `BACnetBase` portieren | ✅ | 1.0 |
-| 1.4 | `BACnetClient` portieren | ⬜ | 1.5 |
-| 1.5 | `BACnetTransport` (MSTP + Serial) portieren | ⬜ | 2.0 |
-| 1.6 | Pipe-/UDP-/PTP-Transport entfernen | 🟡 | 0.5 |
-| 1.7 | `Trace` → `ILogger` | 🟡 | 0.5 |
-| 1.8 | Timeout-/Reconnect-Härtung + Spin-Loop-Fix (A8) | ⬜ | 1.0 |
+| 1.4 | `BACnetClient` portieren | ✅ | 1.5 |
+| 1.5 | `BACnetTransport` (MSTP + Serial) portieren | ✅ | 2.0 |
+| 1.6 | Pipe-/UDP-/PTP-Transport entfernen | ✅ | 0.5 |
+| 1.7 | `Trace` → `ILogger` | ✅ | 0.5 |
+| 1.8 | Timeout-/Reconnect-Härtung + Spin-Loop-Fix (A8) | ✅ | 1.0 |
 
 ## Phase 2 – Domain & Gateway-Kern (7 PT)
 
@@ -167,12 +167,13 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 2 PT (Phase 0) + 2.5 PT (Phase 1, Aufgaben 1.1–1.3) von 63 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) von 63 PT.
 
 ## Nächste Aufgabe
 
-> **1.4 – `BACnetClient` portieren** (1.5 PT)
-> Datei: `src/ComfoBox.Bacnet/Bacnet/BacnetClient.cs` ·
-> Verifikation: Golden-Tests bleiben grün, `async`/`await`, kein `.Result`
-> → Details: [phase-1.md](phase-1.md)
-> → **Prompt:** [prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md) (direkt kopierbar)
+> **2.1 – `ComfoBox.Domain`: Item-Katalog aus `src_old/ComfoBoxLib/Items/**`** (1.5 PT)
+> Datei: `src/ComfoBox.Domain/**` ·
+> Verifikation: Build grün, Item-Katalog deckt `docs/topics.json` ab, keine
+> Abhängigkeit zu `ComfoBox.Bacnet`/Logging
+> → Details: [phase-2.md](phase-2.md)
+> → **Prompt:** [prompts/Prompt-Phase-2.md](prompts/Prompt-Phase-2.md) (direkt kopierbar)

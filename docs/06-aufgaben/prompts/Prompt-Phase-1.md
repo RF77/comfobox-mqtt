@@ -143,5 +143,6 @@ Am Ende der Session:
 
 - [phase-1.md](../phase-1.md) – die Aufgaben im Detail
 - [bacnet-portierung.md](../../02-modernisierung/bacnet-portierung.md) – die Spec
+- [Prompt-Phase-2.md](Prompt-Phase-2.md) – der Prompt für die nächste Session
 - [teststrategie.md](../../04-migration/teststrategie.md) – Teststrategie
 - [Prompt-Phase-0.md](Prompt-Phase-0.md) – der Prompt der Vorsession

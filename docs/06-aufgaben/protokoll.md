@@ -27,6 +27,95 @@
 
 ---
 
+## 2026-10-31 – Phase 1 abgeschlossen: BACnet-Stack läuft async auf .NET 10 (Aufgaben 1.4–1.8)
+
+**Ergebnis:** Der BACnet-Stack ist vollständig portiert. `BacnetClient` arbeitet
+mit `async`/`await` und typisierten Exceptions, der MS/TP-Transport verwaltet
+Port, Reconnect und Backoff, der Zustandsautomat läuft 1:1 wie im Legacy –
+ohne dessen Spin-Loop. 45 Tests grün (26 Golden + 19 neu), die Golden-Fixture
+ist **byteweise unverändert**. Für die Portierung war **kein Docker und keine
+ComfoBox/kein Serial-Adapter** nötig: alle Tests laufen offline gegen
+In-Memory-Attrappen.
+
+**Geänderte Dateien (neu):**
+- `src/ComfoBox.Bacnet/Serial/ISerialPort.cs` – schmale Port-Schnittstelle
+- `src/ComfoBox.Bacnet/Serial/SerialReadResult.cs` + `SerialReadStatus.cs` – Lesergebnis
+- `src/ComfoBox.Bacnet/Serial/BacnetSerialOptions.cs` – Portname, Baudrate, Timeouts
+- `src/ComfoBox.Bacnet/Serial/SerialPortAdapter.cs` – Adapter auf `System.IO.Ports.SerialPort`
+- `src/ComfoBox.Bacnet/Serial/ISerialPortFactory.cs` + `SerialPortFactory.cs` – Testnaht
+- `src/ComfoBox.Bacnet/Bacnet/BacnetMstpOptions.cs` – Station, MaxMaster, Reconnect-Backoff
+- `src/ComfoBox.Bacnet/Bacnet/MstpStateMachine.cs` – **1:1-Port** des Legacy-Automaten
+- `src/ComfoBox.Bacnet/Bacnet/MstpOutboundFrame.cs` – Frame in der Sendewarteschlange
+- `src/ComfoBox.Bacnet/Bacnet/MstpState.cs` – Zustände (Legacy-Namen + `Fatal`)
+- `src/ComfoBox.Bacnet/Bacnet/IBacnetTransport.cs` – Transport-Interface (nur MS/TP)
+- `src/ComfoBox.Bacnet/Bacnet/BacnetMstpTransport.cs` – Port, Reconnect, Backoff
+- `src/ComfoBox.Bacnet/Bacnet/BacnetFrameReceivedEventArgs.cs` – Frame-Ereignis
+- `src/ComfoBox.Bacnet/Bacnet/BacnetClient.cs` – **async** Client
+- `src/ComfoBox.Bacnet/Bacnet/BacnetExceptions.cs` – typisierte Fehler
+- `src/ComfoBox.Bacnet/Bacnet/BacnetIamEventArgs.cs` – IAm-Ereignis
+- `src/ComfoBox.Bacnet.Tests/FakeSerialPort.cs` + `FakeSerialPortFactory.cs`
+- `src/ComfoBox.Bacnet.Tests/FakeTransport.cs` – Transport-Attrappe
+- `src/ComfoBox.Bacnet.Tests/MstpFramingTests.cs` – Framing + Zustandsautomat
+- `src/ComfoBox.Bacnet.Tests/SerialPortBehaviourTests.cs` – **A8-Regression**
+- `src/ComfoBox.Bacnet.Tests/BacnetClientTests.cs` – Request/Antwort/Fehler
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Bacnet/ComfoBox.Bacnet.csproj` – `InternalsVisibleTo` für die Tests
+- `src/ComfoBox.Bacnet/Serial/SerialPortFactory.cs` – jetzt `ISerialPortFactory`
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **45 Tests grün, 0 Fehler**
+  (26 Golden-Tests unverändert + 19 neue Tests)
+- Fixture-Prüfsumme **unverändert**:
+  `F95AA7633D6C563D309BE6A7A4AC6797CAB198E315BA365B205E7C5C81CE681B` (5.657 Bytes)
+- **1.6** geprüft: keine Treffer für `kernel32`, `UdpClient`, `Socket`, `PipeStream`,
+  `BacnetIpUdpProtocolTransport`, `BacnetPtpProtocolTransport` in `src/**/*.cs`
+- **1.7** geprüft: kein `Trace.` und kein `Console.Write` in `src/**/*.cs`
+- **A23** geprüft: kein `ThreadPriority.Highest` im neuen Code
+
+**Offen / nicht gemacht:**
+- Der **Gateway-Anschluss** fehlt noch: der neue `BacnetClient` ist nicht in
+  `ComfoBox.Gateway` eingebunden (das ist Aufgabe 2.3/2.4 der Phase 2).
+- **Segmentierte Antworten** werden zusammengesetzt, aber nicht vollständig
+  gegen die SegmentAck-Semantik des Legacy geprüft (Realtest braucht Hardware).
+- Der Legacy unterstützt **ReadPropertyMultiple**, **ReadRange**, **File**,
+  **SubscribeCOV** – diese Dienste sind **nicht** portiert. Der ComfoBox nutzt
+  laut `src_old/ComfoBoxLib` nur `ReadProperty` und `WriteProperty`.
+- **Kein Realtest** gegen die ComfoBox (kein Serial-Adapter an dieser Maschine).
+
+**Überraschungen:**
+- ⚠️ **`create_file` überschreibt keine vorhandene Datei** – der Versuch,
+  `SerialPortFactory.cs` neu anzulegen, schlug mit „File already exists" fehl.
+  Lösung: Datei erst löschen (`Remove-Item`) oder mit `replace_string_in_file`
+  bearbeiten. **Vorher im Repo prüfen, ob die Datei schon existiert.**
+- ⚠️ **Die Antwort-Zuordnung darf nicht über die Adresse laufen.** Der erste
+  Entwurf hat die wartende Anfrage über `(Invoke-ID, MAC-Adresse)` identifiziert.
+  Bei Broadcast-Antworten (IAm) passt die Absenderadresse aber nicht zur
+  Zieladresse – die Anfrage lief ins Timeout. Der Legacy ordnet **nur über die
+  Invoke-ID** zu; das ist jetzt so übernommen (`ConcurrentDictionary<byte, …>`).
+- ⚠️ **`MSTP.Encode` schreibt die Daten-CRC *hinter* die Nutzdaten.** Wer den
+  Frame baut, muss die Nutzdaten **vor** dem Aufruf in den Puffer kopieren –
+  sonst überschreibt `Encode` sie mit der CRC. Zwei Tests sind daran initially
+  gescheitert.
+- ⚠️ **Der Zustandsautomat verschluckt Frames in der Poll-For-Master-Runde.**
+  Ein Frame, der nach dem Start des Automaten eintrifft, landet in der
+  PFM-Runde und wird verworfen. Für Tests muss der Frame **vor** dem Start
+  bereitliegen.
+- Der Legacy wartete 250 ms (`T_REPLY_DELAY`) auf eine mögliche Antwort, bevor
+  er „Reply Postponed" sendete. Da das Gateway ein reiner Client ist, wird
+  „Reply Postponed" sofort gesendet – **das ist eine Abweichung vom Legacy**
+  (dokumentiert in `MstpStateMachine`).
+- Der Legacy hatte **keinen** `ThreadPriority.Highest`-Ersatz im neuen Code –
+  der Transport nutzt `TaskCreationOptions.LongRunning` (eigener Thread,
+  Standardpriorität).
+- `dotnet test` auf der Solution meldet für `ComfoBox.Domain.Tests`,
+  `ComfoBox.Contract.Tests` und `ComfoBox.Gateway.Tests` „kein Test verfügbar" –
+  das ist **vorbestehend** (diese Projekte enthalten noch keine Tests) und
+  kein Fehler dieser Session.
+
+---
+
 ## 2026-10-31 – Phase 1: BACnet-Codec portiert, Golden-Fixture erzeugt (Aufgaben 1.1–1.3, 1.6, 1.7)
 
 **Ergebnis:** Der BACnet-Codec läuft verhaltensgleich auf .NET 10. 25 Golden-Frames,
