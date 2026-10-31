@@ -37,10 +37,10 @@ Priorisierte Liste der Defekte, Schwachstellen und Risiken. Grundlage für die S
 
 | ID | Prio | Befund | Fundstelle | Wirkung |
 |---|---|---|---|---|
-| **A7** | P0 | Ein BACnet-Fehler → Gateway wird komplett zerstört (`Dispose()` + `throw`) | `ComfoBoxMqttClient.cs:262-265` | Ein einzelner Lesefehler reißt Broker-Verbindung und Polling mit |
-| **A8** | P0 | **Tight-Spin-Loop bei Serial-Fehler** – `m_port == null` wird nie gesetzt, `while (m_port != null)` läuft weiter | `BACnetTransport.cs:1900` | **100 % CPU** auf dem Pi, wenn der USB-Adapter gezogen wird |
+| **A7** <a id="a7-ein-bacnet-fehler-killt-den-gateway"></a> | P0 | Ein BACnet-Fehler → Gateway wird komplett zerstört (`Dispose()` + `throw`) | `ComfoBoxMqttClient.cs:262-265` | Ein einzelner Lesefehler reißt Broker-Verbindung und Polling mit |
+| **A8** <a id="a8-tight-spin-loop-bei-serial-connectionerror"></a> | P0 | **Tight-Spin-Loop bei Serial-Fehler** – `m_port == null` wird nie gesetzt, `while (m_port != null)` läuft weiter | `BACnetTransport.cs:1900` | **100 % CPU** auf dem Pi, wenn der USB-Adapter gezogen wird |
 | **A9** | P0 | Reconnect-Rekursion ohne Backoff und ohne `CancellationToken` | `ComfoBoxMqttClient.cs:70-81` | Unbegrenzte Kette, Thread-Pool wächst, Stop funktioniert nicht |
-| **A10** | P1 | Nach Reconnect wird `Connected=1` **nicht** erneut publiziert | `ComfoBoxMqttClient.cs:84-94` | **HA sieht den Gateway dauerhaft als offline** |
+| **A10** <a id="a10-nach-reconnect-kein-connected1-publiziert"></a> | P1 | Nach Reconnect wird `Connected=1` **nicht** erneut publiziert | `ComfoBoxMqttClient.cs:84-94` | **HA sieht den Gateway dauerhaft als offline** |
 | **A11** | P1 | Service reconnectet beim Stoppen (`ConnectionClosed` feuert nach `Disconnect`) | `ComfoBoxMqttClient.cs:276-294` | Beenden des Dienstes unzuverlässig |
 | **A12** | P1 | `OnStop` → `NullReferenceException` bei `_client == null` | `ComfoboxService.cs:80-86` | Stop vor Start crasht den Dienst |
 | **A14** | P1 | Ein Fehler im Publish-Pfad beendet den Poll-Loop | `StartPollingAsync` | |
@@ -58,7 +58,7 @@ Priorisierte Liste der Defekte, Schwachstellen und Risiken. Grundlage für die S
 |---|---|---|---|---|
 | **A5** | **P0** | **Kulturabhängige Zahlen** beim Parsen *und* Formatieren | `MqttItem.cs:110,139`, `EnumMqttItem.cs:96` | Auf de-DE: `23.5` nicht parsebar, `23,5` → `235`. **Schreibvorgänge sind im Feld faktisch kaputt**; publizierte Payloads sind für HA unbrauchbar |
 | **A6** | **P0** | Ungültige Enum-Payload schreibt den **Wert 0** | `EnumMqttItem.cs:91-98` | `float.TryParse` prüft nur „ist es eine Zahl", geparst wird aber der String → `newValue` bleibt 0 |
-| **A3** | P0 | 24-h-Schreibzähler ist **nicht persistent** und relativ zum Prozessstart | `ComfoBoxClient.cs:27,58-69` | Service-Neustart setzt den EEPROM-Schutz zurück → Schreibzyklen werden überschritten |
+| **A3** <a id="a3-schreibzähler-nicht-persistent"></a> | P0 | 24-h-Schreibzähler ist **nicht persistent** und relativ zum Prozessstart | `ComfoBoxClient.cs:27,58-69` | Service-Neustart setzt den EEPROM-Schutz zurück → Schreibzyklen werden überschritten |
 | **A22** | P1 | `CurrentNumberOfWrites++` auch bei **fehlgeschlagenem** Write | `ComfoBoxClient.cs:145-152` | Zähler zu pessimistisch |
 | **A21** | P2 | `WriteValue` ignoriert den `propertyType`-Parameter | `ComfoBoxClient.cs:231-239` | Schreibt immer `PROP_PRESENT_VALUE` |
 | **A20** | P2 | `DateValue.ConvertValue` ist leer, `ConvertValueBack` wirft `NotImplementedException` | `DateValue.cs:35-38` | Date-Items werden nie befüllt und nie publiziert |
@@ -71,7 +71,7 @@ Priorisierte Liste der Defekte, Schwachstellen und Risiken. Grundlage für die S
 
 | ID | Befund | Fundstelle |
 |---|---|---|
-| **A15** | Prioritäts-/Refresh-Attribute (`[Primary]`, `[Secondary]`, `[Once]`) werden gelesen und **verworfen**; alle Items werden mit `RefreshPriority.None` erzeugt. Die 4 `*RefreshRate`-Settings sind tote Konfiguration | `ItemFactory.cs:66-82` |
+| **A15** <a id="a15-priorisierungsattribute-wirkungslos"></a> | Prioritäts-/Refresh-Attribute (`[Primary]`, `[Secondary]`, `[Once]`) werden gelesen und **verworfen**; alle Items werden mit `RefreshPriority.None` erzeugt. Die 4 `*RefreshRate`-Settings sind tote Konfiguration | `ItemFactory.cs:66-82` |
 | **A4** | Pseudo-Async: `await Task.Delay(1)` + blockierender BACnet-Call | `ItemValue.cs:66-76` |
 | **A1** | `async void` an 6 Stellen → unbehandelbare Exceptions, Crash-Risiko | `ComfoBoxClient.cs:58`, `ComfoBoxMqttClient.cs:64,227`, 3× DemoClient |
 | **A24** | `keepAlivePeriod = 2` s → unnötig häufige Disconnects | `ComfoBoxMqttClient.cs:89` |

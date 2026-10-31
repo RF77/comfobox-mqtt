@@ -77,9 +77,21 @@ Checklisten pro Phase. Jede Phase gilt erst als abgeschlossen, wenn **alle** Pun
 - [ ] Validierung mit korrekten Statuscodes (400/403/409/422/502)
 - [ ] Schreibfehler landen in `Status/Errors`
 - [ ] SSE liefert `snapshot` + `value`-Events
-- [ ] `nginx`-Proxying ohne SSE-Buffering getestet
+- [ ] **SPA wird aus dem .NET-Host ausgeliefert** (`wwwroot`, `MapFallbackToFile`) – kein nginx
 - [ ] `/api/service/restart` startet den Container neu (auf dem NAS getestet)
 - [ ] API-Tests grün
+
+### 4a. Setup-API (Getting Started)
+
+- [ ] `GET /api/setup/state` meldet `setupCompleted`
+- [ ] `GET /api/setup/ports` liefert die erkannten Ports mit stabilem Pfad
+- [ ] `GET /api/setup/ports/suggest` schlägt einen freien Port vor
+- [ ] `POST /api/setup/bacnet/test` liefert bei Erfolg `ok=true`, bei Fehlern einen `hint`
+- [ ] `POST /api/setup/mqtt/test` prüft Erreichbarkeit **und** Authentifizierung
+- [ ] `PUT /api/setup/config` hasht das Passwort **serverseitig** (PBKDF2, 600 000 Iterationen)
+- [ ] In `config.json` steht **kein** Klartext-Passwort; Datei-Modus 0600
+- [ ] `POST /api/setup/apply` setzt `setupCompleted=true` und stößt den Neustart aus
+- [ ] Nach der Ersteinrichtung sind alle `/api/setup/*`-Endpunkte authentifizierungspflichtig
 
 ---
 
@@ -104,8 +116,8 @@ Checklisten pro Phase. Jede Phase gilt erst als abgeschlossen, wenn **alle** Pun
 
 ## Phase 6 – Container & Synology
 
-- [ ] `docker build` für Gateway und Web erfolgreich
-- [ ] Image-Größe im erwarteten Rahmen (≈ 230 MB / 55 MB)
+- [ ] `docker build` für **ein** Image (Gateway + UI) erfolgreich
+- [ ] Image-Größe im erwarteten Rahmen (≈ 250 MB)
 - [ ] `docker compose up -d` auf der **realen DS923+** erfolgreich
 - [ ] **`/dev/ttyUSB0` im Container sichtbar und lesbar**
 - [ ] `IAm` wird empfangen (Status/Bacnet = connected)
@@ -116,7 +128,47 @@ Checklisten pro Phase. Jede Phase gilt erst als abgeschlossen, wenn **alle** Pun
 - [ ] Logs landen in `/var/log/comfobox` und auf stdout
 - [ ] Backup & Restore getestet
 - [ ] Trivy-Scan ohne kritische Findings
-- [ ] CI baut und publiziert beide Images
+- [ ] CI baut und publiziert das Image
+
+---
+
+## Phase 8 – Synology-Paket & Getting Started
+
+### 8a. SPK
+
+- [ ] `INFO` enthält `checksum`, `adminport`, `adminurl`, `adminprotocol`
+- [ ] `install_dep_packages="ContainerManager>=1432"` → Installation startet Container Manager
+- [ ] `bash -n` über **alle** Skripte in `deploy/synology-spk/` ist grün
+- [ ] `preinst` hat **keine** Seiteneffekte
+- [ ] `postinst` legt `var/` an, installiert udev-Regel + systemd-Unit, schreibt Default-`config.json`
+- [ ] `status` liefert `0` (läuft) bzw. `150` (gestoppt) – das Paketzcenter zeigt den richtigen Status
+- [ ] `postuninst` entfernt Container + Unit + udev-Regel, **lässt aber `var/` stehen**
+- [ ] Kein Docker-Socket im Container (`/var/run/docker.sock` nicht gemountet)
+- [ ] `config.json` hat Modus 0600
+- [ ] Installation auf der **realen DS923+** ohne Parameter → Paketcenter zeigt „Installiert"
+- [ ] `synopkg start/stop/status ComfoBoxGateway` funktioniert
+
+### 8b. Supervisor & Serial-Port
+
+- [ ] `serial-scan.sh` findet den Adapter und schreibt `ports.json`
+- [ ] `supervisor.sh` rendert `compose.yaml` aus dem Template
+- [ ] `devices:` enthält den **gewählten** Port (nicht alle)
+- [ ] Änderung an `config.json` → Container wird ersetzt (≈ 10 s)
+- [ ] Adapter wird neu angesteckt → Port wird wiedererkannt (`by-id`-Symlink stabil)
+- [ ] `passAllSerialDevices` ist standardmäßig **an** (Verbindungstest vor Portwahl möglich)
+
+### 8c. Getting-Started-Assistent
+
+- [ ] Assistent startet automatisch beim ersten Aufruf (`setupCompleted=false`)
+- [ ] Schritt 1 zeigt die Portliste mit Beschreibung und stabilem Pfad
+- [ ] Schritt 1 aktualisiert sich bei Hotplug (Adapter einstecken)
+- [ ] Schritt 2: BACnet-Test meldet verständliche Fehler (38400-Baud-Hinweis)
+- [ ] Schritt 3: MQTT-Test meldet Authentifizierungsfehler korrekt
+- [ ] Schritt 4: Passwortregeln (≥ 12 Zeichen, 3 von 4 Klassen) werden geprüft
+- [ ] Schritt 5: „Übernehmen" startet den Neustart, der Erfolg wird beobachtet und gemeldet
+- [ ] Assistent ist nach der Ersteinrichtung passwortgeschützt
+- [ ] Assistent ist **wiederholbar** (Port/Broker später wechselbar)
+- [ ] Assistent läuft auf Deutsch
 
 ---
 
@@ -140,6 +192,7 @@ Checklisten pro Phase. Jede Phase gilt erst als abgeschlossen, wenn **alle** Pun
 | Kriterium | Erfüllt |
 |---|---|
 | Alle sechs Anforderungen umgesetzt | ☐ |
+| Installation per Klick (SPK) + Assistent auf der DS923+ verifiziert | ☐ |
 | Contract-Test grün | ☐ |
 | Keine offenen P0-Befunde aus [Ist-Befunde](../01-ist-zustand/befunde.md) | ☐ |
 | Betrieb auf der DS923+ > 7 Tage stabil (ohne Neustart) | ☐ |

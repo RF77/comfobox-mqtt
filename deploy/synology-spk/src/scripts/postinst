@@ -1,0 +1,73 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# postinst – Umgebung nach der Installation vorbereiten.
+#
+# Reihenfolge laut DSM:
+#   prereplace → preinst → postinst → postreplace → start-stop-status start
+#
+# Hier wird alles vorbereitet, was für einen Start ohne further user action
+# nötig ist. Der eigentliche Container-Start passiert in start-stop-status.
+# ---------------------------------------------------------------------------
+set -u
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=../target/bin/common.sh
+. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+echo "ComfoBox Gateway: Umgebung wird vorbereitet …"
+
+# 1) Verzeichnisse anlegen
+mkdir -p "$VAR_DIR" "$LOG_DIR" "${VAR_DIR}/data" "${VAR_DIR}/logs"
+chmod 700 "$VAR_DIR"
+
+# 2) udev-Regel installieren (stabile Symlinks + dialout-Rechte)
+if [ -f "${PKG_DIR}/etc/99-comfobox-serial.rules" ]; then
+    cp -f "${PKG_DIR}/etc/99-comfobox-serial.rules" /etc/udev/rules.d/99-comfobox-serial.rules
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules >/dev/null 2>&1 || true
+        udevadm trigger >/dev/null 2>&1 || true
+    fi
+    log "udev-Regel installiert"
+fi
+
+# 3) systemd-Unit installieren
+if [ -f "${PKG_DIR}/etc/comfobox-gateway.service" ]; then
+    cp -f "${PKG_DIR}/etc/comfobox-gateway.service" /etc/systemd/system/comfobox-gateway.service
+    if command -v systemctl >/dev/null 2>&1; then
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        systemctl enable comfobox-gateway.service >/dev/null 2>&1 || true
+    fi
+    log "systemd-Unit installiert"
+fi
+
+# 4) Skripte ausführbar machen
+chmod 755 "${PKG_DIR}/bin/"*.sh 2>/dev/null || true
+
+# 5) Erste Ports-Ermittlung
+"${PKG_DIR}/bin/serial-scan.sh" "${PORTS_FILE}.tmp" >/dev/null 2>&1 \
+    && mv -f "${PORTS_FILE}.tmp" "$PORTS_FILE" \
+    || true
+
+# 6) Startkonfiguration schreiben, falls noch keine existiert
+if [ ! -f "$CONFIG_FILE" ]; then
+    cat > "$CONFIG_FILE" <<'EOF'
+{
+  "schemaVersion": 1,
+  "setupCompleted": false,
+  "web": { "port": 8081, "requireAuthentication": false, "users": [] },
+  "bacnet": { "port": "", "baudrate": 38400, "masterId": 1, "clientId": 3 },
+  "mqtt": { "baseTopic": "ComfoBox", "enableDiscovery": true, "brokers": [] },
+  "gateway": { "pollIntervalSeconds": 60, "expertMode": false, "maxNumberOfWritesPer24h": 200 }
+}
+EOF
+    log "Startkonfiguration geschrieben (Setup-Modus)"
+fi
+chmod 600 "$CONFIG_FILE"
+
+# 7) Compose-Datei zum ersten Mal rendern und Container starten
+"${PKG_DIR}/bin/supervisor.sh" render >> "$LOG_FILE" 2>&1 || true
+"${PKG_DIR}/bin/supervisor.sh" start >> "$LOG_FILE" 2>&1 || true
+
+log "postinst abgeschlossen"
+echo "ComfoBox Gateway ist vorbereitet. Die Web-Oberfläche öffnet sich automatisch."
+exit 0

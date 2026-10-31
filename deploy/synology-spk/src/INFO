@@ -1,0 +1,50 @@
+package="ComfoBoxGateway"
+version="1.0.0-0001"
+
+displayname="ComfoBox Gateway"
+displayname_ger="ComfoBox Gateway"
+displayname_enu="ComfoBox Gateway"
+
+description="MQTT-Gateway für die Zehnder ComfoBox Series 5 (RS485/BACnet MSTP). Liest und schreibt die Heizungswerte über MQTT und stellt eine Web-Oberfläche für Konfiguration, Status und Bedienung bereit."
+description_ger="MQTT-Gateway für die Zehnder ComfoBox Series 5 (RS485/BACnet MSTP). Liest und schreibt die Heizungswerte über MQTT und stellt eine Web-Oberfläche für Konfiguration, Status und Bedienung bereit."
+description_enu="MQTT gateway for the Zehnder ComfoBox Series 5 (RS485/BACnet MSTP). Reads and writes heating values via MQTT and provides a web interface for configuration, status and operation."
+
+maintainer="RF77"
+maintainer_url="https://github.com/RF77/comfobox-mqtt"
+distributor="RF77"
+distributor_url="https://github.com/RF77/comfobox-mqtt"
+support_url="https://github.com/RF77/comfobox-mqtt/issues"
+helpurl="https://github.com/RF77/comfobox-mqtt/tree/main/docs"
+
+# Kein Binärinhalt → läuft auf jeder Architektur
+arch="noarch"
+
+# Docker Project Worker / Container Manager ab DSM 7.2.1
+os_min_ver="7.2-63134"
+
+# Container Manager als Abhängigkeit: wird bei Bedarf mit installiert und gestartet
+install_dep_packages="ContainerManager>=1432"
+start_dep_services="ContainerManager"
+
+# Admin-Link: DSM öffnet beim Start automatisch http://<NAS-IP>:8081/
+adminprotocol="http"
+adminport="8081"
+adminurl="/"
+checkport="yes"
+
+# Lifecycle
+precheckstartstop="yes"
+ctl_stop="yes"
+ctl_uninstall="yes"
+
+# Paketcenter-Verhalten
+silent_install="no"
+silent_upgrade="yes"
+silent_uninstall="yes"
+thirdparty="yes"
+install_type="system"
+install_reboot="no"
+extractsize="1024"
+
+# Wird beim Build durch build-spk.sh gesetzt
+checksum=""

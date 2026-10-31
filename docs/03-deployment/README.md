@@ -4,19 +4,22 @@
 
 | Aspekt | Ziel |
 |---|---|
-| Verpackung | Docker-Image (OCI) aus GitHub Container Registry |
-| Zielplattform | **Synology DS923+** (DSM 7.2, Container Manager) |
-| Compose | `compose.yaml` mit 2 Services (`gateway`, `web`) + optional `mosquitto` |
-| Serial-Port | `/dev/ttyUSB0` per `devices:` in den Container durchgereicht |
-| Konfiguration | Datei (`appsettings.json`) + Umgebungsvariablen |
-| Persistenz | Docker-Volume für Schreibzähler und Logs |
+| Verpackung | Docker-Image (OCI) aus GitHub Container Registry + **Synology-Paket (SPK)** |
+| Zielplattform | **Synology DS923+** (DSM 7.2.1+, Container Manager) |
+| Installation | *„Installieren"* im DSM-Paketcenter → Browser öffnet sich → **Getting-Started-Assistent** |
+| Container | **ein** Container `gateway` (ASP.NET Core **inkl.** Angular-UI) → [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md) |
+| Compose | `compose.yaml` mit **1** Service (`gateway`) + optional `mosquitto` |
+| Serial-Port | zur Laufzeit gerendert (`devices:`) aus der Portwahl im Assistenten → [ADR-008](../05-entscheidungen/adr-008-synology-spk.md) |
+| Konfiguration | `config.json` (Modus 0600) + Umgebungsvariablen als Override |
+| Persistenz | Verzeichnis `/var/lib/comfobox` (Schreibzähler, Konfiguration) |
 | Neustart | `restart: unless-stopped` + Healthcheck |
-| Update | `docker compose pull && docker compose up -d` |
+| Update | `docker compose pull && docker compose up -d` **oder** SPK-Upgrade im DSM |
 
 ## 2. Dokumente
 
 | Dokument | Inhalt |
 |---|---|
+| [synology-paketcenter.md](synology-paketcenter.md) | **SPK-Paket, Installation per Klick, Getting-Started-Assistent** |
 | [containerisierung.md](containerisierung.md) | Dockerfile, Multi-Stage-Build, Compose, Image-Größe, Healthcheck |
 | [synology-ds923.md](synology-ds923.md) | Container Manager, **Serial-Port in Docker**, udev, Betrieb |
 | [konfiguration-und-secrets.md](konfiguration-und-secrets.md) | Env-Variablen, Bind-Mounts, Credentials, Backups |
@@ -59,15 +62,24 @@ Details und Schritt-für-Schritt-Anleitung: [synology-ds923.md](synology-ds923.m
 
 ## 4. Container-Übersicht
 
-| Container | Image | Ports | Volumes |
-|---|---|---|---|
-| `comfobox-gateway` | `ghcr.io/<user>/comfobox-gateway:<tag>` | `8080` → `8080` | `/var/lib/comfobox` (Schreibzähler), `/dev/ttyUSB0` |
-| `comfobox-web` | `ghcr.io/<user>/comfobox-web:<tag>` | `8081` → `80` | – |
-| `mosquitto` *(optional)* | `eclipse-mosquitto:2` | `1883` → `1883` | `./mosquitto/config`, `./mosquitto/data` |
+| Container | Image | Ports | Volumes / Devices | optional |
+|---|---|---|---|---|
+| `gateway` | `ghcr.io/<user>/comfobox-gateway:<tag>` | `8081` → `8080` | `/var/lib/comfobox`, `/dev/ttyUSB*` (gerendert) | nein |
+| `mosquitto` | `eclipse-mosquitto:2` | `1883` → `1883` | `./mosquitto/config`, `./mosquitto/data` | ja |
 
+> **Ein Container** enthält Gateway **und** Web-UI (→ [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)).
+> Es gibt keinen zweiten nginx-Container – ASP.NET Core liefert die SPA statisch aus.
+>
 > Der Broker läuft **optional** mit. Standard ist ein externer Broker (HA-Add-on oder ein
 > Mosquitto auf einem anderen Host). Ein eigener Broker auf der DS923+ ist sinnvoll, wenn HA
 > nicht auf dem NAS läuft.
+
+### 4.1 Zwei Betriebsarten
+
+| Betriebsart | Einstieg | Für wen |
+|---|---|---|
+| **SPK** (empfohlen) | DSM-Paketcenter → *Installieren* → Assistent | Normalfall |
+| **Manuelles Compose** | `docker compose up -d` + Hand-Konfiguration | Container-Enthusiasten, andere Hosts (Pi, Linux-Server) |
 
 ## 5. Release- und Update-Prozess
 

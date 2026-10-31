@@ -12,7 +12,7 @@ Zur Laufzeit gewinnt die `.exe.config` (via `LocalFileSettingsProvider`). Beide 
 
 > `System.Configuration.ApplicationSettingsBase` existiert unter .NET Core/.NET 5+ **nicht**.
 > Der gesamte Mechanismus muss bei der Migration ersetzt werden
-> (siehe [../02-modernisierung/dotnet-migration.md](../02-modernisierung/dotnet-migration.md#settings--und-konfiguration)).
+> (siehe [../02-modernisierung/dotnet-migration.md §4](../02-modernisierung/dotnet-migration.md#4-settings--microsoftextensionsconfiguration)).
 
 ## 2. `ComfoBoxLib` – Hardware- und Geräteeinstellungen
 

@@ -150,7 +150,7 @@ verworfen; `23,5` wird zu `235` interpretiert.
 > Beide Fehler werden im Rahmen der Migration behoben – **ohne** das Topic-Schema zu ändern.
 > Die Vertrags-relevanten Payloads (Name oder Zahl, Punkt als Dezimaltrenner) bleiben identisch,
 > aber die **Interpretation** wird kultur-invariant. Details in
-> [../04-migration/mqtt-kompatibilitaet.md](../04-migration/mqtt-kompatibilitaet.md#payload-interpretation).
+> [../04-migration/mqtt-kompatibilitaet.md §3](../04-migration/mqtt-kompatibilitaet.md#3-payload-interpretation).
 
 ## 8. Retention-Semantik
 

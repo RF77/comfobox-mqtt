@@ -178,6 +178,13 @@ Basis-URL: `/api`. Authentifizierung: optional (siehe offene Frage Q2).
 | `POST` | `/api/service/reconnect/mqtt` | MQTT neu verbinden | `202` |
 | `GET` | `/api/diagnostics/errors` | Letzte Fehler (Ringpuffer) | `ErrorEntry[]` |
 | `GET` | `/api/diagnostics/writes` | Schreibzähler-Historie | `WriteStats` |
+| `GET` | `/api/setup/state` | Ist das Setup abgeschlossen? | `SetupState` |
+| `GET` | `/api/setup/ports` | Erkannte serielle Ports | `SerialPort[]` |
+| `GET` | `/api/setup/ports/suggest` | Freien Web-UI-Port vorschlagen | `int` |
+| `POST` | `/api/setup/bacnet/test` | BACnet-Verbindung testen | `TestResult` |
+| `POST` | `/api/setup/mqtt/test` | MQTT-Verbindung testen | `TestResult` |
+| `PUT` | `/api/setup/config` | Konfiguration schreiben (Assistent) | `204` |
+| `POST` | `/api/setup/apply` | Konfiguration übernehmen → Neustart | `202` |
 
 ### 3.2 Beispiele
 
@@ -294,6 +301,71 @@ internal static class ItemsEndpoints
 }
 ````
 
+### 3.4 Setup-Endpunkte (Getting Started)
+
+Diese Endpunkte speisen den [Setup-Assistenten](ui-angular-optimus.md#3-getting-started-setup-assistent).
+Details zum Installationsfluss: [Synology-Paketcenter](../03-deployment/synology-paketcenter.md).
+
+| Endpunkt | Verhalten |
+|---|---|
+| `GET /api/setup/state` | `{ "setupCompleted": false, "steps": ["serial","bacnet","mqtt","security"], "version": 1 }` |
+| `GET /api/setup/ports` | Liest `ports.json` aus dem Datenverzeichnis (vom Supervisor erzeugt) |
+| `GET /api/setup/ports/suggest` | Erster freier Port ab 8081 |
+| `POST /api/setup/bacnet/test` | Öffnet den Port, sendet `WhoIs`, wartet auf `IAm` |
+| `POST /api/setup/mqtt/test` | CONNECT + Publish/Receive eines Test-Topics |
+| `PUT /api/setup/config` | Schreibt `config.json`; ** hasht Passwörter serverseitig** |
+| `POST /api/setup/apply` | Setzt `setupCompleted = true` und löst den Neustart aus |
+
+#### TestResult
+
+````json
+{
+  "ok": false,
+  "message": "Die ComfoBox antwortet nicht.",
+  "hint": "no_iam",
+  "durationMs": 30012
+}
+````
+
+| `hint` | Bedeutung |
+|---|---|
+| `serial_port_not_found` | Der Port existiert nicht (mehr) |
+| `permission_denied` | Keine Berechtigung (Gruppe `dialout`) |
+| `busy` | Port wird von einem anderen Prozess gehalten |
+| `no_iam` | Kein `IAm` innerhalb des Timeouts |
+| `mqtt_unreachable` | Broker nicht erreichbar |
+| `mqtt_auth_failed` | Anmeldedaten falsch |
+| `mqtt_tls_failed` | TLS-Verhandlung fehlgeschlagen |
+
+#### Schreiben der Konfiguration
+
+````csharp
+group.MapPut("/config", async (SetupConfigRequest request, ISetupService setup, CancellationToken ct) =>
+{
+    // Passwort kommt im Klartext an und wird hier serverseitig gehasht.
+    var config = request.ToConfiguration();                       // ohne Passwort-Hash
+    config.Users = request.Users
+        .Select(u => new WebUser(u.Username, PasswordHasher.Hash(u.Password)))
+        .ToList();
+
+    await setup.WriteAsync(config, ct);     // → config.json (0600)
+    return Results.NoContent();
+});
+
+group.MapPost("/apply", async (ISetupService setup, CancellationToken ct) =>
+{
+    await setup.ApplyAsync(ct);             // setupCompleted = true + Neustart anstoßen
+    return Results.Accepted();
+});
+````
+
+> **Wichtig:** Der Klartext-Passwort ist nur auf diesem einen Weg unterwegs. In `config.json`
+> steht ausschließlich der Hash (`pbkdf2-sha256$600000$…`).
+>
+> **Sicherheitsregel:** Alle `/api/setup/*`-Endpunkte sind nach der Ersteinrichtung
+> authentifizierungspflichtig; im Setup-Modus (noch kein Benutzer) sind sie **offen** –
+> das ist vertretbar, weil der Gateway dann noch nichts kann.
+
 ## 4. SSE (Server-Sent Events) für Live-Werte
 
 Die UI soll Werte live sehen, ohne Polling-Bremse. SSE ist gegenüber WebSockets einfacher
@@ -310,7 +382,7 @@ internal static class EventsEndpoint
         {
             ctx.Response.Headers.ContentType = "text/event-stream";
             ctx.Response.Headers.CacheControl = "no-cache";
-            ctx.Response.Headers["X-Accel-Buffering"] = "no";   // nginx: kein Buffering
+            ctx.Response.Headers["X-Accel-Buffering"] = "no";   // nur relevant, falls doch ein Reverse-Proxy davorsteht
 
             await using var writer = new StreamWriter(ctx.Response.Body);
             await writer.WriteAsync($"event: snapshot\ndata: {JsonSerializer.Serialize(cache.Snapshot())}\n\n");
@@ -326,7 +398,10 @@ internal static class EventsEndpoint
 }
 ````
 
-> **nginx-Wichtig:** `proxy_buffering off;` für `/api/events`, sonst wartet der Browser auf
+> **Kein Proxy dazwischen:** Der .NET-Host liefert UI **und** SSE direkt aus
+> (→ [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)). Es gibt daher kein
+> `proxy_buffering`-Problem. Steht doch einmal ein Reverse-Proxy davor, muss dort
+> `proxy_buffering off;` für `/api/events` gesetzt werden – sonst wartet der Browser auf
 > 4 KB und sieht keine Live-Werte.
 
 ## 5. Persistenter Schreibschutz (24 h)
@@ -394,7 +469,7 @@ app.MapPost("/api/service/restart", (IHostApplicationLifetime lifetime, ILogger<
 
 ### 6.2 Per MQTT
 
-Siehe [home-assistant.md#5-restart-aus-home-assistant](home-assistant.md#5-restart-aus-home-assistant).
+Siehe [home-assistant.md §6](home-assistant.md#6-neustart-aus-home-assistant-anforderung-6).
 
 ### 6.3 Restart-Implementierung
 
@@ -434,6 +509,20 @@ internal sealed class ServiceControl(
 ## 7. Konfigurations-Endpunkt
 
 Der Nutzer soll aus der UI heraus Expert-Mode, Poll-Intervall, Schreiblimit etc. ändern können.
+
+### 7.1 Konfigurationsquellen und Präzedenz
+
+```
+config.json im Datenverzeichnis   ← vom Assistenten geschrieben, VORRANG
+        ↓
+Umgebungsvariablen COMFOBOX__*    ← Override (CI, Tests, Debug-Läufe)
+        ↓
+appsettings.json (im Image)        ← Defaults
+```
+
+> **Warum die Datei Vorrang hat:** Passwörter in Env-Variablen landen sichtbar in
+> `docker inspect`. In `config.json` (Modus 0600) stehen sie nur im Dateisystem.
+> → [Konfiguration & Secrets](../03-deployment/konfiguration-und-secrets.md)
 
 | Aktion | Wirkung |
 |---|---|

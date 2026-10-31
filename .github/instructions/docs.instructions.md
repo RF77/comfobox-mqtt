@@ -44,8 +44,8 @@ docs/
 - Eine Ebene pro Abschnitt, keine Übersprünge (`#` → `##` → `###`)
 - Tabellen für Vergleiche, Listen für Sequenzen
 - Codeblöcke **mit** Sprachangabe
-- Dateipfade als Markdown-Links: `[docs/topics.json](docs/topics.json)`
-- Zeilenverweise: `[ItemFactory.cs:66](src/ComfoBoxMqtt/Groups/ItemFactory.cs#L66)`
+- Dateipfade als Markdown-Links: `[docs/topics.json](../../docs/topics.json)`
+- Zeilenverweise: `[ItemFactory.cs:66](../../src/ComfoBoxMqtt/Groups/ItemFactory.cs#L66)`
 - Relative Links, damit die Doku auf GitHub **und** lokal funktioniert
 - „Ist" und „Soll" klar trennen
 

@@ -1,0 +1,13 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# preuninst – Container vor der Deinstallation stoppen.
+# ---------------------------------------------------------------------------
+set -u
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=../target/bin/common.sh
+. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+echo "ComfoBox Gateway: Container werden gestoppt …"
+"${PKG_DIR}/bin/supervisor.sh" stop >> "$LOG_FILE" 2>&1 || true
+exit 0

@@ -1,0 +1,21 @@
+# ComfoBox Gateway – udev-Regeln
+#
+# 1) Stabile Symlinks: /dev/ttyUSB0 kann sich nach einem Reboot oder erneuten
+#    Anstecken ändern, /dev/comfobox nicht.
+# 2) Gruppenrechte: der Container-Prozess braucht Lese-/Schreibzugriff auf das
+#    Device-Node. Auf DSM ist "dialout" in der Regel die GID 20.
+#
+# Installiert durch scripts/postinst nach /etc/udev/rules.d/.
+
+# CH340 (USB2RS485-Adapter, im Projekt erprobt)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", \
+  SYMLINK+="comfobox", GROUP="dialout", MODE="0660"
+
+# FTDI (alternative Adapter)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", \
+  SYMLINK+="comfobox", GROUP="dialout", MODE="0660"
+
+# Generelle Fallback-Regel für alle übrigen seriellen Ports:
+# stellt sicher, dass die Gruppe "dialout" immer gesetzt ist.
+SUBSYSTEM=="tty", MODE="0660", GROUP="dialout", \
+  ENV{ID_SERIAL}!="", SYMLINK+="serial/by-id/$env{ID_SERIAL}"

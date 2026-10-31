@@ -106,10 +106,11 @@ Jeder Fehler landet in **drei** Kanälen: Log, `ComfoBox/Status/Errors` und die 
 src/
 ├── ComfoBox.Bacnet/          # BACnet-MSTP-Stack (portiert)
 ├── ComfoBox.Domain/          # Item-Katalog + Werttypen (framework-frei!)
-├── ComfoBox.Gateway/         # Host: BACnet + MQTT + API + Health
-├── ComfoBox.Web/             # Angular 22 + Optimus UI
+├── ComfoBox.Gateway/         # Host: BACnet + MQTT + API + Health (+ SPA aus wwwroot)
+├── ComfoBox.Web/             # Angular 22 + Optimus UI (inkl. Getting-Started-Assistent)
 ├── ComfoBox.*.Tests/         # Unit-/Integrationstests
 └── ComfoBox.Contract.Tests/  # MQTT-Kompatibilität
+deploy/synology-spk/          # Synology-Paket (SPK) + Supervisor
 docs/                         # Spezifikation (siehe docs/README.md)
 ````
 
@@ -143,6 +144,10 @@ cd src/ComfoBox.Web && npm ci && npm run lint && npm start
 # Container
 docker compose up -d
 docker compose logs -f gateway
+
+# Synology-Paket (SPK) bauen und prüfen
+bash deploy/synology-spk/tools/check-shell.sh
+bash deploy/synology-spk/build-spk.sh
 ````
 
 | Voraussetzung | Version |
@@ -174,6 +179,11 @@ docker compose logs -f gateway
 | M2Mqtt hat kein Async/TLS/Auth | MQTT | MQTTnet verwenden |
 | `keepAlivePeriod = 2` war der Broker-Killer | MQTT | ≥ 15 s, hier 30 s |
 | `Connected=1` fehlte nach Reconnect | MQTT | bei **jedem** Connect publizieren |
+| Ein Image für Gateway **und** UI | Container | kein nginx-Container (→ ADR-007) |
+| `devices:` ist zur Installzeit **nicht** bekannt | SPK/Supervisor | wird aus der Portwahl gerendert |
+| Kein Docker-Socket im Container | Sicherheit | Host-seitiger Supervisor |
+| `postuninst` darf das `var`-Verzeichnis **nicht** löschen | SPK | sonst ist der Schreibzähler weg |
+| Root-`.gitignore` hat `[Bb]in/` | SPK | `src/target/bin/*.sh` würde ignoriert → Ausnahme in `deploy/synology-spk/.gitignore` |
 
 ## 9. Detailliertere Regeln
 

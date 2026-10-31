@@ -1,28 +1,34 @@
 ---
-description: "Use when writing Dockerfiles, docker-compose files, or deployment configuration for this repository — building images, running on Synology DS923+, serial device passthrough, healthchecks, volumes, or secrets handling."
-applyTo: ["**/Dockerfile", "**/docker-compose*.y*ml", "**/compose*.y*ml", "**/.dockerignore", "**/nginx.conf"]
+description: "Use when writing Dockerfiles, docker-compose files, Synology SPK packages, or deployment configuration for this repository — building images, running on Synology DS923+, serial device passthrough, healthchecks, volumes, or secrets handling."
+applyTo: ["**/Dockerfile", "**/docker-compose*.y*ml", "**/compose*.y*ml", "**/.dockerignore", "deploy/synology-spk/**", "**/INFO", "**/scripts/**"]
 ---
 
 # Docker & Deployment – Regeln
 
 ## 1. Zielplattform
 
-**Synology DS923+** (AMD Ryzen R1600, x86_64, 4 GB RAM, DSM 7.2, Container Manager / Docker 24+).
+**Synology DS923+** (AMD Ryzen R1600, x86_64, 4 GB RAM, DSM 7.2.1+, Container Manager / Docker 24+).
 
 ⇒ Nur **`linux/amd64`**. Kein arm64 (die DS923+ braucht es nicht; der Build-Aufwand wäre
 unnötig doppelt).
+
+> **Primärer Installationsweg:** das Synology-Paket (SPK) in `deploy/synology-spk/`
+> → [ADR-008](../../docs/05-entscheidungen/adr-008-synology-spk.md).
+> Manuelles Compose bleibt als Alternative für andere Hosts (Pi, Linux-Server).
 
 ## 2. Images
 
 | Image | Base | Inhalt | Zielgröße |
 |---|---|---|---|
-| `comfobox-gateway` | `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` | .NET-Gateway | ~230 MB |
-| `comfobox-web` | `nginx:1.27-alpine` | statisches Angular-Bundle | ~55 MB |
+| `comfobox-gateway` | `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` | .NET-Gateway **+ Angular-UI** (ein Image!) | ~250 MB |
 | `mosquitto` (optional) | `eclipse-mosquitto:2` | Broker | ~25 MB |
+
+> **Ein Image für Gateway und UI** → [ADR-007](../../docs/05-entscheidungen/adr-007-ein-container-image.md).
+> Es gibt **keinen** `comfobox-web`-Container und **keine** nginx-Konfiguration.
 
 **Regeln:**
 
-- **Multi-Stage-Build**: SDK-Stage zum Bauen, Runtime-Stage als Ziel
+- **Multi-Stage-Build**: `node` (Angular) → `dotnet/sdk` (.NET) → `dotnet/aspnet` (Laufzeit)
 - **`tini` als PID 1** → korrektes `SIGTERM` → `docker stop` beendet den Prozess sauber
   (sonst wird der LWT nicht ausgelöst und HA bleibt im alten Zustand)
 - **Kein Root**: `USER comfobox`
@@ -35,6 +41,22 @@ unnötig doppelt).
 HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
     CMD curl -fsS http://localhost:8080/api/health || exit 1
 ````
+
+### 2.1 Statische Auslieferung aus dem .NET-Host
+
+Die SPA liegt unter `wwwroot/` und wird von ASP.NET Core ausgeliefert:
+
+````csharp
+app.UseDefaultFiles();          // → index.html
+app.UseStaticFiles();           // → Assets
+app.MapFallbackToFile("index.html");  // SPA-Routing (NACH den API-Routen!)
+````
+
+| Punkt | Regel |
+|---|---|
+| Reihenfolge | `MapFallbackToFile` **nach** allen `MapGet`/`MapPut` → sonst schluckt es `/api/...` |
+| Kompression | `AddResponseCompression()` mit Brotli/Gzip – der nginx-Pfad existiert nicht mehr |
+| Assets cachen | `UseStaticFiles` + `Cache-Control` per Middleware (Angular nutzt gehashte Namen) |
 
 ## 3. Serielle Schnittstelle
 
@@ -61,14 +83,18 @@ services:
 > **Hinweis:** `dialout` hat auf DSM üblicherweise **GID 20**. Im Zweifel die numerische GID
 > verwenden.
 
+> **Im SPK-Betrieb ist der `devices:`-Block dynamisch:** Der Supervisor rendert ihn aus der
+> Portwahl im Getting-Started-Assistenten. Die Compose-Datei im Repo ist ein Template mit
+> Platzhaltern (`${SERIAL_DEVICES}`), **keine** direkt lauffähige Datei.
+
 ## 4. Compose
 
 | Aspekt | Regel |
 |---|---|
 | `image:` (nicht `build:`) auf dem NAS | Images kommen aus der Registry |
 | Projektname | `comfobox` |
-| Gateway-Port | `127.0.0.1:8080:8080` → nur nginx ist der öffentliche Eintrittspunkt |
-| UI-Port | `8081:80` |
+| **Ein** Service `gateway` | Gateway + UI in einem Container |
+| Gateway-Port | `8081:8080` (8081 ist der Port, den das SPK im DSM öffnet) |
 | `env_file: .env` | Secrets getrennt vom Image |
 | `restart: unless-stopped` | |
 | Volumes | `comfobox-data:/var/lib/comfobox` (Schreibzähler!), `./logs:/var/log/comfobox` |
@@ -81,34 +107,82 @@ services:
 
 | Punkt | Regel |
 |---|---|
-| Konfiguration | `appsettings.json` (Bind-Mount) + Env `COMFOBOX__*` |
-| Passwörter | **niemals** im Image, **niemals** im Git → `.env` mit `chmod 600` |
+| Konfiguration | `config.json` im Datenverzeichnis (Modus 0600) + Env `COMFOBOX__*` als **Override** |
+| Präzedenz | **`config.json` schlägt Env-Variablen** – Passwörter sollen nicht in `docker inspect` landen |
+| Passwörter | **niemals** im Image, **niemals** im Git → `config.json` (0600) bzw. `.env` mit `chmod 600` |
 | `.env` in `.gitignore` | `.env.example` mit Platzhaltern committen |
-| `appsettings.override.json` | im **selben** Volume wie `/var/lib/comfobox` |
 | API-Key | optional; UI nicht ins Internet exponieren |
 
-````bash
-# .env.example
-MQTT_PASSWORD=changeme
-API_KEY=changeme
-````
+> **Details:** [Konfiguration & Secrets](../../docs/03-deployment/konfiguration-und-secrets.md),
+> [API §7.1](../../docs/02-modernisierung/datenmodell-und-api.md#71-konfigurationsquellen-und-präzedenz)
 
-## 6. nginx
+## 6. Synology-Paket (SPK)
+
+Regeln für `deploy/synology-spk/`:
+
+### 6.1 `INFO`
+
+| Feld | Wert | Begründung |
+|---|---|---|
+| `package` | `ComfoBoxGateway` | keine Punkte, camelcase |
+| `arch` | `noarch` | Image ist `linux/amd64`; SPK ist plattformneutral |
+| `os_min_ver` | `7.2-63134` | DSM-Version, ab der Container Manager + SPK-Funktionen verfügbar sind |
+| `install_dep_packages` | `ContainerManager>=1432` | erzwingt Container Manager als Abhängigkeit |
+| `start_dep_services` | `ContainerManager` | Container Manager muss laufen |
+| `adminprotocol` / `adminport` / `adminurl` | `http` / `8081` / `/` | **öffnet den Browser nach der Installation** |
+| `checkport` | `yes` | Portkonflikt wird vor der Installation geprüft |
+| `precheckstartstop` | `yes` | Vorprüfung beim Start |
+| `silent_install` | `no` | der Nutzer **soll** sehen, was passiert |
+| `silent_upgrade` / `silent_uninstall` | `yes` | Routine |
+| `thirdparty` | `yes` | erscheint als Drittanbieter-Paket |
+| `ctl_stop` / `ctl_uninstall` | `yes` | „Stoppen"/„Deinstallieren" im DSM |
+| `install_type` | `system` | nicht als „App installieren" |
+
+> `checksum` wird beim Build **automatisch** in die INFO geschrieben (MD5 über `package.tgz`).
+
+### 6.2 Lifecycle-Skripte
+
+`scripts/` enthält: `preinst`, `postinst`, `preuninst`, `postuninst`, `start-stop-status`.
+
+| Skript | Aufgabe | Seiteneffekte |
+|---|---|---|
+| `preinst` | Voraussetzungen prüfen (DSM-Version, Container Manager, freier Port) | **keine** |
+| `postinst` | Verzeichnisse anlegen, udev-Regel + systemd-Unit installieren, erste Port-Erkennung, Default-`config.json` schreiben, Compose rendern, Container starten | ja |
+| `preuninst` | Container stoppen | ja |
+| `postuninst` | Container entfernen, systemd-Unit + udev-Regel entfernen | ja, **aber `var/` bleibt** (Schreibzähler!) |
+| `start-stop-status` | `start` / `stop` / `status` / `prestart` / `prestop` / `log` | ja |
+
+**Exit-Codes** (DSM-Konvention):
+
+| Code | Bedeutung |
+|---|---|
+| `0` | Erfolg |
+| `1` | Unbekannter Fehler |
+| `2` | Falsche Parameter / Aufruf |
+| `3` | Paket ist nicht „gestartet" (Status-Abfrage) |
+| `4` | Abhängigkeit nicht erfüllt (Container Manager fehlt) |
+| `150` | „Sollzustand ist Stop" (Status-Abfrage bei gestopptem Paket) |
+
+> `status` muss `0` liefern, wenn der Container läuft, und `150`, wenn er gestoppt ist –
+> nur so zeigt das DSM-Paketcenter den richtigen Status.
+
+### 6.3 Supervisor
 
 | Regel | Begründung |
 |---|---|
-| `location /api/events` **ohne** `proxy_buffering` | sonst kommen SSE-Live-Werte erst beim Verbindungsende |
-| `proxy_read_timeout 24h` | SSE-Verbindung soll nicht timeouten |
-| `try_files $uri $uri/ /index.html` | SPA-Routing |
-| `expires 1y` für `.js/.css/…` | Angular nutzt gehashte Dateinamen |
-| `gzip off` für `/api/events` | SSE-Kompression puffert |
+| Der Supervisor läuft **auf dem Host**, nicht im Container | der `devices:`-Block hängt vom gewählten Port ab |
+| **Kein** Docker-Socket im Container | Sicherheit; der Container braucht ihn nicht |
+| Compose wird aus `compose.template.yaml` **gerendert** | Platzhalter `${WEB_PORT} ${SERIAL_DEVICES} ${DIALOUT_GID} …` |
+| Watch-Loop prüft `config.json` + `ports.json` (MD5) | Änderung → `compose up -d` (Container wird ersetzt) |
+| `passAllSerialDevices` | Standard **an** → der Verbindungstest im Assistenten funktioniert vor der endgültigen Portwahl |
+| Shell-Skripte mit `bash -n` prüfen | `deploy/synology-spk/tools/check-shell.sh` |
 
 ## 7. Build in CI
 
 ````yaml
 - uses: docker/build-push-action@v6
   with:
-    context: ./src/ComfoBox.Gateway
+    context: .
     file: ./src/ComfoBox.Gateway/Dockerfile
     platforms: linux/amd64
     push: true
@@ -116,10 +190,10 @@ API_KEY=changeme
     cache-to: type=gha,mode=max,scope=gateway
 ````
 
-- **Getrennte Kontexte** pro Image (`context: ./src/ComfoBox.Gateway`) → kleiner Build-Kontext,
-  schnellerer Cache
+- **Ein** Build-Kontext (`.`) → der Dockerfile braucht das Angular-Ergebnis
 - `cache-from`/`cache-to` mit `type=gha` → GitHub Actions Cache
 - Trivy-Scan **vor** dem Push (Fail on CRITICAL/HIGH)
+- Anschließend: SPK bauen (`deploy/synology-spk/build-spk.sh`) → GitHub Release
 
 ## 8. Betrieb & Diagnose
 
@@ -138,6 +212,8 @@ docker inspect --format '{{json .State.Health}}' comfobox-gateway
 | `no_iam` | falsche Baudrate | ComfoBox auf 38400 prüfen |
 | `unhealthy` | `/api/health` antwortet nicht | Logs prüfen |
 | HA-Entitäten `unavailable` | Broker nicht erreichbar | `COMFOBOX_Mqtt__Brokers__0__Host` prüfen |
+| SPK-Status „gestoppt" | `status` liefert nicht 0/150 | `synopkg status ComfoBoxGateway` prüfen |
+| Container startet nicht | `devices:` zeigt auf falschen Pfad | `compose.yaml` im `var`-Verzeichnis prüfen |
 
 ## 9. Checkliste vor jedem Deployment
 
@@ -146,7 +222,10 @@ docker inspect --format '{{json .State.Health}}' comfobox-gateway
 - [ ] Image-Größe im Rahmen
 - [ ] `devices:` zeigt auf `by-id`-Pfad
 - [ ] `group_add` gesetzt
-- [ ] `.env` vorhanden, `chmod 600`, nicht im Git
+- [ ] `config.json` vorhanden, Modus 0600, nicht im Git
 - [ ] Volume `comfobox-data` **nicht** gelöscht
 - [ ] `compose.yaml` zeigt auf den richtigen Tag (nicht `latest` in Produktion)
-- [ ] Backup von `comfobox-data` und `.env` vorhanden
+- [ ] Backup von `comfobox-data` und `config.json` vorhanden
+- [ ] *(nur SPK)* `bash -n` über alle Skripte in `deploy/synology-spk/` grün
+- [ ] *(nur SPK)* `INFO` enthält `checksum` und `adminport`
+- [ ] *(nur SPK)* `postuninst` lässt das `var`-Verzeichnis stehen

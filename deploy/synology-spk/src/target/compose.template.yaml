@@ -1,0 +1,51 @@
+# Compose-Vorlage für das ComfoBox-Gateway-Paket.
+#
+# Der Supervisor (target/bin/supervisor.sh) ersetzt die ${…}-Platzhalter per sed
+# und schreibt das Ergebnis nach var/compose.yaml.
+#
+# Wichtig: Diese Datei enthält KEINE Secrets. Passwörter stehen in var/config.json
+# und werden vom Gateway selbst gelesen (nicht über Env-Variablen) – so tauchen
+# sie nicht in `docker inspect` auf.
+
+services:
+  gateway:
+    image: ${IMAGE}
+    container_name: comfobox-gateway
+    restart: unless-stopped
+
+    ports:
+      - "${WEB_PORT}:8080"
+
+    environment:
+      # Konfiguration kommt aus der Datei im Volume (Vorrang vor Env-Variablen)
+      - COMFOBOX_CONFIG_FILE=/var/lib/comfobox/config.json
+      - COMFOBOX_BACNET__Baudrate=${BAUDRATE}
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_gcServer=1
+
+    devices:
+      # Leer, solange im Assistent kein Port gewählt wurde (Setup-Modus).
+      ${SERIAL_DEVICES}
+
+    group_add:
+      - "${DIALOUT_GID}"
+
+    volumes:
+      - "${DATA_DIR}:/var/lib/comfobox"
+      - "${LOG_DIR}:/var/log/comfobox"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    security_opt:
+      - no-new-privileges:true

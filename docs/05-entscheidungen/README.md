@@ -25,6 +25,8 @@ ihre Konsequenzen. Ein ADR ist **unveränderlich** – eine geänderte Entscheid
 | [ADR-004](adr-004-containerisierung.md) | Betrieb als Container-Image auf Synology DS923+ | Accepted |
 | [ADR-005](adr-005-api-stil.md) | Schnittstelle Gateway ↔ UI: REST + SSE | Accepted |
 | [ADR-006](adr-006-item-katalog.md) | Item-Katalog als deklarative Domäne | Accepted |
+| [ADR-007](adr-007-ein-container-image.md) | Ein einziges Container-Image für Gateway und Web-UI | Accepted |
+| [ADR-008](adr-008-synology-spk.md) | Installation als Synology-Paket (SPK) mit Getting-Started-Assistenten | Accepted |
 
 ## 3. Offene Entscheidungen (noch kein ADR)
 
@@ -33,8 +35,9 @@ Diese Fragen sind noch offen und werden nach Rückmeldung zu ADRs
 
 | # | Frage | Mögliche ADR |
 |---|---|---|
-| Q1 | Eingebetteter Broker im Gateway? | ADR-007 (optional) |
-| Q2 | Authentifizierung der Web-UI | ADR-008 |
-| Q3 | Ein oder mehrere ComfoBox-Geräte? | ADR-009 (falls >1) |
-| Q4 | `ExpertMode` zur Laufzeit umschaltbar? | Teil von ADR-005 |
+| Q1 | Eingebetteter Broker im Gateway? | ADR-009 (optional) |
+| Q2 | Authentifizierung der Web-UI | **entschieden:** Cookie-Auth + PBKDF2, siehe [ADR-005](adr-005-api-stil.md) und [ADR-008](adr-008-synology-spk.md) |
+| Q3 | Ein oder mehrere ComfoBox-Geräte? | ADR-010 (falls >1) |
+| Q4 | `ExpertMode` zur Laufzeit umschaltbar? | **entschieden:** ja, umschaltbar in der Konfigurationsseite, siehe [ADR-005](adr-005-api-stil.md) |
+| Q5 | `MaxNumberOfWritesPer24h` pro Item oder global? | ADR-011 (falls verfeinert) |
 | Q6 | Discovery-Prefix konfigurierbar? | Teil von ADR-002 |

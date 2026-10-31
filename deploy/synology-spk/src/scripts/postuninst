@@ -1,0 +1,36 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# postuninst – Aufräumen nach der Deinstallation.
+#
+# WICHTIG: Die persistenten Daten (config.json, writes.json, logs) bleiben
+# erhalten! Grund:
+#   • Der 24-h-Schreibzähler (EEPROM-Schutz) darf nicht zurückgesetzt werden.
+#   • Eine versehentliche Deinstallation ist mit den Daten jederzeit rückgängig
+#     zu machen.
+# Der Benutzer kann die Daten manuell unter var/ löschen.
+# ---------------------------------------------------------------------------
+set -u
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=../target/bin/common.sh
+. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+echo "ComfoBox Gateway: Container werden entfernt …"
+"${PKG_DIR}/bin/supervisor.sh" remove >> "$LOG_FILE" 2>&1 || true
+
+# systemd-Unit und udev-Regel entfernen
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl disable --now comfobox-gateway.service >/dev/null 2>&1 || true
+fi
+rm -f /etc/systemd/system/comfobox-gateway.service
+rm -f /etc/udev/rules.d/99-comfobox-serial.rules
+command -v udevadm >/dev/null 2>&1 && udevadm control --reload-rules >/dev/null 2>&1 || true
+
+# Datenverzeichnis bewusst NICHT löschen
+if [ -d "$VAR_DIR" ]; then
+    log "Datenverzeichnis bleibt erhalten: $VAR_DIR"
+    echo "Die Konfiguration bleibt unter $VAR_DIR erhalten."
+    echo "Zum vollständigen Entfernen bitte dieses Verzeichnis manuell löschen."
+fi
+
+exit 0

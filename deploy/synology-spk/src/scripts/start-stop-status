@@ -1,0 +1,55 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# start-stop-status – Lifecycle des Pakets.
+#
+#   start     Container starten
+#   stop      Container stoppen (LWT wird ausgelöst → HA sieht 'offline')
+#   status    0 = läuft, 1 = tot (PID da), 2 = tot (Lock da), 3 = läuft nicht,
+#             4 = unbekannt, 150 = defekt
+#   prestart  wird vor 'start' aufgerufen (precheckstartstop=yes)
+#   prestop   wird vor 'stop' aufgerufen
+# ---------------------------------------------------------------------------
+set -u
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=../target/bin/common.sh
+. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+case "${1:-}" in
+    start)
+        mkdir -p "$VAR_DIR" "$LOG_DIR"
+        "${PKG_DIR}/bin/supervisor.sh" start >> "$LOG_FILE" 2>&1
+        exit 0
+        ;;
+
+    stop)
+        "${PKG_DIR}/bin/supervisor.sh" stop >> "$LOG_FILE" 2>&1
+        exit 0
+        ;;
+
+    status)
+        "${PKG_DIR}/bin/supervisor.sh" status
+        exit $?
+        ;;
+
+    prestart)
+        # Vor dem Start: prüfen, ob der Container Manager bereit ist
+        if ! container_manager_running; then
+            sleep 5
+        fi
+        exit 0
+        ;;
+
+    prestop)
+        exit 0
+        ;;
+
+    log)
+        [ -f "$LOG_FILE" ] && cat "$LOG_FILE"
+        exit 0
+        ;;
+
+    *)
+        exit 0
+        ;;
+esac

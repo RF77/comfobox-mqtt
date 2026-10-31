@@ -1,0 +1,16 @@
+# Build-Artefakte
+dist/
+*.spk
+*.tar.gz
+
+# Prüf-Ausgaben
+tools/*.out.txt
+tools/*.err.txt
+
+# ACHTUNG: Das Root-.gitignore enthält die Regel "[Bb]in/" und würde damit
+# src/target/bin/ komplett ignorieren. Diese Shell-Skripte (common.sh,
+# serial-scan.sh, supervisor.sh) MÜSSEN aber versioniert werden –
+# sie sind Bestandteil des SPK-Pakets.
+# Reihenfolge: tiefere .gitignore-Datei hat Vorrang vor der Root-Datei.
+!src/target/bin/
+!src/target/bin/**

@@ -1,0 +1,52 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# preinst – Prüfungen VOR der Installation.
+#
+# Laut DSM-Vorgabe darf dieses Skript KEINE Seiteneffekte haben. Es darf nur
+# Bedingungen prüfen; ein Rückgabewert != 0 bricht die Installation ab.
+# ---------------------------------------------------------------------------
+set -u
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck source=../target/bin/common.sh
+. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+echo "ComfoBox Gateway: Voraussetzungen werden geprüft …"
+
+# 1) DSM-Version
+DSM_MAJOR=$(echo "${SYNOPKG_DSM_VERSION_MAJOR:-0}" | cut -d. -f1)
+if [ "$DSM_MAJOR" -lt 7 ]; then
+    echo "ComfoBox Gateway benötigt DSM 7.2 oder neuer."
+    exit 1
+fi
+
+# 2) Container Manager vorhanden?
+if ! command -v synopkg >/dev/null 2>&1; then
+    echo "synopkg nicht gefunden – läuft dieses Skript außerhalb von DSM?"
+    exit 1
+fi
+
+if ! synopkg status ContainerManager >/dev/null 2>&1; then
+    if [ -x /var/packages/ContainerManager/target/usr/bin/docker ]; then
+        echo "Container Manager gefunden."
+    else
+        echo "Container Manager ist nicht installiert."
+        echo "Bitte zuerst den Container Manager im Paketcenter installieren."
+        exit 1
+    fi
+fi
+
+# 3) Admin-Port frei?
+PORT=$(sed -n 's/^adminport="\([0-9]*\)".*/\1/p' "${SYNOPKG_PKGINST_TEMP_DIR:-/tmp}/INFO" 2>/dev/null | head -n 1)
+[ -z "$PORT" ] && PORT="8081"
+
+if command -v netstat >/dev/null 2>&1; then
+    if netstat -an 2>/dev/null | grep -q ":$PORT .*LISTEN"; then
+        echo "Der Port $PORT ist bereits belegt."
+        echo "Bitte einen freien Port in der INFO-Datei (adminport) wählen."
+        exit 1
+    fi
+fi
+
+echo "Alle Voraussetzungen erfüllt."
+exit 0

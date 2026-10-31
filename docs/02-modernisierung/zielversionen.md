@@ -70,8 +70,9 @@ Alle Versionen sind zum Analysezeitpunkt (2026-10-31) fixiert. Sie werden hier g
 |---|---|---|
 | Docker Engine | 27+ | Build/Run |
 | `mcr.microsoft.com/dotnet/sdk:10.0` | | CI-Build-Image |
-| `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` | | Laufzeit-Image |
-| `nginx:1.27-alpine` | | statisches UI + Reverse-Proxy |
+| `mcr.microsoft.com/dotnet/aspnet:10.0-alpine` | | Laufzeit-Image (Gateway **+** UI) |
+| `node:22-alpine` | | Angular-Build-Stage im Image-Build |
+| ~~`nginx:1.27-alpine`~~ | – | **entfallen** – kein nginx-Container (→ [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)) |
 | Docker Compose | v2 (Plugin) | `compose.yaml` |
 | GitHub Actions | `actions/checkout@v4`, `actions/setup-dotnet@v4`, `docker/setup-buildx-action@v3`, `docker/build-push-action@v6` | CI/CD |
 | Trivy / `dotnet list package --vulnerable` | – | Security-Scan in CI |

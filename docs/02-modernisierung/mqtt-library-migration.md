@@ -229,7 +229,7 @@ public static class MqttPayload
 > **Kompatibilitäts-Auswirkung:** Bestehende HA-Automationen, die `23,5` publishen, würden
 > nach dem Fix abgelehnt. Das ist **richtig**, weil `23,5` formal kein gültiger MQTT-Zahlwert
 > ist. Die Fehlermeldung landet in `Status/Errors` und im UI.
-> → Siehe [mqtt-kompatibilitaet](../04-migration/mqtt-kompatibilitaet.md#payload-interpretation).
+> → Siehe [mqtt-kompatibilitaet §3](../04-migration/mqtt-kompatibilitaet.md#3-payload-interpretation).
 
 ### Enum-Schreibpfad
 

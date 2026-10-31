@@ -3,11 +3,11 @@
 ## 0. Überblick
 
 ```
-Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7
- Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Parallel-
- Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      Umschaltung
- + CI        + Tests     Kern
- 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       3 PT
+Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8
+ Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Parallel-   Synology-
+ Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      Umschaltung  SPK &
+ + CI        + Tests     Kern                                               (1 Image)               Assistent
+ 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       3 PT        13 PT
 ```
 
 **Abhängigkeiten:**
@@ -21,6 +21,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | 5 | 4 |
 | 6 | 3, 4, 5 |
 | 7 | 6 |
+| 8 | 5, 6 |
 
 ---
 
@@ -123,7 +124,10 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | 5.5 | Konfigurationsseite | 1.0 |
 | 5.6 | Diagnoseseite | 0.5 |
 | 5.7 | Responsive, A11y, i18n (de) | 0.5 |
-| 5.8 | nginx + Docker-Stage | 0.5 |
+| 5.8 | **SPA-Auslieferung aus dem .NET-Host** (`wwwroot` + `MapFallbackToFile`) + Docker-Stage | 0.5 |
+
+> **Kein nginx-Container** – Gateway und UI teilen sich ein Image
+> (→ [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)).
 
 ---
 
@@ -131,12 +135,12 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 
 | # | Aufgabe | PT |
 |---|---|---|
-| 6.1 | Dockerfile Gateway (Multi-Stage, tini, Healthcheck) | 0.5 |
-| 6.2 | Dockerfile Web | 0.5 |
-| 6.3 | `compose.yaml` (mit `devices:`) | 0.5 |
-| 6.4 | CI: Image-Build + Push + Trivy | 0.5 |
-| 6.5 | **Test auf der DS923+** (Serial-Durchreichung, Broker, HA) | 1.0 |
-| 6.6 | Backup/Restore, Monitoring, Alarmierung | 0.5 |
+| 6.1 | Dockerfile **ein** Image (Angular-Stage + .NET-Stage + Runtime, tini, Healthcheck) | 1.0 |
+| 6.2 | `compose.yaml` (mit `devices:`, **einer** Service) | 0.5 |
+| 6.3 | CI: Image-Build + Push + Trivy | 0.5 |
+| 6.4 | **Test auf der DS923+** (Serial-Durchreichung, Broker, HA) | 1.0 |
+| 6.5 | Backup/Restore, Monitoring, Alarmierung | 0.5 |
+| 6.6 | udev-Regel + stabiler `by-id`-Pfad für den Adapter | 0.5 |
 
 ---
 
@@ -152,6 +156,32 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 
 ---
 
+## Phase 8 – Synology-Paket & Getting Started (13 PT)
+
+> Ziel: *„Als Third Party App in der DS923+ installieren und bequem einrichten."*
+> → [ADR-008](../05-entscheidungen/adr-008-synology-spk.md),
+> [Synology-Paketcenter](../03-deployment/synology-paketcenter.md)
+
+| # | Aufgabe | PT | Ergebnis |
+|---|---|---|---|
+| 8.1 | SPK-Skelett (`INFO`, `package.tgz`, `scripts/`, Icon) | 1.0 | `ComfoBoxGateway_noarch-dsm7_<ver>.spk` |
+| 8.2 | Lifecycle-Skripte (`preinst`, `postinst`, `preuninst`, `postuninst`, `start-stop-status`) | 2.0 | korrekte Exit-Codes, Paketcenter-Status |
+| 8.3 | `common.sh` (Pfade, Logging, `compose_cmd`-Discovery) | 1.0 | gemeinsame Basis |
+| 8.4 | `serial-scan.sh` (Port-Enumeration → `ports.json`) | 1.0 | Portliste für den Assistenten |
+| 8.5 | `supervisor.sh` (Compose rendern, Watch-Loop, `up`/`down`) | 2.5 | `devices:` folgt der Portwahl |
+| 8.6 | udev-Regel + systemd-Unit + `by-id`-Symlink | 1.0 | stabile Pfade |
+| 8.7 | Setup-API (`/api/setup/*`, PBKDF2, `config.json`) | 2.0 | Konfiguration ohne Neustart |
+| 8.8 | **Getting-Started-Assistent** (6 Schritte in der UI) | 2.5 | Portwahl, Tests, Benutzer, Passwort |
+| 8.9 | SPK-Build in CI + Release-Artefakt | 0.5 | `.spk` im GitHub Release |
+
+**Abnahme:**
+- `*.spk` installiert auf einer DS923+ **ohne** Parameter → Browser öffnet sich → Assistent startet.
+- Der Assistent findet den Adapter, testet BACnet und MQTT, legt den Benutzer an.
+- Nach „Übernehmen" läuft der Gateway mit dem gewählten Serial-Port.
+- `postuninst` lässt das `var`-Verzeichnis (Schreibzähler) stehen.
+
+---
+
 ## Meilensteine
 
 | Meilenstein | Phase | Kriterium |
@@ -160,7 +190,8 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | **M2** | Ende Phase 3 | Gateway publiziert alle 127 Topics + Discovery |
 | **M3** | Ende Phase 5 | UI bedient die Anlage |
 | **M4** | Ende Phase 6 | Deployment auf der DS923+ läuft |
-| **M5** | Ende Phase 7 | Alte Installation abgeschaltet |
+| **M5** | Ende Phase 8 | Installation per Klick + Assistent läuft auf der DS923+ |
+| **M6** | Ende Phase 7 | Alte Installation abgeschaltet |
 
 ## Reihenfolge-Constraints (nicht verhandelbar)
 

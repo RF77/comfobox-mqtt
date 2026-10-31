@@ -214,7 +214,7 @@ Beispiel:
 
 ## 7. Anzeige in der UI
 
-Siehe [ui-angular-optimus.md#dashboard](ui-angular-optimus.md#3-dashboard) – dort ist die
+Siehe [ui-angular-optimus.md §4](ui-angular-optimus.md#4-dashboard-statusübersicht) – dort ist die
 Health-Anzeige (Header-Banner + Statusseite) beschrieben.
 
 ## 8. Alarmierung

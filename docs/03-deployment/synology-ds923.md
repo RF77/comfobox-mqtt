@@ -110,7 +110,7 @@ cd /volume1/docker/comfobox
 
 ### 4.2 compose.yaml anlegen
 
-Siehe [containerisierung.md §5](containerisierung.md#5-composeyaml). Wichtig auf der DS923+:
+Siehe [containerisierung.md §4](containerisierung.md#4-composeyaml-manueller-betrieb). Wichtig auf der DS923+:
 
 | Anpassung | Grund |
 |---|---|
@@ -141,8 +141,7 @@ docker compose logs -f gateway
 Erwartete Ausgabe:
 
 ````
-comfobox-gateway   Up  (healthy)   0.0.0.0:8080->8080/tcp
-comfobox-web       Up              0.0.0.0:8081->80/tcp
+comfobox-gateway   Up  (healthy)   0.0.0.0:8081->8080/tcp
 comfobox-mosquitto Up              0.0.0.0:1883->1883/tcp
 ````
 
@@ -150,8 +149,8 @@ comfobox-mosquitto Up              0.0.0.0:1883->1883/tcp
 
 | Dienst | URL |
 |---|---|
-| Web-UI | `http://<NAS-IP>:8081` |
-| Gateway-API | `http://<NAS-IP>:8080/api/health` |
+| Web-UI **und** API | `http://<NAS-IP>:8081` (ein Port für beides) |
+| API (rein) | `http://<NAS-IP>:8081/api/health` |
 | MQTT-Broker | `<NAS-IP>:1883` |
 
 ## 5. Container Manager (DSM-GUI) statt SSH
@@ -215,7 +214,7 @@ docker image prune -f
 | Aspekt | Erwartung |
 |---|---|
 | CPU | < 5 % im Normalbetrieb (Polling alle 60 s) |
-| RAM | ~120–180 MB (Gateway), ~15 MB (nginx), ~20 MB (mosquitto) |
+| RAM | ~120–180 MB (Gateway inkl. UI), ~20 MB (mosquitto) |
 | Polling-Laufzeit | ~2–5 s für 127 Items (MSTP, 38400 Baud) |
 | IO | vernachlässigbar |
 

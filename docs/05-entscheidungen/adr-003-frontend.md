@@ -42,6 +42,8 @@ API-kompatibel zu PrimeNG v21, Presets Aura/Lara/Material/Nora.
 - **Signal-Stores** statt NgRx – für diese Größe ausreichend
 - **REST** für Lesen/Schreiben, **SSE** für Live-Werte (→ [ADR-005](adr-005-api-stil.md))
 - Build über `@angular/build`; Auslieferung als statisches Bundle an nginx
+  → **Nachtrag:** kein nginx-Container mehr. Das Bundle wird vom .NET-Host aus `wwwroot/`
+  ausgeliefert (ein Image für Gateway + UI → [ADR-007](adr-007-ein-container-image.md)).
 - Internationalisierung der UI-Texte auf **Deutsch** (Code-Bezeichner englisch)
 - Der WPF-`DemoClient` entfällt als eigenständige Anwendung; seine Kernfunktionen
   (Item-Baum, freier BACnet-Leser) werden durch den Item-Browser bzw. ein separates

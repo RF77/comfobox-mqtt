@@ -74,7 +74,11 @@ Einheitliches Fehlerformat für alle Endpunkte:
 ### Live-Werte
 
 SSE sendet einen `snapshot` (alle aktuellen Werte) beim Verbindungsaufbau und danach
-`value`-Events bei Änderung. nginx muss dafür `proxy_buffering off;` setzen.
+`value`-Events bei Änderung.
+
+> **Nachtrag (2026-10-31):** Es steht **kein Proxy** davor – der .NET-Host liefert UI **und**
+> SSE direkt aus (→ [ADR-007](adr-007-ein-container-image.md)). `proxy_buffering` ist damit
+> kein Thema mehr.
 
 ## Alternativen
 
@@ -116,7 +120,8 @@ SSE sendet einen `snapshot` (alle aktuellen Werte) beim Verbindungsaufbau und da
   nicht per `docker restart` → der Container wird vom Supervisor neu gestartet.
   Das ist sicherer (kein Docker-Socket im Container) und funktioniert auch ohne Docker.
 - Die API hört standardmäßig auf `0.0.0.0:8080` innerhalb des Containers; nach außen wird sie
-  nur über nginx veröffentlicht (`127.0.0.1:8080`).
+  über **einen** Port (`8081`) veröffentlicht – UI und API teilen sich denselben Host
+  (→ [ADR-007](adr-007-ein-container-image.md)).
 
 ## Verwandte Dokumente
 

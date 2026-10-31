@@ -31,10 +31,11 @@ Produktionsfehlern (kulturabhängige Zahlen, Enum-Schreibfehler, 100-%-CPU-Spin-
 │  │          │                  ▼                                      │  │
 │  │          │           ┌──────────────────────┐                      │  │
 │  │          └──────────►│ REST/SSE API (:8080) │◄──── Angular UI ───┘  │  │
-│  │                      └──────────────────────┘      (nginx)         │  │
+│  │                      └──────────────────────┘   (statisch aus      │  │
+│  │                                                   wwwroot)          │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │  ┌─────────────────────────────────────────────────────────────────────┐  │
-│  │  ComfoBox.Web — Angular 22 + Optimus UI (statisch, nginx)          │  │
+│  │  ComfoBox.Web — Angular 22 + Optimus UI (statisch, aus wwwroot)     │  │
 │  └─────────────────────────────────────────────────────────────────────┘  │
 │                                                                           │
 │   /dev/ttyUSB0  ◄─── USB-RS485-Adapter (CH340) ───► ComfoBox ELESTA     │

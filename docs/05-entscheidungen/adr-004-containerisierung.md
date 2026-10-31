@@ -6,6 +6,15 @@
 | **Datum** | 2026-10-31 |
 | **Bereich** | Betrieb, Deployment, Hardware |
 
+> **Nachtrag (2026-10-31):** Die Entscheidung „Container-Image" bleibt unverändert.
+> **Zwei Details wurden später präzisiert:**
+> - Die *Zwei-Image-Aufteilung* ist überholt → **ein** Image für Gateway + UI
+>   ([ADR-007](adr-007-ein-container-image.md)).
+> - Die *Installation* erfolgt zusätzlich als **Synology-Paket (SPK)** mit
+>   Getting-Started-Assistenten ([ADR-008](adr-008-synology-spk.md)).
+> - Der Serielle Port wird **zur Laufzeit gerendert** (Portwahl im Assistenten), nicht
+>   statisch in der Compose-Datei.
+
 ## Kontext
 
 Anforderung 3: *„Alles als Docker Image, damit ich es auf meiner DS 923+ deployen kann.
@@ -33,14 +42,18 @@ Docker Compose betrieben.**
 
 ### Image-Aufteilung
 
+> ⚠️ **Überholt durch [ADR-007](adr-007-ein-container-image.md)** – es gibt jetzt **ein** Image
+> für Gateway **und** UI. Die folgende Tabelle beschreibt den ursprünglichen Stand.
+
 | Image | Inhalt | Port |
 |---|---|---|
 | `comfobox-gateway` | .NET 10 ASP.NET Core (multi-stage, `alpine`, `tini`) | `127.0.0.1:8080` |
 | `comfobox-web` | nginx + statisches Angular-Bundle | `8081:80` |
 | `mosquitto` *(optional)* | MQTT-Broker | `1883` |
 
-→ **Zwei getrennte Images** statt eines mit zwei Prozessen (Begründung in
-[containerisierung §1](../03-deployment/containerisierung.md#1-zwei-images-statt-einem)).
+→ ursprünglich **zwei getrennte Images** statt eines mit zwei Prozessen. Heute: **ein** Image
+(Begründung in [ADR-007](adr-007-ein-container-image.md) und
+[containerisierung §1](../03-deployment/containerisierung.md#1-ein-image-statt-zwei)).
 
 ### Serial-Port
 
@@ -80,7 +93,7 @@ alpine statt debian (~230 MB statt ~450 MB). **Kein** Trimming/AOT, weil
 | **Docker + Compose auf der DS923+** ✅ | Anforderung, Passt zur Hardware, reproduzierbar | – |
 | **systemd-Unit auf dem NAS** (ohne Docker) | kein Build nötig | Build-Artefakt (`.NET`) auf dem NAS zu betreiben ist aufwendiger; kein isoliertes Deployment; .NET-Runtime-Installation auf DSM ist unüblich |
 | **Container Manager GUI-Projekt** (ohne `compose.yaml`) | einsteigerfreundlich | `compose.yaml` wird nicht versioniert → Deployments nicht reproduzierbar |
-| **Ein Image mit Gateway + nginx** | ein Deployment-Objekt | Zwei-Prozess-Supervision ohne init-System; Signal-Forwarding und Restart-Semantik sind fehleranfällig |
+| **Ein Image mit Gateway + nginx** | ein Deployment-Objekt | Zwei-Prozess-Supervision ohne init-System; Signal-Forwarding und Restart-Semantik sind fehleranfällig. **Heute obsolet:** es gibt weder nginx noch zwei Prozesse, sondern ein Image mit **einem** Prozess (→ [ADR-007](adr-007-ein-container-image.md)) |
 | **Deployment auf dem Raspberry Pi** | Bekanntes Terrain | Anforderung nennt die DS923+; ein Container läuft auf beiden – die DS923+ ist aber die Zielhardware |
 | **Bare-Metal .NET auf Windows** (Status quo +) | kein Docker nötig | Windows-Server ist nicht die Zielhardware; kein Linux |
 | **Bau des Images auf dem NAS selbst** | kein Registry nötig | Sehr langsame Builds auf dem NAS; ARM/x86-Architektur-Problem bei arm64; CI auf GitHub Actions ist schneller |
@@ -104,7 +117,7 @@ alpine statt debian (~230 MB statt ~450 MB). **Kein** Trimming/AOT, weil
   → Mitigation: eigener Prototyp in Phase 0/1, `by-id`-Pfad, Retry mit Backoff, klarer
   Health-Zustand bei Portfehlern
 - Zusätzliche Technologie-Schicht (Docker) im Projekt
-- Zwei Images → zwei Release-Artefakte
+- Zwei Images → zwei Release-Artefakte *(heute: ein Image → ein Artefakt, siehe [ADR-007](adr-007-ein-container-image.md))*
 - `mosquitto` im Compose ist **optional**; Standard ist ein externer Broker → die
   `compose.yaml` muss je nach Installation angepasst werden (per `.env` steuerbar)
 - Debugging ist schwieriger (Logs über `docker compose logs` statt direkt auf der Konsole)

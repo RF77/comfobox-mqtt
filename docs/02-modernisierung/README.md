@@ -7,16 +7,17 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
 
 ---
 
-## Die sechs Anforderungen als Akzeptanzkriterien
+## Die Anforderungen als Akzeptanzkriterien
 
 | # | Anforderung | Akzeptanzkriterium | Spec |
 |---|---|---|---|
 | 1 | .NET & Libraries aktualisieren, bessere MQTT-Library | Build läuft mit .NET 10 SDK; `dotnet build` ohne Visual Studio; MQTT-Client = MQTTnet 5 mit TLS/Auth/Reconnect-Backoff | [dotnet-migration](dotnet-migration.md), [mqtt-library-migration](mqtt-library-migration.md) |
 | 2 | Angular/Optimus UI | Web-UI mit Konfiguration, Statusübersicht und Bedienung; zeigt Verbindungs-/Fehlerzustand an | [ui-angular-optimus](ui-angular-optimus.md) |
-| 3 | Docker-Image, DS923+, Serial-Port | `docker compose up` auf der DS923+ mit `/dev/ttyUSB0` im Container; Image ≤ 200 MB | [containerisierung](../03-deployment/containerisierung.md), [synology-ds923](../03-deployment/synology-ds923.md) |
+| 3 | Docker-Image, DS923+, Serial-Port | `docker compose up` auf der DS923+ mit `/dev/ttyUSB0` im Container; Image ≤ 300 MB; **zusätzlich** Installation per Klick als Synology-Paket | [containerisierung](../03-deployment/containerisierung.md), [synology-ds923](../03-deployment/synology-ds923.md), [synology-paketcenter](../03-deployment/synology-paketcenter.md) |
+| 7 | *Installation so bequem wie möglich* | SPK per Klick im DSM-Paketcenter → Browser öffnet sich → Getting-Started-Assistent (Portwahl, BACnet-/MQTT-Test, Benutzer + Passwort) | [synology-paketcenter](../03-deployment/synology-paketcenter.md), [ui-angular-optimus §3](ui-angular-optimus.md#3-getting-started-setup-assistent) |
 | 4 | MQTT-Adressen bleiben gleich | **Alle** 127 Topics + `/Set`, `/AsNumber`, `/Special`, `/Connected`, `/Version` bleiben gültig; durch Contract-Test gegen `docs/topics.json` abgesichert | [mqtt-kompatibilitaet](../04-migration/mqtt-kompatibilitaet.md) |
 | 5 | Fehler/Verbindungsprobleme an HA **und** UI | Health-Topic mit LWT, Status-Topics, REST-Health-Endpoint, sichtbarer Fehlerbanner in der UI | [health-und-status](health-und-status.md), [home-assistant](home-assistant.md) |
-| 6 | Neustart aus HA möglich | `ComfoBox/Command/Restart` (Subscribe) + `POST /api/service/restart` + HA-Button-Entity | [home-assistant](home-assistant.md#5-restart-aus-home-assistant) |
+| 6 | Neustart aus HA möglich | `ComfoBox/Command/Restart` (Subscribe) + `POST /api/service/restart` + HA-Button-Entity | [home-assistant](home-assistant.md#6-neustart-aus-home-assistant-anforderung-6) |
 
 ---
 
@@ -39,7 +40,7 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
 ## Zielarchitektur in einem Bild
 
 ```
-   ┌──────────────────────── Docker: comfobox-gateway ─────────────────────────┐
+   ┌──────────────── Docker: comfobox-gateway (ein Image) ──────────────────┐
    │                                                                          │
    │  ┌────────────────────────────────────────────────────────────────────┐  │
    │  │  ComfoBox.Gateway  (.NET 10, ASP.NET Core / Generic Host)         │  │
@@ -52,13 +53,16 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
    │  │        ├──► MqttPublisher   (MQTTnet 5) ──► Broker :1883 ──► HA   │  │
    │  │        ├──► HomeAssistantDiscovery (MQTT Discovery)               │  │
    │  │        ├──► HealthPublisher (Status-Topics + LWT)                 │  │
-   │  │        └──► REST/SSE API (:8080) ──► Angular UI                   │  │
-   │  └────────────────────────────────────────────────────────────────────┘  │
-   │  ┌────────────────────────────────────────────────────────────────────┐  │
-   │  │  ComfoBox.Web  (Angular 22 + Optimus UI)  → nginx, statisch      │  │
+   │  │        └──► REST/SSE API (:8080)                                  │  │
+   │  │                                                                    │  │
+   │  │   ComfoBox.Web  (Angular 22 + Optimus UI) → wwwroot/, statisch    │  │
+   │  │   Setup-Assistent (6 Schritte) → /api/setup/*                      │  │
    │  └────────────────────────────────────────────────────────────────────┘  │
    └──────────────────────────────────────────────────────────────────────────┘
 ```
+
+> **Ein Container für Gateway und UI** → [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md).
+> Kein nginx, kein Reverse-Proxy, ein Port.
 
 ---
 
@@ -87,9 +91,9 @@ src/
 │   └── Program.cs
 │
 ├── ComfoBox.Web/                 # Angular 22 + Optimus UI
-│   ├── src/app/core/             # ApiClient, Signal-Store, Auth
-│   ├── src/app/features/         # dashboard, items, config, diagnostics
-│   └── nginx.conf
+│   ├── src/app/core/             # ApiClient, Signal-Store, Auth, SetupStore
+│   ├── src/app/features/         # setup, dashboard, items, config, diagnostics
+│   └── (kein nginx – SPA wird aus wwwroot/ des .NET-Hosts ausgeliefert)
 │
 ├── ComfoBox.Gateway.Tests/
 ├── ComfoBox.Bacnet.Tests/

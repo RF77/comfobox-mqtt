@@ -58,7 +58,7 @@ ohne Windows möglich.
 
 `net10.0` als **einziges** TFM: alle Konsumenten (Gateway, Tests, Docker) laufen auf Linux.
 `EnableWindowsTargeting` ist **nicht** nötig, weil der WPF-`DemoClient` entfällt
-(siehe [ui-angular-optimus](ui-angular-optimus.md#ablösung-des-democlients)).
+(siehe [ui-angular-optimus §12](ui-angular-optimus.md#12-ablösung-des-wpf-democlients)).
 
 ## 3. Projekttransformation
 
