@@ -86,6 +86,66 @@ Benutzerdoku erzeugt HTML.
 
 ---
 
+## 2026-10-31 – Python-Toolchain, HA-Tests grün, Logging-Spec (D.9, Aufgabe 8a.6)
+
+**Ergebnis:** Python 3.12 ist installiert, die HA-Integrationstests laufen grün (3/3),
+`ruff` ist sauber. Die Logging-Entscheidung (Serilog + In-Memory-Ringbuffer mit
+1000 Einträgen für den Log-Viewer) ist als Spec + ADR dokumentiert.
+
+**Geänderte Dateien:**
+- `pytest.ini` (**neu**) – `asyncio_mode = auto`, `asyncio_default_fixture_loop_scope`,
+  `testpaths` auf `custom_components/comfobox/tests`
+- `custom_components/comfobox/tests/conftest.py` – zwei Windows-Workarounds (siehe unten)
+- `docs/02-modernisierung/logging.md` (**neu**) – Serilog, Ringpuffer, API, Log-Viewer
+- `docs/05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md` (**neu**)
+- `docs/02-modernisierung/dotnet-migration.md` – §5 um Ringpuffer-Sink erweitert
+- `docs/02-modernisierung/ui-angular-optimus.md` – §7.1 Log-Viewer, DoD +2
+- `docs/02-modernisierung/datenmodell-und-api.md` – 3 Log-Endpunkte
+- `docs/02-modernisierung/health-und-status.md` – Abgrenzung Fehler- vs. Log-Puffer
+- `docs/03-deployment/konfiguration-und-secrets.md` – `Logging:RingBuffer:*`
+- `docs/06-aufgaben/phase-2.md` – **2.7** Serilog + Ringpuffer (1.0 PT)
+- `docs/06-aufgaben/phase-4.md` – **4.9** Log-Endpunkte + SSE-Tail (0.5 PT)
+- `docs/06-aufgaben/phase-5.md` – **5.12** Log-Viewer (1.5 PT)
+- `docs/06-aufgaben/status.md` – neue Zeilen, Summe 67 → **72 PT**
+- `.github/instructions/csharp.instructions.md` – §5.1 Serilog & Ringpuffer
+- `docs/benutzer/06-bedienung.md` – Abschnitt „Das Protokoll"
+- `docs/benutzer/09-fehlersuche.md` – „Was im Protokoll nachsehen"
+
+**Verifikation:**
+- `python --version` → 3.12.10 (via `winget`, `--scope user`, **ohne Admin**)
+- `python -m pytest custom_components/comfobox/tests -v` → **3 passed**
+- `python -m ruff check custom_components/comfobox` → **All checks passed**
+- `pwsh -File tools/check-links.ps1` → 84 Dateien, 0 Probleme
+
+**Offen / nicht gemacht:**
+- **Kein Docker-Daemon** → Container-Tasks weiterhin nicht verifizierbar.
+- Die HA-Integration hat nur **3 Tests** (Config Flow). Coordinator, API-Client und
+  die Plattform-Mappings (`sensor`/`number`/`select`/`switch`) sind **noch nicht**
+  getestet – das ist der Rest von Aufgabe 8a.6.
+- Die **Solution** (`src/ComfoBox.sln`) existiert noch nicht → Aufgabe 0.4.
+
+**Überraschungen:**
+- `pytest-socket` blockiert jede Socket-Erstellung. Home Assistants Test-Plugin tut das
+  in `pytest_runtest_setup` – und **darum** scheitert unter Windows schon die
+  Event-Loop-Erstellung (asyncio braucht unter Windows ein TCP-Socketpaar als
+  Self-Pipe, unter Linux genügt ein AF_UNIX-Socket, den HA erlaubt).
+  - **Fehlversuch 1:** Fixture `socket_enabled` → wirkungslos, weil `event_loop`
+    **modulscoped** ist und die Fixture daher **vor** den function-scoped Fixtures
+    entsteht.
+  - **Fehlversuch 2:** `hookwrapper` → zu spät. Der Code hinter `yield` läuft erst
+    nach dem kompletten Setup; der eingebaute `pytest_runtest_setup` von pytest baut
+    aber genau dort die Fixtures auf.
+  - **Lösung:** `pytest_socket.disable_socket` im conftest **ersetzen**. HA ruft es
+    ueber das Modulattribut auf → der Patch greift unabhängig von der Hook-Reihenfolge.
+    `connect()` bleibt auf `127.0.0.1` beschraenkt.
+- `aiodns` (HA setzt den DNS-Resolver fest auf `AsyncResolver`) verlangt unter Windows
+  einen `SelectorEventLoop`, HA nutzt dort den Proactor → `RuntimeError: aiodns needs
+  a SelectorEventLoop on Windows`. **Lösung:** im Test `ThreadedResolver` statt
+  `AsyncResolver` (`homeassistant.helpers.aiohttp_client.AsyncResolver`). Im
+  **Produktivbetrieb** (Linux) bleibt aiodns unveraendert.
+
+---
+
 ## Nächste Session
 
 **Aufgabe 0.1** – `src/global.json` anlegen (SDK-Pinning 10.0.400)

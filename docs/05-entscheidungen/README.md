@@ -29,6 +29,7 @@ ihre Konsequenzen. Ein ADR ist **unveränderlich** – eine geänderte Entscheid
 | [ADR-008](adr-008-synology-spk.md) | Installation als Synology-Paket (SPK) mit Getting-Started-Assistenten | Accepted |
 | [ADR-009](adr-009-ha-integration-ohne-mqtt.md) | Home Assistant: Integration über das Gateway statt eigenem BACnet-Stack | Accepted |
 | [ADR-010](adr-010-benutzerdokumentation.md) | Benutzerdokumentation: eine Quelle, drei Auslieferungskanäle | Accepted |
+| [ADR-011](adr-011-logging-serilog-und-ringbuffer.md) | Logging: Serilog als Provider, In-Memory-Ringbuffer (1000) für die Web-UI | Accepted |
 
 ## 3. Offene Entscheidungen (noch kein ADR)
 

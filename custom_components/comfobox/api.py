@@ -6,7 +6,6 @@ Grund: das Gateway ist der einzige Master am MS/TP-Bus und hält den Schreibschu
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -157,7 +156,7 @@ class ComfoBoxApiClient:
                 if resp.status == 204 or resp.content_type != "application/json":
                     return None
                 return await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, aiohttp.ClientError) as err:
             raise ConnectionFailed(f"Gateway nicht erreichbar: {err}") from err
 
     async def get_status(self) -> GatewayStatus:

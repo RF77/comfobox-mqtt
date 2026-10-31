@@ -66,6 +66,7 @@ src/ComfoBox.Web/
         │   │   ├── health.service.ts
         │   │   ├── config.service.ts
         │   │   ├── setup.service.ts       # ← Getting Started
+        │   │   ├── logs.service.ts         # ← Log-Viewer (History + SSE-Tail)
         │   │   └── events.service.ts      # SSE
         │   ├── models/                    # TS-Interfaces (ItemDto, HealthReport, …)
         │   ├── state/
@@ -451,9 +452,45 @@ async save(item: ItemDto, value: unknown) {
 |---|---|
 | **Health-Checks** | Tabelle aller Checks mit Status, Letzter Erfolg, Nachricht |
 | **Fehlerhistorie** | Letzte 50 Fehler (Zeit, Severity, Quelle, Code, Meldung), Filter |
+| **Protokoll** | **Log-Viewer**: letzte 1000 Log-Einträge, Live-Ansicht, Filter, Export |
 | **Schreibvorgänge** | Zähler, Limit, Zeitfenster |
 | **Verbindungen** | Broker-Status, Reconnect-Zähler, Publish-/Receive-Zähler |
 | **Rohdaten** | Live-Ansicht der Topics (`ComfoBox/#`) über eine SSE-Debug-Schnittstelle |
+
+### 7.1 Der Log-Viewer
+
+> Vollständige Spezifikation:
+> [logging.md §7](logging.md#7-web-ui-der-log-viewer) ·
+> [ADR-011](../05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md).
+
+Der Reiter „Protokoll" zeigt die Log-Einträge, die das Gateway im
+**In-Memory-Ringbuffer** hält (Standard 1000, konfigurierbar über
+`Logging:RingBuffer:Capacity`).
+
+| Element | Verhalten |
+|---|---|
+| **Live** | Toggle – per SSE (`/api/diagnostics/logs/stream`), event-getrieben |
+| **Level-Filter** | Mehrfachauswahl (Debug, Information, Warning, Error) |
+| **Quellen-Filter** | Dropdown mit den vorhandenen Logger-Kategorien |
+| **Textsuche** | Volltext über Meldung, Exception und Properties |
+| **Zeitbereich** | „letzte 5 min / 15 min / Stunde / alles" |
+| **Auto-Scroll** | folgt dem Ende, wenn „Live" aktiv (abschaltbar) |
+| **Export** | gefilterte Einträge als `.log`-Datei |
+| **Leeren** | „Protokoll leeren" → `DELETE /api/diagnostics/logs` |
+| **Kopieren** | einzelner Eintrag per Klick kopieren (inkl. Exception) |
+
+Farbcodierung: `Debug` grau · `Information` Standard · `Warning` gelb/orange ·
+`Error` rot · `Critical` dunkelrot.
+
+> **Die UI rendert die Meldung, nicht das rohe JSON.** Properties werden eingerückt
+> darunter angezeigt – das entspricht dem gewohnten Serilog-Format.
+
+### 7.2 Abgrenzung zur Fehlerhistorie
+
+Die **Fehlerhistorie** (50 Einträge) und der **Log-Viewer** (1000 Einträge) sind
+zwei getrennte Ansichten: Die Fehlerhistorie beantwortet „was ist schiefgegangen",
+der Log-Viewer „was passiert gerade". Beide Reiter stehen nebeneinander auf der
+Diagnoseseite.
 
 ## 8. Datenfluss & Signals
 
@@ -683,6 +720,8 @@ geladen, **muss** auf `DomSanitizer.sanitize` gewechselt werden.
 - [ ] **Assistent** ist nach der Ersteinrichtung passwortgeschützt und wiederholbar
 - [ ] Dashboard zeigt Health, Verbindungen, Version, Uptime, Schreibzähler
 - [ ] Fehlerbanner bei `degraded` / `offline` **sichtbar und aussagekräftig**
+- [ ] **Log-Viewer**: zeigt die letzten 1000 Einträge, Live-Tail per SSE, Filter (Level, Quelle, Text, Zeit)
+- [ ] **Log-Viewer**: Export der gefilterten Einträge und „Protokoll leeren" funktionieren
 - [ ] Item-Browser zeigt alle 127 Items mit aktuellem Wert, gruppiert, mit Suche
 - [ ] Analog- und Enum-Werte sind **schreibbar** mit Validierung (Min/Max, Options)
 - [ ] Schreibfehler werden angezeigt und der Serverwert wiederhergestellt

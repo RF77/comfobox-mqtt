@@ -177,11 +177,43 @@ app.Run();
 
 ---
 
+## 2.7 – Serilog-Setup & In-Memory-Ringbuffer · 1.0 PT
+
+| | | |
+|---|---|---|
+| **Spec** | [logging.md](../02-modernisierung/logging.md) | 
+| **ADR** | [ADR-011](../05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md) |
+| **Ziel** | `src/ComfoBox.Gateway/Logging/{InMemoryLogSink,LogEntry,LoggingOptions}.cs` |
+
+> **Voraussetzung für Phase 4 und 5:** ohne Ringpuffer gibt es keinen Log-Viewer.
+
+| Anforderung | Umsetzung |
+|---|---|
+| Provider | Serilog (`Serilog.Extensions.Hosting`), Console + Datei + Ringpuffer |
+| Abstraktion | `ILogger<T>` – **kein** `Trace`, **kein** `Console.WriteLine` |
+| Kapazität | `Logging:RingBuffer:Capacity`, Default **1000**, `0` = aus |
+| Level | `Logging:RingBuffer:MinimumLevel`, Default `Information` |
+| Thread-sicher | `Interlocked` (Index/Zähler) + `Volatile` (Slots) |
+| Kein I/O im Log-Pfad | `Emit` schreibt nur in ein Array |
+| Secrets | vor dem Speichern maskiert (`••••`) |
+
+**Akzeptanzkriterien:**
+- [ ] `UseSerilog` in `Program.cs` mit Console-, File- und Ringpuffer-Sink
+- [ ] `Serilog.Extensions.Hosting` in `Directory.Packages.props` gepinnt
+- [ ] `InMemoryLogSink.Emit` überschreibt den ältesten Eintrag ohne Fehler
+- [ ] Test `Capacity_Zero_DisablesBuffer` ✅
+- [ ] Test `Emit_OverwritesOldestEntry` ✅
+- [ ] `Capacity` und `MinimumLevel` werden validiert (`ValidateOnStart`)
+- [ ] Ein Fehler im Sink wirft **nie** – der Gateway läuft weiter
+
+---
+
 ## Abnahme der Phase 2
 
 - [ ] Der Gateway liest alle 127 Items und schreibt in den Cache
 - [ ] `ComfoBox.Domain` hat **keine** externen Abhängigkeiten
 - [ ] Der Schreibzähler ist persistent und getestet
+- [ ] Serilog ist eingerichtet, der Ringpuffer hält 1000 Einträge
 - [ ] **Noch kein MQTT** – die Werte sind nur intern sichtbar
 
 → Weiter mit [Phase 3](phase-3.md)

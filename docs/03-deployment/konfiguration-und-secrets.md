@@ -42,6 +42,9 @@ Command-Line-Argumente      (höchste Priorität)
 | `COMFOBOX_Mqtt__DiscoveryPrefix` | Mqtt | DiscoveryPrefix | `homeassistant` |
 | `COMFOBOX_Mqtt__EmbedBroker` | Mqtt | EmbedBroker | `false` |
 | `COMFOBOX_Logging__Level` | Logging | Level | `Information` |
+| `COMFOBOX_Logging__Directory` | Logging | Directory | `/var/log/comfobox` |
+| `COMFOBOX_Logging__RingBuffer__Capacity` | Logging | RingBuffer.Capacity | `1000` |
+| `COMFOBOX_Logging__RingBuffer__MinimumLevel` | Logging | RingBuffer.MinimumLevel | `Information` |
 
 ## 3. Vollständige `appsettings.json` (Referenz)
 
@@ -90,10 +93,18 @@ Command-Line-Argumente      (höchste Priorität)
   },
   "Logging": {
     "Level": "Information",
-    "Directory": "/var/log/comfobox"
+    "Directory": "/var/log/comfobox",
+    "RingBuffer": {
+      "Capacity": 1000,
+      "MinimumLevel": "Information"
+    }
   }
 }
 ````
+
+> **Der Ringpuffer** hält die letzten 1000 Log-Einträge im Speicher, damit die Web-UI
+> sie anzeigen kann. `Capacity: 0` schaltet ihn ab.
+> → [logging.md §8](../02-modernisierung/logging.md#8-konfiguration)
 
 ## 4. Secrets
 

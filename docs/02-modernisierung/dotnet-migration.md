@@ -199,6 +199,11 @@ builder.Services.AddSingleton<ItemCatalog>();
 
 log4net wird durch `Microsoft.Extensions.Logging` (Abstraktion) + Serilog (Provider) ersetzt.
 
+> **Vollständige Spezifikation:**
+> [logging.md](logging.md) – inklusive In-Memory-Ringbuffer (1000 Einträge) für den
+> Log-Viewer in der Web-UI.
+> Entscheidung: [ADR-011](../05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md).
+
 ````csharp
 // src/ComfoBox.Gateway/Program.cs
 builder.Host.UseSerilog((ctx, cfg) => cfg
@@ -207,7 +212,8 @@ builder.Host.UseSerilog((ctx, cfg) => cfg
     .WriteTo.File(new RenderedCompactJsonFormatter(),
                   path: "/var/log/comfobox/gateway-.jsonl",
                   rollingInterval: RollingInterval.Day,
-                  retainedFileCountLimit: 14));
+                  retainedFileCountLimit: 14)
+    .WriteTo.Sink(logBuffer));   // In-Memory-Ringbuffer für die Web-UI
 ````
 
 **Wichtig:** Der BACnet-Stack muss von `System.Diagnostics.Trace` auf `ILogger` umgestellt werden
@@ -222,6 +228,10 @@ _logger.LogWarning("BACnet MSTP connection error in {Method}", nameof(Idle));
 ````
 
 > `System.Diagnostics.Trace` kann **nicht** global umgeleitet werden – der Code muss umgestellt werden.
+
+> **Drei Ausgaben, ein Provider:** Konsole (JSON), Datei (JSON, 14 Tage) und der
+> **In-Memory-Ringbuffer** (1000 Einträge, konfigurierbar) für den Log-Viewer in der
+> Angular-UI. Details: [logging.md §3–§4](logging.md#3-serilog-konfiguration).
 
 ## 6. Host & Lebenszyklus
 

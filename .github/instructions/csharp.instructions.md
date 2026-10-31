@@ -111,6 +111,40 @@ _logger.LogWarning($"ReadProperty {item.Id} timed out");   // → vermeiden
 > **`System.Diagnostics.Trace` ist verboten.** Im Legacy-BACnet-Stack wurde es 26× verwendet
 > und war im Release-Build unsichtbar → in `ILogger` umwandeln.
 
+> **`Console.WriteLine` ist ebenfalls verboten** – es umgeht alle Sinks und Filter.
+
+### 5.1 Serilog & In-Memory-Ringbuffer
+
+| Punkt | Regel |
+|---|---|
+| Provider | **Serilog** (`Serilog.Extensions.Hosting`) – der einzige |
+| Abstraktion | im Code immer `Microsoft.Extensions.Logging.ILogger<T>` |
+| Sinks | Console (JSON), Datei (JSON, 14 Tage), **In-Memory-Ringbuffer** |
+| Ringpuffer | `src/ComfoBox.Gateway/Logging/InMemoryLogSink.cs`, Default **1000** Einträge |
+| Kapazität | `Logging:RingBuffer:Capacity` (`0` = aus), Obergrenze 100 000 |
+| Zweck | die Web-UI zeigt die Logs an (Diagnoseseite → Reiter „Protokoll") |
+
+**Regeln für den Sink:**
+
+````csharp
+// ✅ Immer ILogger – nie direkt die Sink-Klasse
+_logger.LogInformation("Connected to broker {Broker}", broker.Host);
+
+// ❌ Verboten: Passwörter und Tokens niemals loggen
+_logger.LogInformation("Connecting with {Password}", options.Password);
+````
+
+| Verboten | Begründung |
+|---|---|
+| `Console.WriteLine` | umgeht Sinks und Filter |
+| `System.Diagnostics.Trace` | unsichtbar im Release (Befund A16) |
+| Secrets loggen | der Ringpuffer ist in der Web-UI sichtbar |
+| `throw` in `Emit` | ein Log-Fehler darf den Gateway nie stoppen |
+| Allokation im `Emit` | der Ringpuffer muss im Betrieb allokationsfrei sein |
+
+> **Details:** [logging.md](../../docs/02-modernisierung/logging.md) ·
+> [ADR-011](../../docs/05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md)
+
 ## 6. Konfiguration
 
 - Bindung über `Microsoft.Extensions.Configuration` + `IOptions<T>`

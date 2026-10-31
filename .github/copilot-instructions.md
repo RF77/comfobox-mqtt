@@ -85,6 +85,7 @@ Jeder Fehler landet in **drei** Kanälen: Log, `ComfoBox/Status/Errors` und die 
 | **Keine** statischen, veränderlichen Zustände | nicht testbar |
 | `throw;` statt `throw ex;` | Stack-Trace erhalten |
 | `ILogger` statt `System.Diagnostics.Trace` | der BACnet-Stack nutzte `Trace` → Diagnose unsichtbar |
+| Serilog als **einziger** Log-Provider | Console + Datei + In-Memory-Ringbuffer (1000) für die Web-UI |
 | `record` für Datenklassen | Immutability by default |
 | Benennungen: `PascalCase` (Typen), `camelCase` (Felder), `_camelCase` (private Felder) |
 
@@ -208,6 +209,10 @@ node tools/build-docs.mjs
 | Ingress ist **kein** API-Endpunkt | HA-Add-on | Ingress-URL enthält ein rotierendes Token → Port 8099 nutzen |
 | `src_old/` ist **Archiv** | Altbestand | wird nicht gebaut, nicht gepflegt – nur gelesen |
 | Die Benutzerdoku hat **Front-Matter** | docs/benutzer | `tools/build-docs.mjs` bricht sonst ab |
+| `Trace`/`Console.WriteLine` sind **verboten** | C# | immer `ILogger<T>` – Serilog ist der einzige Provider |
+| Der Log-Ringpuffer zeigt **Secrets** | Logging | Redaktion vor dem Speichern (`••••`) |
+| `pytest-socket` blockiert **jede** Socket-Erstellung | HA-Tests | unter Windows braucht asyncio ein TCP-Self-Pipe → `pytest_socket.disable_socket` im conftest ersetzen |
+| `aiodns` braucht unter Windows einen **SelectorEventLoop** | HA-Tests | im Test `ThreadedResolver` statt `AsyncResolver` |
 
 ## 9. Detailliertere Regeln
 

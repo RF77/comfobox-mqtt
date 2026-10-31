@@ -20,7 +20,7 @@ Home Assistant).
 | **Dashboard** | Zustand, Verbindungen, die wichtigsten Werte |
 | **Geräte** | alle 127 Werte, lesen und schreiben |
 | **Konfiguration** | Grundeinstellungen, Broker, Expertenmodus |
-| **Diagnose** | Fehlerhistorie, Verbindungen, Schreibvorgänge |
+| **Diagnose** | Protokoll, Fehlerhistorie, Verbindungen, Schreibvorgänge |
 | **Hilfe** | diese Anleitung |
 
 ---
@@ -111,6 +111,7 @@ Hier sehen Sie **alle** Werte der Anlage, nach Gruppen sortiert.
 
 | Ansicht | Inhalt |
 |---|---|
+| **Protokoll** | die letzten 1000 Log-Einträge, live mitlaufend, filterbar |
 | **Zustandsprüfungen** | jede Einzelprüfung mit Status und Meldung |
 | **Fehlerhistorie** | die letzten 50 Fehler, filterbar |
 | **Schreibvorgänge** | Zähler, Limit, Zeitraum |
@@ -119,6 +120,33 @@ Hier sehen Sie **alle** Werte der Anlage, nach Gruppen sortiert.
 
 > **Bei Problemen:** Der schnellste Weg ist, in der Fehlerhistorie nach dem Zeitpunkt
 > des Problems zu suchen. Dort steht der genaue Grund.
+
+### Das Protokoll
+
+Unter **Diagnose → Protokoll** sehen Sie, was das Gateway gerade macht – ohne
+SSH, ohne Docker, ohne NAS-Logbrowser.
+
+| Bedienelement | Bedeutung |
+|---|---|
+| **Live** | an/aus. Angeschaltet laufen neue Zeilen automatisch ein |
+| **Level** | nur Warnungen, Fehler … oder alles anzeigen |
+| **Quelle** | z. B. nur der BACnet-Teil oder nur der MQTT-Teil |
+| **Textsuche** | Volltext über Meldung, Exception und Zusatzfelder |
+| **Zeitraum** | „letzte 5 min / 15 min / Stunde / alles" |
+| **Auto-Scroll** | die Liste folgt dem Ende (abschaltbar) |
+| **Exportieren** | die gefilterten Zeilen als Datei speichern |
+| **Protokoll leeren** | den Puffer im Gateway leeren |
+
+Farbige Zeilen: grau = Detail, normal = Meldung, gelb = Warnung, rot = Fehler.
+
+> **Gut zu wissen:** Das Protokoll liegt **nur im Arbeitsspeicher** des Gateways und ist
+> nach einem Neustart leer. Die dauerhafte Historie schreibt das Gateway in die Logdatei
+> auf dem Datenverzeichnis. Der Puffer umfasst standardmäßig die letzten **1000**
+> Einträge – bei sehr vielen Meldungen können Sie ihn über
+> `Logging:RingBuffer:Capacity` in der `compose.yaml` vergrößern.
+
+> **Sicherheit:** Passwörter und Tokens werden **nie** protokolliert. Ein Redakteur
+> maskiert sie, bevor sie im Protokoll landen.
 
 ---
 

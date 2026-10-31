@@ -65,7 +65,7 @@ class ComfoBoxSwitch(ComfoBoxEntity, SwitchEntity):
         """Schreibt den Wert. Der Schreibschutz liegt im Gateway."""
         try:
             await self.coordinator.client.write_item(self.item.id, value)
-        except Exception as err:  # noqa: BLE001 - Fehler an den Nutzer melden
+        except Exception as err:
             raise HomeAssistantError(
                 f"Schreiben von {self.item.display_name} fehlgeschlagen: {err}"
             ) from err

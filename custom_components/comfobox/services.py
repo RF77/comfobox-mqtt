@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
@@ -46,7 +45,7 @@ async def async_setup_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
 
         try:
             await coordinator.client.write_item(item_id, value)
-        except Exception as err:  # noqa: BLE001 - Fehler an den Nutzer melden
+        except Exception as err:
             raise HomeAssistantError(f"Schreiben fehlgeschlagen: {err}") from err
         await coordinator.async_request_refresh()
 
@@ -55,7 +54,7 @@ async def async_setup_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         coordinator: ComfoBoxCoordinator = entry.runtime_data
         try:
             await coordinator.client.restart()
-        except Exception as err:  # noqa: BLE001 - Fehler an den Nutzer melden
+        except Exception as err:
             raise HomeAssistantError(f"Neustart fehlgeschlagen: {err}") from err
 
     async def async_read_all(call: ServiceCall) -> None:

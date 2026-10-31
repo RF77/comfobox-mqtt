@@ -169,6 +169,12 @@ internal sealed class HealthReporter(
 | Log-Kopplung | jedes Ereignis wird **auch** geloggt (Serilog) |
 | Kein Log-Flood | Health-Checks laufen alle 30 s, nicht im Poll-Takt |
 
+> **Abgrenzung zum Log-Ringpuffer:** Dieser Puffer sammelt **nur Fehler** (letzte 50) und
+> steuert den Health-Status. Er ist **nicht** derselbe Puffer wie der Log-Ringpuffer
+> (letzte 1000 Log-Einträge, alle Level) für den Log-Viewer in der Web-UI.
+> → [logging.md §5](logging.md#5-abgrenzung-fehler-ringpuffer-vs-log-ringpuffer),
+> [ADR-011](../05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md)
+
 ## 5. Fehlerklassifikation
 
 | Code | Severity | Auslöser | Effekt auf Health |
@@ -195,6 +201,8 @@ internal sealed class HealthReporter(
 | `GET /api/health` | Gesamtzustand + alle Checks |
 | `GET /api/status` | Vollständiger Laufzeitstatus (Version, Uptime, Zähler, Broker) |
 | `GET /api/diagnostics/errors` | Fehlerhistorie (letzte 50) |
+| `GET /api/diagnostics/logs` | **Log-Einträge** (letzte 1000, filterbar) – siehe [logging.md §6](logging.md#6-api) |
+| `GET /api/diagnostics/logs/stream` | **Live-Log-Tail** per SSE |
 | `GET /api/diagnostics/writes` | Schreibzähler-Historie (24 h) |
 
 Beispiel:

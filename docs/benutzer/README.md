@@ -19,7 +19,7 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 | [Installation](03-installation.md) | Die vier Installationsmöglichkeiten im Vergleich |
 | [MQTT](04-mqtt.md) | Broker einrichten, Topics, Werte schreiben |
 | [Home Assistant](05-home-assistant.md) | Automatische Entitäten und die HACS-Integration |
-| [Bedienung](06-bedienung.md) | Web-Oberfläche, Werte schreiben, Schreibschutz |
+| [Bedienung](06-bedienung.md) | Web-Oberfläche, Werte schreiben, Schreibschutz, **Protokoll ansehen** |
 | [HA-Add-on](07-ha-addon.md) | Installation als Add-on in Home Assistant |
 | [Synology](08-synology.md) | Installation als Paket auf der DS923+ |
 | [Fehlersuche](09-fehlersuche.md) | Symptom, Ursache und Lösung |

@@ -29,13 +29,13 @@ Die Migration verfolgt zwei Ziele gleichzeitig:
 |---|---|
 | 0 – Repo-Hygiene & CI | 2 |
 | 1 – BACnet-Portierung + Tests | 8 |
-| 2 – Domain & Gateway-Kern | 6 |
+| 2 – Domain & Gateway-Kern | 7 |
 | 3 – MQTT-Migration & HA-Discovery | 6 |
-| 4 – REST/SSE-API | 4 |
-| 5 – Angular/Optimus UI | 8 |
+| 4 – REST/SSE-API | 4.5 |
+| 5 – Angular/Optimus UI | 9.5 |
 | 6 – Container & Synology | 4 |
 | 7 – Parallelbetrieb & Umschaltung | 3 |
-| **Summe** | **≈ 41 Personentage** (≈ 8–10 Wochen à 5 Tage) |
+| **Summe** | **≈ 44 Personentage** (≈ 9–11 Wochen à 5 Tage) |
 
 > **Puffer:** +25 % für Unbekanntes im BACnet-Stack und für Rückfragen.
 > **Realistisch:** 10–13 Wochen.

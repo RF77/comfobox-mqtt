@@ -40,7 +40,7 @@
 | 1.7 | `Trace` → `ILogger` | ⬜ | 0.5 |
 | 1.8 | Timeout-/Reconnect-Härtung + Spin-Loop-Fix (A8) | ⬜ | 1.0 |
 
-## Phase 2 – Domain & Gateway-Kern (6 PT)
+## Phase 2 – Domain & Gateway-Kern (7 PT)
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
@@ -50,6 +50,7 @@
 | 2.4 | `BacnetDevice`: I/O, Serialisierung, Priorisierung | ⬜ | 1.5 |
 | 2.5 | `ValueCache` | ⬜ | 0.5 |
 | 2.6 | Persistenter Schreibzähler (A3) | ⬜ | 0.5 |
+| 2.7 | **Serilog-Setup + In-Memory-Ringbuffer** (1000, konfigurierbar) | ⬜ | 1.0 |
 
 ## Phase 3 – MQTT-Migration & HA-Discovery (6 PT)
 
@@ -62,7 +63,7 @@
 | 3.5 | Home-Assistant-Discovery (Device + Komponenten) | ⬜ | 1.5 |
 | 3.6 | Health-/Status-Publisher | ⬜ | 1.0 |
 
-## Phase 4 – REST/SSE-API (4 PT)
+## Phase 4 – REST/SSE-API (4.5 PT)
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
@@ -74,8 +75,9 @@
 | 4.6 | OpenAPI/Swagger | ⬜ | 0.5 |
 | 4.7 | **Setup-API** (`/api/setup/*`, PBKDF2, `config.json`) | ⬜ | 1.5 |
 | 4.8 | **Token-API** (`/api/security/tokens`) | ⬜ | 1.0 |
+| 4.9 | **Log-Endpunkte** (`/api/diagnostics/logs`, SSE-Tail) | ⬜ | 0.5 |
 
-## Phase 5 – Angular/Optimus UI (8 PT)
+## Phase 5 – Angular/Optimus UI (9.5 PT)
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
@@ -90,6 +92,7 @@
 | 5.9 | **Getting-Started-Assistent** (6 Schritte) | ⬜ | 2.5 |
 | 5.10 | **Login** + Cookie-Auth | ⬜ | 1.0 |
 | 5.11 | **Hilfe-Bereich** (`/help/:slug`) + Suche | ⬜ | 1.5 |
+| 5.12 | **Log-Viewer** (Live-Tail, Filter, Export) | ⬜ | 1.5 |
 
 ## Phase 6 – Container & Synology (4 PT)
 
@@ -125,7 +128,7 @@
 | 8a.3 | Coordinator (10-s-Intervall, `unavailable` statt Flackern) | ✅ | 1.0 |
 | 8a.4 | Plattformen `sensor`/`number`/`select`/`switch`/`binary_sensor` | ✅ | 2.5 |
 | 8a.5 | Services + Übersetzungen | ✅ | 0.5 |
-| 8a.6 | Tests (Config Flow, Client, Coordinator, Mapping) | 🟡 | 1.5 |
+| 8a.6 | Tests (Config Flow ✅ · Client, Coordinator, Mapping offen) | 🟡 | 1.5 |
 | 8b.1 | HA-Add-on-Manifest | ✅ | 1.0 |
 | 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | ⬜ | 1.0 |
 | 8b.3 | Add-on-Doku + Übersetzungen (de/en) | ✅ | 1.0 |
@@ -154,16 +157,17 @@
 | D.6 | **Benutzerdokumentation** (11 Seiten + Build-Skript) | ✅ | 7 |
 | D.7 | Aufgaben-Dokument (dieses Verzeichnis) | ✅ | – |
 | D.8 | Link-Validator (`tools/check-links.ps1`) | ✅ | – |
+| D.9 | **Logging-Spec + ADR-011** (Serilog, Ringbuffer, Log-Viewer) | ✅ | 2 |
 
 ## Summe
 
 | Bereich | PT |
 |---|---|
-| Implementierung (Phase 0–8d) | 60 |
-| Dokumentation (D.6) | 7 |
-| **Gesamt** | **67** |
+| Implementierung (Phase 0–8d) | 63 |
+| Dokumentation (D.6 + D.9) | 9 |
+| **Gesamt** | **72** |
 
-> **Fertig:** 0 PT von 60. Der Fortschritt beginnt mit **Phase 0**.
+> **Fertig:** 0 PT von 63. Der Fortschritt beginnt mit **Phase 0**.
 
 ## Nächste Aufgabe
 

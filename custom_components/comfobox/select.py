@@ -62,7 +62,7 @@ class ComfoBoxSelect(ComfoBoxEntity, SelectEntity):
         """Schreibt den Enum-Wert."""
         try:
             await self.coordinator.client.write_item(self.item.id, option)
-        except Exception as err:  # noqa: BLE001 - Fehler an den Nutzer melden
+        except Exception as err:
             raise HomeAssistantError(
                 f"Schreiben von {self.item.display_name} fehlgeschlagen: {err}"
             ) from err

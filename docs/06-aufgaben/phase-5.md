@@ -255,10 +255,39 @@ app.MapFallbackToFile("index.html");   // NACH den API-Routen!
 
 ---
 
+## 5.12 – Log-Viewer · 1.5 PT
+
+| | | |
+|---|---|---|
+| **Ziel** | `src/ComfoBox.Web/src/app/features/diagnostics/logs/` |
+| **Spec** | [logging.md §7](../02-modernisierung/logging.md#7-web-ui-der-log-viewer) |
+| **Bezug** | Aufgabe 4.9 (Endpunkte), 2.7 (Ringpuffer) |
+
+| Aspekt | Wert |
+|---|---|
+| Ort | Diagnoseseite → Reiter „Protokoll" |
+| Historie | `GET /api/diagnostics/logs` mit Filtern |
+| Live | `GET /api/diagnostics/logs/stream` (SSE), Toggle „Live" |
+| Filter | Level (Mehrfachauswahl), Quelle, Volltext, Zeitbereich |
+| Anzeige | gerenderte Meldung, Properties eingerückt, Level farbig |
+| Aktionen | Export als `.log`, „Protokoll leeren", Eintrag kopieren |
+
+**Akzeptanzkriterien:**
+- [ ] Die Liste zeigt die neuesten Einträge **oben**
+- [ ] „Live" hält die Liste ohne Polling aktuell (SSE)
+- [ ] Auto-Scroll folgt dem Ende und ist abschaltbar
+- [ ] Die Filter wirken **kombiniert** und lassen sich zurücksetzen
+- [ ] Export enthält **nur** die gefilterten Einträge
+- [ ] „Protokoll leeren" leert die Liste **und** den Serverpuffer
+- [ ] Keine Secrets im Log-Viewer (Redaktion greift)
+
+---
+
 ## Abnahme der Phase 5
 
 - [ ] Dashboard, Item-Browser, Konfiguration, Diagnose, Login, Assistent, Hilfe vorhanden
 - [ ] Fehlerbanner sichtbar und verständlich
+- [ ] **Log-Viewer** zeigt Live- und historische Einträge mit Filtern und Export
 - [ ] Schreibfehler → Serverwert wiederhergestellt
 - [ ] Live-Werte via SSE (kein Polling im Browser)
 - [ ] `npm run lint` grün, Produktions-Build erfolgreich

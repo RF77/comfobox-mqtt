@@ -17,6 +17,7 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
 | 7 | *Installation so bequem wie möglich* | SPK per Klick im DSM-Paketcenter → Browser öffnet sich → Getting-Started-Assistent (Portwahl, BACnet-/MQTT-Test, Benutzer + Passwort) | [synology-paketcenter](../03-deployment/synology-paketcenter.md), [ui-angular-optimus §3](ui-angular-optimus.md#3-getting-started-setup-assistent) |
 | 4 | MQTT-Adressen bleiben gleich | **Alle** 127 Topics + `/Set`, `/AsNumber`, `/Special`, `/Connected`, `/Version` bleiben gültig; durch Contract-Test gegen `docs/topics.json` abgesichert | [mqtt-kompatibilitaet](../04-migration/mqtt-kompatibilitaet.md) |
 | 5 | Fehler/Verbindungsprobleme an HA **und** UI | Health-Topic mit LWT, Status-Topics, REST-Health-Endpoint, sichtbarer Fehlerbanner in der UI | [health-und-status](health-und-status.md), [home-assistant](home-assistant.md) |
+| 8 | *Logs direkt in der UI ansehen* | Serilog im Backend + In-Memory-Ringbuffer (1000, konfigurierbar) + Log-Viewer auf der Diagnoseseite | [logging](logging.md), [ADR-011](../05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md) |
 | 6 | Neustart aus HA möglich | `ComfoBox/Command/Restart` (Subscribe) + `POST /api/service/restart` + HA-Button-Entity | [home-assistant](home-assistant.md#6-neustart-aus-home-assistant-anforderung-6) |
 
 ---
@@ -28,6 +29,7 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
 | [uebersicht-und-zielbild.md](uebersicht-und-zielbild.md) | Zielarchitektur, Komponenten, Datenflüsse, Migrationsstrategie, Projektstruktur |
 | [zielversionen.md](zielversionen.md) | Fixierte Versionen + Begründung + Update-Politik |
 | [dotnet-migration.md](dotnet-migration.md) | TFM, Paket-Mapping, Settings-Ersatz, Logging, Hosting, Struktur |
+| [logging.md](logging.md) | **Logging**: Serilog, In-Memory-Ringbuffer (1000), Log-Viewer in der Web-UI |
 | [mqtt-library-migration.md](mqtt-library-migration.md) | M2Mqtt → MQTTnet, API-Mapping, LWT, Reconnect, TLS, QoS, Payload-Fixes |
 | [bacnet-portierung.md](bacnet-portierung.md) | Portierung des Protokollstacks, Teststrategie, Regressionssicherung |
 | [datenmodell-und-api.md](datenmodell-und-api.md) | Item-Katalog, Typsystem, REST-API, SSE, Validierung, Schreibschutz, Restart |

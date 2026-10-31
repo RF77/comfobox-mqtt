@@ -7,7 +7,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
  Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Synology-   HA-Add-on    Parallel-
  Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      SPK &       + HACS-      betrieb &
  + CI        + Tests     Kern                                               (1 Image)  Assistent   Integration  Umschaltung
- 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       13 PT       14 PT         3 PT
+ 2 PT        8 PT        7 PT       6 PT       4.5 PT      9.5 PT      4 PT       13 PT       14 PT         3 PT
 ```
 
 **Abhängigkeiten:**
@@ -69,7 +69,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 
 ---
 
-## Phase 2 – Domain & Gateway-Kern (6 PT)
+## Phase 2 – Domain & Gateway-Kern (7 PT)
 
 | # | Aufgabe | PT |
 |---|---|---|
@@ -79,6 +79,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | 2.4 | `BacnetDevice`: I/O, `SemaphoreSlim`-Serialisierung, Priorisierung (`Once`/`Primary`/`Secondary`) | 1.5 |
 | 2.5 | `ValueCache` | 0.5 |
 | 2.6 | Persistenter Schreibzähler (A3) | 0.5 |
+| 2.7 | **Serilog-Setup + In-Memory-Ringbuffer** (1000 Einträge) | 1.0 |
 
 **Abnahme:** Der Gateway liest alle 127 Items und schreibt in den Cache – **noch ohne MQTT**.
 
@@ -101,7 +102,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 
 ---
 
-## Phase 4 – REST/SSE-API (4 PT)
+## Phase 4 – REST/SSE-API (4.5 PT)
 
 | # | Aufgabe | PT |
 |---|---|---|
@@ -114,7 +115,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 
 ---
 
-## Phase 5 – Angular/Optimus UI (8 PT)
+## Phase 5 – Angular/Optimus UI (9.5 PT)
 
 | # | Aufgabe | PT |
 |---|---|---|

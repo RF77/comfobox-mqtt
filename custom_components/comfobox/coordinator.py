@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
 import logging
+from datetime import timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -15,7 +15,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     AuthenticationError,
     ComfoBoxApiClient,
-    ComfoBoxItem,
     ConnectionFailed,
 )
 from .const import DOMAIN, STATUS_KEY

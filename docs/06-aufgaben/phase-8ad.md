@@ -114,32 +114,45 @@ MQTT-Konfiguration, Gerät mit allen Entities."*
 | | |
 |---|---|
 | **Ziel** | `custom_components/comfobox/tests/` |
-| **Problem** | **Python ist auf dieser Maschine nicht installiert** → Tests nie gelaufen |
+| **Stand** | Config-Flow-Tests **grün** (3/3), `ruff` sauber – API-Client, Coordinator und Entity-Mapping fehlen noch |
 
 **Ablauf:**
 
 ````bash
+# Python 3.12 (Windows, ohne Admin):
+winget install --id Python.Python.3.12 --scope user
+
 pip install -r custom_components/comfobox/requirements_test.txt
 pytest custom_components/comfobox/tests -v
 ruff check custom_components/comfobox
 ````
 
-| Test | Werkzeug |
-|---|---|
-| Config Flow (Erfolg, falscher Token, nicht erreichbar) | `pytest-homeassistant-custom-component` |
-| API-Client (Mock) | `aioresponses` |
-| Coordinator (Timeout, 401, Normalfall) | `pytest` |
-| Entity-Mapping | `pytest` |
+> **Konfiguration:** `pytest.ini` im Repo-Root setzt `asyncio_mode = auto` und den
+> `testpaths` auf `custom_components/comfobox/tests`.
+
+| Test | Werkzeug | Status |
+|---|---|---|
+| Config Flow (Erfolg, falscher Token, nicht erreichbar) | `pytest-homeassistant-custom-component` | ✅ 3 Tests |
+| API-Client (Mock) | `aioresponses` | ⬜ offen |
+| Coordinator (Timeout, 401, Normalfall) | `pytest` | ⬜ offen |
+| Entity-Mapping | `pytest` | ⬜ offen |
 
 **Akzeptanzkriterien:**
 - [ ] `pytest` grün
 - [ ] `ruff check` ohne Befund
 - [ ] Mindestens **5** Testfälle
+- [ ] API-Client, Coordinator und Entity-Mapping sind getestet
+
+> **Windows-Fallstricke** (in `tests/conftest.py` gelöst):
+> `pytest-socket` blockiert jede Socket-Erstellung – unter Windows braucht asyncio für
+> den Self-Pipe ein TCP-Socketpaar → `pytest_socket.disable_socket` im conftest ersetzen.
+> `aiodns` (HAs fester DNS-Resolver) verlangt unter Windows einen `SelectorEventLoop` →
+> im Test `ThreadedResolver` statt `AsyncResolver`. Im **Produktivbetrieb** (Linux)
+> bleibt aiodns unverändert.
 
 > **Vorher manuell geprüft:** Der Code wurde von Hand reviewiert; dabei wurden drei
 > echte Fehler gefunden und behoben (unausgewerteter `await` beim Service-Setup,
 > fehlerhafte Content-Type-Prüfung, `config_entry`-Zugriff im Unique-ID).
-> **Ohne** `pytest` ist das **kein** Ersatz.
 
 ---
 

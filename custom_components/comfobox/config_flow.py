@@ -6,7 +6,6 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_TOKEN, CONF_VERIFY_SSL
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
@@ -51,7 +50,7 @@ class ComfoBoxConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = "invalid_auth"
             except ConnectionFailed:
                 errors["base"] = "cannot_connect"
-            except Exception:  # noqa: BLE001 - jede unerwartete Exception ist ein Connect-Fehler
+            except Exception:
                 _LOGGER.exception("Unerwarteter Fehler beim Verbinden mit dem Gateway")
                 errors["base"] = "unknown"
             else:

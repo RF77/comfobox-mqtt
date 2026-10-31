@@ -186,6 +186,7 @@ Heizung beeinflussen (Kurvenparameter, Grenzwerte).
 
 | Weg | was Sie tun |
 |---|---|
+| **Diagnose → Protokoll** | die letzten 1000 Log-Einträge, live, filterbar – **der schnellste Weg** |
 | **Diagnose-Seite** | Fehlerhistorie, Zustandsprüfungen, Rohdaten |
 | **Protokoll (Docker)** | `docker compose logs -f gateway` |
 | **Protokoll (Synology)** | `ssh synology` → `synopkg` / Container-Manager |
@@ -194,3 +195,18 @@ Heizung beeinflussen (Kurvenparameter, Grenzwerte).
 
 > **Bereiten Sie das vor**, bevor Sie Support fragen: Version des Gateways, Version
 > der ComfoBox-Software, Protokoll aus dem Diagnose-Bereich.
+
+### Was im Protokoll nachsehen
+
+| Symptom im Protokoll | Bedeutung | nächster Schritt |
+|---|---|---|
+| `no_iam` | die ComfoBox antwortet nicht | [Baudrate prüfen](#1-baudrate-prüfen) |
+| `Permission denied` | der Container darf den Port nicht öffnen | [Permission denied](#permission-denied) |
+| `Device or resource busy` | ein zweiter Master belegt den Bus | [Ein zweiter Master?](#4-zweiter-master) |
+| `Publish failed` | der MQTT-Broker ist nicht erreichbar | [MQTT einrichten](04-mqtt.md) |
+| `timed out` | einzelne Werte kommen nicht | Ggf. Baudrate oder Verkabelung |
+| `write_limit_exceeded` | das Tageslimit ist erreicht | [Schreibschutz](06-bedienung.md#der-schreibschutz) |
+
+> **Tipp:** Setzen Sie den Filter auf **Level: Warnung oder höher**, um die relevanten
+> Zeilen ohne Rauschen zu sehen. Mit **Live** laufen neue Zeilen automatisch ein – Sie
+> müssen die Seite nicht neu ladenen.

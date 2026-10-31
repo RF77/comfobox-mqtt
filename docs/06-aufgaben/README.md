@@ -97,7 +97,7 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | 8a–d | 4, 6, 8 | 14 |
 | 7 | 6 | 3 |
 
-> **Summe: 60 PT** ≈ 15 Arbeitstage.
+> **Summe: 63 PT** ≈ 16 Arbeitstage.
 
 ## 6. Vorbedingungen, die global gelten
 
@@ -107,12 +107,12 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | Node.js 22 | ✅ installiert |
 | Git-Bash (`C:\Program Files\Git\bin\bash.exe`) | ✅ vorhanden |
 | Docker-Daemon | ⚠️ **nicht** verfügbar → Container-Aufgaben brauchen Docker Desktop |
-| Python | ⚠️ **nicht** verfügbar → HA-Integration braucht Python 3.12+ |
+| Python 3.12 | ✅ installiert (`winget --scope user`, ohne Admin) |
 
-> **Hinweis für die Umgebung:** Auf dieser Maschine gibt es derzeit **kein Python** und
-> **keinen laufenden Docker-Daemon**. Die Aufgaben der Phasen 8a–d und 6 sind daher
-> **nicht vollständig verifizierbar** – entweder Docker Desktop starten oder Python
-> installieren.
+> **Hinweis für die Umgebung:** Python 3.12 ist seit 2026-10-31 installiert, die
+> HA-Integrationstests laufen grün. Es gibt weiterhin **keinen laufenden
+> Docker-Daemon** – die Aufgaben der Phase 6 sind daher **nicht vollständig
+> verifizierbar** (Docker Desktop starten).
 
 ## 7. Globale Regeln ( Kurzform)
 

@@ -216,12 +216,37 @@ appsettings.json (im Image)        ← Defaults
 
 ---
 
+## 4.9 – Log-Endpunkte & Live-Tail · 0.5 PT
+
+| | | |
+|---|---|---|
+| **Endpunkte** | `GET /api/diagnostics/logs`, `GET /api/diagnostics/logs/stream`, `DELETE /api/diagnostics/logs` |
+| **Bezug** | Aufgabe 2.7 (Ringpuffer), Phase 5.12 (Log-Viewer) |
+| **Spec** | [logging.md §6](../02-modernisierung/logging.md#6-api) |
+
+| Endpunkt | Verhalten |
+|---|---|
+| `GET /api/diagnostics/logs` | filterbar: `level`, `source`, `search`, `since`, `limit` (max. 1000), `order` |
+| `GET /api/diagnostics/logs/stream` | SSE-Tail; Initial-Snapshot der letzten 50 Einträge |
+| `DELETE /api/diagnostics/logs` | leert den Puffer, `204` |
+
+**Akzeptanzkriterien:**
+- [ ] Die Filter arbeiten **kombiniert** (Level **und** Quelle **und** Text)
+- [ ] `limit` ist begrenzt (Obergrenze 1000) – kein unbounded Response
+- [ ] Der SSE-Stream liefert nur **neue** Einträge, event-getrieben (kein Polling)
+- [ ] Ein langsamer Client blockiert den Log-Pfad nicht (bounded channel, `DropOldest`)
+- [ ] Maximal 5 gleichzeitige Log-Streams
+- [ ] Integrationstest: `GET /api/diagnostics/logs` liefert `200` mit `LogEntryDto[]`
+
+---
+
 ## Abnahme der Phase 4
 
 - [ ] Alle Endpunkte vorhanden und getestet
 - [ ] Validierung mit korrekten Statuscodes
 - [ ] SSE liefert `snapshot` + `value`
 - [ ] Fehler landen in `Status/Errors`
+- [ ] Log-Endpunkte liefern die Ringpuffer-Einträge gefiltert
 - [ ] API-Tests grün
 
 → Weiter mit [Phase 5](phase-5.md)

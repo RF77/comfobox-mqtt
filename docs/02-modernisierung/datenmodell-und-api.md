@@ -177,6 +177,9 @@ Basis-URL: `/api`. Authentifizierung: optional (siehe offene Frage Q2).
 | `POST` | `/api/service/reconnect/bacnet` | BACnet neu verbinden | `202` |
 | `POST` | `/api/service/reconnect/mqtt` | MQTT neu verbinden | `202` |
 | `GET` | `/api/diagnostics/errors` | Letzte Fehler (Ringpuffer) | `ErrorEntry[]` |
+| `GET` | `/api/diagnostics/logs` | **Log-Einträge** (Ringpuffer, gefiltert) | `LogEntryDto[]` |
+| `GET` | `/api/diagnostics/logs/stream` | **Live-Log-Tail** per SSE | `text/event-stream` |
+| `DELETE` | `/api/diagnostics/logs` | Log-Puffer leeren | `204` |
 | `GET` | `/api/diagnostics/writes` | Schreibzähler-Historie | `WriteStats` |
 | `GET` | `/api/setup/state` | Ist das Setup abgeschlossen? | `SetupState` |
 | `GET` | `/api/setup/ports` | Erkannte serielle Ports | `SerialPort[]` |

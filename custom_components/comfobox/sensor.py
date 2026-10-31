@@ -6,7 +6,6 @@ from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
-    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -16,7 +15,6 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import device_info
 from .api import ComfoBoxItem
-from .const import DOMAIN
 from .coordinator import ComfoBoxCoordinator
 from .entity import ComfoBoxEntity, slugify
 
