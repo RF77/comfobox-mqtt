@@ -23,6 +23,17 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 1: `ComfoBox.Bacnet.Diagnostics.BacnetLog` – `ILogger`-Fassade für den
   statischen Fremdcode (ersetzt `System.Diagnostics.Trace`, Befund A16)
 - Phase 1: `tools/port-bacnet/port-bacnet-base.mjs` – mechanischer, idempotenter Port
+- Phase 1: `ComfoBox.Bacnet.BacnetClient` – **async** BACnet-Client
+  (`ReadPropertyAsync`, `WritePropertyAsync`, `WhoIsAsync`, `IamReceived`-Ereignis)
+- Phase 1: typisierte BACnet-Fehler (`BacnetTimeoutException`, `BacnetDeviceErrorException`,
+  `BacnetDeviceAbortException`, `BacnetDecodeException`) statt `Exception("…")`
+- Phase 1: `ComfoBox.Bacnet.BacnetMstpTransport` – MS/TP-Transport mit Port-Verwaltung,
+  Reconnect und exponentiellem Backoff (5 s → 30 s)
+- Phase 1: `ComfoBox.Bacnet.Serial` – schmale Port-Schnittstelle (`ISerialPort`,
+  `ISerialPortFactory`, `SerialPortAdapter`) als Testnaht
+- Phase 1: `MstpStateMachine` – 1:1-Port des Legacy-MS/TP-Automaten
+- Phase 1: 19 neue Tests (MS/TP-Framing, Serial-Verhalten inkl. A8-Regression,
+  Client-Request/Antwort/Fehler) → 45 Tests grün
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
@@ -30,9 +41,19 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Archiv-Prüfung ersetzt – `src_old/` wird **nicht** gebaut (Projektregel §5)
 - Phase 1: der BACnet-Codec enthält kein BACnet/IP (`BVLC`) und kein PTP mehr –
   der Stack läuft ausschließlich über MS/TP
+- Phase 1: der neue BACnet-Code nutzt durchgängig `ILogger` statt `Trace`/`Console`
 
 ### Fixed
-- keine
+- Phase 1: **Befund A8** – ein Serial-Portfehler löste im Legacy einen
+  Tight-Spin-Loop mit 100 % CPU aus. Der neue Zustandsautomat endet bei einem
+  Portfehler, der Transport verbindet sich mit Backoff neu (5 s → 30 s)
+- Phase 1: **Befund A19** – die Sende-Warteschlange des Legacy war eine
+  ungeschützte `LinkedList`, auf die Aufrufer und Zustandsautomat gleichzeitig
+  zugriffen. Jetzt `ConcurrentQueue`
+- Phase 1: **Befund A23** – der MS/TP-Thread läuft mit `ThreadPriority.Highest`.
+  Der neue Transport nutzt `TaskCreationOptions.LongRunning` (Standardpriorität)
+- Phase 1: die Invoke-ID Vergabe im Client war nicht threadsicher (`m_invoke_id++`)
+  → jetzt `Interlocked`
 
 ## [0.1.0] – 2026-10-31
 

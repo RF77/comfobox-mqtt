@@ -32,4 +32,12 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Der MS/TP-Zustandsautomat ist internal, wird aber direkt getestet
+      (Aufgabe 1.6: Regression gegen den Spin-Loop aus Befund A8).
+    -->
+    <InternalsVisibleTo Include="ComfoBox.Bacnet.Tests" />
+  </ItemGroup>
+
 </Project>
