@@ -34,6 +34,27 @@ public sealed class GatewayOptions
     public bool ExpertMode { get; init; }
 
     /// <summary>
+    /// Die Geräte-Id des Gateways, z. B. <c>comfobox1</c>.
+    /// </summary>
+    /// <remarks>
+    /// Die Id erscheint in <c>/api/status</c> und in der
+    /// Home-Assistant-Discovery. Sie muss je Installation eindeutig sein.
+    /// </remarks>
+    [Required]
+    [RegularExpression(@"^\S+$", ErrorMessage = "Gateway:DeviceId darf keine Leerzeichen enthalten.")]
+    public string DeviceId { get; init; } = "comfobox1";
+
+    /// <summary>
+    /// Darf der Gateway über die API neu gestartet werden?
+    /// </summary>
+    /// <remarks>
+    /// <c>false</c> verbietet den Neustart über <c>POST /api/service/restart</c>
+    /// (und damit auch über MQTT). Der Neustart läuft **in-process** - der
+    /// Supervisor startet den Container neu.
+    /// </remarks>
+    public bool RestartEnabled { get; init; } = true;
+
+    /// <summary>
     /// Das Datenverzeichnis (Schreibzähler, später die Setup-Konfiguration).
     /// </summary>
     /// <remarks>

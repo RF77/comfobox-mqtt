@@ -582,9 +582,125 @@ Serilog in einen In-Memory-Ringpuffer. **143 Tests grün** (45 BACnet + 30 Domai
 
 ---
 
+## 2026-10-31 – Phase 4 abgeschlossen: REST/SSE-API (Aufgaben 4.1–4.9)
+
+**Ergebnis:** Der Gateway hat die **komplette** REST-/SSE-Schnittstelle:
+Items lesen und schreiben, Health/Status/Fehler, Live-Werte per SSE,
+Konfiguration, Neustart, Setup-Assistent, API-Token und Log-Viewer.
+**278 Tests grün** (45 BACnet + 30 Domain + 10 Contract + 193 Gateway).
+Beide Fixtures sind **byteweise unverändert**. Die 21 Endpunkte stehen im
+OpenAPI-Dokument (`/swagger`, nur im Development-Modus).
+
+**Geänderte Dateien (neu – API):**
+- `src/ComfoBox.Gateway/Api/GatewayApiExtensions.cs` – `AddGatewayApi()` (DI) + `MapGatewayApi()` (Routen) + `MapGatewaySwagger()`
+- `src/ComfoBox.Gateway/Api/ItemsEndpoints.cs` – `GET /api/items`, `/api/items/{id}`, `/api/items/group/{group}`, `PUT /api/items/{id}` (204/400/403/409/422/502)
+- `src/ComfoBox.Gateway/Api/StatusEndpoints.cs` – `/api/health`, `/api/status`, `/api/diagnostics/errors`, `/api/diagnostics/writes`
+- `src/ComfoBox.Gateway/Api/EventsEndpoints.cs` – SSE `/api/events` (`snapshot` + `value`)
+- `src/ComfoBox.Gateway/Api/ConfigEndpoints.cs` – `/api/config` (GET ohne Passwörter, PUT → `config.json`)
+- `src/ComfoBox.Gateway/Api/ServiceEndpoints.cs` – `POST /api/service/restart` (202)
+- `src/ComfoBox.Gateway/Api/SetupEndpoints.cs` – `/api/setup/*` (state, ports, Tests, config, apply)
+- `src/ComfoBox.Gateway/Api/TokenEndpoints.cs` – `/api/security/tokens` (erzeugen/listen/widerrufen)
+- `src/ComfoBox.Gateway/Api/LogEndpoints.cs` – `/api/diagnostics/logs` (Filter), `/stream` (SSE-Tail), `DELETE`
+- `src/ComfoBox.Gateway/Api/Models/*.cs` – die DTOs (Feldnamen sind **Vertrag**)
+- `src/ComfoBox.Gateway/Api/ApiJson.cs`, `ApiErrors.cs`, `SseWriter.cs` – JSON-Optionen, Fehlerkanal, SSE-Helfer
+
+**Geänderte Dateien (neu – Sicherheit, Setup, Persistenz):**
+- `src/ComfoBox.Gateway/Security/PasswordHasher.cs` – PBKDF2-HMAC-SHA256, 600.000 Iterationen
+- `src/ComfoBox.Gateway/Security/ApiToken.cs` + `ApiSecurityStore.cs` – Token-Bestand in `config.json` (nur Hash), Setup-Flag, Administrator
+- `src/ComfoBox.Gateway/Security/ApiAccessGuard.cs` – die Zugriffskontrolle (Bearer, Basic, LAN-Modus)
+- `src/ComfoBox.Gateway/Setup/SetupService.cs` – Ports, BACnet-/MQTT-Test, Konfiguration schreiben
+- `src/ComfoBox.Gateway/Configuration/ConfigStore.cs` – `config.json` (Modus 0600), atomar
+- `src/ComfoBox.Gateway/Configuration/ApiOptions.cs` – `Api:RequireAuthentication` u. a.
+- `src/ComfoBox.Gateway/Configuration/GatewayConfiguration.cs` – die **Präzedenz** der Konfigurationsquellen
+- `src/ComfoBox.Gateway/Storage/AtomicFile.cs` – atomares Schreiben mit Retry (Windows-Sperre)
+- `src/ComfoBox.Gateway/ServiceControl.cs` – Neustart in-process + Marker-Datei
+- `src/ComfoBox.Gateway/Logging/LogStreamBroker.cs` – die Verteilung der Log-Einträge (max. 5 Streams)
+- `src/ComfoBox.Gateway/RuntimeInfo.cs` – Startzeitpunkt und Uptime
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Program.cs` – Konfigurationsquellen, `AddGatewayApi()`, `MapGatewayApi()`, Swagger nur im Development-Modus
+- `src/ComfoBox.Gateway/GatewayServiceCollectionExtensions.cs` – `startBackgroundServices` (Testnaht), `LoggingOptions` als Singleton
+- `src/ComfoBox.Gateway/Bacnet/BacnetDevice.cs` – `IsConnected` + `LastError` (für `/api/status`)
+- `src/ComfoBox.Gateway/Configuration/GatewayOptions.cs` – `DeviceId`, `RestartEnabled`
+- `src/ComfoBox.Gateway/Logging/InMemoryLogSink.cs` – Ereignis `EntryAdded` (Live-Tail)
+- `src/ComfoBox.Gateway/Protection/WriteCounter.cs` – `AtomicFile` (Retry gegen die Windows-Dateisperre)
+- `src/Directory.Packages.props` – Swashbuckle **10.3.1** (Microsoft.OpenApi 2.x, .NET 10-kompatibel)
+- `src/ComfoBox.Gateway/ComfoBox.Gateway.csproj` – `Microsoft.AspNetCore.OpenApi` entfernt (Kollision mit Swashbuckle 9)
+
+**Geänderte Dateien (neu – Tests, 59 Stück):**
+- `src/ComfoBox.Gateway.Tests/Api/GatewayApiFixture.cs` – **echter** Kestrel-Testhost auf einem freien Port
+- `src/ComfoBox.Gateway.Tests/Api/ItemsApiTests.cs` – 16 Tests (Schreibpfade, Statuscodes, A5/A6)
+- `src/ComfoBox.Gateway.Tests/Api/StatusApiTests.cs` – 6 Tests (Feldnamen von `/api/status` **exakt**)
+- `src/ComfoBox.Gateway.Tests/Api/EventsApiTests.cs` – 2 Tests (SSE `snapshot` + `value`)
+- `src/ComfoBox.Gateway.Tests/Api/ConfigApiTests.cs` – 4 Tests (ohne Passwörter, Persistenz)
+- `src/ComfoBox.Gateway.Tests/Api/ServiceApiTests.cs` – 3 Tests (202, Marker-Datei, deaktivierter Neustart)
+- `src/ComfoBox.Gateway.Tests/Api/TokenApiTests.cs` – 7 Tests (einmaliger Klartext, nur Hash, 401, Widerruf)
+- `src/ComfoBox.Gateway.Tests/Api/SetupApiTests.cs` – 9 Tests (PBKDF2, Apply, Schutz nach der Ersteinrichtung)
+- `src/ComfoBox.Gateway.Tests/Api/LogApiTests.cs` – 8 Tests (Filter kombiniert, Limit, SSE-Tail, max. 5 Streams)
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → grün, 0 Warnungen, 0 Fehler
+- `dotnet test src/ComfoBox.sln -c Release` → **278 Tests grün**
+- Golden-Fixture `bacnet-frames.json` → SHA256 `F95AA763…CE681B`, 5.657 Bytes (**unverändert**)
+- `docs/topics.json` → SHA256 `67D7485B…C1463`, 33.845 Bytes (**unverändert**)
+- `tools/check-links.ps1` → 617 Links, 0 Probleme
+- **Smoke-Test** gegen den **laufenden** Gateway: `/api/health`, `/api/status`,
+  `/api/setup/state`, `/api/items/{id}`, `/api/diagnostics/writes` → 200,
+  `/swagger/v1/swagger.json` → 200 mit allen 21 Endpunkten
+
+**Offen / nicht gemacht:**
+- `POST /api/service/reconnect/bacnet` und `.../mqtt` (aus der Spec §3.1) fehlen
+  noch – der Neustart deckt beide Fälle ab (Aufgabe 5.x nachziehen).
+- `PUT /api/config` schreibt die Werte in die `config.json`; sie werden beim
+  **nächsten Start** wirksam (die Options sind unveränderliche Schnappschüsse).
+  Die Oberfläche bietet deshalb den Neustart an.
+- `GET /api/items/{id}` liefert den **gecachten** Wert, keinen blockierenden
+  BACnet-Read (der würde den Bus belegen). Der Wert kommt über `/api/events`.
+- Die Web-UI, der Cookie-Login (5.10) und die Token-Verwaltung in der
+  Oberfläche sind Phase 5 bzw. 8d.
+
+**Überraschungen:**
+- ⚠️ **Ein nicht registrierter Options-Typ hat JEDE Anfrage mit HTTP 500
+  beantwortet.** `LoggingOptions` war nur über `IOptions<T>` gebunden, nicht
+  als Singleton – die Minimal-API hat den Parameter deshalb für einen
+  **Request-Body** gehalten: „Body was inferred but the method does not allow
+  inferred body parameters". Der Fehler tritt **erst beim ersten Request** auf
+  (die Endpunkte werden lazy gebaut) und sieht wie ein Serverabsturz aus.
+  **Merksatz:** Jeder Typ, der als Parameter eines Minimal-API-Endpunkts
+  auftaucht, muss als konkreter Dienst registriert sein.
+- ⚠️ **`RemoveAll<IHostedService>()` zerstört die Pipeline des Webhosts.** Der
+  `GenericWebHostService` (er startet Kestrel) ist selbst ein `IHostedService`.
+  Nach dem Entfernen antwortete der Server mit einem leeren 500.
+  **Merksatz:** Für Tests den Schalter `AddGatewayServices(..., startBackgroundServices:
+  false)` benutzen – nicht `RemoveAll<IHostedService>()`.
+- ⚠️ **Swashbuckle 9 kollidiert mit .NET 10.** `Microsoft.AspNetCore.OpenApi`
+  10.0.14 braucht `Microsoft.OpenApi` 2.x, Swashbuckle 9 braucht 1.6.x. Umstieg
+  auf Swashbuckle **10.3.1** und `Microsoft.AspNetCore.OpenApi` aus dem Projekt
+  entfernt.
+- ⚠️ **Ein SSE-Stream ohne Daten schickt keine Kopfzeilen.** Der Browser
+  (und `HttpCompletionOption.ResponseHeadersRead`) wartet dann bis zum ersten
+  Eintrag. `SseWriter.PrepareAsync` flusht die Kopfzeilen deshalb sofort.
+- ⚠️ **`File.Move(…, overwrite: true)` scheitert unter Windows sporadisch**
+  („Access to the path is denied") – ein Virenscanner sperrt die Datei für
+  einen Moment. `AtomicFile.WriteAllText` wiederholt den Vorgang jetzt
+  sechsmal (25 ms Abstand). Der Schreibzähler schrieb sonst bei 100 schnellen
+  Writes einmal ins Leere.
+- ⚠️ **PBKDF2 mit 600.000 Iterationen kostet ≈ 0,3 s.** Ein Token enthält
+  deshalb seine Id im Klartext-Präfix (`cbk_<id>_<secret>`) – gesucht wird
+  über die Id, verifiziert wird nur **ein** Hash. Das Verifikations-Ergebnis
+  wird zusätzlich für kurze Zeit zwischengespeichert (bei jeder Änderung des
+  Token-Bestands wird der Cache verworfen → ein widerrufener Token wirkt
+  sofort nicht mehr).
+- ⚠️ **`dotnet test` zeigt bei einem Fehler im Testhost keinen Body.** Ein
+  leerer 500 ohne Exception-Text kostete Zeit. Abhilfe: den Testhost mit
+  `dotnet test --logger "console;verbosity=detailed"` laufen lassen – dann
+  steht die Server-Exception im Log (`fail: Microsoft.AspNetCore.Server.Kestrel[13]`).
+
+---
+
 ## Nächste Session
 
-**Aufgabe 3.1** – MQTTnet-Client (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`)
-→ [phase-3.md](phase-3.md)
-→ **Prompt:** [prompts/Prompt-Phase-3.md](prompts/Prompt-Phase-3.md)
+**Aufgabe 5.1** – Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura
+→ [phase-5.md](phase-5.md)
+→ **Prompt:** [prompts/Prompt-Phase-5.md](prompts/Prompt-Phase-5.md)
 

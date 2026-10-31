@@ -2,6 +2,7 @@ using ComfoBox.Bacnet;
 using ComfoBox.Bacnet.Serial;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway;
+using ComfoBox.Gateway.Api;
 using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Health;
@@ -14,6 +15,12 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ---------------------------------------------------------------------------
+// Konfiguration (Phase 4): die Umgebungsvariablen COMFOBOX_* und die
+// config.json im Datenverzeichnis. Die Datei hat Vorrang vor den Variablen.
+// ---------------------------------------------------------------------------
+GatewayConfiguration.AddGatewaySources(builder.Configuration, builder.Environment.ContentRootPath);
 
 // ---------------------------------------------------------------------------
 // Logging (ADR-011): Serilog ist der einzige Provider, der Code schreibt
@@ -42,36 +49,33 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .WriteTo.Sink(logBuffer));
 
 // ---------------------------------------------------------------------------
-// Dienste (Konfiguration, BACnet, MQTT).
+// Dienste (Konfiguration, BACnet, MQTT) und die REST/SSE-Schnittstelle.
 // ---------------------------------------------------------------------------
 builder.Services.AddGatewayServices(
     builder.Configuration,
     builder.Environment.ContentRootPath,
     logBuffer);
 
+builder.Services.AddGatewayApi(
+    builder.Configuration,
+    builder.Environment.ContentRootPath);
+
 // ---------------------------------------------------------------------------
 // Host
 // ---------------------------------------------------------------------------
 Directory.CreateDirectory(
-    Path.Combine(
-        builder.Environment.ContentRootPath,
-        builder.Configuration.GetSection(GatewayOptions.SectionName)[nameof(GatewayOptions.DataDirectory)]
-            ?? new GatewayOptions().DataDirectory));
+    GatewayConfiguration.ResolveDataDirectory(builder.Configuration, builder.Environment.ContentRootPath));
 
 var app = builder.Build();
 
-app.MapGet("/api/health", (IValueCache cache, IErrorCollector errors) =>
+// Die Swagger-Oberfläche ist **nur** im Development-Modus erreichbar.
+if (app.Environment.IsDevelopment())
 {
-    var values = cache.Snapshot();
+    app.MapGatewaySwagger();
+}
 
-    return Results.Ok(new
-    {
-        status = "online",
-        items = values.Length,
-        stale = values.Count(v => v.IsStale),
-        errors = errors.Snapshot().Length,
-    });
-});
+// Alle REST-/SSE-Endpunkte (/api/items, /api/status, /api/events, …).
+app.MapGatewayApi();
 
 app.Run();
 

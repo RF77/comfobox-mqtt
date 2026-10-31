@@ -86,6 +86,7 @@ Die Teile 03–05 enthalten Deployment, Migrations-Roadmap und die dokumentierte
 | [ADR-009](05-entscheidungen/adr-009-ha-integration-ohne-mqtt.md) | HA-Integration über das Gateway (kein eigener BACnet-Stack) |
 | [ADR-010](05-entscheidungen/adr-010-benutzerdokumentation.md) | Benutzerdokumentation: eine Quelle, drei Kanäle |
 | [ADR-011](05-entscheidungen/adr-011-logging-serilog-und-ringbuffer.md) | Logging: Serilog + In-Memory-Ringbuffer (1000) für die Web-UI |
+| [ADR-012](05-entscheidungen/adr-012-api-zugriffskontrolle.md) | Zugriffskontrolle der REST-API: Bearer-Token, Administrator, LAN-Modus |
 
 ---
 

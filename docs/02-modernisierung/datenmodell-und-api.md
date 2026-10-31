@@ -198,7 +198,17 @@ internal sealed class ValueCache
 
 ## 3. REST-API
 
-Basis-URL: `/api`. Authentifizierung: optional (siehe offene Frage Q2).
+Basis-URL: `/api`. Authentifizierung: **optional** (siehe
+[ADR-012](../05-entscheidungen/adr-012-api-zugriffskontrolle.md)).
+
+| Modus | Bedeutung |
+|---|---|
+| **LAN-Modus** (Standard, `Api:RequireAuthentication = false`) | Im reinen Heimnetz regelt die Firewall den Zugriff. Administrative Endpunkte sind offen. |
+| **Authentifiziert** (`Api:RequireAuthentication = true`) | Administrative Endpunkte brauchen `Authorization: Bearer <Token>` oder `Authorization: Basic <base64(user:pass)>`. |
+
+> **Unabhängig vom Modus:** Die `/api/setup/*`-Endpunkte sind **nach** der
+> Ersteinrichtung immer geschützt - sie können die Konfiguration und damit
+> auch das Administrator-Passwort überschreiben.
 
 ### 3.1 Endpunkte
 
@@ -343,6 +353,12 @@ internal static class ItemsEndpoints
     }
 }
 ````
+
+> **Umsetzung (Phase 4):** `GET /api/items/{id}` liefert den **gecachten**
+> Wert. Ein blockierender BACnet-Read in einem HTTP-Request würde den Bus
+> belegen (der Poll-Zyklus wartet dann) - der Wert kommt stattdessen über den
+> SSE-Stream `/api/events`, sobald der nächste Poll-Zyklus ihn gelesen hat.
+> Ein Item ohne bisherigen Wert liefert `value: null`.
 
 ### 3.4 Setup-Endpunkte (Getting Started)
 
@@ -569,9 +585,14 @@ appsettings.json (im Image)        ← Defaults
 
 | Aktion | Wirkung |
 |---|---|
-| `PUT /api/config` | ändert die **laufende** Konfiguration und persistiert sie nach `appsettings.override.json` |
+| `PUT /api/config` | persistiert die geänderten Werte nach `config.json` (Modus 0600) |
 | Teile der Konfiguration | **nur** zur Laufzeit änderbar: `ExpertMode`, `PollIntervalSeconds`, `MaxNumberOfWritesPer24h`, `UseMqttRetain` |
 | **Nicht** änderbar zur Laufzeit | `Bacnet:Port`, `Bacnet:Baudrate`, `Mqtt:Brokers` → erfordern einen Neustart (Button in der UI) |
+
+> **Umsetzung (Phase 4):** `PUT /api/config` schreibt die Werte in die
+> `config.json`; sie werden beim nächsten Start wirksam (die Options sind
+> unveränderliche Schnappschüsse). Der Neustart wird in der Oberfläche
+> angeboten.
 
 > **Sicherheitsregel:** Konfigurationsänderungen, die Schreibzugriffe ermöglichen
 > (`ExpertMode = true`), erfordern eine explizite Bestätigung in der UI und werden

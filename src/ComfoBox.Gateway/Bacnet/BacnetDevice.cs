@@ -107,6 +107,22 @@ public sealed class BacnetDevice : IDisposable
     }
 
     /// <summary>
+    /// Ist die ComfoBox erreichbar?
+    /// </summary>
+    /// <remarks>
+    /// Der Zustand wird aus dem letzten Buszugriff abgeleitet: ein
+    /// erfolgreicher Lese- oder Schreibvorgang setzt ihn auf <c>true</c>,
+    /// ein Fehler auf <c>false</c>. Die API zeigt ihn in
+    /// <c>/api/status</c> an.
+    /// </remarks>
+    public bool IsConnected { get; private set; }
+
+    /// <summary>
+    /// Der letzte Fehler (oder <c>null</c>).
+    /// </summary>
+    public string? LastError { get; private set; }
+
+    /// <summary>
     /// Liest die angegebenen Items - einer nach dem anderen.
     /// </summary>
     /// <param name="items">Die Items in Lesereihenfolge.</param>
@@ -202,6 +218,7 @@ public sealed class BacnetDevice : IDisposable
                 cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Schreibvorgang {Item} = {Value} erfolgreich.", item.Id, value);
+            MarkConnected();
             return WriteOutcome.Ok;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -221,6 +238,7 @@ public sealed class BacnetDevice : IDisposable
                 $"WriteProperty ({item.TopicPath}) timed out: {ex.Message}",
                 ex,
                 "warning");
+            MarkFailed("timeout");
             return WriteOutcome.BusError;
         }
         catch (BacnetException ex)
@@ -234,6 +252,7 @@ public sealed class BacnetDevice : IDisposable
                 "write_failed",
                 $"WriteProperty ({item.TopicPath}) ist fehlgeschlagen: {ex.Message}",
                 ex);
+            MarkFailed("write_failed");
             return WriteOutcome.BusError;
         }
         finally
@@ -280,6 +299,7 @@ public sealed class BacnetDevice : IDisposable
                     $"ReadProperty ({item.TopicPath}) hat keinen verwertbaren Wert geliefert.",
                     null,
                     "warning");
+                MarkFailed("no_value");
                 return false;
             }
 
@@ -295,6 +315,7 @@ public sealed class BacnetDevice : IDisposable
                 : new AnalogValue(number.Value, item.Min, item.Max, item.Unit);
 
             _cache.Update(item.Id, value);
+            MarkConnected();
             return true;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
@@ -310,6 +331,7 @@ public sealed class BacnetDevice : IDisposable
                 $"ReadProperty ({item.TopicPath}) timed out after {_itemTimeout.TotalMilliseconds:0} ms",
                 null,
                 "warning");
+            MarkFailed("timeout");
             return false;
         }
         catch (BacnetTimeoutException ex)
@@ -325,6 +347,7 @@ public sealed class BacnetDevice : IDisposable
                 $"ReadProperty ({item.TopicPath}) timed out after {_itemTimeout.TotalMilliseconds:0} ms",
                 ex,
                 "warning");
+            MarkFailed("timeout");
             return false;
         }
         catch (BacnetException ex)
@@ -336,6 +359,7 @@ public sealed class BacnetDevice : IDisposable
                 "read_failed",
                 $"ReadProperty ({item.TopicPath}) ist fehlgeschlagen: {ex.Message}",
                 ex);
+            MarkFailed("read_failed");
             return false;
         }
         finally
@@ -345,6 +369,25 @@ public sealed class BacnetDevice : IDisposable
                 _busLock.Release();
             }
         }
+    }
+
+    /// <summary>
+    /// Vermerkt einen erfolgreichen Buszugriff.
+    /// </summary>
+    private void MarkConnected()
+    {
+        IsConnected = true;
+        LastError = null;
+    }
+
+    /// <summary>
+    /// Vermerkt einen fehlgeschlagenen Buszugriff.
+    /// </summary>
+    /// <param name="code">Der Fehlercode.</param>
+    private void MarkFailed(string code)
+    {
+        IsConnected = false;
+        LastError = code;
     }
 
     /// <summary>

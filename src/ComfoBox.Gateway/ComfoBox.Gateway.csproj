@@ -21,7 +21,6 @@
 
   <ItemGroup>
     <!-- Hosting/Configuration bringt der Web-SDK bereits mit (NU1510) -->
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="MQTTnet" />
     <PackageReference Include="Serilog.AspNetCore" />

@@ -28,12 +28,18 @@ public static class GatewayServiceCollectionExtensions
     /// <param name="configuration">Die Konfiguration.</param>
     /// <param name="contentRootPath">Der Arbeitsverzeichnis-Pfad (für das Datenverzeichnis).</param>
     /// <param name="logBuffer">Der In-Memory-Logpuffer.</param>
+    /// <param name="startBackgroundServices">
+    /// Sollen die Hintergrunddienste (BACnet-Polling, MQTT-Verbindung) laufen?
+    /// Ein Test schaltet sie ab - er darf weder den seriellen Port öffnen
+    /// noch sich mit einem Broker verbinden.
+    /// </param>
     /// <returns>Der Service-Container.</returns>
     public static IServiceCollection AddGatewayServices(
         this IServiceCollection services,
         IConfiguration configuration,
         string contentRootPath,
-        InMemoryLogSink logBuffer)
+        InMemoryLogSink logBuffer,
+        bool startBackgroundServices = true)
     {
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
@@ -71,9 +77,16 @@ public static class GatewayServiceCollectionExtensions
 
         // Die Options-Klassen selbst als Singleton - mehrere Dienste brauchen sie
         // direkt (nicht nur über IOptions<T>).
+        //
+        // Wichtig: jeder Typ, der als Parameter eines Minimal-API-Endpunkts
+        // auftaucht, muss hier registriert sein. Sonst hält die
+        // RequestDelegateFactory den Parameter für einen Request-Body - und
+        // ein GET mit Body-Parameter ist ein Fehler ("Body was inferred but
+        // the method does not allow inferred body parameters").
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<GatewayOptions>>().Value);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<BacnetOptions>>().Value);
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<MqttOptions>>().Value);
+        services.AddSingleton(sp => sp.GetRequiredService<IOptions<LoggingOptions>>().Value);
 
         // -------------------------------------------------------------------
         // Kern
@@ -134,7 +147,11 @@ public static class GatewayServiceCollectionExtensions
             return client;
         });
         services.AddSingleton<BacnetDevice>();
-        services.AddHostedService<BacnetPollingService>();
+
+        if (startBackgroundServices)
+        {
+            services.AddHostedService<BacnetPollingService>();
+        }
 
         // -------------------------------------------------------------------
         // MQTT (Phase 3): Verbindungen, Publisher, Subscriber, Discovery, Status.
@@ -172,9 +189,12 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatusPublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantBirthHandler>());
 
-        services.AddHostedService(sp => sp.GetRequiredService<MqttStatePublisher>());
-        services.AddHostedService(sp => sp.GetRequiredService<MqttStatusPublisher>());
-        services.AddHostedService(sp => sp.GetRequiredService<MqttConnectionManager>());
+        if (startBackgroundServices)
+        {
+            services.AddHostedService(sp => sp.GetRequiredService<MqttStatePublisher>());
+            services.AddHostedService(sp => sp.GetRequiredService<MqttStatusPublisher>());
+            services.AddHostedService(sp => sp.GetRequiredService<MqttConnectionManager>());
+        }
 
         return services;
     }

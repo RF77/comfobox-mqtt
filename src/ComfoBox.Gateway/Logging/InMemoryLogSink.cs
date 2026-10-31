@@ -50,6 +50,16 @@ public sealed class InMemoryLogSink : ILogEventSink, IDisposable
     public long Count => Interlocked.Read(ref _count);
 
     /// <summary>
+    /// Wird ausgelöst, wenn ein neuer Eintrag aufgenommen wurde.
+    /// </summary>
+    /// <remarks>
+    /// Der Live-Tail der Web-UI (<c>GET /api/diagnostics/logs/stream</c>)
+    /// hört auf diesem Ereignis - so ist der Stream **ereignisgetrieben**
+    /// und kein Polling.
+    /// </remarks>
+    public event EventHandler<LogEntry>? EntryAdded;
+
+    /// <summary>
     /// Nimmt ein Log-Ereignis auf.
     /// </summary>
     /// <param name="logEvent">Das Ereignis.</param>
@@ -77,6 +87,8 @@ public sealed class InMemoryLogSink : ILogEventSink, IDisposable
             }
 
             Interlocked.Increment(ref _count);
+
+            EntryAdded?.Invoke(this, entry);
         }
         catch (Exception)
         {

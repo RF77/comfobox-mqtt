@@ -7,17 +7,20 @@ appsettings.json            (im Image, Defaults)
         ↓
 appsettings.{Environment}.json  (optional, z. B. Production)
         ↓
-Umgebungsvariablen COMFOBOX__*   (überschreiben)
+Umgebungsvariablen COMFOBOX_*   (überschreiben)
         ↓
-appsettings.override.json    (von der UI geschrieben, überschreiben ebenfalls)
-        ↓
-Command-Line-Argumente      (höchste Priorität)
+config.json                  (vom Assistenten geschrieben – höchste Priorität)
 ```
 
-> **Achtung Reihenfolge:** `AddJsonFile(..., reloadOnChange: true)` wird **vor** den
-> Umgebungsvariablen registriert → Env gewinnt. Die `override.json` muss **nach** den
-> Env-Variablen geladen werden, damit die UI sie überschreiben kann – oder, wie in der
-> Spec beschrieben, entscheidet die UI explizit, welche Werte sie überschreibt.
+> **Warum hat die Datei Vorrang?** Passwörter in Umgebungsvariablen landen
+> sichtbar in `docker inspect`. Die ausdrückliche Wahl des Benutzers im
+> Assistenten darf außerdem nicht von einer Umgebungsvariable überschrieben
+> werden. Umgesetzt in `GatewayConfiguration.AddGatewaySources()`
+> (`src/ComfoBox.Gateway/Configuration/GatewayConfiguration.cs`).
+>
+> **Umgebungsvariablen:** `Microsoft.Extensions.Configuration` übersetzt `__`
+> (Doppel-Unterstrich) in Hierarchie. Mit dem Präfix `COMFOBOX_` wird
+> `COMFOBOX_Gateway__BaseTopic` zu `Gateway:BaseTopic`.
 
 ## 2. Environment-Variable-Schema
 
@@ -45,6 +48,12 @@ Command-Line-Argumente      (höchste Priorität)
 | `COMFOBOX_Logging__Directory` | Logging | Directory | `/var/log/comfobox` |
 | `COMFOBOX_Logging__RingBuffer__Capacity` | Logging | RingBuffer.Capacity | `1000` |
 | `COMFOBOX_Logging__RingBuffer__MinimumLevel` | Logging | RingBuffer.MinimumLevel | `Information` |
+| `COMFOBOX_Gateway__DeviceId` | Gateway | DeviceId | `comfobox1` |
+| `COMFOBOX_Gateway__RestartEnabled` | Gateway | RestartEnabled | `true` |
+| `COMFOBOX_Api__RequireAuthentication` | Api | RequireAuthentication | `false` |
+| `COMFOBOX_Api__SuggestedUiPort` | Api | SuggestedUiPort | `8081` |
+| `COMFOBOX_Api__BacnetTestTimeoutSeconds` | Api | BacnetTestTimeoutSeconds | `10` |
+| `COMFOBOX_Api__MqttTestTimeoutSeconds` | Api | MqttTestTimeoutSeconds | `10` |
 
 ## 3. Vollständige `appsettings.json` (Referenz)
 
@@ -52,6 +61,7 @@ Command-Line-Argumente      (höchste Priorität)
 {
   "Gateway": {
     "BaseTopic": "ComfoBox",
+    "DeviceId": "comfobox1",
     "PollIntervalSeconds": 60,
     "UseMqttRetain": true,
     "ExpertMode": false,
@@ -98,6 +108,12 @@ Command-Line-Argumente      (höchste Priorität)
       "Capacity": 1000,
       "MinimumLevel": "Information"
     }
+  },
+  "Api": {
+    "RequireAuthentication": false,
+    "SuggestedUiPort": 8081,
+    "BacnetTestTimeoutSeconds": 10,
+    "MqttTestTimeoutSeconds": 10
   }
 }
 ````
@@ -156,11 +172,12 @@ services:
 | Pfad im Container | Zweck | Volume |
 |---|---|---|
 | `/var/lib/comfobox` | Schreibzähler (24-h-Fenster) | `comfobox-data` |
+| `/var/lib/comfobox/config.json` | Konfiguration des Assistenten, Admin-Hash, API-Token (Modus 0600) | `comfobox-data` |
 | `/var/log/comfobox` | JSON-Log-Dateien | `./logs` (Bind-Mount) |
-| `/app/appsettings.override.json` | von der UI geänderte Config | **im selben Volume** |
 
-> **Wichtig:** `appsettings.override.json` muss im **gleichen** Volume liegen wie
+> **Wichtig:** Die `config.json` muss im **gleichen** Volume liegen wie
 > `/var/lib/comfobox`, sonst ist die UI-Konfiguration nach einem Container-Neustart weg.
+> Der Schreibzähler (`write-counter.json`) liegt dort ebenfalls.
 
 ## 7. Backup & Restore
 

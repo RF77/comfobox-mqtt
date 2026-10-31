@@ -67,15 +67,15 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 4.1 | Items-Endpunkte (CRUD + Validierung) | ⬜ | 1.0 |
-| 4.2 | `/api/health`, `/api/status`, `/api/diagnostics` | ⬜ | 0.5 |
-| 4.3 | SSE-Stream | ⬜ | 1.0 |
-| 4.4 | `/api/config` (GET/PUT) + Persistenz | ⬜ | 0.5 |
-| 4.5 | `/api/service/restart` + `ServiceControl` | ⬜ | 0.5 |
-| 4.6 | OpenAPI/Swagger | ⬜ | 0.5 |
-| 4.7 | **Setup-API** (`/api/setup/*`, PBKDF2, `config.json`) | ⬜ | 1.5 |
-| 4.8 | **Token-API** (`/api/security/tokens`) | ⬜ | 1.0 |
-| 4.9 | **Log-Endpunkte** (`/api/diagnostics/logs`, SSE-Tail) | ⬜ | 0.5 |
+| 4.1 | Items-Endpunkte (CRUD + Validierung) | ✅ | 1.0 |
+| 4.2 | `/api/health`, `/api/status`, `/api/diagnostics` | ✅ | 0.5 |
+| 4.3 | SSE-Stream | ✅ | 1.0 |
+| 4.4 | `/api/config` (GET/PUT) + Persistenz | ✅ | 0.5 |
+| 4.5 | `/api/service/restart` + `ServiceControl` | ✅ | 0.5 |
+| 4.6 | OpenAPI/Swagger | ✅ | 0.5 |
+| 4.7 | **Setup-API** (`/api/setup/*`, PBKDF2, `config.json`) | ✅ | 1.5 |
+| 4.8 | **Token-API** (`/api/security/tokens`) | ✅ | 1.0 |
+| 4.9 | **Log-Endpunkte** (`/api/diagnostics/logs`, SSE-Tail) | ✅ | 0.5 |
 
 ## Phase 5 – Angular/Optimus UI (9.5 PT)
 
@@ -167,15 +167,16 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) von 63 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) von 63 PT.
 >
-> **Stand 2026-10-31:** 219 Tests grün (45 BACnet + 30 Domain + 10 Contract + 134 Gateway).
+> **Stand 2026-10-31:** 278 Tests grün (45 BACnet + 30 Domain + 10 Contract + 193 Gateway).
 
 ## Nächste Aufgabe
 
-> **4.1 – Items-Endpunkte (CRUD + Validierung)** (1.0 PT)
-> Datei: `src/ComfoBox.Gateway/Api/**` · Die REST-API liegt in Phase 4
-> Verifikation: Build grün, `dotnet test` grün, kein Schreibvorgang ohne den
-> 24-h-Zähler
-> → Details: [phase-4.md](phase-4.md)
-> → **Prompt:** [prompts/Prompt-Phase-4.md](prompts/Prompt-Phase-4.md) (direkt kopierbar)
+> **5.1 – Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura** (0.5 PT)
+> Datei: `src/ComfoBox.Web/**` · Die Web-UI spricht nur mit der REST/SSE-API
+> des Gateways
+> Verifikation: `npm ci && npm run lint && npm start` grün, die Oberfläche
+> zeigt die Items aus `/api/items`
+> → Details: [phase-5.md](phase-5.md)
+> → **Prompt:** [prompts/Prompt-Phase-5.md](prompts/Prompt-Phase-5.md) (direkt kopierbar)

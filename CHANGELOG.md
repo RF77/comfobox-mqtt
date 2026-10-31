@@ -93,6 +93,45 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 3: 76 neue Tests (Payload, Topic-Vertrag, Subscriber, Discovery,
   Health, MQTT-Integration gegen einen eingebetteten Broker, End-to-End) →
   **219 Tests grün**
+- Phase 4: `ComfoBox.Gateway.Api.GatewayApiExtensions` – `AddGatewayApi()` (DI)
+  und `MapGatewayApi()` (Routen) – die REST-Schnittstelle liegt **nicht** in
+  `Program.cs`, damit die Tests sie isoliert aufbauen können
+- Phase 4: Item-Endpunkte – `GET /api/items`, `GET /api/items/{id}`,
+  `GET /api/items/group/{group}`, `PUT /api/items/{id}` mit den Statuscodes
+  204/400/403/409/422/502; **jeder** Schreibvorgang läuft über
+  `BacnetDevice.WriteAsync` (der 24-h-Zähler ist nicht umgehbar)
+- Phase 4: `GET /api/health`, `GET /api/status`, `GET /api/diagnostics/errors`,
+  `GET /api/diagnostics/writes` – die Feldnamen von `/api/status` sind
+  **Vertrag** (die Home-Assistant-Integration liest sie)
+- Phase 4: SSE-Stream `GET /api/events` mit den Ereignissen `snapshot` und
+  `value`
+- Phase 4: `GET`/`PUT /api/config` – `GET` liefert die Konfiguration **ohne**
+  Passwörter (nur `passwordSet`), `PUT` schreibt nach `config.json`
+  (Modus 0600)
+- Phase 4: `POST /api/service/restart` → 202; der Neustart läuft **in-process**
+  (`IHostApplicationLifetime.StopApplication()`) – kein Docker-Socket nötig
+- Phase 4: OpenAPI/Swagger unter `/swagger` (nur im Development-Modus) –
+  Swashbuckle **10.3.1**
+- Phase 4: Setup-API `/api/setup/*` – Zustand, serielle Ports (aus
+  `ports.json`), freier Web-Port, BACnet-/MQTT-Test mit maschinenlesbarem
+  `hint`, Konfiguration schreiben (Passwort **serverseitig** gehasht),
+  `apply` → Neustart
+- Phase 4: Token-API `/api/security/tokens` – der Klartext ist **einmal**
+  sichtbar, gespeichert wird nur der PBKDF2-Hash (`pbkdf2-sha256$600000$…`)
+- Phase 4: Log-Endpunkte `/api/diagnostics/logs` (Filter level/source/search/
+  since/limit/order, Obergrenze 1000), `/stream` (SSE-Tail mit Initial-
+  Snapshot, max. 5 gleichzeitige Streams) und `DELETE`
+- Phase 4: `ComfoBox.Gateway.Security.ApiAccessGuard` – die Zugriffskontrolle
+  (Bearer-Token, Basic-Auth des Administrators, LAN-Modus) – siehe
+  [ADR-012](docs/05-entscheidungen/adr-012-api-zugriffskontrolle.md)
+- Phase 4: `ComfoBox.Gateway.Storage.AtomicFile` – atomisches Schreiben mit
+  Retry (Windows sperrt die Datei unter Umständen für einen Moment)
+- Phase 4: `Gateway:DeviceId` (Standard `comfobox1`) und
+  `Gateway:RestartEnabled` als neue Einstellungen; `Api:RequireAuthentication`,
+  `Api:SuggestedUiPort`, `Api:BacnetTestTimeoutSeconds`,
+  `Api:MqttTestTimeoutSeconds` als neuer `Api`-Abschnitt
+- Phase 4: 59 neue Tests (Items, Status, SSE, Config, Neustart, Token, Setup,
+  Log) gegen einen **echten** Kestrel-Testhost → **278 Tests grün**
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ComfoBox.Gateway.Storage;
 
 namespace ComfoBox.Gateway.Protection;
 
@@ -268,18 +269,10 @@ public sealed class WriteCounter : IWriteCounter
     /// </summary>
     private void Persist()
     {
-        var directory = Path.GetDirectoryName(_filePath);
-        if (!string.IsNullOrEmpty(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-
         var state = new CounterState { Writes = [.. _writes] };
         var json = JsonSerializer.Serialize(state, JsonOptions);
 
-        var temporary = _filePath + ".tmp";
-        File.WriteAllText(temporary, json);
-        File.Move(temporary, _filePath, overwrite: true);
+        AtomicFile.WriteAllText(_filePath, json);
     }
 
     /// <summary>
