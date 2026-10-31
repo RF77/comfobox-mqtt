@@ -37,22 +37,45 @@ Golden-Tests ZUERST, Portierung DANACH. Der Codec (BACnetBase) wird 1:1
 übernommen – KEINE "Verbesserungen" während der Portierung. Die Golden-Tests
 müssen vor der Portierung existieren und danach OHNE Fixture-Änderung grün sein.
 
-Reihenfolge (aus phase-1.md):
-- 1.1 Golden-Frames aus docs/Mono/MoMA Scan Results.html extrahieren
-- 1.2 Golden-Tests gegen den ALTEN Code (src_old/Bacnet) – müssen zuerst grün sein
-- 1.3 Portierung des Codecs nach src/ComfoBox.Bacnet/
-- 1.4 Item-Metadaten / BACnet-Objekt-IDs übernehmen
-- 1.5 MSTP-Transport portieren
-- 1.6 Pipe-/UDP-/PTP-Transport ENTFERNEN
-- 1.7 Trace → ILogger (Befund A16, 26 Fundstellen in src_old/)
-- 1.8 Timeout-/Reconnect-Härtung + Spin-Loop-Fix (Befund A8)
+Stand: **1.1, 1.2 und 1.3 sind fertig** (siehe status.md / protokoll.md vom
+2026-10-31). Offen sind 1.4 (BACnetClient), 1.5 (BACnetTransport), 1.6
+(Pipe/UDP/PTP in den Transports), 1.7 (Trace in Client/Transport) und 1.8
+(Timeout-/Reconnect-Härtung).
 
-Hinweise, die ich schon verifiziert habe:
-- docs/Mono/MoMA Scan Results.html und docs/topics.json sind TEST-FIXTURES.
-  Sie dürfen NICHT verändert werden. Notiere die Prüfsumme der HTML-Datei
-  im Protokoll, bevor du anfängst.
+Reihenfolge (aus phase-1.md):
+- 1.4 BACnetClient portieren (2.098 Zeilen) → async/await, kein .Result
+- 1.5 BACnetTransport portieren (2.005 Zeilen, MSTP + Serial) → A8-Spin-Loop-Fix
+- 1.6 Pipe-/UDP-/PTP-Transport ENTFERNEN (im Codec bereits erledigt)
+- 1.7 Trace → ILogger (im Codec bereits erledigt, Client/Transport offen)
+- 1.8 Timeout-/Reconnect-Härtung
+
+Hinweise, die ich schon verifiziert habe – bitte nicht neu recherchieren:
+- ✅ `docs/Mono/MoMA Scan Results.html` enthält **KEINE BACnet-Frames** (es ist ein
+  Mono-Missing-Analysis-Report). Die Golden-Frames kommen aus dem Legacy-Codec
+  selbst, erzeugt über `tools/port-bacnet/oracle/`. Die Fixture
+  `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` (25 Frames) ist
+  eingefroren und darf **nicht** geändert werden.
+- ✅ Der Codec ist portiert: `src/ComfoBox.Bacnet/Bacnet/BacnetCodec.cs`.
+  Das Port-Skript ist `tools/port-bacnet/port-bacnet-base.mjs` – **benutze es**,
+  statt den Codec von Hand umzubauen. Es entfernt `BVLC` + `PTP`, zieht den
+  Namespace um und ersetzt `Trace` durch `BacnetLog`.
+- ✅ `dotnet test src/ComfoBox.sln -c Release` → 26 Tests grün. Das ist die
+  Messlatte: nach 1.4/1.5 müssen sie **ohne** Fixture-Änderung grün bleiben.
+- ⚠️ `BACnetBase.cs` referenziert `BacnetIpUdpProtocolTransport` aus
+  `BACnetTransport.cs` – der Codec ist nicht standalone. Für 1.4/1.5 gilt das
+  umgekehrt: `BACnetTransport.cs` braucht den Codec.
+- ⚠️ Der Legacy-Codec braucht `#nullable disable` (7.500 Zeilen) – mit
+  `Nullable=enable` + `TreatWarningsAsErrors` sind das ~40 Fehler. Das Projekt
+  `ComfoBox.Bacnet` hat daher `EnableNETAnalyzers=false` und ein `NoWarn`
+  (CS1591, CS0162, CS1572, CS1587).
+- ⚠️ `CA1707` moniert Unterstriche in Bezeichnern – auch in **Testmethodennamen**.
+  Die sind hier Haustil → `NoWarn CA1707` in den Testprojekten.
+- ⚠️ `Services.DecodeIamBroadcast` gibt bei Erfolg **0** zurück
+  (`return offset - org_offset`), nicht die Länge. Golden-Test schreibt das fest.
+- ⚠️ `dotnet new web` liefert Pakete, die der Web-SDK schon mitbringt → `NU1510`.
+- ⚠️ `RestorePackagesWithLockFile` braucht das TFM **in der Projektdatei**,
+  nicht nur in `Directory.Build.props` → sonst `NETSDK1013`.
 - src_old/ ist Archiv: lesen ist erlaubt und erwünscht, ändern nie.
-  Die Golden-Tests in 1.2 referenzieren den alten Code – das ist beabsichtigt.
 - Baue immer aus src/ (cd src), damit global.json greift. Baue nie vom Repo-Root.
 - Die Zeitlimits des MSTP-Frame-Encoders sind der heikelste Teil des Projekts.
   Keine "Aufrundung" zu Gunsten der Lesbarkeit – der alte Code ist die Norm.
