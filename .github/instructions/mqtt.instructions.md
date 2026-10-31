@@ -1,9 +1,30 @@
 ---
 description: "Use when changing MQTT publishing, subscribing, topic mapping, payloads, Home Assistant discovery, availability, health/status topics, or the restart command in this repository."
-applyTo: ["src/ComfoBox.Gateway/Mqtt/**/*.cs", "src/ComfoBoxMqtt/**/*.cs", "src/ComfoBox.Domain/**/*.cs"]
+applyTo: ["src/ComfoBox.Gateway/Mqtt/**/*.cs", "src_old/ComfoBoxMqtt/**/*.cs", "src/ComfoBox.Domain/**/*.cs", "custom_components/comfobox/**/*.py"]
 ---
 
 # MQTT & Home Assistant – Regeln
+
+## 0. Zwei Wege nach Home Assistant – nicht verwechseln
+
+| Weg | Transport | Code | Broker nötig? |
+|---|---|---|---|
+| **MQTT-Discovery** (Status quo) | MQTT-Topics | `src/ComfoBox.Gateway/Mqtt/**` | **ja** |
+| **HA-Integration** (HACS) | REST/SSE zum Gateway | `custom_components/comfobox/**` | **nein** |
+
+> **Die Integration spricht mit dem Gateway, nicht mit dem Bus.**
+> Es gibt **nie** zwei gleichzeitige Master auf dem MS/TP-Bus.
+> → [ADR-009](../../docs/05-entscheidungen/adr-009-ha-integration-ohne-mqtt.md)
+
+**Für die Integration gilt zusätzlich:**
+
+| Regel | Begründung |
+|---|---|
+| Min/Max/Enum-Namen **nicht** nachbauen | sie kommen aus dem Gateway-Katalog (`/api/items`) |
+| Kein eigener BACnet-Zugriff | umginge den Schreibschutz (24-h-Limit) |
+| Der **API-Token** nie loggen | erscheint sonst in HA-Logs und Exceptions |
+| Schreibanfragen immer über `PUT /api/items/{id}` | der Schreibschutz liegt im Gateway |
+| `mqtt`-Imports sind in der Integration **verboten** | sie ist broker-frei |
 
 ## 1. Library
 

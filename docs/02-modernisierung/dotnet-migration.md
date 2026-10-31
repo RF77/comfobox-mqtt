@@ -1,5 +1,8 @@
 # .NET-Migration
 
+> **Quelle:** Der Legacy-Bestand liegt unter [`src_old/`](../../src_old) und ist die
+> **Eingangsliste** für diese Migration. Die Ziele entstehen neu in [`src/`](../../src).
+
 ## 1. Ziel
 
 Alle Projekte werden von **.NET Framework 4.5.2 / `packages.config`** auf **.NET 10 / SDK-Projektformat
@@ -64,14 +67,14 @@ ohne Windows möglich.
 
 | Alt | Neu | Transformation |
 |---|---|---|
-| `src/Bacnet` | `src/ComfoBox.Bacnet` | nur MSTP/Serial behalten, `System.IO.Ports` |
-| `src/ComfoBoxLib` | `src/ComfoBox.Domain` (Katalog/Werte) **+** `ComfoBox.Gateway/Bacnet` (I/O) | Trennung: Fachmodell vs. I/O |
-| `src/ComfoBoxMqtt` | `src/ComfoBox.Gateway/Mqtt` | Rewrite auf MQTTnet |
-| `src/ComfoBoxMqttConsole` | `src/ComfoBox.Gateway` | → ASP.NET Core Host |
-| `src/ComfoboxService` | — | entfällt (Docker bzw. `WindowsService`-Host) |
-| `src/DemoClient` (WPF) | — | entfällt → wird durch die Web-UI ersetzt |
-| `src/ServiceInstaller` (WiX) | — | entfällt → `dotnet publish` + Container |
-| `src/XmlConfigMerge` (Binär) | — | entfällt |
+| `src_old/Bacnet` | `src/ComfoBox.Bacnet` | nur MSTP/Serial behalten, `System.IO.Ports` |
+| `src_old/ComfoBoxLib` | `src/ComfoBox.Domain` (Katalog/Werte) **+** `ComfoBox.Gateway/Bacnet` (I/O) | Trennung: Fachmodell vs. I/O |
+| `src_old/ComfoBoxMqtt` | `src/ComfoBox.Gateway/Mqtt` | Rewrite auf MQTTnet |
+| `src_old/ComfoBoxMqttConsole` | `src/ComfoBox.Gateway` | → ASP.NET Core Host |
+| `src_old/ComfoboxService` | — | entfällt (Docker bzw. `WindowsService`-Host) |
+| `src_old/DemoClient` (WPF) | — | entfällt → wird durch die Web-UI ersetzt |
+| `src_old/ServiceInstaller` (WiX) | — | entfällt → `dotnet publish` + Container |
+| `src_old/XmlConfigMerge` (Binär) | — | entfällt |
 
 ## 4. Settings → `Microsoft.Extensions.Configuration`
 

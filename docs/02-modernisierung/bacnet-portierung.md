@@ -1,6 +1,11 @@
 # BACnet-Portierung
 
-Der Protokollstack in `src/Bacnet` (~12.800 Zeilen) ist **Fremdcode** ohne Tests und die größte
+> **Quelle:** Der zu portierende Stack liegt unter
+> [`src_old/Bacnet/`](../../src_old/Bacnet) und ist **Fremdcode** (MIT, von
+> bacnet.sourceforge.net). Das Ziel entsteht neu in
+> [`src/ComfoBox.Bacnet/`](../../src).
+
+Der Protokollstack in `src_old/Bacnet` (~12.800 Zeilen) ist **Fremdcode** ohne Tests und die größte
 Portierungsrisiko-Quelle. Dieses Dokument beschreibt, wie er sicher auf .NET 10 kommt.
 
 ## 1. Bestandsaufnahme des Fremdcodes

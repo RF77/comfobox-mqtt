@@ -1,5 +1,10 @@
 # Befunde (Ist-Zustand)
 
+> ⚠️ **Befunde am Legacy-Bestand unter [`src_old/`](../../src_old).**
+> Die Fundstellen (`ComfoBoxMqttClient.cs:262-265` usw.) beziehen sich auf `src_old/`.
+> Der Code wird **nicht** mehr gepflegt – die Befunde sind die **Eingangsliste** für die
+> Neuzuimplementierung in [`src/`](../../src).
+
 Priorisierte Liste der Defekte, Schwachstellen und Risiken. Grundlage für die Spec in
 [../02-modernisierung](../02-modernisierung/README.md).
 
@@ -47,7 +52,7 @@ Priorisierte Liste der Defekte, Schwachstellen und Risiken. Grundlage für die S
 | **A23** | P2 | MSTP-Thread mit `ThreadPriority.Highest` | `BACnetTransport.cs:1500` | Kann OS-Tasks starve'n |
 | **A18** | P2 | `throw ex` statt `throw` (3×) – Stack-Trace-Verlust | `BACnetClient.cs:932` u. a. | Diagnose erschwert |
 | **A19** | P2 | `m_invoke_id++` nicht threadsicher (20+ Stellen) | `BACnetClient.cs:949` u. a. | Nur durch `lock(this)` kaschiert |
-| **A16** | P1 | BACnet-Stack nutzt `System.Diagnostics.Trace` statt Logging | 26 Fundstellen in `src/Bacnet` | **Protokolldiagnose unsichtbar**; im Release-Build gehen alle Meldungen ins Leere |
+| **A16** | P1 | BACnet-Stack nutzt `System.Diagnostics.Trace` statt Logging | 26 Fundstellen in `src_old/Bacnet` | **Protokolldiagnose unsichtbar**; im Release-Build gehen alle Meldungen ins Leere |
 | **A26** | P1 | `BacnetPipeTransport` mit `kernel32.dll`-P/Invoke | `BACnetTransport.cs:466` | Windows-only – bricht unter Mono |
 
 ---

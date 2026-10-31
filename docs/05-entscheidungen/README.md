@@ -27,6 +27,8 @@ ihre Konsequenzen. Ein ADR ist **unveränderlich** – eine geänderte Entscheid
 | [ADR-006](adr-006-item-katalog.md) | Item-Katalog als deklarative Domäne | Accepted |
 | [ADR-007](adr-007-ein-container-image.md) | Ein einziges Container-Image für Gateway und Web-UI | Accepted |
 | [ADR-008](adr-008-synology-spk.md) | Installation als Synology-Paket (SPK) mit Getting-Started-Assistenten | Accepted |
+| [ADR-009](adr-009-ha-integration-ohne-mqtt.md) | Home Assistant: Integration über das Gateway statt eigenem BACnet-Stack | Accepted |
+| [ADR-010](adr-010-benutzerdokumentation.md) | Benutzerdokumentation: eine Quelle, drei Auslieferungskanäle | Accepted |
 
 ## 3. Offene Entscheidungen (noch kein ADR)
 

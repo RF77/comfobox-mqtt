@@ -103,16 +103,26 @@ Jeder Fehler landet in **drei** Kanälen: Log, `ComfoBox/Status/Errors` und die 
 ## 5. Projektstruktur (Ziel)
 
 ````
-src/
+src/                          # ← Neuzuimplementierung (.NET 10 / Angular 22)
 ├── ComfoBox.Bacnet/          # BACnet-MSTP-Stack (portiert)
 ├── ComfoBox.Domain/          # Item-Katalog + Werttypen (framework-frei!)
 ├── ComfoBox.Gateway/         # Host: BACnet + MQTT + API + Health (+ SPA aus wwwroot)
 ├── ComfoBox.Web/             # Angular 22 + Optimus UI (inkl. Getting-Started-Assistent)
 ├── ComfoBox.*.Tests/         # Unit-/Integrationstests
 └── ComfoBox.Contract.Tests/  # MQTT-Kompatibilität
+src_old/                      # ← Legacy-Bestand (net452): NUR Referenz, nicht pflegen
+custom_components/comfobox/   # Home-Assistant-Integration (Python, via HACS)
 deploy/synology-spk/          # Synology-Paket (SPK) + Supervisor
+deploy/ha-addon/              # Home-Assistant-Add-on (Supervisor-Manifest)
 docs/                         # Spezifikation (siehe docs/README.md)
+docs/benutzer/                # Benutzerdokumentation (→ HTML für die Web-UI)
+docs/06-aufgaben/             # Arbeitsanweisungen je Phase (Task-Dokument)
+tools/                        # Link-Checker, Doku-Build, Payload-Vergleich
 ````
+
+> **`src_old/` ist Archiv.** Der Code wird nicht gebaut und nicht gepflegt. Er ist die
+> Referenz für Protokollverhalten, Item-Metadaten und Fehlerbilder. **Neue Änderungen
+> gehören immer nach `src/`.**
 
 **Schichtregeln:**
 
@@ -148,6 +158,14 @@ docker compose logs -f gateway
 # Synology-Paket (SPK) bauen und prüfen
 bash deploy/synology-spk/tools/check-shell.sh
 bash deploy/synology-spk/build-spk.sh
+
+# HA-Integration (Python)
+pip install -r custom_components/comfobox/requirements_test.txt
+pytest custom_components/comfobox/tests -v
+ruff check custom_components/comfobox
+
+# Benutzerdoku → HTML (für den Hilfe-Bereich der Web-UI)
+node tools/build-docs.mjs
 ````
 
 | Voraussetzung | Version |
@@ -184,6 +202,12 @@ bash deploy/synology-spk/build-spk.sh
 | Kein Docker-Socket im Container | Sicherheit | Host-seitiger Supervisor |
 | `postuninst` darf das `var`-Verzeichnis **nicht** löschen | SPK | sonst ist der Schreibzähler weg |
 | Root-`.gitignore` hat `[Bb]in/` | SPK | `src/target/bin/*.sh` würde ignoriert → Ausnahme in `deploy/synology-spk/.gitignore` |
+| Ein Master pro MS/TP-Bus | BACnet/HA | Gateway **oder** Direktintegration – nie beides |
+| Die HA-Integration spricht **mit dem Gateway**, nicht mit dem Bus | HA | sonst umginge sie den Schreibschutz |
+| Add-on braucht `linux/arm64` | Docker | Pi 5 / HA Green → Multi-Arch-Publish |
+| Ingress ist **kein** API-Endpunkt | HA-Add-on | Ingress-URL enthält ein rotierendes Token → Port 8099 nutzen |
+| `src_old/` ist **Archiv** | Altbestand | wird nicht gebaut, nicht gepflegt – nur gelesen |
+| Die Benutzerdoku hat **Front-Matter** | docs/benutzer | `tools/build-docs.mjs` bricht sonst ab |
 
 ## 9. Detailliertere Regeln
 

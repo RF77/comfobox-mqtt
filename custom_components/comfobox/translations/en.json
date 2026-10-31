@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect ComfoBox gateway",
+        "description": "Enter the gateway address and an API token. You can find the token in the gateway web UI under 'Configuration → API tokens'.",
+        "data": {
+          "host": "Gateway address",
+          "token": "API token",
+          "verify_ssl": "Verify TLS certificate"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Enter a new API token",
+        "description": "The previous token is no longer accepted. Please enter a new token from the gateway web UI.",
+        "data": {
+          "token": "API token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The gateway is not reachable at this address.",
+      "invalid_auth": "The API token is invalid.",
+      "unknown": "Unexpected error while connecting."
+    },
+    "abort": {
+      "already_configured": "This gateway is already set up."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bacnet_connected": { "name": "BACnet connected" },
+      "mqtt_connected": { "name": "Broker connected" }
+    }
+  },
+  "services": {
+    "set_value": {
+      "name": "Set value",
+      "description": "Writes a value to a ComfoBox item.",
+      "fields": {
+        "value": { "name": "Value", "description": "The value to write." }
+      }
+    },
+    "restart": {
+      "name": "Restart gateway",
+      "description": "Restarts the ComfoBox gateway."
+    },
+    "read_all": {
+      "name": "Read all values",
+      "description": "Reads all items from the gateway immediately."
+    }
+  }
+}

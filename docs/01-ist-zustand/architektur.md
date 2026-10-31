@@ -1,5 +1,8 @@
 # Architektur (Ist-Zustand)
 
+> ⚠️ **Beschreibt den Legacy-Bestand unter [`src_old/`](../../src_old).**
+> Datei- und Zeilenverweise gelten für `src_old/`.
+
 ## 1. Schichtenmodell
 
 ```
@@ -168,7 +171,7 @@ MQTT-Verbindung und Startet alles neu. Details in [befunde.md](befunde.md#a7-ein
 
 ## 6. Was der Protokollstack mitbringt (und nicht braucht)
 
-`src/Bacnet` enthält **vier** Transport-Implementierungen:
+`src_old/Bacnet` enthält **vier** Transport-Implementierungen:
 
 | Transport | Klasse | Wird genutzt? | Portierungsrisiko |
 |---|---|---|---|

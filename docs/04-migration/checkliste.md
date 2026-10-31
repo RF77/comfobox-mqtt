@@ -172,6 +172,60 @@ Checklisten pro Phase. Jede Phase gilt erst als abgeschlossen, wenn **alle** Pun
 
 ---
 
+## Phase 8a–8d – Home-Assistant-Ökosystem
+
+### 8a. HACS-Integration
+
+- [ ] `hacs.json` vorhanden, HACS findet die Integration
+- [ ] `manifest.json` vollständig (`domain`, `name`, `codeowners`, `config_flow`, `documentation`, `iot_class`, `version`)
+- [ ] Config Flow mit Adresse + Token; Fehler `cannot_connect` / `invalid_auth` verständlich
+- [ ] **Ein** Gerät „ComfoBox ELESTA" (Hersteller, Modell, SW-Version, Konfigurations-URL)
+- [ ] Alle 127 Items als Entitäten angelegt (`sensor`/`number`/`select`/`switch`)
+- [ ] Enum-Items als `select` mit den **exakten** Enum-Namen
+- [ ] Analog-Items als `number` mit **exaktem** Min/Max aus dem Katalog
+- [ ] `unique_id` stabil und eindeutig (`{deviceId}_{itemId}`)
+- [ ] 4 Sonder-Entitäten (BACnet-Status, Broker-Status, Schreibzähler, Version)
+- [ ] Gateway-Ausfall → `unavailable`, **kein** Flackern
+- [ ] **Kein** MQTT-Broker für die Entitäten erforderlich
+- [ ] API-Token erscheint **nirgends** in Logs, Exceptions oder Diagnostics
+- [ ] Schreibvorgänge laufen über den Gateway-Schreibschutz (kein Direktzugriff)
+- [ ] Services `set_value`, `restart`, `read_all` registriert
+- [ ] `strings.json` + `translations/en.json` vorhanden
+- [ ] Tests grün (`pytest`)
+
+### 8b. HA-Add-on
+
+- [ ] `repository.yaml` im Wurzelverzeichnis des Add-on-Repos
+- [ ] `config.yaml` mit `name`, `version`, `slug`, `description`, `arch` (aarch64 + amd64)
+- [ ] `image:` verweist auf das Multi-Arch-Image, `version` = Image-Tag
+- [ ] `init: false` (das Image bringt tini mit)
+- [ ] `device(subsystem=tty)`-Option → **Dropdown** der seriellen Ports
+- [ ] `ingress: true` → Web-UI als Panel in HA
+- [ ] `ports: { 8080/tcp: 8099 }` → Adresse für die HA-Integration
+- [ ] `watchdog` zeigt auf `/api/health`
+- [ ] `services: [mqtt:want]` → interner Mosquitto optional
+- [ ] `map: [app_config, data]` → Konfiguration und persistenter Schreibzähler
+- [ ] Übersetzungen `de.yaml` + `en.yaml` vorhanden
+- [ ] `DOCS.md` wird im Add-on-Panel angezeigt
+
+### 8c. Release
+
+- [ ] Image für `linux/amd64` **und** `linux/arm64` publiziert
+- [ ] HACS-Release mit Tag = Version aus `manifest.json`
+- [ ] Add-on-Release mit Tag = Version aus `config.yaml`
+- [ ] `hacs` und `hassfest`-Validierung in CI grün
+
+### 8d. Token-API
+
+- [ ] `POST /api/security/tokens` erzeugt einen Token (nur Admin)
+- [ ] Token wird **einmal** im Klartext angezeigt, danach nur noch der Hash
+- [ ] Hash ist PBKDF2-HMAC-SHA256 mit 600.000 Iterationen
+- [ ] `DELETE /api/security/tokens/{id}` widerruft einen Token
+- [ ] `Authorization: Bearer <token>` wird akzeptiert
+- [ ] Ungültiger Token → 401
+
+---
+
 ## Phase 7 – Parallelbetrieb & Umschaltung
 
 - [ ] Neues Gateway läuft parallel mit `BaseTopic=ComfoBox2`

@@ -16,10 +16,17 @@ applyTo: ["**/*.cs", "**/*.csproj", "**/*.props", "**/*.sln", "**/Directory.*.pr
 | Nullable | `enable` |
 | Warnungen | `TreatWarningsAsErrors=true` |
 
-**Legacy beachten:** `src/Bacnet`, `src/ComfoBoxLib`, `src/ComfoBoxMqtt`, `src/ComfoBoxMqttConsole`,
-`src/ComfoboxService`, `src/DemoClient` sind noch **net452**-Projekte. Wenn du sie anfasst,
-portiere sie in die neuen Projekte (`src/ComfoBox.Bacnet`, `src/ComfoBox.Domain`,
-`src/ComfoBox.Gateway`) – **nicht** „quick and dirty" im alten Projekt reparieren.
+**Altbestand:** `src_old/Bacnet`, `src_old/ComfoBoxLib`, `src_old/ComfoBoxMqtt`, `src_old/ComfoBoxMqttConsole`,
+`src_old/ComfoboxService`, `src_old/DemoClient` sind **net452**-Projekte und **werden nicht
+mehr gepflegt**. Sie dienen **nur** als Referenz (Protokollverhalten, Item-Metadaten,
+Fehlerbilder).
+
+> **Regel:** Änderungen gehören **immer** nach `src/` (`src/ComfoBox.Bacnet`, `src/ComfoBox.Domain`,
+> `src/ComfoBox.Gateway`) – **nie** „quick and dirty" in `src_old/` reparieren.
+> `src_old/` wird nicht gebaut; ein Build-Fehler dort ist **erwartet** und wird **nicht** behoben.
+>
+> **Ausnahme:** Wenn du den Altbestand liest, um Verhalten zu übernehmen, zitiere die
+> Fundstelle als `src_old/…` – damit bleibt der Bezug zum Legacy-Code erkennbar.
 
 ## 2. Layering
 

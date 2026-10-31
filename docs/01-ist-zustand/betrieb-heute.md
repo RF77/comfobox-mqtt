@@ -1,4 +1,8 @@
-# Betrieb heute (Ist-Zustand)
+# Betrieb heute (Legacy)
+
+> ⚠️ **Beschreibt den Betrieb des Legacy-Bestands unter [`src_old/`](../../src_old).**
+> Für den Zielbetrieb siehe [Synology DS923+](../03-deployment/synology-ds923.md) und
+> [Installationsstufen](../03-deployment/installationsstufen.md). (Ist-Zustand)
 
 ## 1. Betriebsformen
 
@@ -128,7 +132,7 @@ protected override void OnStart(string[] args)
 
 ### MSI-Installer (WiX)
 
-`src/ServiceInstaller/Product.wxs`:
+`src_old/ServiceInstaller/Product.wxs`:
 
 | Property | Wert |
 |---|---|

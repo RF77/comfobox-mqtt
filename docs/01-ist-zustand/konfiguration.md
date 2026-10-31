@@ -1,5 +1,8 @@
 # Konfiguration (Ist-Zustand)
 
+> ⚠️ **Beschreibt die Konfiguration des Legacy-Bestands unter [`src_old/`](../../src_old).**
+> Der Zielzustand steht in [Konfiguration & Secrets](../03-deployment/konfiguration-und-secrets.md).
+
 ## 1. Zwei parallele Konfigurationswege
 
 | Quelle | Zweck | Erzeugt durch |
@@ -16,7 +19,7 @@ Zur Laufzeit gewinnt die `.exe.config` (via `LocalFileSettingsProvider`). Beide 
 
 ## 2. `ComfoBoxLib` – Hardware- und Geräteeinstellungen
 
-Quelle: `src/ComfoBoxLib/Properties/Settings.settings` und `src/ComfoBoxLib/app.config`
+Quelle: `src_old/ComfoBoxLib/Properties/Settings.settings` und `src_old/ComfoBoxLib/app.config`
 
 | Setting | Typ | Default | Verwendung |
 |---|---|---|---|
@@ -46,7 +49,7 @@ Das Attribut selbst wirkt nur auf die Doku-Ausgabe (`Needs Expert Mode: True`).
 
 ## 3. `ComfoBoxMqtt` – MQTT- und Polling-Einstellungen
 
-Quelle: `src/ComfoBoxMqtt/Properties/Settings.settings` und `src/ComfoBoxMqtt/App.config`
+Quelle: `src_old/ComfoBoxMqtt/Properties/Settings.settings` und `src_old/ComfoBoxMqtt/App.config`
 
 | Setting | Typ | Default | Verwendung |
 |---|---|---|---|
@@ -73,11 +76,11 @@ Quelle: `src/ComfoBoxMqtt/Properties/Settings.settings` und `src/ComfoBoxMqtt/Ap
 
 | Datei | Appender | Ziel |
 |---|---|---|
-| `src/ComfoBoxMqttConsole/App.config` | `RollingFileAppender` + `ConsoleAppender` | `ComfoboxConsole_Log.txt` (CWD), Root-Level `DEBUG` |
-| `src/ComfoboxService/App.config` | `RollingFileAppender` | `./logs/logs.txt` (**relativ zum Dienst-CWD**) |
-| `src/DemoClient/App.config` | `RollingFileAppender` | `${USERPROFILE}\ComfoBox\Logs\Comfobox_Log.txt` |
-| `src/ComfoBoxLib/app.config` | – | enthält **keine** log4net-Section |
-| `src/ComfoBoxMqtt/App.config` | – | enthält **keine** log4net-Section |
+| `src_old/ComfoBoxMqttConsole/App.config` | `RollingFileAppender` + `ConsoleAppender` | `ComfoboxConsole_Log.txt` (CWD), Root-Level `DEBUG` |
+| `src_old/ComfoboxService/App.config` | `RollingFileAppender` | `./logs/logs.txt` (**relativ zum Dienst-CWD**) |
+| `src_old/DemoClient/App.config` | `RollingFileAppender` | `${USERPROFILE}\ComfoBox\Logs\Comfobox_Log.txt` |
+| `src_old/ComfoBoxLib/app.config` | – | enthält **keine** log4net-Section |
+| `src_old/ComfoBoxMqtt/App.config` | – | enthält **keine** log4net-Section |
 
 Rolling-Strategie: `Size`, 10 MB × 5 Backups. **Keine Zeitrotation.**
 
@@ -87,7 +90,7 @@ Rolling-Strategie: `Size`, 10 MB × 5 Backups. **Keine Zeitrotation.**
 |---|---|
 | Service loggt nach `./logs/logs.txt` | Unter `LocalSystem` landet das unter `C:\Windows\System32\logs\` |
 | `XmlConfigurator.Configure()` ohne Argument | sucht `log4net.config` neben der Exe, sonst `App.config` → unter Mono abweichendes Verhalten |
-| **BACnet-Stack nutzt `System.Diagnostics.Trace`** | 26 Fundstellen in `src/Bacnet` → `Trace` ist **nie** an log4net angebunden. Im Release-Build (`DefineConstants=TRACE`) gehen alle Protokollmeldungen nach `OutputDebugString` und sind **nicht** sichtbar. |
+| **BACnet-Stack nutzt `System.Diagnostics.Trace`** | 26 Fundstellen in `src_old/Bacnet` → `Trace` ist **nie** an log4net angebunden. Im Release-Build (`DefineConstants=TRACE`) gehen alle Protokollmeldungen nach `OutputDebugString` und sind **nicht** sichtbar. |
 
 ## 5. Build-Kopplung über `XmlConfigMerge`
 
@@ -99,7 +102,7 @@ Post-Build-Event in Console, Service und DemoClient:
 ```
 
 > `XmlConfigMergeConsole.exe` liegt **nur als opake Binärdatei** im Repo
-> (`src/XmlConfigMerge/XmlConfigMergeConsole.exe`) – **kein Quellcode**.
+> (`src_old/XmlConfigMerge/XmlConfigMergeConsole.exe`) – **kein Quellcode**.
 > Ein frischer Clone baut nicht reproduzierbar; die Bitness des Tools muss zur Zielplattform passen.
 
 Zusätzlich: `DemoClient/App.config` enthält **keine** `ComfoBoxLib.Properties.Settings`-Section,

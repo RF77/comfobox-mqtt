@@ -12,7 +12,7 @@ Der Kern des Systems sind **127 BACnet-Objekte** mit Typ, Grenzen, Einheit und S
 Der Ist-Zustand modelliert sie über Klassen mit expression-bodied Properties:
 
 ````csharp
-// src/ComfoBoxLib/Items/Config.cs
+// src_old/ComfoBoxLib/Items/Config.cs
 public AnalogValue AbsMinVorlauftemp => new AnalogValue(830, 0, 99, "°C") { IsReadOnly = !Settings.Default.ExpertMode };
 ````
 

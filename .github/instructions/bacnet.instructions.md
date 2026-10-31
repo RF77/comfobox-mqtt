@@ -1,6 +1,6 @@
 ---
 description: "Use when changing the BACnet MS/TP stack, the serial RS485 transport, or the ComfoBox device protocol code — framing, timeouts, MSTP state machine, BACnet object IDs, or serial port handling and reconnect behaviour."
-applyTo: ["src/ComfoBox.Bacnet/**/*.cs", "src/Bacnet/**/*.cs", "src/ComfoBox.Domain/**/*.cs"]
+applyTo: ["src/ComfoBox.Bacnet/**/*.cs", "src_old/Bacnet/**/*.cs", "src/ComfoBox.Domain/**/*.cs"]
 ---
 
 # BACnet / Serielle Schnittstelle – Regeln
@@ -9,13 +9,14 @@ applyTo: ["src/ComfoBox.Bacnet/**/*.cs", "src/Bacnet/**/*.cs", "src/ComfoBox.Dom
 
 | Bereich | Ort |
 |---|---|
-| BACnet-Codec (Structs, Encode/Decode) | `src/ComfoBox.Bacnet/Bacnet/BacnetCodec.cs` (aus `src/Bacnet/BACnetBase.cs`) |
+| BACnet-Codec (Structs, Encode/Decode) | `src/ComfoBox.Bacnet/Bacnet/BacnetCodec.cs` (aus `src_old/Bacnet/BACnetBase.cs`) |
 | Protokoll-Logik (Read/Write Property, WhoIs/IAm) | `src/ComfoBox.Bacnet/Bacnet/BacnetClient.cs` |
 | MSTP-Zustandsmaschine | `src/ComfoBox.Bacnet/Bacnet/BacnetMstpTransport.cs` |
 | Serien-Port | `src/ComfoBox.Bacnet/Serial/SerialPortFactory.cs` |
 | Item-Katalog (BACnet-Objekt-IDs) | `src/ComfoBox.Domain/Items/Catalog.cs` |
 
-> **Herkunft:** `src/Bacnet` ist eine Portierung von `bacnet.sourceforge.net`
+> **Herkunft:** `src_old/Bacnet` ist eine Portierung von `bacnet.sourceforge.net` (MIT).
+> Es ist **Referenz**, kein Ziel – der portierte Stack entsteht in `src/ComfoBox.Bacnet`.
 > (Morten Kvistgaard, **MIT**). Die MIT-Lizenz **muss** erhalten bleiben →
 > `LICENSE-bacnet.md` im neuen Projekt ablegen, Urheber nennen.
 

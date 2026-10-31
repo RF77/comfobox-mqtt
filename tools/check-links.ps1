@@ -11,6 +11,8 @@ $ErrorActionPreference = 'Stop'
 function Get-Slug([string]$heading) {
     $s = $heading.Trim().ToLowerInvariant()
     $s = $s -replace '[^\p{L}\p{Nd}\s\-_]', ''
+    # GitHub: jedes Leerzeichen wird zu EINEM Bindestrich (Whitespace-Runs
+    # bleiben erhalten → "– " erzeugt "--")
     $s = $s -replace '\s', '-'
     return $s
 }
@@ -54,6 +56,8 @@ foreach ($file in $files) {
 
     # Code-Fences ausblenden (Beispiel-Links in Codeblöcken sind kein Linkfehler)
     $content = [regex]::Replace($content, '(?ms)^(`{3,})[^\n]*\n.*?^\1\s*$', '')
+    # Inline-Code ausblenden (`` `code` ``) – Beispiel-Links sind dort kein Linkfehler
+    $content = [regex]::Replace($content, '`[^`\r\n]+`', '')
 
     # Inline-Links [text](target) und Bilder ![alt](target)
     $matches = [regex]::Matches($content, '!?(?:\[[^\]]*\])\(\s*<?([^)\s]+)>?(?:\s+"[^"]*")?\s*\)')

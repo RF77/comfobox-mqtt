@@ -1,0 +1,39 @@
+configuration:
+  device:
+    name: "Serieller Port"
+    description: >-
+      Der USB-RS485-Adapter, über den die ComfoBox angebunden ist.
+      Der Supervisor zeigt die stabilen by-id-Pfade an.
+  baudrate:
+    name: "Baudrate"
+    description: >-
+      Die ComfoBox muss auf 38400 Baud umgestellt und neu gestartet sein.
+  base_topic:
+    name: "MQTT-Basis-Topic"
+    description: "Präfix aller MQTT-Topics. Standard: ComfoBox"
+  broker_host:
+    name: "Broker-Host"
+    description: >-
+      Adresse des MQTT-Brokers. Leer lassen, um das Gateway ohne MQTT zu betreiben
+      (Werte dann nur über die Home-Assistant-Integration erreichbar).
+      Für den HA-eigenen Mosquitto: core-mosquitto
+  broker_port:
+    name: "Broker-Port"
+    description: "Port des MQTT-Brokers"
+  broker_username:
+    name: "Broker-Benutzername"
+    description: "Optional – falls der Broker eine Anmeldung verlangt"
+  broker_password:
+    name: "Broker-Passwort"
+    description: "Optional – wird vom Supervisor geheim behandelt"
+  use_tls:
+    name: "TLS verwenden"
+    description: "Verschlüsselte Verbindung zum Broker (Port 8883)"
+  enable_discovery:
+    name: "Home-Assistant-Discovery"
+    description: >-
+      Veröffentlicht die Entitäten automatisch über MQTT-Discovery.
+      Nicht nötig, wenn die ComfoBox-Integration aus HACS verwendet wird.
+  log_level:
+    name: "Log-Level"
+    description: "Detailgrad der Protokolle"

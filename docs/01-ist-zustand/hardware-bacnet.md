@@ -1,5 +1,8 @@
 # Hardware & BACnet (Ist-Zustand)
 
+> ⚠️ **Beschreibt den Legacy-Bestand unter [`src_old/`](../../src_old).**
+> Die Hardware gilt unverändert auch für die Neuzuimplementierung. (Ist-Zustand)
+
 ## 1. Physische Anbindung
 
 ```

@@ -3,11 +3,11 @@
 ## 0. Überblick
 
 ```
-Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8
- Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Parallel-   Synology-
- Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      Umschaltung  SPK &
- + CI        + Tests     Kern                                               (1 Image)               Assistent
- 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       3 PT        13 PT
+Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 8 ──▶ Phase 8a–d ──▶ Phase 7
+ Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Synology-   HA-Add-on    Parallel-
+ Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      SPK &       + HACS-      betrieb &
+ + CI        + Tests     Kern                                               (1 Image)  Assistent   Integration  Umschaltung
+ 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       13 PT       14 PT         3 PT
 ```
 
 **Abhängigkeiten:**
@@ -20,8 +20,9 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | 4 | 2, 3 |
 | 5 | 4 |
 | 6 | 3, 4, 5 |
-| 7 | 6 |
 | 8 | 5, 6 |
+| 8a–d | 4, 6, 8 |
+| 7 | 6 |
 
 ---
 
@@ -161,7 +162,6 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 > Ziel: *„Als Third Party App in der DS923+ installieren und bequem einrichten."*
 > → [ADR-008](../05-entscheidungen/adr-008-synology-spk.md),
 > [Synology-Paketcenter](../03-deployment/synology-paketcenter.md)
-
 | # | Aufgabe | PT | Ergebnis |
 |---|---|---|---|
 | 8.1 | SPK-Skelett (`INFO`, `package.tgz`, `scripts/`, Icon) | 1.0 | `ComfoBoxGateway_noarch-dsm7_<ver>.spk` |
@@ -179,6 +179,36 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 - Der Assistent findet den Adapter, testet BACnet und MQTT, legt den Benutzer an.
 - Nach „Übernehmen" läuft der Gateway mit dem gewählten Serial-Port.
 - `postuninst` lässt das `var`-Verzeichnis (Schreibzähler) stehen.
+
+---
+
+## Phase 8a–8d – Home-Assistant-Ökosystem (14 PT)
+
+> Ziel: *„Alles in HA installierbar, Plugin via HACS, Zugriff ohne MQTT-Konfiguration."*
+> → [ADR-009](../05-entscheidungen/adr-009-ha-integration-ohne-mqtt.md),
+> [HA-Integration](../02-modernisierung/ha-integration.md),
+> [Installationsstufen](../03-deployment/installationsstufen.md)
+
+| # | Aufgabe | PT | Ergebnis |
+|---|---|---|---|
+| 8a.1 | HACS-Integration: `manifest.json`, `hacs.json`, Config Flow | 1.5 | `custom_components/comfobox` |
+| 8a.2 | API-Client (`aiohttp`, Bearer-Token, Fehlerklassifizierung) | 1.0 | `api.py` |
+| 8a.3 | Coordinator (10-s-Intervall, `unavailable` statt Flackern) | 1.0 | `coordinator.py` |
+| 8a.4 | Plattformen `sensor`/`number`/`select`/`switch`/`binary_sensor` | 2.5 | 131 Entitäten |
+| 8a.5 | Services (`set_value`, `restart`, `read_all`) + Übersetzungen | 0.5 | `services.py`, `strings.json` |
+| 8a.6 | Tests (Config Flow, Client, Coordinator, Mapping) | 1.5 | `pytest` grün |
+| 8b.1 | HA-Add-on-Manifest (`config.yaml`, `device(subsystem=tty)`, `ingress`, `watchdog`) | 1.0 | `deploy/ha-addon/` |
+| 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | 1.0 | `AddOnOptionsProvider.cs` |
+| 8b.3 | Add-on-Doku + Übersetzungen (de/en) | 1.0 | `DOCS.md`, `translations/` |
+| 8c.1 | Multi-Arch-Publish (`amd64` + `arm64`) + HACS-Release | 2.0 | Release-Artefakte |
+| 8d.1 | Token-API im Gateway (`/api/security/tokens`, PBKDF2-Hash) | 1.0 | Token-Erzeugung in der UI |
+
+**Abnahme:**
+- `hacs.json` vorhanden, HACS findet die Integration.
+- Ein Gerät „ComfoBox ELESTA" mit allen 127 Items + 4 Sonder-Entitäten.
+- **Kein** MQTT-Broker nötig für die Entitäten.
+- Add-on installierbar, serieller Port per Dropdown wählbar, UI als Panel in HA.
+- Image für `linux/amd64` **und** `linux/arm64` publiziert.
 
 ---
 

@@ -1,5 +1,9 @@
 # MQTT-Schema (Ist-Zustand)
 
+> ⚠️ **Beschreibt die Topics des Legacy-Bestands unter [`src_old/`](../../src_old).**
+> Der Topic-Vertrag bleibt **verbindlich** – siehe
+> [MQTT-Kompatibilität](../04-migration/mqtt-kompatibilitaet.md).
+
 > **Dieses Dokument ist der Kompatibilitätsvertrag.** Anforderung 4 der Modernisierung lautet:
 > *„MQTT-Adressen sollen gleich bleiben."* Die hier beschriebenen Adressen und Payloads müssen
 > nach der Migration **unverändert** gültig sein.

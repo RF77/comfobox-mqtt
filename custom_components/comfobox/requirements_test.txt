@@ -1,0 +1,10 @@
+# Test-Abhängigkeiten der ComfoBox-HA-Integration
+#
+# Installation:
+#   pip install -r custom_components/comfobox/requirements_test.txt
+
+pytest-homeassistant-custom-component>=0.13.100
+pytest-asyncio>=0.23.0
+aioresponses>=0.7.6
+syrupy>=4.6.0
+ruff>=0.6.0

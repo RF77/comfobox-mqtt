@@ -34,6 +34,8 @@ Entscheidungen steht in den [ADRs](../05-entscheidungen/README.md).
 | [home-assistant.md](home-assistant.md) | Discovery, Availability, Restart, Payload-Fixes, Migrationshilfen für HA |
 | [health-und-status.md](health-und-status.md) | Health-Checks, Status-Topics, Fehlerpropagation, Persistenz, Alarmierung |
 | [ui-angular-optimus.md](ui-angular-optimus.md) | Frontend-Architektur, Optimus UI, Komponentenübersicht, Build, Theming |
+| [ha-integration.md](ha-integration.md) | **HA-Integration ohne MQTT**: HACS, Gerät + 127 Entitäten, API-Client, Coordinator |
+| [benutzerdokumentation.md](benutzerdokumentation.md) | **Benutzerdoku in drei Kanälen**: Web-UI (HTML), HACS, Synology |
 
 ---
 

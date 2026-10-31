@@ -1,4 +1,20 @@
-# 01 – Ist-Zustand
+# 01 – Ist-Zustand (Legacy-Bestand)
+
+> ⚠️ **Dieser Abschnitt dokumentiert den Altbestand unter [`src_old/`](../../src_old).**
+>
+> Der Code wurde am 2026-10-31 mit `git mv src src_old` **verschoben** – die
+> Dateihistorie bleibt vollständig erhalten. `src_old/` wird **nicht** mehr gebaut und
+> **nicht** mehr gepflegt; er dient ausschließlich als **Referenz** für die
+> Neuzuimplementierung in [`src/`](../../src):
+>
+> | Wofür | Quelle in `src_old/` |
+> |---|---|
+> | BACnet-Protokollverhalten | `Bacnet/` |
+> | Item-Metadaten (127 Items, BACnet-IDs, Min/Max, Einheiten) | `ComfoBoxLib/Items/**` |
+> | Fehlerbilder und Verhaltensreferenzen | `ComfoBoxMqtt/`, `ComfoBoxLib/` |
+>
+> **Zeilenangaben in diesem Abschnitt beziehen sich auf `src_old/`.**
+> → [src/README.md](../../src/README.md) · [Roadmap](../04-migration/roadmap.md)
 
 Diese Sektion beschreibt das System **wie es heute im Repo liegt**. Sie ist die Grundlage für die
 Modernisierungs-Spec in [../02-modernisierung](../02-modernisierung/README.md).
@@ -50,14 +66,14 @@ oder Grafana/InfluxDB.
 
 | Projekt | Pfad | Typ | TFM | Zweck |
 |---|---|---|---|---|
-| `BacnetLib` | `src/Bacnet` | Library | net452 | Fremdimport BACnet-Protokollstack (UDP + MSTP), ~12.800 Z. |
-| `ComfoBoxLib` | `src/ComfoBoxLib` | Library | net452 | BACnet-Objekt-Katalog (127 Items) + Client-Wrapper |
-| `ComfoBoxMqtt` | `src/ComfoBoxMqtt` | Library | net452 | MQTT-Fassade, Item-Factory, Polling |
-| `ComfoBoxMqttConsole` | `src/ComfoBoxMqttConsole` | Exe | net452 | Konsolen-App – **Haupt-Deployment auf Linux/Mono** |
-| `ComfoboxService` | `src/ComfoboxService` | WinExe | net452 | Windows-Service-Wrapper |
-| `DemoClient` | `src/DemoClient` | WinExe (WPF) | net452 | Standalone-GUI direkt gegen BACnet |
-| `ServiceInstaller` | `src/ServiceInstaller` | WiX-Paketet | – | MSI-Installer für den Windows-Service |
-| `XmlConfigMerge` | `src/XmlConfigMerge` | Binär-Artefakt | – | `XmlConfigMergeConsole.exe` – **nur Binärdatei, kein Quellcode** |
+| `BacnetLib` | `src_old/Bacnet` | Library | net452 | Fremdimport BACnet-Protokollstack (UDP + MSTP), ~12.800 Z. |
+| `ComfoBoxLib` | `src_old/ComfoBoxLib` | Library | net452 | BACnet-Objekt-Katalog (127 Items) + Client-Wrapper |
+| `ComfoBoxMqtt` | `src_old/ComfoBoxMqtt` | Library | net452 | MQTT-Fassade, Item-Factory, Polling |
+| `ComfoBoxMqttConsole` | `src_old/ComfoBoxMqttConsole` | Exe | net452 | Konsolen-App – **Haupt-Deployment auf Linux/Mono** |
+| `ComfoboxService` | `src_old/ComfoboxService` | WinExe | net452 | Windows-Service-Wrapper |
+| `DemoClient` | `src_old/DemoClient` | WinExe (WPF) | net452 | Standalone-GUI direkt gegen BACnet |
+| `ServiceInstaller` | `src_old/ServiceInstaller` | WiX-Paketet | – | MSI-Installer für den Windows-Service |
+| `XmlConfigMerge` | `src_old/XmlConfigMerge` | Binär-Artefakt | – | `XmlConfigMergeConsole.exe` – **nur Binärdatei, kein Quellcode** |
 
 Solution: `src/Comfobox.sln` (VS 2015, Format 12.00).
 
@@ -78,4 +94,4 @@ Solution: `src/Comfobox.sln` (VS 2015, Format 12.00).
 | [`docs/topics.json`](../topics.json) | 127 Items mit Subscribe-/Publish-Topic, Typ, Min/Max, Unit, Readonly | **Fixture für Contract-Tests** |
 | [`docs/topics.md`](../topics.md) | dieselben 127 Items als Markdown | menschlich lesbare Referenz |
 | [`docs/Mono/MoMA Scan Results.html`](../Mono/MoMA%20Scan%20Results.html) | BACnet-Monitor-Scan des ELESTA | **Fixture für BACnet-Regressionstests** |
-| `src/ComfoBoxLib/Items/**` | 127 Item-Definitionen mit BACnet-Objekt-IDs | Kern des Datenmodells |
+| `src_old/ComfoBoxLib/Items/**` | 127 Item-Definitionen mit BACnet-Objekt-IDs | Kern des Datenmodells |

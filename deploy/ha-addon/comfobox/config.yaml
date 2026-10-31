@@ -1,0 +1,97 @@
+name: "ComfoBox Gateway"
+version: "1.0.0"
+slug: "comfobox"
+description: "MQTT-Gateway für die Zehnder ComfoBox Series 5 (ELESTA) – BACnet/MS-TP über RS485."
+url: "https://github.com/RF77/comfobox-mqtt"
+arch:
+  - aarch64
+  - amd64
+
+# Das Image bringt seinen eigenen Init (tini) mit → init: false
+init: false
+startup: application
+boot: auto
+stage: stable
+
+# Mindestversion Home Assistant Core
+homeassistant: "2024.11.0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Image
+# ─────────────────────────────────────────────────────────────────────────────
+# Multi-Arch-Image; der Supervisor zieht den Tag, der "version" entspricht.
+image: "ghcr.io/rf77/comfobox-gateway"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Optionen
+# ─────────────────────────────────────────────────────────────────────────────
+options:
+  device: ""
+  baudrate: 38400
+  base_topic: "ComfoBox"
+  broker_host: ""
+  broker_port: 1883
+  broker_username: ""
+  broker_password: ""
+  use_tls: false
+  enable_discovery: true
+  log_level: "Information"
+
+schema:
+  # Dropdown der seriellen Ports des Hosts (Supervisor liefert stabile by-id-Pfade)
+  device: "device(subsystem=tty)"
+  baudrate: "int(9600,115200)"
+  base_topic: "str"
+  broker_host: "str"
+  broker_port: "port"
+  broker_username: "str?"
+  broker_password: "password?"
+  use_tls: "bool?"
+  enable_discovery: "bool?"
+  log_level: "list(Trace|Debug|Information|Warning|Error)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Netzwerk
+# ─────────────────────────────────────────────────────────────────────────────
+# 8099 ist der Host-Port, unter dem die HA-Integration das Gateway erreicht.
+ports:
+  8080/tcp: 8099
+ports_description:
+  8080/tcp: "Gateway (REST/SSE) – Adresse für die ComfoBox-HA-Integration"
+
+# Web-UI als Panel in Home Assistant
+ingress: true
+ingress_port: 8080
+panel_icon: "mdi:home-thermometer-outline"
+panel_title: "ComfoBox"
+
+# Der Supervisor startet neu, wenn das Gateway nicht mehr antwortet.
+watchdog: "http://[HOST]:[PORT:8080]/api/health"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Hardware
+# ─────────────────────────────────────────────────────────────────────────────
+# Kein "uart: true" – der Nutzer wählt genau EINEN Port per device-Option.
+# Das ist die schmalste mögliche Rechtevergabe.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ablage
+# ─────────────────────────────────────────────────────────────────────────────
+map:
+  # Öffentlicher Konfigurationsordner des Add-ons (in HA sichtbar)
+  - type: app_config
+    read_only: false
+  # Privates Datenverzeichnis: config.json, writes.json (Schreibzähler!)
+  - type: data
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Dienste
+# ─────────────────────────────────────────────────────────────────────────────
+# "want" = optional: der interne Mosquitto wird genutzt, wenn vorhanden.
+services:
+  - "mqtt:want"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backups
+# ─────────────────────────────────────────────────────────────────────────────
+backup: hot

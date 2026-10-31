@@ -7,13 +7,23 @@ applyTo: ["**/Dockerfile", "**/docker-compose*.y*ml", "**/compose*.y*ml", "**/.d
 
 ## 1. Zielplattform
 
-**Synology DS923+** (AMD Ryzen R1600, x86_64, 4 GB RAM, DSM 7.2.1+, Container Manager / Docker 24+).
+**Synology DS923+** (AMD Ryzen R1600, x86_64, 4 GB RAM, DSM 7.2.1+, Container Manager / Docker 24+)
+**und** Home Assistant (HA OS / Supervised → Raspberry Pi 4/5, HA Green, VMs).
 
-⇒ Nur **`linux/amd64`**. Kein arm64 (die DS923+ braucht es nicht; der Build-Aufwand wäre
-unnötig doppelt).
+⇒ **Multi-Arch**: `linux/amd64` **und** `linux/arm64`.
+Das HA-Add-on auf einem Raspberry Pi 5 braucht `arm64` – ein reines `amd64`-Image
+liefert dort einen `exec format error`.
+(→ [ADR-009](../../docs/05-entscheidungen/adr-009-ha-integration-ohne-mqtt.md#e2--ha-add-on-f2))
+
+| Plattform | Architektur |
+|---|---|
+| Synology DS923+ | `linux/amd64` |
+| HA Green, Intel-NUC, VMs | `linux/amd64` |
+| Raspberry Pi 4/5 | `linux/arm64` |
 
 > **Primärer Installationsweg:** das Synology-Paket (SPK) in `deploy/synology-spk/`
 > → [ADR-008](../../docs/05-entscheidungen/adr-008-synology-spk.md).
+> Zweiter Weg: das HA-Add-on in `deploy/ha-addon/`.
 > Manuelles Compose bleibt als Alternative für andere Hosts (Pi, Linux-Server).
 
 ## 2. Images
@@ -184,16 +194,39 @@ Regeln für `deploy/synology-spk/`:
   with:
     context: .
     file: ./src/ComfoBox.Gateway/Dockerfile
-    platforms: linux/amd64
+    platforms: linux/amd64,linux/arm64
     push: true
     cache-from: type=gha,scope=gateway
     cache-to: type=gha,mode=max,scope=gateway
 ````
 
 - **Ein** Build-Kontext (`.`) → der Dockerfile braucht das Angular-Ergebnis
+- **Multi-Arch** `linux/amd64,linux/arm64` → Pflicht für das HA-Add-on
 - `cache-from`/`cache-to` mit `type=gha` → GitHub Actions Cache
 - Trivy-Scan **vor** dem Push (Fail on CRITICAL/HIGH)
 - Anschließend: SPK bauen (`deploy/synology-spk/build-spk.sh`) → GitHub Release
+
+## 7a. Home-Assistant-Add-on
+
+Manifest in `deploy/ha-addon/comfobox/config.yaml`.
+
+| Schlüssel | Wert | Begründung |
+|---|---|---|
+| `image` | `ghcr.io/rf77/comfobox-gateway` | Multi-Arch-Image; der Supervisor zieht den Tag `= version` |
+| `version` | muss dem Image-Tag entsprechen | sonst findet der Supervisor das Image nicht |
+| `init` | `false` | das Image bringt tini mit – S6/S6-overlay würde sonst nicht starten |
+| `arch` | `aarch64`, `amd64` | Pi 5 und HA Green |
+| `device` (Option) | `device(subsystem=tty)` | **Dropdown** der seriellen Ports mit stabilen `by-id`-Pfaden |
+| `ports` | `8080/tcp: 8099` | Adresse für die HA-Integration (Ingress ist dafür ungeeignet) |
+| `ingress` | `true` | Web-UI als Panel in HA |
+| `ingress_port` | `8080` | Container-Port der UI |
+| `watchdog` | `http://[HOST]:[PORT:8080]/api/health` | Neustart bei Hänger |
+| `services` | `mqtt:want` | interner Mosquitto optional |
+| `map` | `app_config`, `data` | Konfiguration + persistenter Schreibzähler |
+
+> **Wichtig:** Der Supervisor schreibt die Optionen nach `/data/options.json`.
+> Der Gateway liest diese Datei optional → `AddOnOptionsProvider.cs`.
+> **Kein** `uart: true` – der Nutzer wählt genau **einen** Port (schmalste Rechte).
 
 ## 8. Betrieb & Diagnose
 

@@ -1,0 +1,1 @@
+"""Tests der ComfoBox-Integration."""

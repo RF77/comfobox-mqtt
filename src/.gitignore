@@ -1,0 +1,36 @@
+# Build-Artefakte
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+.vscode/
+TestResults/
+[Cc]overage*/
+*.coverage
+*.trx
+
+# Angular
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+
+# Python (HA-Integration)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.venv/
+
+# Umgebung / Secrets
+.env
+.env.*
+!.env.example
+appsettings.override.json
+appsettings.*.local.json
+secrets.yaml

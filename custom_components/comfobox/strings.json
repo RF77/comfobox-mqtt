@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "ComfoBox-Gateway verbinden",
+        "description": "Gib die Adresse des Gateways und einen API-Token ein. Den Token findest du in der Web-UI des Gateways unter 'Konfiguration → API-Token'.",
+        "data": {
+          "host": "Adresse des Gateways",
+          "token": "API-Token",
+          "verify_ssl": "TLS-Zertifikat prüfen"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Neuen API-Token eingeben",
+        "description": "Der bisherige Token wird nicht mehr akzeptiert. Bitte einen neuen Token aus der Web-UI des Gateways eingeben.",
+        "data": {
+          "token": "API-Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Das Gateway ist unter dieser Adresse nicht erreichbar.",
+      "invalid_auth": "Der API-Token ist ungültig.",
+      "unknown": "Unerwarteter Fehler beim Verbinden."
+    },
+    "abort": {
+      "already_configured": "Dieses Gateway ist bereits eingerichtet."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "bacnet_connected": { "name": "BACnet verbunden" },
+      "mqtt_connected": { "name": "Broker verbunden" }
+    }
+  },
+  "services": {
+    "set_value": {
+      "name": "Wert setzen",
+      "description": "Schreibt einen Wert auf ein ComfoBox-Item.",
+      "fields": {
+        "value": { "name": "Wert", "description": "Der zu schreibende Wert." }
+      }
+    },
+    "restart": {
+      "name": "Gateway neu starten",
+      "description": "Startet das ComfoBox-Gateway neu."
+    },
+    "read_all": {
+      "name": "Alle Werte neu lesen",
+      "description": "Liest alle Items sofort neu vom Gateway."
+    }
+  }
+}

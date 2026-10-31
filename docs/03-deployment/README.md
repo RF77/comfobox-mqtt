@@ -20,6 +20,7 @@
 | Dokument | Inhalt |
 |---|---|
 | [synology-paketcenter.md](synology-paketcenter.md) | **SPK-Paket, Installation per Klick, Getting-Started-Assistent** |
+| [installationsstufen.md](installationsstufen.md) | **Die vier Installationswege**: Compose, SPK, HA-Add-on, HA-Integration |
 | [containerisierung.md](containerisierung.md) | Dockerfile, Multi-Stage-Build, Compose, Image-Größe, Healthcheck |
 | [synology-ds923.md](synology-ds923.md) | Container Manager, **Serial-Port in Docker**, udev, Betrieb |
 | [konfiguration-und-secrets.md](konfiguration-und-secrets.md) | Env-Variablen, Bind-Mounts, Credentials, Backups |

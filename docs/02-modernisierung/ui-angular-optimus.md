@@ -83,6 +83,7 @@ src/ComfoBox.Web/
             ├── config/                    # Konfiguration
             ├── diagnostics/               # Fehler, Logs, Status
             ├── login/                     # ← Anmeldung
+            ├── help/                      # ← Benutzerdoku (HTML aus dem Image)
             └── about/
 ````
 
@@ -608,7 +609,69 @@ CMD ["dotnet", "ComfoBox.Gateway.dll"]
 > produktive UI übernommen, sondern bleibt als separates Werkzeug unter
 > `tools/bacnet-probe` (Konsolen-Tool) verfügbar.
 
-## 13. Definition of Done
+## 13. Hilfe-Bereich (Benutzerdokumentation)
+
+> Vollständige Spezifikation:
+> [benutzerdokumentation.md](benutzerdokumentation.md) – eine Quelle, drei Kanäle
+> ([ADR-010](../05-entscheidungen/adr-010-benutzerdokumentation.md)).
+
+### 13.1 Route
+
+| Route | Inhalt | Anmeldung |
+|---|---|---|
+| `/help` | Index aller Hilfeseiten | **nein** |
+| `/help/:slug` | eine Hilfeseite (z. B. `/help/mqtt`) | **nein** |
+
+> **Warum ohne Anmeldung?** Die Anleitungen werden vor allem **vor** der Ersteinrichtung
+> gebraucht (Serial-Port, Baudrate, Broker einrichten). Sie enthalten keine Geheimnisse
+> und keinen Gerätezustand. Der Assistent verlinkt genau dorthin.
+
+### 13.2 Woher kommt der Inhalt?
+
+Die Seiten werden zur **Build-Zeit** aus `docs/benutzer/` erzeugt
+([`tools/build-docs.mjs`](../../tools/build-docs.mjs)) und liegen danach statisch im
+Image unter `wwwroot/help/`:
+
+````
+wwwroot/help/
+├── index.html          ← Übersicht (Slug "index")
+├── index.json          ← Suchindex (Titel, Beschreibung, Tags, Volltext)
+├── style.css
+├── erste-schritte.html
+├── anschluss.html
+├── installation.html
+├── mqtt.html
+├── home-assistant.html
+├── bedienung.html
+├── ha-addon.html
+├── synology.html
+├── fehlersuche.html
+└── api.html
+````
+
+Der Client lädt nur `<slug>.html` und `index.json` – **kein** Server-Rendering,
+keine Laufzeit-Generierung.
+
+### 13.3 Suche
+
+Die Volltextsuche läuft **clientseitig** über `index.json` (siehe
+[benutzerdokumentation.md §3.4](benutzerdokumentation.md#34-suchindex)). Kein Server,
+keine Anfrage pro Tastendruck.
+
+### 13.4 Verlinkung aus dem Setup-Assistenten
+
+Der Assistent verlinkt an den Stellen, an denen Nutzer typischerweise festhängen, direkt
+auf die passende Hilfeseite – Details in
+[benutzerdokumentation.md §3.5](benutzerdokumentation.md#35-hilfe-auf-der-setup-seite).
+
+### 13.5 Sicherheit
+
+Das gerenderte HTML wird mit `DomSanitizer.bypassSecurityTrustHtml` eingebunden. Das ist
+vertretbar, weil der Inhalt aus dem **eigenen Image** stammt (zur Build-Zeit erzeugt) und
+nicht aus einer Benutzereingabe. Sollte die Doku später zur Laufzeit aus dem Netz
+geladen, **muss** auf `DomSanitizer.sanitize` gewechselt werden.
+
+## 14. Definition of Done
 
 - [ ] `ng add @openng/optimus-ui` erfolgreich, `provideOptimus({ theme: { preset: Aura } })` gesetzt
 - [ ] **Assistent**: alle 6 Schritte durchlaufbar, Zustand bleibt beim Zurück-Navigieren erhalten
@@ -627,6 +690,9 @@ CMD ["dotnet", "ComfoBox.Gateway.dll"]
 - [ ] Neustart-Button mit Bestätigung
 - [ ] Live-Werte via SSE (ohne Polling-Schleife im Browser)
 - [ ] Login mit Benutzername/Passwort (Cookie-Sitzung)
+- [ ] `/help` und `/help/:slug` erreichbar **ohne** Anmeldung
+- [ ] Hilfeseiten werden aus `wwwroot/help/` geladen, Suche läuft clientseitig über `index.json`
+- [ ] Der Setup-Assistent verlinkt an den 5 kritischen Stellen auf die passende Hilfeseite
 - [ ] Responsive von 360 px (Handy) bis 1920 px
 - [ ] Lighthouse-Score ≥ 90 (Performance/Accessibility)
 - [ ] Kein Zone.js-Overhead (`provideZonelessChangeDetection`)

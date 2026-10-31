@@ -163,6 +163,15 @@ ClientBin/
 node_modules/
 bower_components/
 
+# Python (Home-Assistant-Integration unter custom_components/)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.venv/
+
 # RIA/Silverlight projects
 Generated_Code/
 
