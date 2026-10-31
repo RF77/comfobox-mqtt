@@ -39,7 +39,7 @@ namespace ComfoBox.Bacnet;
 /// protokolliert, aber nicht beantwortet.
 /// </para>
 /// </remarks>
-public sealed class BacnetClient : IDisposable
+public sealed class BacnetClient : IBacnetClient
 {
     /// <summary>Standard-Hop-Count (unbegrenzt) laut BACnet.</summary>
     public const byte DefaultHopCount = 0xFF;

@@ -363,8 +363,100 @@ Benutzerdoku erzeugt HTML.
 
 ---
 
+## 2026-10-31 – Phase 2 abgeschlossen: Domain & Gateway-Kern (Aufgaben 2.1–2.7)
+
+**Ergebnis:** Die Domäne kennt jetzt alle **127 Items** mit allen Metadaten
+(BACnet-ID, Typ, Einheit, Grenzen, Schreibbarkeit, Enum-Namen, **Priorität**).
+Der Gateway startet, liest den BACnet-Bus, hält die Werte im Cache, schützt
+das EEPROM mit einem **persistenten** 24-h-Zähler und protokolliert über
+Serilog in einen In-Memory-Ringpuffer. **143 Tests grün** (45 BACnet + 30 Domain
++ 10 Contract + 58 Gateway). Die Golden-Fixture und `docs/topics.json` sind
+**byteweise unverändert**.
+
+**Geänderte Dateien (neu – Domain):**
+- `src/ComfoBox.Domain/Items/ItemDefinition.cs` – das Item (Id, Gruppe, BACnet-ID, Kind, Min/Max, Einheit, ReadOnly, Expert-Modus, Priorität, Enum-Werte)
+- `src/ComfoBox.Domain/Items/ItemValueKind.cs` – `Analog` / `Enum` / `Date`
+- `src/ComfoBox.Domain/Items/RefreshPriority.cs` – `None` / `Once` / `Primary` / `Secondary`
+- `src/ComfoBox.Domain/Items/Catalog.cs` – **generiert** (127 Items)
+- `src/ComfoBox.Domain/Items/ItemEnums.cs` – **generiert** (4 Enums, 70 Namen)
+- `src/ComfoBox.Domain/Items/IItemCatalog.cs` + `ItemCatalog.cs` – Lookup nach Id/Topic-Pfad/Gruppe
+- `src/ComfoBox.Domain/Values/ItemValue.cs`, `AnalogValue.cs`, `EnumValue.cs` – kultur-invariant
+
+**Geänderte Dateien (neu – Gateway):**
+- `src/ComfoBox.Gateway/Configuration/{Gateway,Bacnet,Mqtt,Logging}Options.cs` – Bindung + Validierung
+- `src/ComfoBox.Gateway/Logging/{InMemoryLogSink,LogEntry,SecretRedactor}.cs` – Ringpuffer (1000) + Maskierung
+- `src/ComfoBox.Gateway/ValueCache.cs` – letzter Wert + Zeitstempel, `IsStale`, SSE-Abonnenten
+- `src/ComfoBox.Gateway/Health/ErrorCollector.cs` – Fehler-Senke (50)
+- `src/ComfoBox.Gateway/Protection/WriteCounter.cs` – persistent, atomar, 24-h-Fenster
+- `src/ComfoBox.Gateway/Bacnet/BacnetDevice.cs` – **ein** SemaphoreSlim, Priorisierung, Timeout je Item
+- `src/ComfoBox.Gateway/Bacnet/BacnetPollingService.cs` + `PollPlan.cs` – Poll-Zyklen
+- `src/ComfoBox.Bacnet/Bacnet/IBacnetClient.cs` – Testnaht (Gateway-Test gegen Attrapp)
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Program.cs` – Serilog, DI, Options-Validierung, `/api/health`
+- `src/ComfoBox.Gateway/appsettings.json` – Abschnitte `Gateway`, `Bacnet`, `Mqtt`, `Logging`
+- `src/Directory.Packages.props` – `Serilog.Extensions.Hosting` gepinnt
+- `tools/generate-topics/generate-topics.mjs` – Prioritäten, Expert-Modus, Enums, `--catalog`, `--catalog-check`
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **143 Tests grün, 0 Fehler**
+- Golden-Fixture **byte-identisch**:
+  `F95AA7633D6C563D309BE6A7A4AC6797CAB198E315BA365B205E7C5C81CE681B` (5.657 B)
+- `docs/topics.json` **unverändert** (`git status` leer) –
+  der Contract-Test vergleicht den Katalog Feld für Feld dagegen
+- `node tools/generate-topics/generate-topics.mjs --check` → deckungsgleich (127 Items)
+- `dotnet restore src/ComfoBox.sln --locked-mode` → grün (Lock-Dateien aktualisiert)
+- **Smoke-Test:** Gateway gestartet, `/api/health` → `{"status":"online", …}`,
+  Serilog schreibt JSON-Datei (`gateway-20261031.jsonl`) mit `SourceContext`
+
+**Offen / nicht gemacht:**
+- **Kein MQTT** – Phase 3. Die Werte liegen nur im Cache.
+- **Keine REST-API außer `/api/health`** – Phase 4.
+- Die **zwei Legacy-DateItems** (`States/Controller/InitialOperationDate`,
+  `LastParameterChangeDate`) werden gelesen, ihr Wert bleibt aber leer
+  (Befund A20). Ihr Item bleibt im Katalog, damit die Topics unverändert sind.
+- Die **Item-Id** folgt der Regel camelCase → snake_case
+  (`zone.set_point_normal`). Die Spec nennt im Beispiel `zone.setpoint_normal` –
+  das ist nicht generisch herstellbar; die Spec-Beispiele wurden angepasst.
+- Die **Enum-Beschreibungen** (z. B. „Keine Energieerzeugung") sind **nicht**
+  im Katalog – nur die Namen. Für die UI (Phase 5) ggf. nachziehen.
+
+**Überraschungen:**
+- ⚠️ **Der Altbestand ist nicht einheitlich kodiert.** Die Item-Dateien
+  (`Zone`, `States`, `Config`, `Tests`, `Warmwater`) sind **Windows-1252**,
+  die Enum-Dateien und `Time.cs` dagegen **UTF-8**. Ein blindes CP1252-Lesen
+  zerlegt „ä" (0xC3 0xA4) in zwei Zeichen – der Enum-Name wurde zu
+  `rmequellenstoerung` statt `Wärmequellenstoerung`. Der Generator erkennt
+  die Kodierung jetzt **automatisch** (gültiges UTF-8 → UTF-8, sonst CP1252).
+- ⚠️ **`Interlocked.Read` gibt es nur für `long`.** Für den `int`-Schreiber
+  muss `Volatile.Read(ref _writeIndex)` verwendet werden (Compile-Fehler
+  „Konvertierung von `ref int` in `ref readonly long`").
+- ⚠️ **Serilog 4 kennt am `LogEvent` keine `LoggerName`-Eigenschaft.** Die
+  Logger-Kategorie steckt in der Property `SourceContext`.
+- ⚠️ **`ScalarValue.ToString()` gibt Strings in Anführungszeichen zurück**
+  (`"broker:1883"`). Für die Anzeige muss `ScalarValue.Value` genommen werden.
+- ⚠️ **`CA1848` (LoggerMessage-Delegaten) und `CA1873` sind in der Solution
+  aktiv** (`AnalysisLevel=latest-recommended`) und widersprechen dem in
+  `csharp.instructions.md` festgelegten Stil. Sie werden im Gateway-Projekt
+  per `NoWarn` unterdrückt – mit Begründung im csproj.
+- ⚠️ **`CA1716` verbietet `Set` als Schnittstellenmember.** `IValueCache.Set`
+  heißt jetzt `IValueCache.Update`.
+- ⚠️ **`CA1001`**: eine Klasse mit `SemaphoreSlim` muss `IDisposable` sein –
+  `BacnetDevice` implementiert es jetzt.
+- ⚠️ **XML-Kommentare sind auf lokalen Funktionen in Top-Level-Statements
+  nicht erlaubt** (CS1587) → normale `//`-Kommentare verwenden.
+- ⚠️ **`using N;` importiert keine verschachtelten Namespaces.** Aus
+  `ComfoBox.Gateway.Tests` ist `Serialize.ASN1` nicht auflösbar – stattdessen
+  `using ComfoBox.Bacnet.Serialize;` und `ASN1` direkt verwenden.
+- ⚠️ **DataAnnotations validieren verschachtelte Objekte nicht.** Der
+  `RingBuffer` muss separat geprüft werden.
+
+---
+
 ## Nächste Session
 
-**Aufgabe 0.1** – `src/global.json` anlegen (SDK-Pinning 10.0.400)
-→ [phase-0.md](phase-0.md)
-→ **Prompt:** [prompts/Prompt-Phase-0.md](prompts/Prompt-Phase-0.md)
+**Aufgabe 3.1** – MQTTnet-Client (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`)
+→ [phase-3.md](phase-3.md)
+→ **Prompt:** [prompts/Prompt-Phase-3.md](prompts/Prompt-Phase-3.md)
+

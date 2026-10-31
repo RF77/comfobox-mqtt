@@ -9,6 +9,14 @@
     <RootNamespace>ComfoBox.Gateway</RootNamespace>
     <AssemblyName>ComfoBox.Gateway</AssemblyName>
     <UserSecretsId>comfobox-mqtt-gateway</UserSecretsId>
+    <!--
+      CA1848 (LoggerMessage-Delegaten) und CA1873 (teure Log-Argumente)
+      widersprechen dem in .github/instructions/csharp.instructions.md
+      festgelegten Stil: strukturierte Parameter ueber die
+      LoggerExtensions-Methoden. Die Regeln werden deshalb hier unterdrueckt -
+      die Qualitaets-Gate-Regeln (Warnungen als Fehler) bleiben unberuehrt.
+    -->
+    <NoWarn>$(NoWarn);CA1848;CA1873</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -17,6 +25,7 @@
     <PackageReference Include="Swashbuckle.AspNetCore" />
     <PackageReference Include="MQTTnet" />
     <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
   </ItemGroup>

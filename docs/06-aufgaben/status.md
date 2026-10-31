@@ -44,13 +44,13 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 2.1 | `ComfoBox.Domain`: Item-Katalog aus `src_old/ComfoBoxLib/Items/**` | ⬜ | 1.5 |
-| 2.2 | Werttypen (`AnalogValue`, `EnumValue`), `DateValue`/`CommandValue` entfernen | ⬜ | 1.0 |
-| 2.3 | `ComfoBox.Gateway`: Host, DI, Options, Validierung | ⬜ | 1.0 |
-| 2.4 | `BacnetDevice`: I/O, Serialisierung, Priorisierung | ⬜ | 1.5 |
-| 2.5 | `ValueCache` | ⬜ | 0.5 |
-| 2.6 | Persistenter Schreibzähler (A3) | ⬜ | 0.5 |
-| 2.7 | **Serilog-Setup + In-Memory-Ringbuffer** (1000, konfigurierbar) | ⬜ | 1.0 |
+| 2.1 | `ComfoBox.Domain`: Item-Katalog aus `src_old/ComfoBoxLib/Items/**` | ✅ | 1.5 |
+| 2.2 | Werttypen (`AnalogValue`, `EnumValue`), `DateValue`/`CommandValue` entfernen | ✅ | 1.0 |
+| 2.3 | `ComfoBox.Gateway`: Host, DI, Options, Validierung | ✅ | 1.0 |
+| 2.4 | `BacnetDevice`: I/O, Serialisierung, Priorisierung | ✅ | 1.5 |
+| 2.5 | `ValueCache` | ✅ | 0.5 |
+| 2.6 | Persistenter Schreibzähler (A3) | ✅ | 0.5 |
+| 2.7 | **Serilog-Setup + In-Memory-Ringbuffer** (1000, konfigurierbar) | ✅ | 1.0 |
 
 ## Phase 3 – MQTT-Migration & HA-Discovery (6 PT)
 
@@ -167,13 +167,15 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) von 63 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) von 63 PT.
+>
+> **Stand 2026-10-31:** 143 Tests grün (45 BACnet + 30 Domain + 10 Contract + 58 Gateway).
 
 ## Nächste Aufgabe
 
-> **2.1 – `ComfoBox.Domain`: Item-Katalog aus `src_old/ComfoBoxLib/Items/**`** (1.5 PT)
-> Datei: `src/ComfoBox.Domain/**` ·
-> Verifikation: Build grün, Item-Katalog deckt `docs/topics.json` ab, keine
-> Abhängigkeit zu `ComfoBox.Bacnet`/Logging
-> → Details: [phase-2.md](phase-2.md)
-> → **Prompt:** [prompts/Prompt-Phase-2.md](prompts/Prompt-Phase-2.md) (direkt kopierbar)
+> **3.1 – MQTTnet-Client** (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`) (1.5 PT)
+> Datei: `src/ComfoBox.Gateway/Mqtt/**` ·
+> Verifikation: Build grün, Publish/Subscribe gegen die unveränderten
+> Topic-Adressen, `Connected`/`Version` bei **jedem** Connect publiziert
+> → Details: [phase-3.md](phase-3.md)
+> → **Prompt:** [prompts/Prompt-Phase-3.md](prompts/Prompt-Phase-3.md) (direkt kopierbar)

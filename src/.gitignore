@@ -34,3 +34,8 @@ __pycache__/
 appsettings.override.json
 appsettings.*.local.json
 secrets.yaml
+
+# Laufzeit des Gateways (Schreibzähler, Logs)
+logs/
+data/
+write-counter.json

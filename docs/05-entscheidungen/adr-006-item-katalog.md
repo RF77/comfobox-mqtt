@@ -42,26 +42,32 @@ Der Katalog wird zur Laufzeit per Reflection (Fasterflect) enumeriert
 - Enum-Werte sind Teil der Definition (`IReadOnlyDictionary<int, string>`)
 - `RefreshPriority` ist ein **echtes** Feld und wird in der Polling-Logik ausgewertet
 - Der Katalog ist **serialisierbar** → die UI bekommt ihn als JSON über `/api/items`
-- Die 127 Definitionen werden **einmalig generiert** (aus `docs/topics.json` + `Items/**`),
-  danach manuell gepflegt
+- Die 127 Definitionen werden **aus dem Legacy-Quelltext generiert**
+  (`src_old/ComfoBoxLib/Items/**`) und können jederzeit neu erzeugt werden:
+  `node tools/generate-topics/generate-topics.mjs --catalog src/ComfoBox.Domain/Items`
+  (`--catalog-check` prüft, ob die committierten Dateien noch passen)
 
 ### Beispiel
 
 ````csharp
 new ItemDefinition
 {
-    Id = "zone.setpoint_normal",
+    Id = "zone.set_point_normal",
     Group = "Zone",
     Name = "SetPointNormal",
-    BacnetObjectId = 830,
+    BacnetObjectId = 62,
     Kind = ItemValueKind.Analog,
     Min = 5f, Max = 30f, Unit = "°C",
-    IsWritable = true,
+    IsReadOnly = false,
     RequiresExpertMode = false,
     Priority = RefreshPriority.Primary,
-    Description = "Raumsollwert Normalbetrieb",
+    Description = "Raumsollwert normal 5.0..30.0",
 };
 ````
+
+> **Die Id-Regel:** Topic-Pfad in camelCase → snake_case, mit Punkten verbunden:
+> `Zone/SetPointNormal` → `zone.set_point_normal`. Die Id ist unabhängig vom
+> konfigurierbaren `BaseTopic` und dient als Schlüssel in den REST-Routen.
 
 ### Topic-Ableitung
 
@@ -115,6 +121,10 @@ public string? AsNumberTopic => Kind == ItemValueKind.Enum ? $"{StateTopic}/AsNu
   → 127 × 12 ≈ 1.500 Zeilen
 - **Einmalige Generierung** nötig (Skript aus `docs/topics.json`), sonst manueller Übertragungs-
   fehler → **Contract-Test deckt das auf**
+- Der Generator liest den Legacy-Quelltext – er muss dessen **gemischte
+  Kodierung** beachten (Windows-1252 in den Item-Dateien, UTF-8 in den
+  Enum-Dateien). Das ist in `tools/generate-topics/generate-topics.mjs`
+  (`readLegacyFile`) gelöst.
 - Manuelle Pflege: eine neue ComfoBox-Generation erfordert Katalog-Erweiterung
   (im Ist-Zustand genauso)
 - Kein Compile-Zeit-Schutz mehr für die Item-Zuordnung → der Contract-Test ist der Ersatz

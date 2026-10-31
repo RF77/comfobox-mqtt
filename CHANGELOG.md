@@ -34,6 +34,33 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 1: `MstpStateMachine` – 1:1-Port des Legacy-MS/TP-Automaten
 - Phase 1: 19 neue Tests (MS/TP-Framing, Serial-Verhalten inkl. A8-Regression,
   Client-Request/Antwort/Fehler) → 45 Tests grün
+- Phase 2: `ComfoBox.Domain` – der **Item-Katalog mit 127 Items**
+  (`ItemDefinition`, `ItemValueKind`, `RefreshPriority`, `ItemCatalog`),
+  deklarativ und ohne Reflection
+- Phase 2: `ComfoBox.Domain.Items.Catalog` + `ItemEnums` werden aus dem
+  Legacy-Quelltext **generiert** (`tools/generate-topics/generate-topics.mjs
+  --catalog`) – inklusive BACnet-ID, Einheit, Grenzen, Schreibbarkeit,
+  Expert-Modus, **Priorität** und der exakten Enum-Namen
+- Phase 2: `ComfoBox.Domain.Values` – `ItemValue`, `AnalogValue`, `EnumValue`
+  (kultur-invariant, `InvariantCulture`)
+- Phase 2: `ComfoBox.Gateway` – Host mit DI, Options-Bindung und
+  **Fail-Fast-Validierung** (`ValidateOnStart`)
+- Phase 2: `ComfoBox.Gateway.Bacnet.BacnetDevice` – **ein** `SemaphoreSlim` für
+  alle Buszugriffe, Priorisierung (`Once`/`Primary`/`Secondary`), Timeout je
+  Item, Fehlerbehandlung ohne Abbruch des Zyklus
+- Phase 2: `ComfoBox.Gateway.Bacnet.PollPlan` – welcher Zyklus welche Items liest
+- Phase 2: `ComfoBox.Gateway.ValueCache` – letzter Wert + Zeitstempel,
+  `IsStale` (3 Poll-Zyklen), SSE-Abonnenten
+- Phase 2: `ComfoBox.Gateway.Protection.WriteCounter` – **persistenter**
+  24-h-Schreibzähler (JSON-Datei, atomar geschrieben)
+- Phase 2: `ComfoBox.Gateway.Health.ErrorCollector` – Fehler-Senke (letzte 50)
+- Phase 2: `ComfoBox.Gateway.Logging.InMemoryLogSink` – Serilog-Sink mit
+  In-Memory-Ringpuffer (1000 Einträge) für den Log-Viewer der Web-UI
+- Phase 2: `ComfoBox.Gateway.Logging.SecretRedactor` – Passwörter und Tokens
+  werden **vor** dem Speichern maskiert
+- Phase 2: `ComfoBox.Bacnet.IBacnetClient` – Testnaht, damit der Gateway ohne
+  Hardware getestet werden kann
+- Phase 2: 98 neue Tests (30 Domain, 10 Contract, 58 Gateway) → **143 Tests grün**
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
@@ -54,6 +81,15 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Der neue Transport nutzt `TaskCreationOptions.LongRunning` (Standardpriorität)
 - Phase 1: die Invoke-ID Vergabe im Client war nicht threadsicher (`m_invoke_id++`)
   → jetzt `Interlocked`
+- Phase 2: **Befund A15** – die Prioritäts-Attribute (`[Once]`, `[Primary]`,
+  `[Secondary]`) wurden im Legacy gelesen und **verworfen**; alle Items bekamen
+  `RefreshPriority.None`. Der neue Katalog wertet sie aus, der Poll-Plan liest
+  primäre Items in jedem und sekundäre Items nur alle 5 Zyklen
+- Phase 2: **Befund A22** – der Legacy zählte `CurrentNumberOfWrites++` auch bei
+  **fehlgeschlagenen** Schreibvorgängen. Der neue Zähler reserviert vor dem
+  Schreiben und gibt die Reservierung bei einem Fehler wieder frei
+- Phase 2: die Item-Id folgt der Regel camelCase → snake_case
+  (`zone.set_point_normal`) – die Beispiele in der Spec wurden angepasst
 
 ## [0.1.0] – 2026-10-31
 

@@ -11,28 +11,62 @@ Einheit und Schreibbarkeit. Aus einem Item werden Topic, REST-Route und HA-Disco
 // src/ComfoBox.Domain/Items/ItemDefinition.cs
 namespace ComfoBox.Domain.Items;
 
-public enum ItemValueKind { Analog, Enum, Date, Command }
-public enum RefreshPriority { Once, Primary, Secondary }
+/// <summary>Der Werte-Kind eines Items.</summary>
+public enum ItemValueKind
+{
+    /// <summary>Eine Zahl mit Einheit und optionalen Grenzen.</summary>
+    Analog,
+
+    /// <summary>Eine Auswahl aus benannten Werten.</summary>
+    Enum,
+
+    /// <summary>
+    /// Ein BACnet-Analogwert, dessen Wert nicht interpretiert wird.
+    /// Der Legacy nutzte dafür den (toten) Werttyp <c>DateValue</c> – der
+    /// Wert bleibt leer (Befund A20), das Item bleibt aber im Katalog.
+    /// </summary>
+    Date,
+}
+
+public enum RefreshPriority { None, Once, Primary, Secondary }
 
 public sealed record ItemDefinition
 {
-    public required string Id { get; init; }              // z. B. "zone.setpoint_normal"
+    public required string Id { get; init; }              // z. B. "zone.set_point_normal"
     public required string Group { get; init; }            // z. B. "Zone"
     public required string Name { get; init; }             // z. B. "SetPointNormal"
-    public required int BacnetObjectId { get; init; }      // z. B. 830
+    public required int BacnetObjectId { get; init; }      // z. B. 62
     public required ItemValueKind Kind { get; init; }
-    public required ItemValueType ValueType { get; init; } // float / enum-Typ / DateTime
 
     public float? Min { get; init; }
     public float? Max { get; init; }
     public string? Unit { get; init; }
-    public bool IsWritable { get; init; }
+    public bool IsReadOnly { get; init; }
     public bool RequiresExpertMode { get; init; }
     public RefreshPriority Priority { get; init; } = RefreshPriority.Secondary;
     public string? Description { get; init; }
     public IReadOnlyDictionary<int, string> EnumValues { get; init; } = …;
+
+    /// <summary>Der Topic-Pfad ohne BaseTopic, z. B. "Zone/SetPointNormal".</summary>
+    public string TopicPath => $"{Group}/{Name}";
+
+    /// <summary>Ist das Item grundsätzlich schreibbar?</summary>
+    public bool IsWritable => !IsReadOnly;
+
+    /// <summary>Ist das Item mit dem angegebenen Expert-Modus-Zustand schreibbar?</summary>
+    public bool IsWritableWithExpertMode(bool expertModeEnabled)
+        => !IsReadOnly && (!RequiresExpertMode || expertModeEnabled);
 }
 ````
+
+> **Die Id-Regel:** Der Topic-Pfad wird in camelCase → snake_case überführt und
+> mit Punkten verbunden: `Zone/SetPointNormal` → `zone.set_point_normal`.
+> Die Id ist unabhängig vom konfigurierbaren `BaseTopic` und dient als
+> Schlüssel in den REST-Routen.
+>
+> **Schreibbarkeit:** `IsReadOnly` (fest) und `RequiresExpertMode` sind getrennt
+> geführt. Der Legacy hatte beides in einem Feld (`IsReadOnly = !ExpertMode`)
+> vermischt – so bleibt der effektive Zustand berechenbar.
 
 ### 1.2 Deklarativer Katalog
 
@@ -53,21 +87,26 @@ public static partial class Catalog
     [
         new()
         {
-            Id = "zone.setpoint_normal",
+            Id = "zone.set_point_normal",
             Group = "Zone",
             Name = "SetPointNormal",
-            BacnetObjectId = 830,
+            BacnetObjectId = 62,
             Kind = ItemValueKind.Analog,
-            ValueType = ItemValueKind.Analog,
-            Min = 5f, Max = 30f, Unit = "°C",
-            IsWritable = true,
+            Unit = "°C",
+            Min = 5f, Max = 30f,
             Priority = RefreshPriority.Primary,
-            Description = "Raumsollwert Normalbetrieb",
+            Description = "Raumsollwert normal 5.0..30.0",
         },
         // … 126 weitere
     ];
 }
 ````
+
+> **Der Katalog wird generiert**, nicht von Hand geschrieben:
+> `node tools/generate-topics/generate-topics.mjs --catalog src/ComfoBox.Domain/Items`
+> liest `src_old/ComfoBoxLib/Items/**` und erzeugt `Catalog.cs` **und**
+> `ItemEnums.cs`. `--catalog-check` prüft, ob die committeten Dateien noch zum
+> Legacy-Katalog passen.
 
 > **Vorteil:** Der Katalog ist eine reine Datenstruktur → direkt unit-testbar, JSON-serialisierbar
 > (für die UI), und die Ableitung der Topics ist trivial zu prüfen.
@@ -131,30 +170,31 @@ Der Cache ist die Wahrheit zwischen BACnet, MQTT, REST und UI.
 
 ````csharp
 // src/ComfoBox.Gateway/ValueCache.cs
-internal sealed class ValueCache(ItemCatalog catalog)
+public sealed record CachedValue(string Id, ItemValue? Value, DateTimeOffset Timestamp, bool IsStale);
+
+internal sealed class ValueCache
 {
     private readonly ConcurrentDictionary<string, CachedValue> _values = new();
 
-    public sealed record CachedValue(object? Value, DateTimeOffset Timestamp, bool IsStale);
+    public bool TryGet(string id, out CachedValue? value);
 
-    public bool TryGet(string id, out CachedValue value) => _values.TryGetValue(id, out value!);
+    /// <summary>Schreibt einen Wert nach einem erfolgreichen BACnet-Read.</summary>
+    public void Update(string id, ItemValue? value);
 
-    public void Set(string id, object? value)
-        => _values[id] = new CachedValue(value, DateTimeOffset.UtcNow, IsStale: false);
-
-    public void MarkStale(string id)
-    {
-        if (_values.TryGetValue(id, out var v))
-            _values[id] = v with { IsStale = true };
-    }
+    public void MarkStale(string id);
 
     /// <summary>Fehlt ein Wert, wird er blockierend einmalig gelesen.</summary>
     public async Task<CachedValue> GetOrReadAsync(string id, CancellationToken ct);
 }
 ````
 
-**`IsStale`:** Wenn ein BACnet-Read fehlschlägt, wird der letzte Wert **nicht** gelöscht, sondern
-als `stale` markiert. Die UI zeigt „Wert veraltet". So bleibt der letzte bekannte Stand sichtbar.
+> **`IsStale`:** Ein Wert gilt als veraltet, wenn der letzte Read fehlgeschlagen
+> ist (dann wird er markiert) **oder** wenn er älter als drei Poll-Zyklen ist.
+> Sekundäre Items werden nur alle `SecondaryPollFactor` Zyklen gelesen – die
+> Schwelle ist deshalb `3 × Intervall × Faktor`.
+>
+> Der Wert bleibt im Cache, wenn ein Read fehlschlägt – die UI zeigt „Wert
+> veraltet". So bleibt der letzte bekannte Stand sichtbar.
 
 ## 3. REST-API
 
@@ -192,11 +232,11 @@ Basis-URL: `/api`. Authentifizierung: optional (siehe offene Frage Q2).
 ### 3.2 Beispiele
 
 ````http
-GET /api/items/zone.setpoint_normal
+GET /api/items/zone.set_point_normal
 ````
 ````json
 {
-  "id": "zone.setpoint_normal",
+  "id": "zone.set_point_normal",
   "group": "Zone",
   "name": "SetPointNormal",
   "displayName": "Raumsollwert Normalbetrieb",
@@ -221,7 +261,7 @@ GET /api/items/zone.setpoint_normal
 Schreiben:
 
 ````http
-PUT /api/items/zone.setpoint_normal
+PUT /api/items/zone.set_point_normal
 Content-Type: application/json
 
 { "value": 21.5 }

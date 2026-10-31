@@ -27,6 +27,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      Die Topic-Fixture ist unveränderlich (Projektregel: "docs/topics.json ist
+      die Test-Fixture - nicht verändern"). Sie wird nur in den Ausgabeordner
+      kopiert, damit der Test sie ohne Pfad-Salat lesen kann.
+    -->
+    <None Include="..\..\docs\topics.json" Link="topics.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
