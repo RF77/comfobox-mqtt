@@ -18,14 +18,14 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 0.1 | `global.json` (SDK-Pinning 10.0.400) | ⬜ | 0.2 |
-| 0.2 | `Directory.Packages.props` (Central Package Management) | ⬜ | 0.3 |
-| 0.3 | `Directory.Build.props` (Nullable, Warnungen als Fehler) | ⬜ | 0.2 |
-| 0.4 | `src/ComfoBox.sln` anlegen (SDK-Projekte) | ⬜ | 0.3 |
+| 0.1 | `global.json` (SDK-Pinning 10.0.400) | ✅ | 0.2 |
+| 0.2 | `Directory.Packages.props` (Central Package Management) | ✅ | 0.3 |
+| 0.3 | `Directory.Build.props` (Nullable, Warnungen als Fehler) | ✅ | 0.2 |
+| 0.4 | `src/ComfoBox.sln` anlegen (SDK-Projekte) | ✅ | 0.3 |
 | 0.5 | `src/.gitignore` vervollständigen | ✅ | 0.1 |
-| 0.6 | CI: `build-test.yml` + `codeql.yml` | ⬜ | 0.4 |
-| 0.7 | Fixtures fixieren (`docs/topics.json`, `MoMA Scan Results.html`) | ⬜ | 0.3 |
-| 0.8 | `CHANGELOG.md` anlegen | ⬜ | 0.2 |
+| 0.6 | CI: `build-test.yml` + `codeql.yml` | ✅ | 0.4 |
+| 0.7 | Fixtures fixieren (`docs/topics.json`, `MoMA Scan Results.html`) | ✅ | 0.3 |
+| 0.8 | `CHANGELOG.md` anlegen | ✅ | 0.2 |
 
 ## Phase 1 – BACnet-Portierung & Golden-Tests (8 PT)
 
@@ -167,10 +167,12 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 0 PT von 63. Der Fortschritt beginnt mit **Phase 0**.
+> **Fertig:** 2 PT von 63 (Phase 0 komplett).
 
 ## Nächste Aufgabe
 
-> **0.1 – `global.json` anlegen** (0.2 PT)
-> Datei: `src/global.json` · Verifikation: `dotnet --version` zeigt 10.0.400
-> → Details: [phase-0.md](phase-0.md)
+> **1.1 – Golden-Frames aus `MoMA Scan Results.html` extrahieren** (0.5 PT)
+> Datei: `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` ·
+> Verifikation: Test lädt die Fixture und parst **jeden** Frame
+> → Details: [phase-1.md](phase-1.md)
+> → **Prompt:** [prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md) (direkt kopierbar)

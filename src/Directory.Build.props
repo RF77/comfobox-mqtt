@@ -1,0 +1,33 @@
+<Project>
+
+  <!--
+    Qualitäts-Gate für alle Projekte unterhalb von src/.
+    Grundlage: docs/06-aufgaben/phase-0.md (Aufgabe 0.3)
+
+    Hinweis: Das TargetFramework steht zusätzlich in jeder Projektdatei.
+    Grund: Der Restore mit RestorePackagesWithLockFile wertet das Projekt in
+    einem äußeren Durchlauf aus, in dem die globale TargetFramework-
+    Eigenschaft leer ist. Ohne Deklaration in der Projektdatei entsteht
+    NETSDK1013.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>14</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Reproduzierbare Builds (ADR-001) -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <!-- Lock-Dateien: der CI-Restore läuft im gesperrten Modus -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+  </PropertyGroup>
+
+</Project>

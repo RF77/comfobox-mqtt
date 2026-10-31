@@ -18,7 +18,7 @@ Die Teile 03–05 enthalten Deployment, Migrations-Roadmap und die dokumentierte
 | [03-deployment](03-deployment/README.md) | Container, Synology DS923+, CI/CD | Betrieb & Deployment |
 | [04-migration](04-migration/README.md) | Roadmap, Kompatibilitäts-Garantien, Tests, Risiken | Projektleitung |
 | [05-entscheidungen](05-entscheidungen/README.md) | Architektur-Entscheidungsprotokolle (ADR) | Reviewer |
-| [06-aufgaben](06-aufgaben/README.md) | **Arbeitsanweisungen** für die Umsetzung (Task-Dokument) | Implementierung |
+| [06-aufgaben](06-aufgaben/README.md) | **Arbeitsanweisungen** für die Umsetzung (Task-Dokument) + [Session-Prompts](06-aufgaben/prompts/) | Implementierung |
 | [benutzer](benutzer/README.md) | **Benutzerdokumentation** (→ HTML für Web-UI, HACS, Synology) | Endanwender |
 
 ### 01 – Ist-Zustand

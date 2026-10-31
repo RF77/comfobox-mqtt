@@ -4,6 +4,7 @@
 **Braucht:** Phase 0
 **Spec:** [bacnet-portierung](../02-modernisierung/bacnet-portierung.md) ·
 [teststrategie](../04-migration/teststrategie.md)
+**Prompt:** [prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md) – kopierfertig starten
 
 > ⚠️ **Höchstes Risiko im Projekt.** Deshalb gilt hier ausnahmslos:
 > **Golden-Tests zuerst, Portierung danach.** Ohne Fixture kein Meilenstein M1.

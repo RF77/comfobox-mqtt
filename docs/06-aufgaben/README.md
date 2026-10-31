@@ -22,6 +22,7 @@ für einen Review.
 |---|---|
 | [status.md](status.md) | **Fortschrittstabelle** – eine Zeile pro Aufgabe |
 | [protokoll.md](protokoll.md) | **Session-Protokoll** – was wurde wann gemacht |
+| [prompts/](prompts/) | **Kopierfertige Session-Prompts** je Phase |
 | [phase-0.md](phase-0.md) | Repo-Hygiene & CI |
 | [phase-1.md](phase-1.md) | BACnet-Portierung & Golden-Tests |
 | [phase-2.md](phase-2.md) | Domain & Gateway-Kern |
@@ -32,6 +33,7 @@ für einen Review.
 | [phase-8.md](phase-8.md) | Synology-Paket & Getting Started |
 | [phase-8ad.md](phase-8ad.md) | HA-Add-on & HACS-Integration |
 | [phase-7.md](phase-7.md) | Parallelbetrieb & Umschaltung |
+| [prompts/](prompts/) | **Kopierfertige Session-Prompts** je Phase |
 
 ## 3. Wie eine Session läuft
 
@@ -64,6 +66,27 @@ für einen Review.
 | 3 | [protokoll.md](protokoll.md): Eintrag mit Datum, Aufgabe, Ergebnis, offenen Punkten |
 | 4 | Commit: `feat(scope): …` / `fix(scope): …` (Conventional Commits) |
 | 5 | Bei neuen Entscheidungen: ADR anlegen, `docs/README.md` + `docs/05-entscheidungen/README.md` aktualisieren |
+| 6 | **Den Prompt für die nächste Session ausgeben** (siehe §3.4) |
+
+### 3.4 Der nächste Prompt
+
+> **Regel: Am Ende **jeder** Session wird der Prompt für die nächste Session
+> ausgegeben.** Er ist kopierfertig und **vollständig** – die nächste Session
+> braucht keinen Kontext aus dem Chat.
+
+| Punkt | Inhalt |
+|---|---|
+| **Form** | ein Textblock in Fenced-Code, zum direkten Kopieren |
+| **Inhalt** | Ziel, die zu lesenden Dateien (in Reihenfolge), die Aufgaben, die verifizierten Fallstricke, die Regeln |
+| **Fallstricke** | alles, was in dieser Session **überraschend** war, kommt in den nächsten Prompt |
+| **Quelle** | [prompts/](prompts/) – dort liegt je Phase eine fertige Vorlage |
+
+**Vorlage:** [prompts/Prompt-Phase-0.md](prompts/Prompt-Phase-0.md) ·
+[prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md)
+
+> **Warum?** Die Phasen sind aufeinander aufgebaut. Wer die Fallstricke nicht
+> weitergibt, verschwendet in der nächsten Session Zeit mit demselben Fehler –
+> oder überschreitet die Phase, weil der Zielbild unklar ist.
 
 ## 4. Status-Logik
 

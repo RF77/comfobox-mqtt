@@ -118,6 +118,7 @@ deploy/ha-addon/              # Home-Assistant-Add-on (Supervisor-Manifest)
 docs/                         # Spezifikation (siehe docs/README.md)
 docs/benutzer/                # Benutzerdokumentation (→ HTML für die Web-UI)
 docs/06-aufgaben/             # Arbeitsanweisungen je Phase (Task-Dokument)
+docs/06-aufgaben/prompts/    # kopierfertige Session-Prompts je Phase
 tools/                        # Link-Checker, Doku-Build, Payload-Vergleich
 ````
 
@@ -213,6 +214,7 @@ node tools/build-docs.mjs
 | Der Log-Ringpuffer zeigt **Secrets** | Logging | Redaktion vor dem Speichern (`••••`) |
 | `pytest-socket` blockiert **jede** Socket-Erstellung | HA-Tests | unter Windows braucht asyncio ein TCP-Self-Pipe → `pytest_socket.disable_socket` im conftest ersetzen |
 | `aiodns` braucht unter Windows einen **SelectorEventLoop** | HA-Tests | im Test `ThreadedResolver` statt `AsyncResolver` |
+| Am Session-Ende kommt der **nächste Prompt** | Arbeitsweise | siehe [docs/06-aufgaben/README.md §3.4](../docs/06-aufgaben/README.md#34-der-nächste-prompt) |
 
 ## 9. Detailliertere Regeln
 

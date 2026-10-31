@@ -27,6 +27,64 @@
 
 ---
 
+## 2026-10-31 – Phase 0: Repo-Hygiene & CI (Aufgaben 0.1–0.8)
+
+**Ergebnis:** Das Fundament steht. `src/` enthält eine gepinnte .NET-10-Solution
+mit sieben SDK-Projekten, zentrale Paketverwaltung, Qualitäts-Gate
+(`TreatWarningsAsErrors`), Lock-Dateien, CI mit Build/Test/Fixture-Prüfung und
+einen `CHANGELOG.md`. Der Generator für die Topic-Fixture reproduziert
+`docs/topics.json` **byteidentisch** (127 Items) – die Fixture ist damit
+maschinell abgesichert.
+
+**Geänderte Dateien:**
+- `src/global.json` – SDK-Pinning 10.0.400 (`rollForward: latestFeature`)
+- `src/Directory.Packages.props` – 20 Pakete zentral gepinnt
+  (`CentralPackageTransitivePinningEnabled`)
+- `src/Directory.Build.props` – `net10.0`, C# 14, `Nullable`, `TreatWarningsAsErrors`,
+  `GenerateDocumentationFile`, `RestorePackagesWithLockFile`
+- `src/ComfoBox.sln` + 7 `.csproj` – Domain/Bacnet/Gateway + 4 Testprojekte
+- `CHANGELOG.md` – neu
+- `tools/generate-topics/generate-topics.mjs` + `README.md` – Generator & Prüfmodus
+- `.github/workflows/build-test.yml` – `working-directory: src`, `global-json-file`,
+  Lock-Dateien, Job „Fixture prüfen", Legacy-Job → Archiv-Prüfung
+
+**Verifikation:**
+- `cd src && dotnet --version` → `10.0.400`
+- `cd src && dotnet build ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `cd src && dotnet test ComfoBox.sln -c Release` → grün (0 Tests, erlaubt)
+- `node tools/generate-topics/generate-topics.mjs --check` → „Fixture ist deckungsgleich (127 Items)"
+- Regenerierte Datei vs. committete Fixture → identisch bis auf **eine** dokumentierte
+  Abweichung (`ComfoBox/Warmwater/DoHeatWaterNow`: `DateTime?` → `float?`, 3 Zeichen)
+- `ComfoBox.Domain` → keine `PackageReference` (framework-frei)
+- Projektreferenzen: Bacnet → Domain, Gateway → Domain + Bacnet, keine Zyklen
+- Kein `<PackageReference>` mit `Version=`-Attribut → kein `NU1008`
+- `Class1.cs` / `UnitTest1.cs` entfernt → kein `CS1591`
+
+**Offen / nicht gemacht:**
+- Die CI-Pipeline selbst wurde **nicht** ausgeführt (kein Push in dieser Session) –
+  der Workflow ist aber gegen die lokalen Kommandos verifiziert.
+- `packages.lock.json` sind generiert, aber noch nicht committet.
+
+**Überraschungen:**
+- `dotnet new web` liefert im .NET-10-SDK Pakete, die der Web-SDK bereits mitbringt →
+  `NU1510` (Warnung als Fehler). Betroffen: `Microsoft.Extensions.Hosting`,
+  `Microsoft.Extensions.Configuration.Json`, `…EnvironmentVariables` → entfernt.
+- `dotnet new sln` erzeugt standardmäßig **`.slnx`** → `--format sln` ist Pflicht.
+- Die Template-`PackageReference` enthalten `Version=` → `NU1008` mit CPM.
+- `Swashbuckle.AspNetCore 9.0.6` existiert (die Spec nennt „9.x").
+- **Die Legacy-Dateien sind Windows-1252-kodiert**, nicht UTF-8 – ein UTF-8-Leser
+  erzeugt `�` in Umlauten. Der Generator dekodiert sie mit einer eigenen CP1252-Tabelle.
+- `\w` in JavaScript matcht **nur ASCII** – Bezeichner wie `Gebäudeträgheit` brauchen
+  `\p{L}` mit dem `u`-Flag.
+- In `Config.cs` stehen **auskommentierte** Items (`States/Outputs/R2`, `R6`, `R8`, `R9`) –
+  ein Parser ohne Kommentar-Stripping zählt sie mit.
+- `docs/topics.json` hat ein **UTF-8-BOM** → `JSON.parse` braucht vorher ein `.replace(/^﻿/, '')`.
+- Die Fixture stammt von 2017 und ist seitdem **nicht** mehr deckungsgleich mit dem
+  Legacy-Katalog (ein Werttyp, vier auskommentierte Items). Die Fixture bleibt
+  unverändert – sie ist der Vertrag.
+
+---
+
 ## 2026-10-31 – Spezifikation, SPK-Skelett, HA-Ökosystem, Benutzerdoku (Phasen 0–8d, D.1–D.8)
 
 **Ergebnis:** Die gesamte Spezifikation liegt vor. `src_old/` ist vom Altbestand getrennt,
@@ -110,6 +168,9 @@ Benutzerdoku erzeugt HTML.
 - `.github/instructions/csharp.instructions.md` – §5.1 Serilog & Ringpuffer
 - `docs/benutzer/06-bedienung.md` – Abschnitt „Das Protokoll"
 - `docs/benutzer/09-fehlersuche.md` – „Was im Protokoll nachsehen"
+- `docs/06-aufgaben/prompts/Prompt-Phase-0.md` (**neu**) – kopierfertiger Session-Prompt
+- `docs/06-aufgaben/prompts/Prompt-Phase-1.md` (**neu**) – Prompt für die nächste Session
+- `docs/06-aufgaben/README.md` – §3.4 „Der nächste Prompt" (neue Konvention)
 
 **Verifikation:**
 - `python --version` → 3.12.10 (via `winget`, `--scope user`, **ohne Admin**)
@@ -143,6 +204,14 @@ Benutzerdoku erzeugt HTML.
   a SelectorEventLoop on Windows`. **Lösung:** im Test `ThreadedResolver` statt
   `AsyncResolver` (`homeassistant.helpers.aiohttp_client.AsyncResolver`). Im
   **Produktivbetrieb** (Linux) bleibt aiodns unveraendert.
+- **Drei .NET-10-Fallen reproduziert und in `phase-0.md` dokumentiert:**
+  1. `dotnet new sln` erzeugt standardmäßig **`.slnx`** → `--format sln` ist Pflicht,
+     sonst passen alle Build-Befehle der Spec nicht.
+  2. Die Templates schreiben `Version="…"` in jedes `<PackageReference>` → mit
+     `ManagePackageVersionsCentrally=true` bricht der Restore mit **NU1008**.
+  3. `GenerateDocumentationFile=true` + `TreatWarningsAsErrors=true` macht **CS1591**
+     (fehlender XML-Kommentar) zum Fehler – die Template-Dateien `Class1.cs` /
+     `UnitTest1.cs` müssen weg.
 
 ---
 
@@ -150,3 +219,4 @@ Benutzerdoku erzeugt HTML.
 
 **Aufgabe 0.1** – `src/global.json` anlegen (SDK-Pinning 10.0.400)
 → [phase-0.md](phase-0.md)
+→ **Prompt:** [prompts/Prompt-Phase-0.md](prompts/Prompt-Phase-0.md)

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Domain-Schicht: framework-frei.
+    Keine PackageReference, keine ILogger, keine I/O. (Layerregel §5)
+  -->
+  <PropertyGroup>
+    <!-- Das TFM steht auch hier (nicht nur in Directory.Build.props): der
+         Restore mit RestorePackagesWithLockFile wertet das Projekt in einem
+         "äußeren" Durchlauf aus, in dem die globale TargetFramework-Eigenschaft
+         leer ist. Nur so entsteht NETSDK1013. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ComfoBox.Domain</RootNamespace>
+    <AssemblyName>ComfoBox.Domain</AssemblyName>
+  </PropertyGroup>
+
+</Project>
