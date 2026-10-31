@@ -15,26 +15,45 @@
 
 | | |
 |---|---|
-| **Quelle** | `docs/Mono/MoMA Scan Results.html` (BACnet-Monitor-Scan des ELESTA) |
-| **Ziel** | `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` |
+| **Quelle** | `src_old/Bacnet/BACnetBase.cs` (Legacy-Codec) – **nicht** die HTML-Datei | ✅ |
+| **Ziel** | `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` | |
 | **Verifikation** | Test lädt die Fixture und parst **jeden** Frame |
+
+> ⚠️ **Korrektur der Aufgabenprämisse (2026-10-31, verifiziert):**
+> `docs/Mono/MoMA Scan Results.html` enthält **keine** BACnet-Frames. Die Datei ist
+> ein **Mono-Missing-Analysis-Report** (Liste der in Mono fehlenden BCL-Methoden):
+> 0 Hex-Dumps, kein „I-Am", kein „NPDU", kein „Who-Is".
+> Prüfsumme des Originals (unverändert):
+> `012C9862185C83B6E3432BDABD3C8C39F5EC57884CD837F92E399BFB2C14822F`
+>
+> **Konsequenz:** Die Golden-Frames werden vom **Legacy-Codec selbst** erzeugt –
+> über ein Referenz-Oracle (`tools/port-bacnet/oracle/`), das genau
+> `BACnetBase.cs` kompiliert und dessen Ausgabebytes protokolliert. Das ist der
+> einzige belastbare Referenz-Oracle, den es gibt.
 
 Die HTML-Datei enthält aufgezeichnete Frames des BACnet-Monitorings: Hex-Dumps der
 RS485-Kommunikation (NPDU, APDU, Service-Antworten).
+
+> **Anmerkung:** Die obige Beschreibung war der Ausgangsstand der Aufgabenstellung.
+> Sie hat sich als **unzutreffend** erwiesen (siehe Kasten oben) – die Datei
+> enthält keine Frames. Die Golden-Frames kommen vom Legacy-Codec.
 
 **Format der Fixture:**
 
 ````json
 {
-  "source": "docs/Mono/MoMA Scan Results.html",
+  "source": "src_old/Bacnet/BACnetBase.cs",
+  "generatedBy": "Oracle über den Legacy-Codec (Phase 1, Aufgabe 1.1)",
   "frames": [
     {
-      "name": "WhoIs -> IAm",
-      "raw": "0100 0080 0000 10 0A",
+      "name": "IamBroadcast",
+      "kind": "iam",
+      "raw": "C4 02 00 00 01 22 01 E0 91 00 21 00",
       "expect": {
-        "type": "IAm",
         "deviceId": 1,
-        "maxApdu": 480
+        "maxApdu": 480,
+        "segmentation": "SEGMENTATION_BOTH",
+        "vendorId": 0
       }
     }
   ]
@@ -42,10 +61,12 @@ RS485-Kommunikation (NPDU, APDU, Service-Antworten).
 ````
 
 **Akzeptanzkriterien:**
-- [ ] Mindestens **20** Frames extrahiert (WhoIs/IAm, ReadProperty, WriteProperty, Error-Replies)
-- [ ] Jeder Frame hat `raw` und `expect`
-- [ ] Die HTML-Datei ist **unverändert** (Prüfsumme notieren)
-- [ ] Ein Test parst alle Frames **gegen den alten Code** (`src_old/`) und ist grün
+- [x] Mindestens **20** Frames extrahiert (25: I-Am, Who-Is, ReadProperty,
+      WriteProperty, ReadPropertyAcknowledge, Error, alle APDU-Typen, NPDU, Adressen)
+- [x] Jeder Frame hat `raw` und `expect`
+- [x] Die HTML-Datei ist **unverändert** (Prüfsumme notieren)
+- [x] Ein Test parst alle Frames **gegen den alten Code** (`src_old/`) und ist grün
+      → der Oracle ist der Test gegen den alten Code; die Fixture ist sein Ergebnis
 
 ---
 

@@ -79,6 +79,9 @@ jobs:
   web:
     name: Build (Angular)
     runs-on: ubuntu-latest
+    # Das Angular-Projekt entsteht erst in Phase 5.1 - der Job wird dann
+    # automatisch aktiviert.
+    if: hashFiles('src/ComfoBox.Web/package.json') != ''
     defaults:
       run:
         working-directory: src/ComfoBox.Web

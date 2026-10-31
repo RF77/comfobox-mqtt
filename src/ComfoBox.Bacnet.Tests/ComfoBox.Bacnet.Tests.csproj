@@ -6,7 +6,8 @@
     <RootNamespace>ComfoBox.Bacnet.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <!-- Tests dokumentieren den Vertrag, nicht die Produktions-API -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- CA1707: Unterstriche in Testmethodennamen sind hier Haustil. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ComfoBox.Bacnet\ComfoBox.Bacnet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Die Golden-Fixture wird unverändert in die Ausgabe kopiert. -->
+    <None Update="Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

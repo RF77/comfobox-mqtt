@@ -1,0 +1,156 @@
+{
+  "source": "src_old/Bacnet/BACnetBase.cs",
+  "generatedBy": "Oracle über den Legacy-Codec (Phase 1, Aufgabe 1.1)",
+  "frames": [
+    {
+      "name": "IamBroadcast",
+      "kind": "iam",
+      "raw": "C4 02 00 00 01 22 01 E0 91 00 21 00",
+      "expect": {"deviceId":1,"maxApdu":480,"segmentation":"SEGMENTATION_BOTH","vendorId":0}
+    },
+    {
+      "name": "WhoIsBroadcast",
+      "kind": "whois",
+      "raw": "09 00 1B 3F FF FF",
+      "expect": {"lowLimit":0,"highLimit":4194303}
+    },
+    {
+      "name": "ReadProperty",
+      "kind": "readProperty",
+      "raw": "0C 00 80 00 3E 19 55",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":62,"propertyId":85,"arrayIndex":4294967295}
+    },
+    {
+      "name": "WriteProperty",
+      "kind": "writeProperty",
+      "raw": "0C 00 80 00 3E 19 55 3E 44 41 AC 00 00 3F 49 10",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":62,"propertyId":85,"priority":16,"value":"21.5"}
+    },
+    {
+      "name": "ReadPropertyAcknowledge",
+      "kind": "readPropertyAcknowledge",
+      "raw": "0C 00 80 00 3E 19 55 3E 44 41 AC 00 00 3F",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":62,"propertyId":85,"arrayIndex":4294967295,"value":"21.5"}
+    },
+    {
+      "name": "Error",
+      "kind": "error",
+      "raw": "91 02 91 20",
+      "expect": {"errorClass":"ERROR_CLASS_PROPERTY","errorCode":"ERROR_CODE_UNKNOWN_PROPERTY"}
+    },
+    {
+      "name": "ConfirmedServiceRequest",
+      "kind": "confirmedRequest",
+      "raw": "00 13 01 0C",
+      "expect": {"type":"PDU_TYPE_CONFIRMED_SERVICE_REQUEST","service":"SERVICE_CONFIRMED_READ_PROPERTY","maxSegments":"MAX_SEG2","maxApdu":"MAX_APDU480","invokeId":1,"sequenceNumber":0,"proposedWindow":0}
+    },
+    {
+      "name": "UnconfirmedServiceRequest",
+      "kind": "unconfirmedRequest",
+      "raw": "10 00",
+      "expect": {"type":"PDU_TYPE_UNCONFIRMED_SERVICE_REQUEST","service":"SERVICE_UNCONFIRMED_I_AM"}
+    },
+    {
+      "name": "SimpleAck",
+      "kind": "simpleAck",
+      "raw": "20 07 0F",
+      "expect": {"type":"PDU_TYPE_SIMPLE_ACK","service":"SERVICE_CONFIRMED_WRITE_PROPERTY","invokeId":7}
+    },
+    {
+      "name": "ComplexAck",
+      "kind": "complexAck",
+      "raw": "30 03 0C",
+      "expect": {"type":"PDU_TYPE_COMPLEX_ACK","service":"SERVICE_CONFIRMED_READ_PROPERTY","invokeId":3,"sequenceNumber":0,"proposedWindow":0}
+    },
+    {
+      "name": "ApduError",
+      "kind": "apduError",
+      "raw": "50 09 0C",
+      "expect": {"type":"PDU_TYPE_ERROR","service":"SERVICE_CONFIRMED_READ_PROPERTY","invokeId":9}
+    },
+    {
+      "name": "Abort",
+      "kind": "abort",
+      "raw": "70 04 01",
+      "expect": {"type":"PDU_TYPE_ABORT","invokeId":4,"reason":1}
+    },
+    {
+      "name": "SegmentAck",
+      "kind": "segmentAck",
+      "raw": "40 02 01 04",
+      "expect": {"type":"PDU_TYPE_SEGMENT_ACK","originalInvokeId":2,"sequenceNumber":1,"actualWindowSize":4}
+    },
+    {
+      "name": "NpduExpectingReply",
+      "kind": "npdu",
+      "raw": "01 04",
+      "expect": {"function":"ExpectingReply","source":"","hopCount":0,"networkMessageType":"NETWORK_MESSAGE_WHO_IS_ROUTER_TO_NETWORK"}
+    },
+    {
+      "name": "AddressMac",
+      "kind": "addressMac",
+      "raw": "1E 21 00 65 06 01 02 03 04 05 06 1F",
+      "expect": {"type":"MSTP","net":0,"adrLength":6,"adr":"01 02 03 04 05 06"}
+    },
+    {
+      "name": "ReadProperty Device/ObjectName",
+      "kind": "readProperty",
+      "raw": "0C 02 00 00 01 19 4D",
+      "expect": {"objectType":"OBJECT_DEVICE","instance":1,"propertyId":77,"arrayIndex":4294967295}
+    },
+    {
+      "name": "ReadProperty Warmwater/PresentValue",
+      "kind": "readProperty",
+      "raw": "0C 00 80 00 48 19 55",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":72,"propertyId":85,"arrayIndex":4294967295}
+    },
+    {
+      "name": "ReadProperty Comfofond/PresentValue",
+      "kind": "readProperty",
+      "raw": "0C 00 80 0D 72 19 55",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":3442,"propertyId":85,"arrayIndex":4294967295}
+    },
+    {
+      "name": "WriteProperty Warmwater",
+      "kind": "writeProperty",
+      "raw": "0C 00 80 00 48 19 55 3E 44 42 48 00 00 3F 49 08",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":72,"propertyId":85,"priority":8,"value":"50"}
+    },
+    {
+      "name": "WriteProperty Minimum",
+      "kind": "writeProperty",
+      "raw": "0C 00 80 00 3E 19 55 3E 44 40 A0 00 00 3F 49 10",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":62,"propertyId":85,"priority":16,"value":"5"}
+    },
+    {
+      "name": "WriteProperty Maximum",
+      "kind": "writeProperty",
+      "raw": "0C 00 80 00 3E 19 55 3E 44 41 F0 00 00 3F 49 01",
+      "expect": {"objectType":"OBJECT_ANALOG_VALUE","instance":62,"propertyId":85,"priority":1,"value":"30"}
+    },
+    {
+      "name": "IamBroadcastMaxApdu",
+      "kind": "iam",
+      "raw": "C4 02 00 00 01 22 05 C4 91 03 21 2A",
+      "expect": {"deviceId":1,"maxApdu":1476,"segmentation":"SEGMENTATION_NONE","vendorId":42}
+    },
+    {
+      "name": "AddressIp",
+      "kind": "addressIp",
+      "raw": "1E 21 00 64 C0 A8 01 2A 1F",
+      "expect": {"type":"IP","net":0,"adrLength":4,"adr":"C0 A8 01 2A"}
+    },
+    {
+      "name": "AddressDevice",
+      "kind": "addressDevice",
+      "raw": "1E 21 00 60 1F",
+      "expect": {"type":"None","net":0,"adrLength":0,"adr":""}
+    },
+    {
+      "name": "NpduPriorityNormal",
+      "kind": "npdu",
+      "raw": "01 00",
+      "expect": {"function":"PriorityNormalMessage","source":"","hopCount":0,"networkMessageType":"NETWORK_MESSAGE_WHO_IS_ROUTER_TO_NETWORK"}
+    }
+  ]
+}

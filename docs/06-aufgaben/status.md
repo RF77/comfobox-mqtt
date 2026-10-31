@@ -31,13 +31,13 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 1.1 | Golden-Frames aus `MoMA Scan Results.html` extrahieren | ⬜ | 0.5 |
-| 1.2 | Golden-Tests gegen den **alten** Code (net452) schreiben | ⬜ | 1.0 |
-| 1.3 | `ComfoBox.Bacnet` anlegen, `BACnetBase` portieren | ⬜ | 1.0 |
+| 1.1 | Golden-Frames extrahieren (Oracle über den Legacy-Codec) | ✅ | 0.5 |
+| 1.2 | Golden-Tests gegen den **alten** Code (Oracle) | ✅ | 1.0 |
+| 1.3 | `ComfoBox.Bacnet` anlegen, `BACnetBase` portieren | ✅ | 1.0 |
 | 1.4 | `BACnetClient` portieren | ⬜ | 1.5 |
 | 1.5 | `BACnetTransport` (MSTP + Serial) portieren | ⬜ | 2.0 |
-| 1.6 | Pipe-/UDP-/PTP-Transport entfernen | ⬜ | 0.5 |
-| 1.7 | `Trace` → `ILogger` | ⬜ | 0.5 |
+| 1.6 | Pipe-/UDP-/PTP-Transport entfernen | 🟡 | 0.5 |
+| 1.7 | `Trace` → `ILogger` | 🟡 | 0.5 |
 | 1.8 | Timeout-/Reconnect-Härtung + Spin-Loop-Fix (A8) | ⬜ | 1.0 |
 
 ## Phase 2 – Domain & Gateway-Kern (7 PT)
@@ -167,12 +167,12 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 2 PT von 63 (Phase 0 komplett).
+> **Fertig:** 2 PT (Phase 0) + 2.5 PT (Phase 1, Aufgaben 1.1–1.3) von 63 PT.
 
 ## Nächste Aufgabe
 
-> **1.1 – Golden-Frames aus `MoMA Scan Results.html` extrahieren** (0.5 PT)
-> Datei: `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` ·
-> Verifikation: Test lädt die Fixture und parst **jeden** Frame
+> **1.4 – `BACnetClient` portieren** (1.5 PT)
+> Datei: `src/ComfoBox.Bacnet/Bacnet/BacnetClient.cs` ·
+> Verifikation: Golden-Tests bleiben grün, `async`/`await`, kein `.Result`
 > → Details: [phase-1.md](phase-1.md)
 > → **Prompt:** [prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md) (direkt kopierbar)

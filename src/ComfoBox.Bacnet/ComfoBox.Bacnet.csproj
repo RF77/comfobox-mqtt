@@ -9,6 +9,22 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>ComfoBox.Bacnet</RootNamespace>
     <AssemblyName>ComfoBox.Bacnet</AssemblyName>
+    <!--
+      Der portierte Fremdcode (MIT, siehe Bacnet/HEADER-LIZENZ.txt) wird 1:1
+      uebernommen. Daher werden folgende Regeln nicht angewendet:
+      CS1591 - fehlende XML-Kommentare im Fremdcode
+      CS0162 - "unreachable code" nach throw (Originalzustand)
+      CS1572 - XML-Kommentar mit unbekanntem param-Tag
+      CS1587 - XML-Kommentar ohne Sprachelement
+
+      Die .NET-Analyzer (CAxxxx) sind projektweit abgeschaltet: sie monieren
+      im Fremdcode bewusste Eigenheiten des BACnet-Standards (Bezeichner mit
+      Unterstrichen, doppelte Enum-Werte, sichtbare Felder). Diese Eigenheiten
+      sind Teil des Vertrags und dürfen nicht "verbessert" werden.
+      Der neue Code (z. B. Diagnostics/BacnetLog.cs) richtet sich danach.
+    -->
+    <NoWarn>$(NoWarn);CS1591;CS0162;CS1572;CS1587</NoWarn>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
   </PropertyGroup>
 
   <ItemGroup>

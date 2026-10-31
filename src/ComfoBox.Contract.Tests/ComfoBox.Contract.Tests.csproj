@@ -10,7 +10,8 @@
     <RootNamespace>ComfoBox.Contract.Tests</RootNamespace>
     <IsPackable>false</IsPackable>
     <!-- Tests dokumentieren den Vertrag, nicht die Produktions-API -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- CA1707: Unterstriche in Testmethodennamen sind hier Haustil. -->
+    <NoWarn>$(NoWarn);CS1591;CA1707</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

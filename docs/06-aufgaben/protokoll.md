@@ -27,6 +27,65 @@
 
 ---
 
+## 2026-10-31 – Phase 1: BACnet-Codec portiert, Golden-Fixture erzeugt (Aufgaben 1.1–1.3, 1.6, 1.7)
+
+**Ergebnis:** Der BACnet-Codec läuft verhaltensgleich auf .NET 10. 25 Golden-Frames,
+erzeugt vom **Legacy-Codec selbst**, werden vom portierten Codec byteweise
+reproduziert – 26 Tests grün. Der Codec liegt als
+`src/ComfoBox.Bacnet/Bacnet/BacnetCodec.cs` vor (Fremdcode, MIT, 1:1 portiert).
+
+**Geänderte Dateien:**
+- `src/ComfoBox.Bacnet/Bacnet/BacnetCodec.cs` – **neu**: 1:1-Port von `BACnetBase.cs`
+  (7.471 Zeilen), Namespace `ComfoBox.Bacnet`, ohne `BVLC` (BACnet/IP) und `PTP`
+- `src/ComfoBox.Bacnet/Diagnostics/BacnetLog.cs` – **neu**: `ILogger`-Fassade für den
+  statischen Fremdcode (Befund A16)
+- `src/ComfoBox.Bacnet/Bacnet/HEADER-LIZENZ.txt` – **neu**: MIT-Lizenz + Portierungsprotokoll
+- `src/ComfoBox.Bacnet.Tests/Fixtures/bacnet-frames.json` – **neu**: 25 Golden-Frames
+- `src/ComfoBox.Bacnet.Tests/BacnetCodecGoldenTests.cs` + `BacnetFrames.cs` – **neu**
+- `tools/port-bacnet/port-bacnet-base.mjs` – **neu**: mechanischer Port
+- `tools/port-bacnet/oracle/` – **neu**: Referenz-Oracle (kompiliert den Legacy-Codec)
+- `tools/port-bacnet/README.md` – **neu**
+- `src/ComfoBox.Bacnet/ComfoBox.Bacnet.csproj` – `NoWarn` + `EnableNETAnalyzers=false`
+  für den Fremdcode
+
+**Verifikation:**
+- `cd src && dotnet build ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `cd src && dotnet test ComfoBox.sln -c Release` → **26 Tests grün** (1 Projekt, 25 Frames)
+- Jeder Frame wird dekodiert und mit dem Erwartungswert der Fixture verglichen
+- Die Adress-Frames werden **erneut kodiert** und byteweise verglichen
+
+**Offen / nicht gemacht:**
+- **1.4 `BACnetClient`** (2.098 Zeilen) – offen
+- **1.5 `BACnetTransport`** (2.005 Zeilen, MSTP + Serial) – offen
+- **1.8** Timeout-/Reconnect-Härtung – offen (setzt 1.4/1.5 voraus)
+- 1.6 und 1.7 sind nur für den **Codec** erledigt; die Transports (Pipe/UDP/PTP)
+  und deren `Trace`-Aufrufe folgen mit 1.4/1.5.
+
+**Überraschungen:**
+- ⚠️ **`docs/Mono/MoMA Scan Results.html` enthält KEINE BACnet-Frames.** Die Datei ist
+  ein **Mono-Missing-Analysis-Report** (welche BCL-Methoden in Mono fehlen):
+  0 Hex-Dumps, keine „I-Am", kein „NPDU", keine „Who-Is".
+  Prüfsumme des Originals: `012C9862185C83B6E3432BDABD3C8C39F5EC57884CD837F92E399BFB2C14822F`
+  (unverändert). → **Die Prämisse der Aufgabe 1.1 war falsch.** Die Golden-Frames
+  stammen stattdessen vom Legacy-Codec selbst (Referenz-Oracle).
+- Der Legacy-Codec ist **nicht** standalone: `BACnetBase.cs` referenziert
+  `BacnetIpUdpProtocolTransport` aus `BACnetTransport.cs` (nur für den
+  BACnet/IP-BVLC-Code). Für den Oracle genügt ein Stub.
+- `Services.DecodeIamBroadcast` gibt bei Erfolg **0** zurück (`return offset - org_offset`),
+  nicht die Länge – eine Legacy-Eigenheit, die der Golden-Test festschreibt.
+- Der Legacy-Codec braucht **7.500 Zeilen** `#nullable disable` – mit
+  `Nullable=enable` + `TreatWarningsAsErrors` sind das ~40 Fehler.
+- Die .NET-Analyzer monieren im Fremdcode bewusste Eigenheiten des BACnet-Standards
+  (CA1707 Unterstriche, CA1069 doppelte Enum-Werte, CA1051 sichtbare Felder,
+  CA1711 Namenskonvention) → für das Projekt deaktiviert.
+- `CA1707` moniert auch **Testmethodennamen** mit Unterstrichen – die sind hier
+  Haustil (vgl. `csharp.instructions.md`) → `NoWarn` in den Testprojekten.
+- Der Legacy-Codec liest über den Puffer hinaus (`ASN1.decode_*` ohne Längenprüfung):
+  der Oracle hat deshalb einen 1-KB-Puffer, der Test exakt 12 Byte. Ergebnis gleich –
+  aber der Test ist strenger.
+
+---
+
 ## 2026-10-31 – Phase 0: Repo-Hygiene & CI (Aufgaben 0.1–0.8)
 
 **Ergebnis:** Das Fundament steht. `src/` enthält eine gepinnte .NET-10-Solution
