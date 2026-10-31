@@ -24,6 +24,16 @@
           "Microsoft.TestPlatform.TestHost": "17.14.1"
         }
       },
+      "MQTTnet.AspNetCore": {
+        "type": "Direct",
+        "requested": "[5.2.0.1603, )",
+        "resolved": "5.2.0.1603",
+        "contentHash": "e6oFBGK2SKENTbk5Rfr0oMFYpBGIDjUWZFzL3KQHrfLP64+wmk2EgOKWIPdlQtsmHXPogb/3unwppU9uoc+0tA==",
+        "dependencies": {
+          "MQTTnet": "5.2.0.1603",
+          "MQTTnet.Server": "5.2.0.1603"
+        }
+      },
       "xunit": {
         "type": "Direct",
         "requested": "[2.9.3, )",
@@ -156,6 +166,14 @@
         "dependencies": {
           "Microsoft.TestPlatform.ObjectModel": "17.14.1",
           "Newtonsoft.Json": "13.0.3"
+        }
+      },
+      "MQTTnet.Server": {
+        "type": "Transitive",
+        "resolved": "5.2.0.1603",
+        "contentHash": "o0zmNXtDJlDsa3796C6HBrSwwVDOzQRibK9vpixFk38Gu6ZWT+BDBRekgDQ+OjRk3ornjSqkKzBqBzMDLJ2Zdw==",
+        "dependencies": {
+          "MQTTnet": "5.2.0.1603"
         }
       },
       "Newtonsoft.Json": {

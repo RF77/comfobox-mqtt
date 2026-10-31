@@ -61,6 +61,38 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 2: `ComfoBox.Bacnet.IBacnetClient` – Testnaht, damit der Gateway ohne
   Hardware getestet werden kann
 - Phase 2: 98 neue Tests (30 Domain, 10 Contract, 58 Gateway) → **143 Tests grün**
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttConnectionFactory` – MQTTnet-5-Optionen
+  (TLS, Auth, Keepalive 30 s, Protokoll v5, **zwei** Last Wills)
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttConnectionManager` + `BrokerConnection` –
+  Connect/Reconnect mit exponentiellem Backoff, orderly Shutdown je Broker
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttClientRegistry` – Verzeichnis der
+  verbundenen Clients (bricht den zirkulären DI-Pfad)
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttPublisher` – Publish mit wählbarem
+  QoS/Retain; ein defekter Broker blockiert die anderen nicht
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttSubscriber` – `/Set`- und
+  `/AsNumber/Set`-Topics; das Schreiben läuft **ausschließlich** über
+  `BacnetDevice` (der 24-h-Zähler kann nicht umgangen werden)
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttPayload` – kultur-invariante Zahlen und
+  ein Enum-Parser **ohne** 0-Fallback
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttTopicMap` – die einzige Stelle, an der
+  Topic-Adressen gebildet werden
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttStatePublisher` – die Item-Werte auf
+  ihren Topics (aus dem Wert-Cache, inkl. `AsNumber` bei Enums)
+- Phase 3: `ComfoBox.Gateway.Mqtt.HomeAssistantDiscovery` – Discovery für alle
+  127 Items, das Gerät und die Status-Entitäten (retained, QoS 1)
+- Phase 3: `ComfoBox.Gateway.Mqtt.HomeAssistantBirthHandler` – reagiert auf die
+  „Geburt" von Home Assistant (`homeassistant/status` = `online`) und wiederholt
+  Discovery und Zustände
+- Phase 3: `ComfoBox.Gateway.Mqtt.MqttStatusPublisher` – `Status/Health`,
+  `Status/Uptime`, `Status/Writes`, `Status/Bacnet`, `Status/Mqtt`,
+  `Status/LastError`, `Status/Errors`
+- Phase 3: `ComfoBox.Gateway.Health.HealthReporter` – Health-Aggregation über
+  die Komponenten (Mqtt, Bacnet) mit `online`/`degraded`/`offline`
+- Phase 3: `ComfoBox.Gateway.GatewayServiceCollectionExtensions` – die gesamte
+  DI-Registrierung (aus `Program.cs` herausgezogen, damit sie testbar ist)
+- Phase 3: 76 neue Tests (Payload, Topic-Vertrag, Subscriber, Discovery,
+  Health, MQTT-Integration gegen einen eingebetteten Broker, End-to-End) →
+  **219 Tests grün**
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
@@ -69,8 +101,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 1: der BACnet-Codec enthält kein BACnet/IP (`BVLC`) und kein PTP mehr –
   der Stack läuft ausschließlich über MS/TP
 - Phase 1: der neue BACnet-Code nutzt durchgängig `ILogger` statt `Trace`/`Console`
+- Phase 3: **M2Mqtt ist vollständig entfernt** – der MQTT-Client ist MQTTnet 5
+  (`5.2.0.1603`), async, mit TLS und Authentifizierung (ADR-002)
+- Phase 3: QoS wurde von „Subscribe 2 / Publish 0" auf „Subscribe 1 /
+  Publish 0|1" geändert – kompatibel, weil QoS vom Empfänger bestimmt wird
+- Phase 3: die Client-ID ist jetzt `comfobox-gateway-{Hostname}` (stabil)
+  statt `ComfoBox{DateTime.Ticks}` (jede Sitzung war eine neue)
+- Phase 3: `Mqtt:ClientId`, `Mqtt:DiscoveryPrefix`, `Mqtt:UseMqttRetain` und
+  `Mqtt:StatusIntervalSeconds` sind konfigurierbar
 
 ### Fixed
+- Phase 3: **Befund A10** – nach **jedem** Reconnect wird `ComfoBox/Connected`
+  mit `1` publiziert. Der Legacy tat das nur beim ersten Connect, danach sah
+  Home Assistant dauerhaft „offline"
+- Phase 3: **Befund A5** – alle Zahlen-Payloads sind kultur-invariant
+  (`21.5`, niemals `21,5`). Auf deutschen Systemen wurden Schreibvorgänge
+  dadurch verworfen oder als `235` interpretiert
+- Phase 3: **Befund A6** – eine ungültige Enum-Payload wird abgelehnt und
+  gemeldet. Der Legacy schrieb in diesem Fall den Wert `0`
+- Phase 3: **Befund A9** – die Reconnect-Logik ist eine ereignisbasierte
+  Schleife mit Backoff und `CancellationToken` statt der Rekursion des Legacy
+- Phase 3: **Befund A11** – beim Shutdown wird erst `offline` publiziert, dann
+  getrennt; der Last Will wird nicht fälschlich ausgelöst
+- Phase 3: **Befund A24** – das Keep-Alive ist 30 s statt 2 s (der Legacy hat
+  damit den Broker laufend getötet)
+- Phase 3: **Befund A25** – TLS, Benutzername und Passwort sind pro Broker
+  konfigurierbar; ein defekter Broker blockiert die anderen nicht
 - Phase 1: **Befund A8** – ein Serial-Portfehler löste im Legacy einen
   Tight-Spin-Loop mit 100 % CPU aus. Der neue Zustandsautomat endet bei einem
   Portfehler, der Transport verbindet sich mit Backoff neu (5 s → 30 s)

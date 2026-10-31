@@ -27,6 +27,134 @@
 
 ---
 
+## 2026-10-31 – Phase 3 abgeschlossen: MQTT-Migration & HA-Discovery (Aufgaben 3.1–3.6)
+
+**Ergebnis:** Der Gateway publiziert alle **127 Topics**, abonniert die
+`/Set`-Topics, meldet sich bei Home Assistant an und bleibt MQTT-seitig
+stabil. **219 Tests grün** (45 BACnet + 30 Domain + 10 Contract + 134 Gateway).
+Die Golden-Fixture und `docs/topics.json` sind **byteweise unverändert**.
+M2Mqtt ist **vollständig** aus `src/` verschwunden.
+
+**Geänderte Dateien (neu – Gateway/Mqtt):**
+- `src/ComfoBox.Gateway/Mqtt/MqttPayload.cs` – kultur-invariante Zahlen, Enum-Parser **ohne** 0-Fallback (A5, A6)
+- `src/ComfoBox.Gateway/Mqtt/MqttTopicMap.cs` – die **einzige** Stelle, an der Topic-Adressen gebildet werden
+- `src/ComfoBox.Gateway/Mqtt/MqttConnectionFactory.cs` – Optionen, TLS, Auth, Keepalive, **zwei** LWT-Rollen
+- `src/ComfoBox.Gateway/Mqtt/MqttConnectionManager.cs` – Connect/Reconnect/Backoff/Shutdown je Broker
+- `src/ComfoBox.Gateway/Mqtt/BrokerConnection.cs` – die Verbindung **eines** Brokers (Haupt- + Will-Verbindung)
+- `src/ComfoBox.Gateway/Mqtt/MqttClientRegistry.cs` – Verzeichnis der verbundenen Clients (bricht den DI-Kreis)
+- `src/ComfoBox.Gateway/Mqtt/MqttPublisher.cs` – Publish mit QoS/Retain, Fehler pro Broker isoliert
+- `src/ComfoBox.Gateway/Mqtt/MqttSubscriber.cs` – `/Set` + `/AsNumber/Set`, Schreiben **nur** über `BacnetDevice`
+- `src/ComfoBox.Gateway/Mqtt/MqttStatePublisher.cs` – Item-Werte auf ihre Topics (aus dem Wert-Cache)
+- `src/ComfoBox.Gateway/Mqtt/HomeAssistantDiscovery.cs` – Discovery für alle 127 Items + Gerät + Status
+- `src/ComfoBox.Gateway/Mqtt/HomeAssistantBirthHandler.cs` – reagiert auf die Geburt von Home Assistant (`homeassistant/status` = `online`)
+- `src/ComfoBox.Gateway/Mqtt/MqttStatusPublisher.cs` – Health-/Status-Topics (online/degraded/offline)
+- `src/ComfoBox.Gateway/Mqtt/MqttVersion.cs` – Version (`Ver 1.0.0` / `1.0.0`)
+- `src/ComfoBox.Gateway/Mqtt/IMqttPublisher.cs`, `IMqttConnectionHandler.cs` – die Naahte
+- `src/ComfoBox.Gateway/GatewayServiceCollectionExtensions.cs` – die gesamte DI-Registrierung (aus `Program.cs` herausgezogen)
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Program.cs` – nur noch Logging + `AddGatewayServices` + `/api/health`
+- `src/ComfoBox.Gateway/Configuration/MqttOptions.cs` – `DiscoveryPrefix`, `UseMqttRetain`, `StatusIntervalSeconds`, `AllowUntrustedCertificates`, Client-ID mit Hostname
+- `src/ComfoBox.Gateway/Health/HealthState.cs` + `HealthReporter.cs` – Health-Aggregation über die Komponenten
+- `src/ComfoBox.Gateway/Health/ErrorCollector.cs` – Ereignis `Reported` (Status-Topic reagiert sofort)
+- `src/ComfoBox.Gateway/Bacnet/BacnetPollingService.cs` – meldet den BACnet-Zustand an den Health-Reporter
+- `src/ComfoBox.Gateway/appsettings.json` – neuer `Mqtt`-Abschnitt
+- `src/ComfoBox.Gateway/ComfoBox.Gateway.csproj` – `InternalsVisibleTo` für die Tests
+
+**Geänderte Dateien (neu – Tests):**
+- `src/ComfoBox.Gateway.Tests/MqttPayloadTests.cs` – A5 + A6 (de-DE-Kultur)
+- `src/ComfoBox.Gateway.Tests/MqttTopicMapTests.cs` – Topic-Vertrag gegen `docs/topics.json`
+- `src/ComfoBox.Gateway.Tests/MqttSubscriberTests.cs` – Schreibpfad **inkl.** Schreibzähler
+- `src/ComfoBox.Gateway.Tests/HomeAssistantDiscoveryTests.cs` – Discovery-Schema
+- `src/ComfoBox.Gateway.Tests/MqttConnectionIntegrationTests.cs` – **echter** Broker im Prozess, A10-Regression
+- `src/ComfoBox.Gateway.Tests/GatewayEndToEndTests.cs` – der komplette Gateway gegen einen Broker
+- `src/ComfoBox.Gateway.Tests/HealthAndStatusTests.cs`, `NoopMqttClient.cs`, `RecordingMqttPublisher.cs`
+- `src/ComfoBox.Gateway.Tests/HomeAssistantBirthHandlerTests.cs` – die Geburt von Home Assistant
+- `src/ComfoBox.Gateway.Tests/HomeAssistantBirthHandlerTests.cs` – die Geburt von Home Assistant
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **219 Tests grün, 0 Fehler**
+  (45 BACnet + 30 Domain + 10 Contract + 134 Gateway; 143 aus Phase 2 unverändert grün)
+- Golden-Fixture **byte-identisch**:
+  `F95AA7633D6C563D309BE6A7A4AC6797CAB198E315BA365B205E7C5C81CE681B` (5.657 B)
+- `docs/topics.json` **byte-identisch**:
+  `67D7485BF961B2B6D11BA5E788932056F073B564F52922D2DE8B34DFC10C1463` (33.845 B)
+- `git diff --stat` auf beide Fixtures → **leer**
+- **3.1** geprüft: kein `M2Mqtt`/`uPLibrary` in `src/**/*.cs` und `*.csproj`
+- **3.3** geprüft: kein `System.Diagnostics.Trace`, kein `Console.WriteLine` in `src/**/*.cs`
+- **A10** geprüft: `Connected_Wird_Nach_Jedem_Reconnect_Publiziert` (Broker-Neustart im Test)
+- **A6** geprüft: `Eine_Ungueltige_Enum_Payload_Schreibt_Keinen_Null_Wert`
+
+**Offen / nicht gemacht:**
+- Der **Neustart-Befehl** (`ComfoBox/Command/Restart`) ist noch nicht implementiert –
+  er gehört zu Phase 4 (Aufgabe 4.5 `ServiceControl`). Der Topic ist reserviert
+  (`MqttTopicMap.RestartCommandTopic`), wird aber noch nicht abonniert.
+- Die **Discovery auf die HA-Geburt** (`homeassistant/status` → `online`) ist
+  implementiert: `HomeAssistantBirthHandler` abonniert das Topic und wiederholt
+  Discovery **und** Zustände.
+- Die **eingebettete Discovery der `AsNumber`-Variante** fehlt bewusst –
+  die Spec empfiehlt sie nicht per Default (sonst verdoppelt sich die
+  Entitätenzahl).
+- Die **MQTT-Sicherheit** (TLS-Zertifikate, `RestartToken`) ist noch offen –
+  siehe ADR-002/ADR-009.
+- **Kein Realtest** gegen eine echte ComfoBox und keinen echten Broker
+  (Mosquitto): die Tests laufen gegen den **eingebetteten** MQTTnet-Broker.
+
+**Überraschungen:**
+- ⚠️ **MQTT 5 erlaubt nur EINEN Last Will pro Verbindung.** Der Vertrag
+  verlangt aber zwei (`Status/Health` **und** `Connected`). Lösung: der
+  Gateway hält je Broker **zwei** Verbindungen – die Hauptverbindung (Will auf
+  `Status/Health`) und eine reine Will-Verbindung (Will auf `Connected`, sonst
+  nichts). Die Will-Verbindung bekommt die Client-ID `{ClientId}-will`.
+- ⚠️ **Ein zirkulärer DI-Abhängigkeitspfad hat den Testhost blockiert**
+  (nicht abgestürzt – 21 Threads, 0 CPU): `MqttConnectionManager` →
+  `IMqttConnectionHandler` → `MqttSubscriber` → `IMqttPublisher` →
+  `MqttPublisher` → `IMqttClientProvider` → `MqttConnectionManager`. MS-DI
+  erkennt den Kreis **nicht** (der Provider war ein `Func`-Factory), sondern
+  blockiert beim Auflösen. **Fix:** `MqttClientRegistry` als eigenes Singleton;
+  der Manager pflegt es, der Publisher liest es. → **Merksatz:** Der
+  Connection-Manager darf **nie** der `IMqttClientProvider` sein, wenn er
+  Handler injiziert bekommt.
+- ⚠️ **`dotnet test` braucht bei einem hängenden Testhost einen
+  `dotnet-dump collect --process-id <PID> --type Full`** – der Standard-Output
+  zeigt nur „Der Testhostprozess ist abgestürzt". Mit `clrstack -all` im Dump
+  sieht man den blockierenden Frame. (Tool war schon global installiert.)
+- ⚠️ **`Host.CreateDefaultBuilder()` + `ConfigureServices(c => c.AddSingleton(services))`
+  registriert den Container als Singleton** – die eigenen Dienste fehlen dann
+  („No service for type … has been registered"). Der richtige Weg:
+  `new HostBuilder().ConfigureServices((_, c) => c.AddGatewayServices(...))`.
+- ⚠️ **`dotnet-dump analyze` kennt die SOS-Kommandos nicht** – `set threads` und
+  `~*s` schlagen fehl. Richtig sind `clrthreads` und `clrstack -all`.
+- ⚠️ **Ein Test, der den echten `BacnetMstpTransport` startet, blockiert** –
+  `SerialPort.Open()` auf einem nicht existierenden Port wirft, der
+  Reconnect-Backoff ist 5 s, aber `BacnetMstpTransport.Dispose()` ruft
+  `StopAsync().GetAwaiter().GetResult()` → **blockierendes** Dispose. Für
+  End-to-End-Tests den `IBacnetClient` per `AddSingleton<IBacnetClient,
+  FakeBacnetClient>()` überschreiben.
+- ⚠️ **Ein Test, der per `Assert.True(Has(topic))` prüft, muss `topic=payload`
+  vergleichen** – die Discovery-Payload ist JSON, `Has(topic)` findet sie nie.
+- ⚠️ **`MqttApplicationMessage.PayloadSegment` hat keinen öffentlichen
+  Getter** – für die Payload im Test `ConvertPayloadToString()` nehmen.
+- ⚠️ **`MqttClientOptionsBuilder.WithTlsOptions` erwartet
+  `Func<MqttClientCertificateValidationEventArgs, bool>`** – nicht vier
+  Argumente (das war die API von MQTTnet 4).
+- ⚠️ **`MqttClientSubscribeOptionsBuilder.WithTopicFilter` nimmt **einen**
+  Filter, keine Liste** – im Aufruf auflösen, sonst findet der Overload
+  `WithTopicFilter(string)` nicht statt.
+- ⚠️ **`MqttClientOptions` hat kein `WithLastWillTopic` für zwei Wills** –
+  s. o.
+- ⚠️ **`MqttClientFactory.CreateMqttClient()` ist statisch** und existiert
+  auch ohne Argument; `MqttServerFactory` (Broker) liegt im transitiven Paket
+  `MQTTnet.Server` – das kommt über `MQTTnet.AspNetCore` mit.
+- ⚠️ **`MqttApplicationMessageReceivedEventArgs` hat einen 4-Parameter-Konstruktor**
+  `(clientId, message, publishPacket, autoAcknowledge)` – für einen Test-Client
+  `null!` für die letzten beiden.
+- ⚠️ **Die Legacy-Datei `src_old/ComfoBoxMqtt/ComfoBoxMqttClient.cs` benutzt
+  `keepAlivePeriod = 2`** (Befund A24) – der neue Wert ist 30 s, wie in der Spec.
+
+---
+
 ## 2026-10-31 – Phase 1 abgeschlossen: BACnet-Stack läuft async auf .NET 10 (Aufgaben 1.4–1.8)
 
 **Ergebnis:** Der BACnet-Stack ist vollständig portiert. `BacnetClient` arbeitet

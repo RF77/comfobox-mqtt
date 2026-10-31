@@ -56,12 +56,12 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 3.1 | MQTTnet-Client (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`) | ⬜ | 1.5 |
-| 3.2 | Subscriber für `/Set`-Topics | ⬜ | 0.5 |
-| 3.3 | `MqttPayload` (InvariantCulture) + Enum-Parser ohne 0-Fallback (A5, A6) | ⬜ | 0.5 |
-| 3.4 | LWT, `Connected`, `Version` | ⬜ | 0.5 |
-| 3.5 | Home-Assistant-Discovery (Device + Komponenten) | ⬜ | 1.5 |
-| 3.6 | Health-/Status-Publisher | ⬜ | 1.0 |
+| 3.1 | MQTTnet-Client (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`) | ✅ | 1.5 |
+| 3.2 | Subscriber für `/Set`-Topics | ✅ | 0.5 |
+| 3.3 | `MqttPayload` (InvariantCulture) + Enum-Parser ohne 0-Fallback (A5, A6) | ✅ | 0.5 |
+| 3.4 | LWT, `Connected`, `Version` | ✅ | 0.5 |
+| 3.5 | Home-Assistant-Discovery (Device + Komponenten) | ✅ | 1.5 |
+| 3.6 | Health-/Status-Publisher | ✅ | 1.0 |
 
 ## Phase 4 – REST/SSE-API (4.5 PT)
 
@@ -167,15 +167,15 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **72** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) von 63 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) von 63 PT.
 >
-> **Stand 2026-10-31:** 143 Tests grün (45 BACnet + 30 Domain + 10 Contract + 58 Gateway).
+> **Stand 2026-10-31:** 219 Tests grün (45 BACnet + 30 Domain + 10 Contract + 134 Gateway).
 
 ## Nächste Aufgabe
 
-> **3.1 – MQTTnet-Client** (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`) (1.5 PT)
-> Datei: `src/ComfoBox.Gateway/Mqtt/**` ·
-> Verifikation: Build grün, Publish/Subscribe gegen die unveränderten
-> Topic-Adressen, `Connected`/`Version` bei **jedem** Connect publiziert
-> → Details: [phase-3.md](phase-3.md)
-> → **Prompt:** [prompts/Prompt-Phase-3.md](prompts/Prompt-Phase-3.md) (direkt kopierbar)
+> **4.1 – Items-Endpunkte (CRUD + Validierung)** (1.0 PT)
+> Datei: `src/ComfoBox.Gateway/Api/**` · Die REST-API liegt in Phase 4
+> Verifikation: Build grün, `dotnet test` grün, kein Schreibvorgang ohne den
+> 24-h-Zähler
+> → Details: [phase-4.md](phase-4.md)
+> → **Prompt:** [prompts/Prompt-Phase-4.md](prompts/Prompt-Phase-4.md) (direkt kopierbar)

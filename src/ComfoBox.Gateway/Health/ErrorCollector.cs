@@ -57,6 +57,15 @@ public interface IErrorCollector
     /// Leert die Senke.
     /// </summary>
     void Clear();
+
+    /// <summary>
+    /// Wird ausgelöst, wenn ein Fehler aufgenommen wurde.
+    /// </summary>
+    /// <remarks>
+    /// Der MQTT-Status-Publisher nutzt das Ereignis, um
+    /// <c>Status/LastError</c> und <c>Status/Errors</c> sofort zu aktualisieren.
+    /// </remarks>
+    event EventHandler<ErrorEntry>? Reported;
 }
 
 /// <summary>
@@ -95,6 +104,8 @@ public sealed class ErrorCollector : IErrorCollector
         }
 
         Interlocked.Increment(ref _count);
+
+        Reported?.Invoke(this, entry);
     }
 
     /// <inheritdoc />
@@ -136,4 +147,7 @@ public sealed class ErrorCollector : IErrorCollector
         Interlocked.Exchange(ref _writeIndex, 0);
         Interlocked.Exchange(ref _count, 0);
     }
+
+    /// <inheritdoc />
+    public event EventHandler<ErrorEntry>? Reported;
 }

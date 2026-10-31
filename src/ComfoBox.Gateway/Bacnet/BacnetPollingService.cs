@@ -1,6 +1,7 @@
 using ComfoBox.Bacnet;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Health;
 using Microsoft.Extensions.Options;
 
 namespace ComfoBox.Gateway.Bacnet;
@@ -27,6 +28,7 @@ public sealed class BacnetPollingService : BackgroundService
     private readonly BacnetDevice _device;
     private readonly IBacnetClient _client;
     private readonly IItemCatalog _catalog;
+    private readonly IHealthReporter _health;
     private readonly ILogger<BacnetPollingService> _logger;
     private readonly TimeSpan _pollInterval;
     private readonly int _secondaryPollFactor;
@@ -38,23 +40,27 @@ public sealed class BacnetPollingService : BackgroundService
     /// <param name="client">Der BACnet-Client.</param>
     /// <param name="catalog">Der Item-Katalog.</param>
     /// <param name="gatewayOptions">Die Grundeinstellungen.</param>
+    /// <param name="health">Der Health-Reporter.</param>
     /// <param name="logger">Logger.</param>
     public BacnetPollingService(
         BacnetDevice device,
         IBacnetClient client,
         IItemCatalog catalog,
         IOptions<GatewayOptions> gatewayOptions,
+        IHealthReporter health,
         ILogger<BacnetPollingService> logger)
     {
         ArgumentNullException.ThrowIfNull(device);
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(gatewayOptions);
+        ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(logger);
 
         _device = device;
         _client = client;
         _catalog = catalog;
+        _health = health;
         _logger = logger;
 
         _pollInterval = TimeSpan.FromSeconds(gatewayOptions.Value.PollIntervalSeconds);
@@ -80,12 +86,14 @@ public sealed class BacnetPollingService : BackgroundService
         {
             _client.Start();
             await _client.WhoIsAsync(cancellationToken: stoppingToken).ConfigureAwait(false);
+            _health.ReportHealthy("Bacnet", "Der BACnet-Bus ist erreichbar.");
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Kein Port, kein Kabel, falscher Portname - der Gateway muss
             // trotzdem starten und weiter versuchen.
             _logger.LogError(ex, "Der BACnet-Client konnte nicht gestartet werden.");
+            _health.Report("Bacnet", HealthState.Degraded, $"Der BACnet-Bus ist nicht erreichbar: {ex.Message}");
         }
 
         var cycle = 0;
@@ -102,6 +110,8 @@ public sealed class BacnetPollingService : BackgroundService
                 var items = PollPlan.ForCycle(primary, secondary, withoutPriority, cycle, _secondaryPollFactor);
 
                 await _device.ReadItemsAsync(items, stoppingToken).ConfigureAwait(false);
+
+                _health.ReportHealthy("Bacnet", "Der BACnet-Bus ist erreichbar.");
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
@@ -111,6 +121,7 @@ public sealed class BacnetPollingService : BackgroundService
             {
                 // Der Legacy hat hier den ganzen Gateway zerstört (Befund A7).
                 _logger.LogError(ex, "Der Poll-Zyklus ist fehlgeschlagen - der Gateway läuft weiter.");
+                _health.Report("Bacnet", HealthState.Degraded, $"Der Poll-Zyklus ist fehlgeschlagen: {ex.Message}");
             }
 
             cycle++;

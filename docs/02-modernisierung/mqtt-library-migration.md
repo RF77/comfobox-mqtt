@@ -308,14 +308,17 @@ if (mqttOptions.EmbedBroker)
 
 | # | Aufgabe | Status |
 |---|---|---|
-| 1 | Paket `MQTTnet` in `Directory.Packages.props` | ☐ |
-| 2 | `MqttConnectionFactory` mit TLS/Credentials/Protokollversion | ☐ |
-| 3 | `MqttConnectionManager` mit Backoff + Cancellation | ☐ |
-| 4 | `MqttPublisher` mit QoS-Wahl + Retain | ☐ |
-| 5 | `MqttSubscriber` mit Handler pro Topic | ☐ |
-| 6 | LWT auf `Status/Health` + `Connected` | ☐ |
-| 7 | `MqttPayload` (InvariantCulture) einführen | ☐ |
-| 8 | Enum-Parser ohne „0-Fallback" | ☐ |
-| 9 | Discovery-Publisher | ☐ |
-| 10 | Contract-Test gegen `docs/topics.json` | ☐ |
-| 11 | `ComfoBoxMqtt`/`M2Mqtt` vollständig entfernt | ☐ |
+| 1 | Paket `MQTTnet` in `Directory.Packages.props` | ✅ 5.2.0.1603 |
+| 2 | `MqttConnectionFactory` mit TLS/Credentials/Protokollversion | ✅ |
+| 3 | `MqttConnectionManager` mit Backoff + Cancellation | ✅ |
+| 4 | `MqttPublisher` mit QoS-Wahl + Retain | ✅ |
+| 5 | `MqttSubscriber` mit Handler pro Topic | ✅ |
+| 6 | LWT auf `Status/Health` + `Connected` | ✅ (zwei Verbindungen je Broker – MQTT 5 erlaubt nur **einen** Will pro Verbindung) |
+| 7 | `MqttPayload` (InvariantCulture) einführen | ✅ |
+| 8 | Enum-Parser ohne „0-Fallback" | ✅ |
+| 9 | Discovery-Publisher | ✅ |
+| 10 | Contract-Test gegen `docs/topics.json` | ✅ |
+| 11 | `ComfoBoxMqtt`/`M2Mqtt` vollständig entfernt | ✅ (aus `src/`; `src_old/` bleibt Archiv) |
+
+> **Stand 2026-10-31:** Phase 3 abgeschlossen – siehe
+> [protokoll.md](../06-aufgaben/protokoll.md). 217 Tests grün.

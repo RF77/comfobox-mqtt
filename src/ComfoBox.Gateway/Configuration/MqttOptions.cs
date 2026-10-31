@@ -25,8 +25,21 @@ public sealed class MqttOptions
     /// <summary>
     /// Die Client-ID, die der Gateway beim Broker anmeldet.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Die Client-ID muss je Installation eindeutig sein - zwei Gateways mit
+    /// derselben ID verdrängen sich gegenseitig beim Broker. Der Legacy
+    /// hängte den Zeitstempel an (<c>ComfoBox{ticks}</c>) - das erzeugte bei
+    /// jedem Connect eine neue Sitzung.
+    /// </para>
+    /// <para>
+    /// Der Standard ist <c>comfobox-gateway-{Hostname}</c>: stabil und
+    /// trotzdem auf verschiedenen Rechnern eindeutig. Für den Parallelbetrieb
+    /// (zwei Gateways auf einem Host) muss die ID konfiguriert werden.
+    /// </para>
+    /// </remarks>
     [Required]
-    public string ClientId { get; init; } = "ComfoBox";
+    public string ClientId { get; init; } = $"comfobox-gateway-{Environment.MachineName}";
 
     /// <summary>
     /// Das Keep-Alive in Sekunden.
@@ -37,6 +50,36 @@ public sealed class MqttOptions
     /// </remarks>
     [Range(15, 3600)]
     public int KeepAliveSeconds { get; init; } = 30;
+
+    /// <summary>
+    /// Das Präfix der Home-Assistant-Discovery-Topics.
+    /// </summary>
+    /// <remarks>
+    /// Der Standard <c>homeassistant</c> ist der von Home Assistant
+    /// erwartete Präfix.
+    /// </remarks>
+    [Required]
+    [RegularExpression(@"^\S+$", ErrorMessage = "Mqtt:DiscoveryPrefix darf keine Leerzeichen enthalten.")]
+    public string DiscoveryPrefix { get; init; } = "homeassistant";
+
+    /// <summary>
+    /// Sollen die Item-Werte retained publiziert werden?
+    /// </summary>
+    /// <remarks>
+    /// Retain sorgt dafür, dass Home Assistant den Zustand nach einem
+    /// Neustart ohne erneutes Polling kennt.
+    /// </remarks>
+    public bool UseMqttRetain { get; init; } = true;
+
+    /// <summary>
+    /// Das Intervall der zyklischen Status-Publishes in Sekunden.
+    /// </summary>
+    /// <remarks>
+    /// Betrifft <c>Status/Uptime</c>, <c>Status/Writes</c>, <c>Status/Bacnet</c>
+    /// und <c>Status/Mqtt</c>. Fehler werden zusätzlich sofort publiziert.
+    /// </remarks>
+    [Range(1, 300)]
+    public int StatusIntervalSeconds { get; init; } = 10;
 
     /// <summary>
     /// Prüft, ob mindestens ein vollständig konfigurierter Broker vorhanden ist.
@@ -86,4 +129,13 @@ public sealed class MqttBrokerOptions
     /// Soll die Verbindung über TLS laufen?
     /// </summary>
     public bool UseTls { get; init; }
+
+    /// <summary>
+    /// Sollen selbstsignierte Zertifikate akzeptiert werden?
+    /// </summary>
+    /// <remarks>
+    /// Nur für das LAN mit einem selbstsignierten Zertifikat. In produktiven
+    /// Umgebungen darf das **nicht** aktiviert sein.
+    /// </remarks>
+    public bool AllowUntrustedCertificates { get; init; }
 }

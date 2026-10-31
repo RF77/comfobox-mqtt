@@ -13,6 +13,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="MQTTnet.AspNetCore" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
@@ -20,6 +21,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ComfoBox.Gateway\ComfoBox.Gateway.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Die Topic-Fixture ist unveränderlich (Projektregel: "docs/topics.json ist
+      die Test-Fixture - nicht verändern"). Sie wird nur in den Ausgabeordner
+      kopiert, damit der Test sie ohne Pfad-Salat lesen kann.
+    -->
+    <None Include="..\..\docs\topics.json" Link="topics.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

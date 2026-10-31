@@ -35,4 +35,12 @@
     <ProjectReference Include="..\ComfoBox.Bacnet\ComfoBox.Bacnet.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Die Gateway-Tests greifen auf interne Typen zu (BrokerConnection,
+      MqttSubscriber.HandleAsync). Die Test-Naehte bleiben dadurch intern.
+    -->
+    <InternalsVisibleTo Include="ComfoBox.Gateway.Tests" />
+  </ItemGroup>
+
 </Project>

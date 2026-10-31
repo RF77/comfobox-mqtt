@@ -83,7 +83,9 @@ für einen Review.
 
 **Vorlage:** [prompts/Prompt-Phase-0.md](prompts/Prompt-Phase-0.md) ·
 [prompts/Prompt-Phase-1.md](prompts/Prompt-Phase-1.md) ·
-[prompts/Prompt-Phase-2.md](prompts/Prompt-Phase-2.md)
+[prompts/Prompt-Phase-2.md](prompts/Prompt-Phase-2.md) ·
+[prompts/Prompt-Phase-3.md](prompts/Prompt-Phase-3.md) ·
+[prompts/Prompt-Phase-4.md](prompts/Prompt-Phase-4.md)
 
 > **Warum?** Die Phasen sind aufeinander aufgebaut. Wer die Fallstricke nicht
 > weitergibt, verschwendet in der nächsten Session Zeit mit demselben Fehler –
