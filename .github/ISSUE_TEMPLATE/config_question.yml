@@ -1,0 +1,23 @@
+name: Config
+description: Konfigurationsanfrage
+labels: ["question"]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Frage
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext
+      description: >
+        Konfigurationsdatei (ohne Passwörter!), Umgebung, verwendete Ports.
+
+  - type: input
+    id: broker
+    attributes:
+      label: MQTT-Broker
+      placeholder: "Mosquitto als HA-Add-on / eigener Container / extern"

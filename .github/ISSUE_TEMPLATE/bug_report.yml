@@ -1,0 +1,76 @@
+name: Bug melden
+description: Ein Fehler im Gateway, in der BACnet-Kommunikation oder in der Web-UI
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für den Report! Bitte beachte die [Hinweise zur Fehlersuche](https://github.com/RF77/comfobox-mqtt/blob/main/docs/01-ist-zustand/befunde.md).
+
+  - type: textarea
+    id: was
+    attributes:
+      label: Was ist passiert?
+      description: Was hast du erwartet, und was ist stattdessen passiert?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduktionsschritte
+      description: Schritt für Schritt, damit wir den Fehler nachstellen können.
+      placeholder: |
+        1. Container starten mit `BaseTopic=ComfoBox`
+        2. `ComfoBox/Zone/SetPointNormal/Set` publishen mit `21.5`
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Ausgabe von `docker compose logs gateway` (gekürzt) oder der Fehlerkanal
+        `ComfoBox/Status/Errors`.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "1.0.0 oder Image-Tag"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Umgebung
+      options:
+        - Synology DS923+ (Container)
+        - Raspberry Pi (Container)
+        - Linux (Container, sonstiges)
+        - Windows (Container)
+        - Windows (nativ)
+        - Andere
+    validations:
+      required: true
+
+  - type: input
+    id: hardware
+    attributes:
+      label: Hardware
+      description: RS485-Adapter und Baudrate
+      placeholder: "CH340, 38400 Baud"
+
+  - type: textarea
+    id: checklist
+    attributes:
+      label: Checkliste
+      options:
+        - Ich habe geprüft, ob `ComfoBox/Status/Health` auf `online` steht
+        - Ich habe die Baudrate geprüft (38400)
+        - Ich habe `ComfoBox/Status/Bacnet` geprüft
+        - Ich habe geprüft, ob ein Neustart das Problem behebt

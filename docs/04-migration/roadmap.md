@@ -1,0 +1,170 @@
+# Roadmap
+
+## 0. Überblick
+
+```
+Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7
+ Repo-       BACnet-     Domain &    MQTT &      REST/      Angular     Docker     Parallel-
+ Hygiene     Portierung  Gateway    HA-Disc.    SSE-API    UI          & NAS      Umschaltung
+ + CI        + Tests     Kern
+ 2 PT        8 PT        6 PT       6 PT        4 PT       8 PT        4 PT       3 PT
+```
+
+**Abhängigkeiten:**
+
+| Phase | Braucht |
+|---|---|
+| 1 | 0 |
+| 2 | 1 (Item-Katalog wird parallel zum BACnet-Test aufgebaut) |
+| 3 | 2 |
+| 4 | 2, 3 |
+| 5 | 4 |
+| 6 | 3, 4, 5 |
+| 7 | 6 |
+
+---
+
+## Phase 0 – Repo-Hygiene & CI (2 PT)
+
+**Ziel:** Eine belastbare Basis, bevor Code bewegt wird.
+
+| # | Aufgabe | Ergebnis |
+|---|---|---|
+| 0.1 | `global.json` (SDK-Pinning 10.0.400) | deterministischer Build |
+| 0.2 | `Directory.Packages.props` (Central Package Management) | eine Versionsquelle |
+| 0.3 | `Directory.Build.props` (Nullable, Warnungen als Fehler) | Qualitäts-Gate |
+| 0.4 | `src/ComfoBox.sln` neu anlegen (SDK-Projekte) | `dotnet build` möglich |
+| 0.5 | `.gitignore` erweitern (`.env`, `appsettings.override.json`, `*.user`) | keine Secrets im Repo |
+| 0.6 | CI: `build-test.yml` + `codeql.yml` | Build & Test bei jedem PR |
+| 0.7 | `docs/topics.json` + `MoMA Scan Results.html` als **Fixtures fixieren** | Test-Grundlage |
+| 0.8 | `CHANGELOG.md` anlegen | Release-Notizen |
+
+**Abnahme:** `dotnet build` und `dotnet test` laufen in CI grün (leere Testprojekte sind ok).
+
+---
+
+## Phase 1 – BACnet-Portierung & Tests (8 PT)
+
+**Ziel:** Der Protokollstack läuft verhaltensgleich auf .NET 10.
+
+| # | Aufgabe | PT | Ergebnis |
+|---|---|---|---|
+| 1.1 | Golden-Frames aus `MoMA Scan Results.html` extrahieren | 0.5 | `bacnet-frames.json` |
+| 1.2 | Golden-Tests gegen den **alten** Code schreiben | 1.0 | Tests grün auf net452 |
+| 1.3 | `ComfoBox.Bacnet` als SDK-Projekt anlegen, `BACnetBase` portieren | 1.0 | Codec grün |
+| 1.4 | `BACnetClient` portieren | 1.5 | grün |
+| 1.5 | `BACnetTransport` (MSTP + Serial) portieren | 2.0 | grün |
+| 1.6 | Pipe-/UDP-/PTP-Transport entfernen | 0.5 | kein Windows-Code mehr |
+| 1.7 | `Trace` → `ILogger` (26 Stellen) | 0.5 | diagnostizierbar |
+| 1.8 | Timeout-/Reconnect-Härtung + Spin-Loop-Fix (A8) | 1.0 | kein 100 % CPU |
+
+**Abnahme:**
+- Golden-Tests grün **ohne** Fixture-Änderung.
+- Port öffnen/geschlossen/Reconnect-Test grün.
+- `dotnet test` grün.
+
+**Risiko:** Hoch. Deshalb die Golden-Tests **zuerst**.
+
+---
+
+## Phase 2 – Domain & Gateway-Kern (6 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 2.1 | `ComfoBox.Domain`: Item-Katalog aus `Items/**` + `topics.json` generieren | 1.5 |
+| 2.2 | Werttypen (`AnalogValue`, `EnumValue`) neu, `DateValue`/`CommandValue` entfernen | 1.0 |
+| 2.3 | `ComfoBox.Gateway`: Host, DI, Options, Validierung | 1.0 |
+| 2.4 | `BacnetDevice`: I/O, `SemaphoreSlim`-Serialisierung, Priorisierung (`Once`/`Primary`/`Secondary`) | 1.5 |
+| 2.5 | `ValueCache` | 0.5 |
+| 2.6 | Persistenter Schreibzähler (A3) | 0.5 |
+
+**Abnahme:** Der Gateway liest alle 127 Items und schreibt in den Cache – **noch ohne MQTT**.
+
+---
+
+## Phase 3 – MQTT-Migration & HA-Discovery (6 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 3.1 | MQTTnet-Client (`MqttConnectionFactory`, `MqttConnectionManager`, `MqttPublisher`) | 1.5 |
+| 3.2 | Subscriber für `/Set`-Topics | 0.5 |
+| 3.3 | `MqttPayload` (InvariantCulture) + Enum-Parser ohne 0-Fallback (A5, A6) | 0.5 |
+| 3.4 | LWT, `Connected`, `Version` (Kompatibilität) | 0.5 |
+| 3.5 | Home-Assistant-Discovery (Device + Komponenten) | 1.5 |
+| 3.6 | Health-/Status-Publisher | 1.0 |
+
+**Abnahme:**
+- **Contract-Test grün**: alle Topics aus `docs/topics.json` werden publiziert bzw. abonniert.
+- Discovery-Payloads erscheinen in HA.
+
+---
+
+## Phase 4 – REST/SSE-API (4 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 4.1 | Items-Endpunkte (CRUD + Validierung) | 1.0 |
+| 4.2 | `/api/health`, `/api/status`, `/api/diagnostics` | 0.5 |
+| 4.3 | SSE-Stream | 1.0 |
+| 4.4 | `/api/config` (GET/PUT) + Persistenz | 0.5 |
+| 4.5 | `/api/service/restart` + `ServiceControl` | 0.5 |
+| 4.6 | OpenAPI/Swagger | 0.5 |
+
+---
+
+## Phase 5 – Angular/Optimus UI (8 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 5.1 | Angular 22 Projekt, `ng add @openng/optimus-ui`, Preset Aura | 0.5 |
+| 5.2 | API-Client, Signal-Stores, SSE-Client | 1.0 |
+| 5.3 | Dashboard (Health, Verbindungen, Kacheln) | 1.5 |
+| 5.4 | Item-Browser + Schreiben (Analog/Enum) | 2.0 |
+| 5.5 | Konfigurationsseite | 1.0 |
+| 5.6 | Diagnoseseite | 0.5 |
+| 5.7 | Responsive, A11y, i18n (de) | 0.5 |
+| 5.8 | nginx + Docker-Stage | 0.5 |
+
+---
+
+## Phase 6 – Container & Synology (4 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 6.1 | Dockerfile Gateway (Multi-Stage, tini, Healthcheck) | 0.5 |
+| 6.2 | Dockerfile Web | 0.5 |
+| 6.3 | `compose.yaml` (mit `devices:`) | 0.5 |
+| 6.4 | CI: Image-Build + Push + Trivy | 0.5 |
+| 6.5 | **Test auf der DS923+** (Serial-Durchreichung, Broker, HA) | 1.0 |
+| 6.6 | Backup/Restore, Monitoring, Alarmierung | 0.5 |
+
+---
+
+## Phase 7 – Parallelbetrieb & Umschaltung (3 PT)
+
+| # | Aufgabe | PT |
+|---|---|---|
+| 7.1 | Neues Gateway mit `BaseTopic=ComfoBox2` parallel starten | 0.5 |
+| 7.2 | Payload-Vergleichstool (`old` vs. `new`) | 1.0 |
+| 7.3 | HA-Discovery mit `ComfoBox2` testen | 0.5 |
+| 7.4 | Umschaltung auf `ComfoBox`, alte Entitäten in HA aufräumen | 0.5 |
+| 7.5 | Alten Dienst stilllegen, Doku aktualisieren | 0.5 |
+
+---
+
+## Meilensteine
+
+| Meilenstein | Phase | Kriterium |
+|---|---|---|
+| **M1** | Ende Phase 1 | BACnet verhaltensgleich auf .NET 10 |
+| **M2** | Ende Phase 3 | Gateway publiziert alle 127 Topics + Discovery |
+| **M3** | Ende Phase 5 | UI bedient die Anlage |
+| **M4** | Ende Phase 6 | Deployment auf der DS923+ läuft |
+| **M5** | Ende Phase 7 | Alte Installation abgeschaltet |
+
+## Reihenfolge-Constraints (nicht verhandelbar)
+
+1. **Golden-Tests vor der Portierung.** Ohne Test-Fixture kein M1.
+2. **Contract-Test vor Phase 3 Ende.** Ohne grünen Contract-Test keine HA-Discovery.
+3. **Kein Umschalten ohne Parallelbetrieb.** Der alte Dienst bleibt bis Phase 7 aktiv.
+4. **Persistenter Schreibzähler vor dem ersten produktiven Schreibvorgang** (Phase 2).

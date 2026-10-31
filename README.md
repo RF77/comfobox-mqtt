@@ -2,6 +2,24 @@
  
 Connect to your Zehnder ComfoBox Series 5 with an ELESTA controller over RS485/BACnet MSTP and control it (read/write).
 
+> ## 📚 Dokumentation & Modernisierungsspec
+>
+> Die vollständige Projektdokumentation liegt in **[`docs/`](docs/README.md)**.
+>
+> | Was | Wo |
+> |---|---|
+> | Bestandsaufnahme des bestehenden Systems | [`docs/01-ist-zustand/`](docs/01-ist-zustand/README.md) |
+> | **Spec der Erneuerung** (.NET, MQTT, UI, Docker, HA) | [`docs/02-modernisierung/`](docs/02-modernisierung/README.md) |
+> | Container & Deployment auf der Synology DS923+ | [`docs/03-deployment/`](docs/03-deployment/README.md) |
+> | Migrations-Roadmap, Kompatibilitätsgarantie, Tests | [`docs/04-migration/`](docs/04-migration/README.md) |
+> | Architektur-Entscheidungen (ADR) | [`docs/05-entscheidungen/`](docs/05-entscheidungen/README.md) |
+> | Regeln für die Arbeit am Repo (C#, Angular, BACnet, MQTT, Docker) | [`.github/instructions/`](.github/instructions/) |
+>
+> **Kurzfassung des Ziels:** .NET 10 statt .NET Framework 4.5.2, **MQTTnet 5** statt M2Mqtt,
+> **Angular 22 + Optimus UI** statt WPF-DemoClient, **Docker-Image** statt Mono/Windows-Service
+> (Deployment auf einer Synology DS923+ inkl. Serial-Port-Durchreichung), **Home-Assistant-Discovery**
+> mit Availability und Restart-Knopf – bei **unveränderten MQTT-Topic-Adressen**.
+
 ## Hardware
 You need an RS485 port on your PC / Raspberry Pi (tested with a USB2RS485 Adapter with a CH340 chip).
 Afterwards connect the RS485 **parallel** to your ComfoBox controlling unit.

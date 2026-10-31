@@ -1,0 +1,105 @@
+name: build-test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Test (.NET)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
+
+      - name: Restore
+        run: dotnet restore src/ComfoBox.sln --locked-mode
+
+      - name: Build
+        run: dotnet build src/ComfoBox.sln -c Release --no-restore -warnaserror
+
+      - name: Test
+        run: dotnet test src/ComfoBox.sln -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Vulnerability scan (NuGet)
+        run: |
+          dotnet list src/ComfoBox.sln package --vulnerable --include-transitive --format json > vuln.json
+          if grep -q '"vulnerabilities": *\[.\+\]' vuln.json; then
+            echo "::error::Vulnerable NuGet packages found – see artifact"
+            exit 1
+          fi
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-dotnet
+          path: '**/TestResults/**'
+          retention-days: 14
+
+  web:
+    name: Build (Angular)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/ComfoBox.Web
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/ComfoBox.Web/package-lock.json
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build -- --configuration production
+
+      - name: Upload bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-web
+          path: src/ComfoBox.Web/dist
+          retention-days: 7
+
+  legacy-check:
+    name: Legacy-Projekte (net452) kompilieren weiterhin
+    runs-on: windows-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET Framework
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build (Legacy)
+        run: msbuild src/Comfobox.sln /p:Configuration=Release /m

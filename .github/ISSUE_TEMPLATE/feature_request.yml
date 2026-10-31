@@ -1,0 +1,46 @@
+name: Feature anfragen
+description: Neue Funktionalität für Gateway, MQTT-Anbindung, Web-UI oder Deployment
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Was ist das Problem, das gelöst werden soll?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Vorgeschlagene Lösung
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Lösung
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - BACnet / RS485
+        - MQTT / Home Assistant
+        - Web-UI
+        - Container / Deployment
+        - Dokumentation
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: compat
+    attributes:
+      label: MQTT-Kompatibilität
+      options:
+        - label: Diese Änderung betrifft bestehende MQTT-Topics oder Payloads
+        - label: Neue Topics werden ausschließlich unter `ComfoBox/Status/` oder `ComfoBox/Command/` angelegt
+        - label: Der Contract-Test (`ComfoBox.Contract.Tests`) muss angepasst werden
