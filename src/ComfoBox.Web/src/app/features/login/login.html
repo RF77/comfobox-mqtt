@@ -1,0 +1,53 @@
+<div class="cb-login">
+  <p-card header="Anmeldung">
+    <p class="cb-hint">
+      Bitte melden Sie sich mit dem Administrator an, den Sie bei der Einrichtung angelegt haben.
+    </p>
+
+    @if (error(); as message) {
+      <p-message severity="error" styleClass="w-full cb-block">
+        <p>{{ message }}</p>
+      </p-message>
+    }
+
+    <form (ngSubmit)="login()">
+      <div class="cb-field">
+        <label for="login-user">Benutzername</label>
+        <input
+          pInputText
+          id="login-user"
+          name="username"
+          [ngModel]="userName()"
+          (ngModelChange)="userName.set($event)"
+          autocomplete="username"
+          required
+        />
+      </div>
+
+      <div class="cb-field">
+        <label for="login-password">Passwort</label>
+        <p-password
+          inputId="login-password"
+          name="password"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+          [feedback]="false"
+          [toggleMask]="true"
+          autocomplete="current-password"
+        />
+      </div>
+
+      <p-button
+        type="submit"
+        label="Anmelden"
+        icon="pi pi-sign-in"
+        [loading]="busy()"
+        [disabled]="!userName().trim() || !password()"
+      />
+    </form>
+
+    <p class="cb-hint cb-block">
+      <a routerLink="/help">Zur Hilfe (ohne Anmeldung)</a>
+    </p>
+  </p-card>
+</div>

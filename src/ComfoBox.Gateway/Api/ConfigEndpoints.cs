@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using ComfoBox.Gateway.Api.Models;
+using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Security;
 
@@ -25,6 +26,7 @@ internal static class ConfigEndpoints
                 LoggingOptions logging,
                 ApiOptions api,
                 ApiSecurityStore security,
+                SerialPortSettings serial,
                 ConfigStore store) =>
             {
                 var dto = new ConfigDto
@@ -42,8 +44,10 @@ internal static class ConfigEndpoints
                     },
                     Bacnet = new BacnetConfigDto
                     {
-                        Port = bacnet.Port,
-                        Baudrate = bacnet.Baudrate,
+                        // Der laufende Port - nach einem Portwechsel steht hier
+                        // der neue Wert.
+                        Port = serial.PortName,
+                        Baudrate = serial.BaudRate,
                         DeviceId = bacnet.DeviceId,
                         ThisStation = bacnet.ThisStation,
                         MaxMaster = bacnet.MaxMaster,

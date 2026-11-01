@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MQTT – ComfoBox Gateway</title>
+  <meta name="description" content="Broker einrichten, Topics verstehen und Werte senden">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>MQTT</h1>
+        <p class="description">Broker einrichten, Topics verstehen und Werte senden</p>
+        <div class="tags"><span class="tag">mqtt</span><span class="tag">broker</span></div>
+      </header>
+
+      <article class="prose">
+<h1>MQTT</h1>
+<p>Mit MQTT bekommen Sie die Werte in beliebige Systeme – Home Assistant, Grafana,
+Node-RED, ioBroker. Für die reine Web-Oberfläche brauchen Sie <strong>keinen</strong> Broker.</p>
+<hr>
+<h2>Broker einrichten</h2>
+<h3>Eigenen Broker mitbringen</h3>
+<p>Im Assistenten unter Schritt 3 gibt es die Option <strong>Eigenen Broker mitbringen</strong>.
+Damit startet das Gateway einen eigenen MQTT-Broker im selben Docker-Netz.</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Host</td>
+<td><code>mosquitto</code> (der interne Name)</td>
+</tr>
+<tr>
+<td>Port</td>
+<td><code>1883</code></td>
+</tr>
+<tr>
+<td>Benutzer/Passwort</td>
+<td>frei wählbar</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ab wann?</strong> Der Broker startet zusammen mit dem Gateway. Nach <em>Übernehmen und starten</em>
+ist er unter <code>mosquitto:1883</code> erreichbar.</p>
+</blockquote>
+<h3>Externen Broker verwenden</h3>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Host</strong></td>
+<td>Adresse des Brokers, z. B. <code>192.168.1.10</code> oder <code>homeassistant</code></td>
+</tr>
+<tr>
+<td><strong>Port</strong></td>
+<td><code>1883</code> (unverschlüsselt) oder <code>8883</code> (TLS)</td>
+</tr>
+<tr>
+<td><strong>Benutzer/Passwort</strong></td>
+<td>falls der Broker eine Anmeldung verlangt</td>
+</tr>
+<tr>
+<td><strong>TLS</strong></td>
+<td>Schalter für verschlüsselte Verbindung</td>
+</tr>
+</tbody></table>
+<h3>Ist mein Broker erreichbar?</h3>
+<p>Der Assistent prüft das für Sie: nach dem Eintragen auf <strong>Verbindung testen</strong> klicken.
+Das Ergebnis sagt klar, was fehlt:</p>
+<table>
+<thead>
+<tr>
+<th>Meldung</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>„Broker erreichbar, Anmeldung erfolgreich&quot;</td>
+<td>alles in Ordnung</td>
+</tr>
+<tr>
+<td>„Broker nicht erreichbar&quot;</td>
+<td>Adresse, Port oder Firewall prüfen</td>
+</tr>
+<tr>
+<td>„Anmeldung fehlgeschlagen&quot;</td>
+<td>Benutzername oder Passwort falsch</td>
+</tr>
+<tr>
+<td>„TLS-Verhandlung fehlgeschlagen&quot;</td>
+<td>Port passt nicht zur TLS-Einstellung</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Topics</h2>
+<p>Alle Werte werden unter einem gemeinsamen Präfix veröffentlicht – standardmäßig
+<code>ComfoBox</code>. Das Präfix ist in der Konfiguration änderbar.</p>
+<pre><code>ComfoBox/
+├── Connected                     1 oder 0
+├── Version                       Ver 1.0.0
+├── Special/NumberOfWritesPer24h  42
+├── Status/…                      Zustand, Fehler, Uptime
+├── Command/Restart               Neustart auslösen
+└── {Gruppe}/{Name}
+    ├── {Name}                    Wert (mit &quot;behalten&quot;)
+    ├── {Name}/Set                Wert schreiben
+    ├── {Name}/AsNumber           Enum als Zahl
+    └── {Name}/AsNumber/Set       Enum als Zahl schreiben
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Gruppe</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Zone</code></td>
+<td>Zonen der Lüftungsanlage (Betriebsart, Sollwerte, Zeiten)</td>
+</tr>
+<tr>
+<td><code>States</code></td>
+<td>Zustände (Betriebsstunden, Störungen, Typen)</td>
+</tr>
+<tr>
+<td><code>Warmwater</code></td>
+<td>Warmwasser (Sollwert, Sofortaufheizung)</td>
+</tr>
+<tr>
+<td><code>Config</code></td>
+<td>Konfigurationswerte (nur mit Expertenmodus)</td>
+</tr>
+<tr>
+<td><code>Tests</code></td>
+<td>Testwerte (nur mit Expertenmodus)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Die vollständige Liste aller 127 Topics</strong> steht in der
+<a href="https://github.com/RF77/comfobox-mqtt/blob/main/docs/topics.md">Topic-Referenz</a>.</p>
+</blockquote>
+<h3>Werte lesen</h3>
+<p>Ein einfaches Abo:</p>
+<pre><code class="language-bash">mosquitto_sub -h 192.168.1.10 -t &#39;ComfoBox/Zone/SetPointNormal&#39; -v
+</code></pre>
+<p>Ausgabe:</p>
+<pre><code>21.5
+</code></pre>
+<h3>Werte schreiben</h3>
+<pre><code class="language-bash">mosquitto_pub -h 192.168.1.10 -t &#39;ComfoBox/Zone/SetPointNormal/Set&#39; -m &#39;22.5&#39;
+</code></pre>
+<blockquote>
+<p><strong>Zahlenformat:</strong> Der Wert muss einen <strong>Punkt</strong> als Dezimaltrennzeichen verwenden –
+auch auf einem deutschen System. <code>22.5</code> ist richtig, <code>22,5</code> wird abgelehnt.</p>
+<p><strong>Grund:</strong> Die Werte werden nach einem festen Format geschrieben, unabhängig von
+den Einstellungen des Betriebssystems. So funktioniert eine Automatisierung
+auf jedem Rechner gleich.</p>
+</blockquote>
+<h3>Aufzählungswerte (Enums)</h3>
+<p>Manche Werte sind nicht Zahlen, sondern Namen:</p>
+<pre><code class="language-bash"># lesen
+mosquitto_sub -h 192.168.1.10 -t &#39;ComfoBox/Zone/OperationMode&#39; -v
+# → Normal
+
+# schreiben
+mosquitto_pub -h 192.168.1.10 -t &#39;ComfoBox/Zone/OperationMode/Set&#39; -m &#39;Reduced&#39;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Regel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Namen</td>
+<td><strong>exakt</strong> wie angezeigt, inkl. Groß-/Kleinschreibung</td>
+</tr>
+<tr>
+<td>Zahlen</td>
+<td>zusätzlich über <code>…/AsNumber</code> verfügbar</td>
+</tr>
+<tr>
+<td>Ungültiger Name</td>
+<td>wird <strong>abgelehnt</strong> – es wird <strong>kein</strong> Ersatzwert geschrieben</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Warum wird kein Ersatzwert geschrieben?</strong>
+Ein stillschweigend gesetzter Nullwert könnte die Lüftungsanlage in einen
+undefinierten Zustand bringen. Besser: eine klare Fehlermeldung.</p>
+</blockquote>
+<hr>
+<h2>Zustand und Fehler</h2>
+<table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ComfoBox/Connected</code></td>
+<td><code>1</code> = verbunden, <code>0</code> = getrennt</td>
+</tr>
+<tr>
+<td><code>ComfoBox/Status/Health</code></td>
+<td><code>online</code>, <code>degraded</code> oder <code>offline</code></td>
+</tr>
+<tr>
+<td><code>ComfoBox/Status/Errors</code></td>
+<td>letzter Fehler (als JSON)</td>
+</tr>
+<tr>
+<td><code>ComfoBox/Special/NumberOfWritesPer24h</code></td>
+<td>Anzahl der Schreibvorgänge heute</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Zustandstände:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Zustand</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>online</code></td>
+<td>alles funktioniert</td>
+</tr>
+<tr>
+<td><code>degraded</code></td>
+<td>die Heizung ist erreichbar, aber etwas stimmt nicht (z. B. kein Broker)</td>
+</tr>
+<tr>
+<td><code>offline</code></td>
+<td>das Gateway läuft nicht oder der Anschluss ist weg</td>
+</tr>
+</tbody></table>
+<p><code>offline</code> wird auch gesendet, wenn das Gateway unerwartet abstürzt – dafür sorgt
+ein sogenannter „Letzter Wille&quot; im Broker.</p>
+</blockquote>
+<h3>Schreibvorgänge zählen</h3>
+<p>Jeder Schreibvorgang auf die Heizung zählt gegen ein Tageslimit (Standard: 200).
+Der Zähler wird <strong>persistent</strong> gespeichert – ein Neustart setzt ihn <strong>nicht</strong> zurück.</p>
+<blockquote>
+<p><strong>Warum?</strong> Jeder Schreibvorgang verändert einen Speicher in der Heizung. Zu viele
+Schreibvorgänge beschädigen ihn irgendwann. Das Limit schützt die Elektronik.</p>
+</blockquote>
+<hr>
+<h2>Neustart aus Home Assistant</h2>
+<p>Mit einem Klick:</p>
+<pre><code class="language-yaml"># als MQTT-Befehl
+service: mqtt.publish
+data:
+  topic: &quot;ComfoBox/Command/Restart&quot;
+  payload: &quot;&quot;
+</code></pre>
+<p>Oder Sie legen in Home Assistant eine Schaltfläche an, die genau diesen Befehl sendet.</p>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="installation.html">&larr; Installation</a>
+          <a class="nav-next" href="home-assistant.html">Home Assistant &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

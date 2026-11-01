@@ -1,0 +1,142 @@
+:host {
+  display: block;
+}
+
+.cb-block {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.cb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.cb-field > label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cb-hint {
+  font-size: 0.82rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-ports {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.cb-port {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--p-content-border-color, var(--p-surface-300));
+  border-radius: var(--p-border-radius-lg, 0.75rem);
+  cursor: pointer;
+}
+
+.cb-port-selected {
+  border-color: var(--p-primary-color, var(--p-highlight-background));
+  background: var(--p-content-hover-background, var(--p-surface-100));
+}
+
+.cb-port-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cb-port-description {
+  font-weight: 600;
+}
+
+.cb-port-path,
+.cb-port-stable {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, inherit);
+  word-break: break-all;
+}
+
+.cb-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cb-switch-row label {
+  font-size: 0.9rem;
+}
+
+.cb-strength {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-strength-bar {
+  width: 8rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--p-content-hover-background, var(--p-surface-200));
+  overflow: hidden;
+}
+
+.cb-strength-fill {
+  height: 100%;
+  transition: width 0.2s ease;
+}
+
+.cb-strength-0 .cb-strength-fill {
+  width: 0;
+  background: var(--p-red-500, #ef4444);
+}
+
+.cb-strength-1 .cb-strength-fill {
+  width: 25%;
+  background: var(--p-red-500, #ef4444);
+}
+
+.cb-strength-2 .cb-strength-fill {
+  width: 50%;
+  background: var(--p-amber-500, #f59e0b);
+}
+
+.cb-strength-3 .cb-strength-fill {
+  width: 75%;
+  background: var(--p-amber-500, #f59e0b);
+}
+
+.cb-strength-4 .cb-strength-fill {
+  width: 100%;
+  background: var(--p-green-500, #22c55e);
+}
+
+.cb-hints {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-result {
+  display: block;
+  margin-top: 1rem;
+}
+
+.cb-checklist {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+}
+
+.cb-checklist li {
+  margin-bottom: 0.25rem;
+}

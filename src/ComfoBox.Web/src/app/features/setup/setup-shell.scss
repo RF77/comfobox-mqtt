@@ -1,0 +1,65 @@
+:host {
+  display: block;
+}
+
+.cb-setup {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.cb-setup-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.cb-progress-text {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  counter-reset: none;
+}
+
+.cb-step a {
+  display: inline-block;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  text-decoration: none;
+  color: var(--p-text-muted-color, inherit);
+  border: 1px solid var(--p-content-border-color, var(--p-surface-300));
+}
+
+.cb-step-active a {
+  background: var(--p-primary-color, var(--p-highlight-background));
+  color: var(--p-primary-contrast-color, #fff);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.cb-step-done a {
+  border-color: var(--p-green-500, #22c55e);
+  color: var(--p-green-600, #16a34a);
+}
+
+.cb-setup-body {
+  margin-bottom: 2rem;
+}
+
+.cb-setup-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-content-border-color, var(--p-surface-300));
+}

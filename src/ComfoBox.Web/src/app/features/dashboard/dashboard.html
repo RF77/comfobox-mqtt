@@ -1,0 +1,202 @@
+<section class="cb-dashboard">
+  <h1 class="cb-page-title">Übersicht</h1>
+
+  <!-- BACnet-Hinweis: prominent, wenn der Bus nicht antwortet. -->
+  @if (!bacnetConnected()) {
+    <p-card header="BACnet nicht verbunden" styleClass="cb-card cb-alert-card">
+      <p-message severity="error" styleClass="w-full">
+        <p class="font-semibold">Die ComfoBox antwortet nicht</p>
+        <p>
+          {{ bacnetError() ?? 'Der BACnet-Bus ist nicht erreichbar.' }}
+        </p>
+        <p>
+          eingestellt ist <code>{{ bacnetPort() }}</code>. Bitte den Adapter prüfen oder unten einen
+          anderen Port wählen - ein Neustart ist dafür nicht nötig.
+        </p>
+      </p-message>
+
+      <app-serial-port-picker
+        [currentPort]="bacnetPortRaw()"
+        [currentBaudrate]="bacnetBaudrate()"
+        (applied)="reload()"
+      />
+    </p-card>
+  }
+
+  <!-- Verbindungen -->
+  <div class="cb-tiles">
+    <p-card header="BACnet">
+      <div class="cb-tile">
+        <span class="cb-tile-label">Status</span>
+        <p-tag
+          [value]="bacnetConnected() ? 'verbunden' : 'getrennt'"
+          [severity]="bacnetConnected() ? 'success' : 'danger'"
+        />
+        <span class="cb-tile-hint">{{ bacnetPort() }}</span>
+        @if (bacnetError(); as error) {
+          <span class="cb-tile-error" role="alert">{{ error }}</span>
+        }
+      </div>
+    </p-card>
+
+    <p-card header="MQTT-Broker">
+      <div class="cb-tile">
+        <span class="cb-tile-label">Status</span>
+        <p-tag
+          [value]="mqttConnected() ? 'verbunden' : 'getrennt'"
+          [severity]="mqttConnected() ? 'success' : 'danger'"
+        />
+        <span class="cb-tile-hint">{{ broker() }}</span>
+      </div>
+    </p-card>
+
+    <p-card header="Gateway">
+      <div class="cb-tile">
+        <span class="cb-tile-label">Version</span>
+        <span class="cb-tile-value">{{ version() }}</span>
+        <span class="cb-tile-hint">Gerät {{ deviceId() }}</span>
+        <span class="cb-tile-hint">Laufzeit {{ uptime() }}</span>
+      </div>
+    </p-card>
+
+    <p-card header="Schreibvorgänge (24 h)">
+      <div class="cb-tile">
+        <span class="cb-tile-label">{{ writeCount() }} / {{ writeLimit() }}</span>
+        <p-progressbar [value]="writeProgress() * 100" [showValue]="false" />
+        <span class="cb-tile-hint">
+          @if (writeLimit() > 0) {
+            Noch {{ writeLimit() - writeCount() }} bis zum Limit
+          } @else {
+            Kein Limit gesetzt
+          }
+        </span>
+        @if (writeWarning()) {
+          <p-tag value="Limit fast erreicht" severity="warn" />
+        }
+      </div>
+    </p-card>
+  </div>
+
+  <!-- Die wichtigsten Bedienelemente -->
+  <h2 class="cb-section-title">Bedienung</h2>
+
+  <div class="cb-tiles">
+    @if (operationMode(); as item) {
+      <p-card header="Betriebsart">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+          <p-button
+            label="In den Geräten öffnen"
+            [text]="true"
+            icon="pi pi-arrow-right"
+            routerLink="/items"
+            [queryParams]="{ q: item.id }"
+          />
+        </div>
+      </p-card>
+    }
+
+    @if (setPoint(); as item) {
+      <p-card header="Raumsollwert">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+          @if (item.min !== null && item.max !== null) {
+            <span class="cb-tile-hint">
+              Bereich {{ format(item.min) }} – {{ format(item.max) }}
+              {{ item.unit ?? '' }}
+            </span>
+          }
+        </div>
+      </p-card>
+    }
+
+    @if (heatPump(); as item) {
+      <p-card header="Wärmepumpe">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+        </div>
+      </p-card>
+    }
+
+    @if (roomTemperature(); as item) {
+      <p-card header="Raumtemperatur">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+        </div>
+      </p-card>
+    }
+
+    @if (outdoorTemperature(); as item) {
+      <p-card header="Außentemperatur">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+        </div>
+      </p-card>
+    }
+
+    @if (warmWater(); as item) {
+      <p-card header="Warmwasser">
+        <div class="cb-tile">
+          <span class="cb-tile-value">{{ item.valueText ?? '–' }}</span>
+          <span class="cb-tile-hint">{{ item.displayName }}</span>
+        </div>
+      </p-card>
+    }
+  </div>
+
+  @if (items.count() === 0 && !items.loading()) {
+    <p-message severity="info" styleClass="w-full">
+      <p>Der Item-Katalog ist leer. Bitte die Konfiguration prüfen.</p>
+    </p-message>
+  }
+
+  <!-- Schnellaktionen -->
+  <h2 class="cb-section-title">Schnellaktionen</h2>
+
+  <div class="cb-actions">
+    <p-button
+      label="Gateway neu starten"
+      icon="pi pi-power-off"
+      severity="danger"
+      [outlined]="true"
+      (onClick)="restart()"
+    />
+
+    <p-button
+      label="BACnet neu verbinden"
+      icon="pi pi-plug"
+      [outlined]="true"
+      [loading]="busy() === 'bacnet'"
+      (onClick)="reconnectBacnet()"
+    />
+
+    <p-button
+      label="MQTT neu verbinden"
+      icon="pi pi-cloud"
+      [outlined]="true"
+      [loading]="busy() === 'mqtt'"
+      (onClick)="reconnectMqtt()"
+    />
+
+    <p-button
+      label="Konfiguration öffnen"
+      icon="pi pi-cog"
+      [outlined]="true"
+      routerLink="/config"
+    />
+
+    <p-button
+      label="Erneut einrichten"
+      icon="pi pi-wrench"
+      [outlined]="true"
+      routerLink="/setup"
+    />
+  </div>
+
+  <p-confirmdialog />
+</section>

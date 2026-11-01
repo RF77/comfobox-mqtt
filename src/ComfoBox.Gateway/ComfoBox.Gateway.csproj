@@ -36,6 +36,19 @@
 
   <ItemGroup>
     <!--
+      Die gebaute Web-Oberfläche (Angular) wird als wwwroot ausgeliefert.
+      Der Build findet nur statt, wenn das SPA gebaut wurde (npm run build) -
+      sonst bleibt wwwroot leer und die API funktioniert trotzdem.
+    -->
+    <Content Include="..\ComfoBox.Web\dist\ComfoBox.Web\browser\**"
+             Link="wwwroot\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             Condition="Exists('..\ComfoBox.Web\dist\ComfoBox.Web\browser')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
       Die Gateway-Tests greifen auf interne Typen zu (BrokerConnection,
       MqttSubscriber.HandleAsync). Die Test-Naehte bleiben dadurch intern.
     -->

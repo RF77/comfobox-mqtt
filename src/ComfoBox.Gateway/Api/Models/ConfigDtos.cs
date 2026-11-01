@@ -257,7 +257,9 @@ public sealed record ApiConfigDto
 /// Die zur Laufzeit änderbaren Konfigurationswerte.
 /// </summary>
 /// <remarks>
-/// Alles andere (Port, Baudrate, Broker) erfordert einen Neustart.
+/// Alles andere (Broker) erfordert einen Neustart. Die serielle
+/// Schnittstelle wird über <see cref="SerialPortUpdateRequest"/> geändert -
+/// das wirkt **ohne** Neustart.
 /// </remarks>
 public sealed class ConfigUpdateRequest
 {
@@ -280,4 +282,40 @@ public sealed class ConfigUpdateRequest
     /// Werden die Item-Werte retained publiziert?
     /// </summary>
     public bool? UseMqttRetain { get; set; }
+}
+
+/// <summary>
+/// Die Änderung der seriellen Schnittstelle.
+/// </summary>
+/// <remarks>
+/// Die Änderung wirkt **sofort**: die Konfiguration wird geschrieben und der
+/// BACnet-Stack baut die Verbindung sofort neu auf.
+/// </remarks>
+public sealed class SerialPortUpdateRequest
+{
+    /// <summary>
+    /// Der serielle Port, z. B. <c>COM3</c> oder <c>/dev/ttyUSB0</c>.
+    /// </summary>
+    public string? Port { get; set; }
+
+    /// <summary>
+    /// Die Baudrate (Standard: 38400).
+    /// </summary>
+    public int Baudrate { get; set; } = 38400;
+}
+
+/// <summary>
+/// Die Prüfung eines seriellen Ports.
+/// </summary>
+public sealed class SerialPortTestRequest
+{
+    /// <summary>
+    /// Der zu prüfende Port, z. B. <c>COM3</c>.
+    /// </summary>
+    public string? Port { get; set; }
+
+    /// <summary>
+    /// Die Baudrate (Standard: 38400).
+    /// </summary>
+    public int Baudrate { get; set; } = 38400;
 }

@@ -32,7 +32,14 @@ public sealed class FakeSerialPort : ISerialPort
     public int ReadCount { get; private set; }
 
     /// <inheritdoc />
-    public bool IsOpen { get; private set; }
+    public string PortName { get; init; } = "FAKE";
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// Der Port gilt als **offen**, bis er geschlossen wird - so verhält sich
+    /// der Attrapp wie ein echter Port, der schon geöffnet ist.
+    /// </remarks>
+    public bool IsOpen { get; private set; } = true;
 
     /// <summary>Alle geschriebenen Bytes.</summary>
     public byte[] Written
@@ -100,6 +107,13 @@ public sealed class FakeSerialPort : ISerialPort
         if (FailOnRead)
         {
             return SerialReadResult.Error;
+        }
+
+        // Ein geschlossener Port meldet „Closed" - der echte Adapter
+        // verhält sich genauso (IOException beim Lesen).
+        if (!IsOpen)
+        {
+            return SerialReadResult.Closed;
         }
 
         lock (_sync)

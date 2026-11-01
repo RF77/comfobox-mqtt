@@ -149,6 +149,43 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
         await base.StopAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Fordert einen Neuaufbau der Broker-Verbindungen an.
+    /// </summary>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Anzahl der Broker, für die ein Neuaufbau angefordert wurde.</returns>
+    /// <remarks>
+    /// Der Normalfall ist der automatische Reconnect mit Backoff. Dieser
+    /// Endpunkt ist für den Fall, dass der Broker wieder läuft, aber die
+    /// Verbindung nicht mehr sauber ist.
+    /// </remarks>
+    public async Task<int> RequestReconnectAsync(CancellationToken cancellationToken)
+    {
+        var count = 0;
+
+        foreach (var connection in _connections)
+        {
+            try
+            {
+                await connection.RequestReconnectAsync(cancellationToken).ConfigureAwait(false);
+                count++;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Der MQTT-Reconnect für {Broker} ist fehlgeschlagen.",
+                    connection.Description);
+            }
+        }
+
+        return count;
+    }
+
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {

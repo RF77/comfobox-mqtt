@@ -47,4 +47,14 @@ public sealed class ApiOptions
     /// </summary>
     [Range(1, 120)]
     public int MqttTestTimeoutSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Die Lebensdauer einer Web-Sitzung in Minuten.
+    /// </summary>
+    /// <remarks>
+    /// Die Sitzung liegt serverseitig: nach dem Ablauf muss sich der Benutzer
+    /// erneut anmelden. Standard ist 8 Stunden.
+    /// </remarks>
+    [Range(1, 10_080)]
+    public int SessionLifetimeMinutes { get; init; } = 480;
 }

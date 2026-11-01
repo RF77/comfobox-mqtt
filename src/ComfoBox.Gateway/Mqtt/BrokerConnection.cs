@@ -146,6 +146,41 @@ internal sealed class BrokerConnection : IAsyncDisposable
     }
 
     /// <summary>
+    /// Fordert einen Neuaufbau der Verbindung an.
+    /// </summary>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der die Trennung abschließt.</returns>
+    /// <remarks>
+    /// Die laufende Verbindung wird getrennt - die Reconnect-Schleife
+    /// verbindet sich sofort wieder (ohne Backoff).
+    /// </remarks>
+    public async Task RequestReconnectAsync(CancellationToken cancellationToken)
+    {
+        var client = _client;
+
+        if (client is { IsConnected: true })
+        {
+            try
+            {
+                await client.DisconnectAsync(new MqttClientDisconnectOptions(), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Die MQTT-Verbindung zu {Broker} konnte nicht sauber getrennt werden.",
+                    Description);
+            }
+        }
+
+        // Das Signal wird auch gesetzt, wenn gar nicht verbunden war - sonst
+        // wartet die Schleife auf das nächste echte Trennen.
+        var signal = Volatile.Read(ref _disconnected);
+        signal.TrySetResult();
+    }
+
+    /// <summary>
     /// Beendet die Verbindung sauber: erst <c>offline</c> publizieren, dann
     /// trennen - sonst feuert der Last Will.
     /// </summary>

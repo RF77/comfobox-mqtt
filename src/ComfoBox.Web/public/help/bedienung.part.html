@@ -1,0 +1,425 @@
+<article class="prose">
+<p>Die Web-Oberfläche erreichen Sie unter <code>http://&lt;IP&gt;:8081/</code> (bzw. als Panel in
+Home Assistant).</p>
+<hr>
+<h2 id="aufbau">Aufbau</h2>
+<table>
+<thead>
+<tr>
+<th>Bereich</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Dashboard</strong></td>
+<td>Zustand, Verbindungen, die wichtigsten Werte</td>
+</tr>
+<tr>
+<td><strong>Geräte</strong></td>
+<td>alle 127 Werte, lesen und schreiben</td>
+</tr>
+<tr>
+<td><strong>Konfiguration</strong></td>
+<td>Grundeinstellungen, Broker, Expertenmodus</td>
+</tr>
+<tr>
+<td><strong>Diagnose</strong></td>
+<td>Protokoll, Fehlerhistorie, Verbindungen, Schreibvorgänge</td>
+</tr>
+<tr>
+<td><strong>Hilfe</strong></td>
+<td>diese Anleitung</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="dashboard">Dashboard</h2>
+<h3 id="zustandsanzeige">Zustandsanzeige</h3>
+<p>Oben sehen Sie einen farbigen Balken:</p>
+<table>
+<thead>
+<tr>
+<th>Farbe</th>
+<th>Bedeutung</th>
+<th>Was tun?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>grün</strong></td>
+<td>alles in Ordnung</td>
+<td>–</td>
+</tr>
+<tr>
+<td><strong>gelb</strong></td>
+<td>eingeschränkt</td>
+<td>Meldung im Balken lesen</td>
+</tr>
+<tr>
+<td><strong>rot</strong></td>
+<td>nicht erreichbar</td>
+<td><a href="/help/fehlersuche">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+<h3 id="verbindungskacheln">Verbindungskacheln</h3>
+<table>
+<thead>
+<tr>
+<th>Kachel</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>BACnet</strong></td>
+<td>Verbindung zur Heizung</td>
+</tr>
+<tr>
+<td><strong>Broker</strong></td>
+<td>Verbindung zum MQTT-Broker (nur wenn einer eingetragen ist)</td>
+</tr>
+<tr>
+<td><strong>Version</strong></td>
+<td>Version des Gateways</td>
+</tr>
+<tr>
+<td><strong>Laufzeit</strong></td>
+<td>wie lange es läuft</td>
+</tr>
+<tr>
+<td><strong>Schreibvorgänge</strong></td>
+<td><code>17 / 200</code> heute</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ist „Broker&quot; rot, obwohl Sie die Web-Oberfläche nutzen?</strong>
+Kein Problem – ohne Broker gibt es keine MQTT-Werte. Die Heizung wird trotzdem
+gelesen und bedient.</p>
+</blockquote>
+<hr>
+<h2 id="geräte-item-browser">Geräte (Item-Browser)</h2>
+<p>Hier sehen Sie <strong>alle</strong> Werte der Anlage, nach Gruppen sortiert.</p>
+<table>
+<thead>
+<tr>
+<th>Bedienelement</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Suchfeld</td>
+<td>Volltext über Name, Beschreibung und Topic</td>
+</tr>
+<tr>
+<td>Filter</td>
+<td>„nur schreibbar“, „nur Expertenmodus“, „veraltet“</td>
+</tr>
+<tr>
+<td>Spalte <strong>Wert</strong></td>
+<td>der aktuelle Wert</td>
+</tr>
+<tr>
+<td>Spalte <strong>Bereich</strong></td>
+<td>kleinster und größter erlaubter Wert</td>
+</tr>
+<tr>
+<td>Spalte <strong>Schreibbar</strong></td>
+<td>Ja/Nein</td>
+</tr>
+</tbody></table>
+<h3 id="werte-schreiben">Werte schreiben</h3>
+<table>
+<thead>
+<tr>
+<th>Werttyp</th>
+<th>Bedienung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zahl</td>
+<td>Zahlenfeld → <strong>Speichern</strong></td>
+</tr>
+<tr>
+<td>Auswahl</td>
+<td>Dropdown mit den Namen → Auswahl <strong>Speichern</strong></td>
+</tr>
+<tr>
+<td>nicht schreibbar</td>
+<td>nur Anzeige</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Nach dem Schreiben</strong> aktualisiert sich der Wert aus der Heizung – das Gateway
+liest ihn zurück. Stimmt der angezeigte Wert nicht mit dem gewünschten überein,
+wurde der Schreibvorgang abgelehnt (Grund steht in der Meldung).</p>
+</blockquote>
+<h3 id="warum-ist-ein-wert-nicht-schreibbar">Warum ist ein Wert nicht schreibbar?</h3>
+<table>
+<thead>
+<tr>
+<th>Grund</th>
+<th>Erklärung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gerät meldet nur</td>
+<td>die Heizung liefert diesen Wert nur zurück</td>
+</tr>
+<tr>
+<td>Expertenmodus aus</td>
+<td>Parameter, die nur mit Spezialwissen verändert werden dürfen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Achtung:</strong> Der Expertenmodus erlaubt das Schreiben von Parametern, die das
+Regelverhalten der Heizung beeinflussen. Aktivieren Sie ihn nur, wenn Sie wissen,
+was Sie tun. Bei Rückfragen: <a href="/help/fehlersuche#expertenmodus">Expertenmodus</a>.</p>
+</blockquote>
+<hr>
+<h2 id="konfiguration">Konfiguration</h2>
+<table>
+<thead>
+<tr>
+<th>Bereich</th>
+<th>Einstellung</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Allgemein</td>
+<td>MQTT-Basis-Topic</td>
+<td>Präfix aller Topics</td>
+</tr>
+<tr>
+<td>Allgemein</td>
+<td>Abfrageintervall</td>
+<td>wie oft gelesen wird (Standard 30 s)</td>
+</tr>
+<tr>
+<td>Schreibschutz</td>
+<td>Limit pro 24 h</td>
+<td>wie viele Schreibvorgänge erlaubt sind</td>
+</tr>
+<tr>
+<td>Schreibschutz</td>
+<td>Expertenmodus</td>
+<td>sensible Parameter freigeben</td>
+</tr>
+<tr>
+<td>MQTT</td>
+<td>Broker</td>
+<td>Adresse, Port, Zugangsdaten</td>
+</tr>
+<tr>
+<td>BACnet</td>
+<td>Port, Baudrate</td>
+<td><strong>erfordert Neustart</strong></td>
+</tr>
+<tr>
+<td>Diagnose</td>
+<td>Neustart, Verbindung neu aufbauen, Protokollstufe</td>
+<td>–</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Felder mit dem Hinweis „Neustart erforderlich&quot;</strong> werden erst nach einem Neustart
+wirksam. Sie finden einen Knopf dafür direkt auf der Seite.</p>
+</blockquote>
+<hr>
+<h2 id="diagnose">Diagnose</h2>
+<table>
+<thead>
+<tr>
+<th>Ansicht</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Protokoll</strong></td>
+<td>die letzten 1000 Log-Einträge, live mitlaufend, filterbar</td>
+</tr>
+<tr>
+<td><strong>Zustandsprüfungen</strong></td>
+<td>jede Einzelprüfung mit Status und Meldung</td>
+</tr>
+<tr>
+<td><strong>Fehlerhistorie</strong></td>
+<td>die letzten 50 Fehler, filterbar</td>
+</tr>
+<tr>
+<td><strong>Schreibvorgänge</strong></td>
+<td>Zähler, Limit, Zeitraum</td>
+</tr>
+<tr>
+<td><strong>Verbindungen</strong></td>
+<td>Broker-Status, Verbindungsabbrüche, Zähler</td>
+</tr>
+<tr>
+<td><strong>Rohdaten</strong></td>
+<td>alle Nachrichten live mitlesen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bei Problemen:</strong> Der schnellste Weg ist, in der Fehlerhistorie nach dem Zeitpunkt
+des Problems zu suchen. Dort steht der genaue Grund.</p>
+</blockquote>
+<h3 id="das-protokoll">Das Protokoll</h3>
+<p>Unter <strong>Diagnose → Protokoll</strong> sehen Sie, was das Gateway gerade macht – ohne
+SSH, ohne Docker, ohne NAS-Logbrowser.</p>
+<table>
+<thead>
+<tr>
+<th>Bedienelement</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Live</strong></td>
+<td>an/aus. Angeschaltet laufen neue Zeilen automatisch ein</td>
+</tr>
+<tr>
+<td><strong>Level</strong></td>
+<td>nur Warnungen, Fehler … oder alles anzeigen</td>
+</tr>
+<tr>
+<td><strong>Quelle</strong></td>
+<td>z. B. nur der BACnet-Teil oder nur der MQTT-Teil</td>
+</tr>
+<tr>
+<td><strong>Textsuche</strong></td>
+<td>Volltext über Meldung, Exception und Zusatzfelder</td>
+</tr>
+<tr>
+<td><strong>Zeitraum</strong></td>
+<td>„letzte 5 min / 15 min / Stunde / alles&quot;</td>
+</tr>
+<tr>
+<td><strong>Auto-Scroll</strong></td>
+<td>die Liste folgt dem Ende (abschaltbar)</td>
+</tr>
+<tr>
+<td><strong>Exportieren</strong></td>
+<td>die gefilterten Zeilen als Datei speichern</td>
+</tr>
+<tr>
+<td><strong>Protokoll leeren</strong></td>
+<td>den Puffer im Gateway leeren</td>
+</tr>
+</tbody></table>
+<p>Farbige Zeilen: grau = Detail, normal = Meldung, gelb = Warnung, rot = Fehler.</p>
+<blockquote>
+<p><strong>Gut zu wissen:</strong> Das Protokoll liegt <strong>nur im Arbeitsspeicher</strong> des Gateways und ist
+nach einem Neustart leer. Die dauerhafte Historie schreibt das Gateway in die Logdatei
+auf dem Datenverzeichnis. Der Puffer umfasst standardmäßig die letzten <strong>1000</strong>
+Einträge – bei sehr vielen Meldungen können Sie ihn über
+<code>Logging:RingBuffer:Capacity</code> in der <code>compose.yaml</code> vergrößern.</p>
+</blockquote>
+<blockquote>
+<p><strong>Sicherheit:</strong> Passwörter und Tokens werden <strong>nie</strong> protokolliert. Ein Redakteur
+maskiert sie, bevor sie im Protokoll landen.</p>
+</blockquote>
+<hr>
+<h2 id="der-schreibschutz">Der Schreibschutz</h2>
+<p>Dieses Thema verdient eigene Erklärung, weil es die Heizung schützt.</p>
+<h3 id="das-tageslimit">Das Tageslimit</h3>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Standard</td>
+<td>200 Schreibvorgänge pro 24 Stunden</td>
+</tr>
+<tr>
+<td>Zählung</td>
+<td>jeder Schreibvorgang, auch der zu einem beliebigen Parameter</td>
+</tr>
+<tr>
+<td>Speicherung</td>
+<td><strong>persistent</strong> – ein Neustart setzt den Zähler nicht zurück</td>
+</tr>
+<tr>
+<td>Bei Überschreitung</td>
+<td>der Schreibvorgang wird <strong>abgelehnt</strong>, nicht gekürzt</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Warum persistent?</strong>
+Der Zweck ist der Schutz der Elektronik in der Heizung. Ein Neustart, der den
+Zähler zurücksetzt, würde diesen Schutz aushebeln.</p>
+</blockquote>
+<h3 id="was-passiert-bei-einem-abgelehnten-schreibvorgang">Was passiert bei einem abgelehnten Schreibvorgang?</h3>
+<ol>
+<li>Der Wert wird <strong>nicht</strong> geschrieben.</li>
+<li>Sie bekommen eine klare Meldung.</li>
+<li>Der alte Wert bleibt aktiv.</li>
+</ol>
+<blockquote>
+<p><strong>Es wird niemals ein Ersatzwert geschrieben</strong> – insbesondere <strong>nicht</strong> die Null.
+Ein stillschweigend gesetzter Nullwert könnte die Anlage in einen undefinierten
+Zustand bringen.</p>
+</blockquote>
+<h3 id="zähler-ansehen">Zähler ansehen</h3>
+<p>Dashboard → Kachel <strong>Schreibvorgänge</strong>, oder
+<code>ComfoBox/Special/NumberOfWritesPer24h</code> per MQTT.</p>
+<hr>
+<h2 id="neustart">Neustart</h2>
+<table>
+<thead>
+<tr>
+<th>Wo</th>
+<th>Wie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dashboard</td>
+<td><em>Gateway neu starten</em> → Bestätigung</td>
+</tr>
+<tr>
+<td>Konfiguration</td>
+<td><em>Gateway neu starten</em></td>
+</tr>
+<tr>
+<td>Home Assistant</td>
+<td><code>comfobox.restart</code> oder MQTT-Befehl</td>
+</tr>
+<tr>
+<td>Kommandozeile</td>
+<td><code>docker compose restart gateway</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Nach dem Neustart</strong> sind die Werte für etwa 10 Sekunden nicht verfügbar.
+Die Heizung arbeitet in dieser Zeit mit ihrem letzten Sollwert weiter – es
+entsteht <strong>kein</strong> Ausfall der Heizungsregelung.</p>
+</blockquote>
+<hr>
+<h2 id="hilfe">Hilfe</h2>
+<p>Über <strong>Hilfe</strong> in der Seitenleiste. Die Anleitung funktioniert auch ohne
+Internetverbindung.</p>
+<table>
+<thead>
+<tr>
+<th>Thema</th>
+<th>Seite</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Installation</td>
+<td><a href="/help/installation">Installation</a></td>
+</tr>
+<tr>
+<td>Anschluss</td>
+<td><a href="/help/anschluss">Anschluss</a></td>
+</tr>
+<tr>
+<td>Home Assistant</td>
+<td><a href="/help/home-assistant">Home Assistant</a></td>
+</tr>
+<tr>
+<td>Fehler</td>
+<td><a href="/help/fehlersuche">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+
+      </article>

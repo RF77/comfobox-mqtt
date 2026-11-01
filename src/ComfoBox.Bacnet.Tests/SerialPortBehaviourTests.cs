@@ -127,6 +127,57 @@ public sealed class SerialPortBehaviourTests
     }
 
     [Fact]
+    public async Task Ein_Angeforderter_Neuaufbau_Ignoriert_Den_Backoff()
+    {
+        // Wenn der Benutzer in der Oberfläche einen anderen Port wählt, muss
+        // der Port **sofort** neu geöffnet werden - der Backoff (bis 30 s)
+        // darf den Wechsel nicht verzögern.
+        var factory = new FakeSerialPortFactory();
+        var transport = new BacnetMstpTransport(
+            factory,
+            new BacnetMstpOptions
+            {
+                ThisStation = 3,
+
+                // Ein sehr langer Backoff: ohne das Signal würde der
+                // Neuaufbau praktisch nie stattfinden.
+                ReconnectDelay = TimeSpan.FromSeconds(30),
+                MaxReconnectDelay = TimeSpan.FromSeconds(30),
+            },
+            NullLogger<BacnetMstpTransport>.Instance);
+
+        try
+        {
+            transport.Start();
+
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (factory.CreatedCount == 0 && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(10);
+            }
+
+            Assert.Equal(1, factory.CreatedCount);
+
+            // Der Benutzer wechselt den Port.
+            transport.RequestReconnect();
+
+            var reconnectDeadline = DateTime.UtcNow.AddSeconds(5);
+            while (factory.CreatedCount < 2 && DateTime.UtcNow < reconnectDeadline)
+            {
+                await Task.Delay(10);
+            }
+
+            Assert.True(
+                factory.CreatedCount >= 2,
+                $"Der Port muss sofort neu geöffnet werden (erzeugte Ports: {factory.CreatedCount}).");
+        }
+        finally
+        {
+            await transport.StopAsync();
+        }
+    }
+
+    [Fact]
     public async Task StopAsync_Schliesst_Den_Port_Und_Beendet_Ohne_Hang()
     {
         var factory = new FakeSerialPortFactory();

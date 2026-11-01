@@ -99,11 +99,30 @@ Hier sehen Sie **alle** Werte der Anlage, nach Gruppen sortiert.
 | Schreibschutz | Limit pro 24 h | wie viele Schreibvorgänge erlaubt sind |
 | Schreibschutz | Expertenmodus | sensible Parameter freigeben |
 | MQTT | Broker | Adresse, Port, Zugangsdaten |
-| BACnet | Port, Baudrate | **erfordert Neustart** |
+| BACnet | **Port, Baudrate** | **wirkt sofort – kein Neustart nötig** |
 | Diagnose | Neustart, Verbindung neu aufbauen, Protokollstufe | – |
 
 > **Felder mit dem Hinweis „Neustart erforderlich"** werden erst nach einem Neustart
 > wirksam. Sie finden einen Knopf dafür direkt auf der Seite.
+
+### Den seriellen Port wechseln
+
+Unter **Konfiguration → BACnet** und auf der **Übersicht** (dort prominent,
+sobald die Heizung nicht antwortet) finden Sie die Port-Auswahl.
+
+| Schritt | Was passiert |
+|---|---|
+| **Neu suchen** | Der Gateway fragt das Betriebssystem nach seriellen Ports ab |
+| Port wählen | Die gefundenen Ports stehen zur Auswahl bereit |
+| **Verbindung testen** | Der Port wird geöffnet und geprüft |
+| **Übernehmen** | Der Gateway benutzt den neuen Port **sofort** |
+
+> **Kein Neustart nötig.** Der Gateway schreibt die Wahl in die Konfiguration
+> und baut die Verbindung zur Heizung sofort neu auf. Nach einem Neustart des
+> Betriebssystems ist der Port weiterhin richtig eingestellt.
+
+> **Der Adapter wird manchmal erst später erkannt** – besonders nach einem
+> Neustart des NAS. Dann einfach auf **Neu suchen** klicken.
 
 ---
 

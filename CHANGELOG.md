@@ -132,6 +132,25 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   `Api:MqttTestTimeoutSeconds` als neuer `Api`-Abschnitt
 - Phase 4: 59 neue Tests (Items, Status, SSE, Config, Neustart, Token, Setup,
   Log) gegen einen **echten** Kestrel-Testhost → **278 Tests grün**
+- Phase 5 (Aufgabe 5.13): **Serielle Ports zur Laufzeit wählen** – die Ports
+  werden **gescannt** (Hotplug: `ports.json` des Supervisors, sonst
+  `SerialPort.GetPortNames()`), der Benutzer wählt sie in der Oberfläche aus,
+  und die Umstellung ist **sofort** wirksam – **kein Neustart** nötig.
+  Neuer Endpunkt-Satz: `GET /api/config/serial-ports`,
+  `POST /api/config/bacnet/test`, `PUT /api/config/bacnet`
+- Phase 5 (Aufgabe 5.13): `ComfoBox.Gateway.Bacnet.SerialPortSettings` – die
+  **laufenden** Parameter der Schnittstelle; die Port-Fabrik liest sie bei
+  jedem Öffnen, deshalb genügt ein Neuaufbau der Verbindung
+- Phase 5 (Aufgabe 5.13): `ComfoBox.Gateway.Bacnet.BacnetSerialManager` –
+  prüft einen Port und stellt die Schnittstelle um (Konfiguration schreiben →
+  Laufzeit übernehmen → BACnet-Stack neu aufbauen)
+- Phase 5 (Aufgabe 5.13): `ComfoBox.Gateway.Hardware.SerialPortScanner` – die
+  Port-Suche; der Setup-Assistent benutzt jetzt dieselbe Quelle
+- Phase 5 (Aufgabe 5.13): `app-serial-port-picker` in der Weboberfläche –
+  eingesetzt auf der Konfigurationsseite und **prominent auf dem Dashboard**,
+  sobald BACnet nicht verbunden ist
+- Phase 5 (Aufgabe 5.13): 7 neue Tests (Port-Umstellung ohne Neustart,
+  Status, Validierung, Sofort-Reconnect) → **293 Tests grün**
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
@@ -148,8 +167,24 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   statt `ComfoBox{DateTime.Ticks}` (jede Sitzung war eine neue)
 - Phase 3: `Mqtt:ClientId`, `Mqtt:DiscoveryPrefix`, `Mqtt:UseMqttRetain` und
   `Mqtt:StatusIntervalSeconds` sind konfigurierbar
+- Phase 5 (Aufgabe 5.13): **`Bacnet:Port` und `Bacnet:Baudrate` sind jetzt ohne
+  Neustart änderbar** – als einzige Einstellung. Vorher galten sie als
+  „nur Konfigurationsdatei"
+- Phase 5 (Aufgabe 5.13): `GET /api/status` und `GET /api/config` melden den
+  **laufenden** Port (nicht mehr den aus der Konfigurationsdatei)
 
 ### Fixed
+- Phase 5 (Aufgabe 5.13): ein angeforderter Neuaufbau der seriellen
+  Schnittstelle wartet nicht mehr den Backoff (bis 30 s) ab – der Port wird
+  **sofort** neu geöffnet
+- Phase 4: **Dark-Mode der Weboberfläche** – der Seitenhintergrund blieb weiß,
+  weil `--p-surface-50` ein Palette-Token ist und im Dark-Mode nicht
+  umgeschaltet wird. Er kommt jetzt über `--cb-page-background` aus
+  `light-dark()` und ist im Dark-Mode einen Tick heller als die Karten
+- Phase 4: **Dark-Mode der Weboberfläche** – die Hilfeseiten, die Auswahlfelder
+  und der Log-Viewer benutzten hellen Palette-Tokens (weißer Text auf hellem
+  Grund). Sie nutzen jetzt semantische Tokens (`--p-content-hover-background`,
+  `--p-content-border-color`, `--p-form-field-background`)
 - Phase 3: **Befund A10** – nach **jedem** Reconnect wird `ComfoBox/Connected`
   mit `1` publiziert. Der Legacy tat das nur beim ersten Connect, danach sah
   Home Assistant dauerhaft „offline"

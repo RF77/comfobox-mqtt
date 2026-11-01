@@ -9,6 +9,7 @@ using ComfoBox.Bacnet;
 using ComfoBox.Bacnet.Serial;
 using ComfoBox.Gateway.Api.Models;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Security;
 using MQTTnet;
 using MQTTnet.Exceptions;
@@ -32,13 +33,14 @@ public sealed class SetupService
     /// <summary>
     /// Der Name der Datei mit den erkannten Ports (vom Supervisor erzeugt).
     /// </summary>
-    public const string PortsFileName = "ports.json";
+    public const string PortsFileName = SerialPortScanner.PortsFileName;
 
     private readonly ConfigStore _config;
     private readonly ApiSecurityStore _security;
     private readonly ApiOptions _apiOptions;
     private readonly BacnetOptions _bacnetOptions;
     private readonly MqttOptions _mqttOptions;
+    private readonly ISerialPortScanner _scanner;
     private readonly ILogger<SetupService> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
@@ -50,6 +52,7 @@ public sealed class SetupService
     /// <param name="apiOptions">Die API-Einstellungen.</param>
     /// <param name="bacnetOptions">Die BACnet-Einstellungen.</param>
     /// <param name="mqttOptions">Die MQTT-Einstellungen.</param>
+    /// <param name="scanner">Die Suche nach den seriellen Ports.</param>
     /// <param name="logger">Logger.</param>
     /// <param name="loggerFactory">Die Logger-Fabrik (für den BACnet-Stack).</param>
     public SetupService(
@@ -58,6 +61,7 @@ public sealed class SetupService
         ApiOptions apiOptions,
         BacnetOptions bacnetOptions,
         MqttOptions mqttOptions,
+        ISerialPortScanner scanner,
         ILogger<SetupService> logger,
         ILoggerFactory loggerFactory)
     {
@@ -66,6 +70,7 @@ public sealed class SetupService
         ArgumentNullException.ThrowIfNull(apiOptions);
         ArgumentNullException.ThrowIfNull(bacnetOptions);
         ArgumentNullException.ThrowIfNull(mqttOptions);
+        ArgumentNullException.ThrowIfNull(scanner);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
@@ -74,6 +79,7 @@ public sealed class SetupService
         _apiOptions = apiOptions;
         _bacnetOptions = bacnetOptions;
         _mqttOptions = mqttOptions;
+        _scanner = scanner;
         _logger = logger;
         _loggerFactory = loggerFactory;
     }
@@ -96,32 +102,7 @@ public sealed class SetupService
     /// Die Ports - bevorzugt aus <c>ports.json</c> (vom Supervisor erzeugt),
     /// sonst aus der Liste des Betriebssystems.
     /// </returns>
-    public IReadOnlyList<SerialPortInfo> GetPorts()
-    {
-        var portsFile = Path.Combine(_config.DataDirectory, PortsFileName);
-
-        if (File.Exists(portsFile))
-        {
-            var fromFile = ReadPortsFile(portsFile);
-            if (fromFile.Count > 0)
-            {
-                return fromFile;
-            }
-        }
-
-        try
-        {
-            return SerialPort.GetPortNames()
-                .OrderBy(name => name, StringComparer.Ordinal)
-                .Select(name => new SerialPortInfo { Port = name })
-                .ToArray();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
-        {
-            _logger.LogWarning(ex, "Die seriellen Ports konnten nicht ermittelt werden.");
-            return [];
-        }
-    }
+    public IReadOnlyList<SerialPortInfo> GetPorts() => _scanner.Scan();
 
     /// <summary>
     /// Schlägt einen freien Web-Port vor.
@@ -386,53 +367,6 @@ public sealed class SetupService
     {
         _security.SetSetupCompleted(true);
         _logger.LogInformation("Die Ersteinrichtung ist abgeschlossen - die Setup-Endpunkte sind jetzt geschützt.");
-    }
-
-    /// <summary>
-    /// Liest die Port-Liste des Supervisors.
-    /// </summary>
-    private List<SerialPortInfo> ReadPortsFile(string path)
-    {
-        try
-        {
-            var text = File.ReadAllText(path);
-            var root = JsonNode.Parse(text) as JsonObject;
-
-            if (root?["ports"] is not JsonArray array)
-            {
-                return [];
-            }
-
-            var ports = new List<SerialPortInfo>(array.Count);
-
-            foreach (var node in array)
-            {
-                if (node is not JsonObject entry)
-                {
-                    continue;
-                }
-
-                var device = entry["device"]?.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(device))
-                {
-                    continue;
-                }
-
-                ports.Add(new SerialPortInfo
-                {
-                    Port = device,
-                    Description = entry["description"]?.GetValue<string>(),
-                    StablePath = entry["stableId"]?.GetValue<string>(),
-                });
-            }
-
-            return ports;
-        }
-        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
-        {
-            _logger.LogWarning(ex, "Die Port-Liste konnte nicht gelesen werden.");
-            return [];
-        }
     }
 
     /// <summary>

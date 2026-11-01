@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation – ComfoBox Gateway</title>
+  <meta name="description" content="Die vier Möglichkeiten, das Gateway zu installieren">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Installation</h1>
+        <p class="description">Die vier Möglichkeiten, das Gateway zu installieren</p>
+        <div class="tags"><span class="tag">installation</span></div>
+      </header>
+
+      <article class="prose">
+<h1>Installation</h1>
+<p>Es gibt <strong>vier</strong> Wege. Alle verwenden dieselbe Software – Sie wählen nur den
+Weg, der zu Ihrer Umgebung passt.</p>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Passend für</th>
+<th>Aufwand</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="synology.html">Synology-Paket</a></td>
+<td>DS923+ und andere DSM-Nas</td>
+<td>1 Klick</td>
+</tr>
+<tr>
+<td><a href="ha-addon.html">Home-Assistant-Add-on</a></td>
+<td>Home Assistant auf HA OS / Supervised</td>
+<td>2 Klicks</td>
+</tr>
+<tr>
+<td><a href="installation.html#docker-container">Docker-Container</a></td>
+<td>jeder Rechner mit Docker</td>
+<td>eine Datei</td>
+</tr>
+<tr>
+<td><a href="#nur-home-assistant">Nur Home Assistant</a></td>
+<td>Sie nutzen nur HA, kein Docker</td>
+<td>1 Klick</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Docker-Container</h2>
+<h3>Voraussetzungen</h3>
+<ul>
+<li>Docker auf dem Zielsystem (NAS, Raspberry Pi, Linux-Server)</li>
+<li>der USB-RS485-Adapter an diesem System</li>
+</ul>
+<h3>Installation</h3>
+<p>Erstellen Sie eine Datei <code>compose.yaml</code>:</p>
+<pre><code class="language-yaml">services:
+  gateway:
+    image: ghcr.io/rf77/comfobox-gateway:1.0.0
+    container_name: comfobox-gateway
+    restart: unless-stopped
+    ports:
+      - &quot;8081:8080&quot;
+    environment:
+      COMFOBOX_CONFIG_FILE: /var/lib/comfobox/config.json
+    devices:
+      - &quot;/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0:/dev/ttyUSB0&quot;
+    group_add:
+      - &quot;dialout&quot;
+    volumes:
+      - comfobox-data:/var/lib/comfobox
+    security_opt:
+      - &quot;no-new-privileges:true&quot;
+
+volumes:
+  comfobox-data:
+</code></pre>
+<p>Dann starten:</p>
+<pre><code class="language-bash">docker compose up -d
+docker compose logs -f gateway
+</code></pre>
+<blockquote>
+<p><strong>Den Pfad anpassen:</strong> Ersetzen Sie den <code>by-id</code>-Pfad durch den Ihres
+Adapters. Die richtige Datei finden Sie mit <code>ls -l /dev/serial/by-id/</code>.</p>
+</blockquote>
+<h3>Zugang</h3>
+<p>Die Oberfläche erreichen Sie unter <code>http://&lt;IP&gt;:8081/</code>.</p>
+<h3>Wichtige Befehle</h3>
+<table>
+<thead>
+<tr>
+<th>Befehl</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>docker compose logs -f gateway</code></td>
+<td>Protokoll live verfolgen</td>
+</tr>
+<tr>
+<td><code>docker compose restart gateway</code></td>
+<td>neu starten</td>
+</tr>
+<tr>
+<td><code>docker compose pull &amp;&amp; docker compose up -d</code></td>
+<td>auf eine neue Version aktualisieren</td>
+</tr>
+<tr>
+<td><code>docker compose down</code></td>
+<td>stoppen (<strong>ohne</strong> <code>-v</code>!)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wichtig:</strong> <code>docker compose down -v</code> löscht auch das Datenvolumen – und damit
+den Schreibzähler. Der Schreibschutz für die Elektronik der ComfoBox beginnt
+dann erneut. Verwenden Sie immer nur <code>down</code>.</p>
+</blockquote>
+<hr>
+<h2>Nur Home Assistant</h2>
+<p>Wenn Sie <strong>kein Docker</strong> und <strong>kein NAS</strong> einsetzen wollen, können Sie die
+ComfoBox auch <strong>direkt aus Home Assistant</strong> ansprechen. In diesem Fall braucht
+Sie <strong>keinen</strong> MQTT-Broker.</p>
+<h3>Voraussetzung</h3>
+<p>Home Assistant auf <strong>HA OS</strong> oder <strong>Supervised</strong> – dort stehen die Add-ons zur
+Verfügung.</p>
+<h3>Schritt 1 – Add-on installieren</h3>
+<ol>
+<li><strong>Einstellungen → Add-ons → Add-on-Store</strong></li>
+<li>Menü oben rechts → <strong>Repositories</strong></li>
+<li>Diese Adresse eintragen:
+<code>https://github.com/RF77/comfobox-mqtt/tree/main/deploy/ha-addon</code>
+→ <strong>Hinzufügen</strong></li>
+<li><strong>ComfoBox Gateway</strong> suchen → <strong>Installieren</strong> → <strong>Starten</strong></li>
+</ol>
+<p>Details: <a href="ha-addon.html">Home-Assistant-Add-on</a></p>
+<h3>Schritt 2 – Seriellen Port wählen</h3>
+<p>In der Add-on-Konfiguration gibt es das Feld <strong>Serieller Port</strong> – ein Dropdown
+mit allen Anschlüssen des Systems. Wählen Sie den Adapter.</p>
+<h3>Schritt 3 – Integration einrichten</h3>
+<ol>
+<li><strong>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → ComfoBox</strong></li>
+<li>Adresse eintragen: <code>http://&lt;HA-IP&gt;:8099</code></li>
+<li>API-Token eintragen (zu finden in der Web-Oberfläche des Add-ons unter
+<em>Konfiguration → API-Token</em>)</li>
+<li><strong>Hinzufügen</strong></li>
+</ol>
+<p>Fertig – das Gerät <strong>ComfoBox ELESTA</strong> erscheint mit allen Werten.</p>
+<p>Details: <a href="home-assistant.html">Home Assistant</a></p>
+<hr>
+<h2>Aktualisierung</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Vorgehen</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Docker</td>
+<td><code>docker compose pull &amp;&amp; docker compose up -d</code></td>
+</tr>
+<tr>
+<td>Synology</td>
+<td>Paketzentrum → <strong>ComfoBox Gateway</strong> → <strong>Aktualisieren</strong></td>
+</tr>
+<tr>
+<td>HA-Add-on</td>
+<td>Add-on-Store → <strong>Aktualisieren</strong></td>
+</tr>
+<tr>
+<td>HA-Integration</td>
+<td>HACS → <strong>ComfoBox</strong> → <strong>Aktualisieren</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Immer eine konkrete Version verwenden</strong>, nicht <code>latest</code>. So können Sie im
+Problemfall auf die vorherige Version zurück.</p>
+</blockquote>
+<hr>
+<h2>Deinstallation</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Vorgehen</th>
+<th>Daten</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Docker</td>
+<td><code>docker compose down</code></td>
+<td>Volume bleibt erhalten</td>
+</tr>
+<tr>
+<td>Synology</td>
+<td>Paketzentrum → <strong>Deinstallieren</strong></td>
+<td>Konfiguration und Schreibzähler bleiben erhalten</td>
+</tr>
+<tr>
+<td>HA-Add-on</td>
+<td>Add-on → <strong>Deinstallieren</strong></td>
+<td>Daten bleiben erhalten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Schreibzähler bleibt bei allen Varianten erhalten.</strong> Das ist Absicht –
+er schützt die Elektronik der ComfoBox vor zu häufigen Schreibvorgängen.</p>
+</blockquote>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="anschluss.html">&larr; Anschluss</a>
+          <a class="nav-next" href="mqtt.html">MQTT &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<p-card header="Web-Zugang">
+  <p class="cb-hint cb-block">
+    Mit diesem Benutzer melden Sie sich später in der Web-Oberfläche an. Das Passwort wird
+    **einmal** im Klartext an das Gateway gesendet und dort mit PBKDF2 gehasht - es wird
+    nirgends gespeichert.
+  </p>
+
+  <div class="cb-field">
+    <label for="security-user">Benutzername</label>
+    <input
+      pInputText
+      id="security-user"
+      [ngModel]="setup.adminUsername()"
+      (ngModelChange)="setup.adminUsername.set($event)"
+      autocomplete="username"
+    />
+    <span class="cb-hint">Mindestens 3 Zeichen: Buchstaben, Ziffern, Punkt, Unterstrich, Bindestrich.</span>
+  </div>
+
+  <div class="cb-field">
+    <label for="security-password">Passwort</label>
+    <p-password
+      inputId="security-password"
+      [ngModel]="setup.adminPassword()"
+      (ngModelChange)="setup.adminPassword.set($event)"
+      [feedback]="false"
+      [toggleMask]="true"
+      autocomplete="new-password"
+    />
+
+    <div class="cb-strength" [class]="setup.passwordStrengthClass()">
+      <span class="cb-strength-bar"><span class="cb-strength-fill"></span></span>
+      <span>Passwortstärke: {{ setup.passwordStrength() }} von 4</span>
+    </div>
+
+    @if (setup.passwordHints().length > 0) {
+      <ul class="cb-hints">
+        @for (hint of setup.passwordHints(); track hint) {
+          <li>{{ hint }}</li>
+        }
+      </ul>
+    }
+  </div>
+
+  <div class="cb-field">
+    <label for="security-password-repeat">Passwort wiederholen</label>
+    <p-password
+      inputId="security-password-repeat"
+      [ngModel]="setup.adminPasswordRepeat()"
+      (ngModelChange)="setup.adminPasswordRepeat.set($event)"
+      [feedback]="false"
+      [toggleMask]="true"
+      autocomplete="new-password"
+    />
+    @if (
+      setup.adminPasswordRepeat().length > 0 &&
+      setup.adminPasswordRepeat() !== setup.adminPassword()
+    ) {
+      <span class="cb-hint">Die beiden Passwörter stimmen noch nicht überein.</span>
+    }
+  </div>
+
+  <div class="cb-field">
+    <span class="cb-label">Web-Port</span>
+    <span class="cb-hint">
+      Vorschlag: {{ setup.suggestedPort() ?? '–' }} (der erste freie Port ab 8081). Der Port wird
+      beim Start des Gateways festgelegt.
+    </span>
+    <p>
+      <a routerLink="/help/erste-schritte" fragment="zugang">
+        Hilfe: Zugang einrichten (ohne Anmeldung)
+      </a>
+    </p>
+  </div>
+</p-card>

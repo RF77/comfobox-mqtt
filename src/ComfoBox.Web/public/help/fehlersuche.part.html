@@ -1,0 +1,389 @@
+<article class="prose">
+<p>Diese Seite ist nach <strong>Symptom</strong> sortiert. Suchen Sie Ihr Symptom – nicht die
+Ursache.</p>
+<hr>
+<h2 id="die-comfobox-antwortet-nicht">Die ComfoBox antwortet nicht</h2>
+<p><strong>Symptom:</strong> Im Assistenten schlägt der Verbindungstest fehl (<code>no_iam</code>). Oder alle
+Werte bleiben leer.</p>
+<h3 id="1-baudrate-prüfen">1. Baudrate prüfen</h3>
+<p>Die ComfoBox muss auf <strong>38400 Baud</strong> stehen und <strong>neu gestartet</strong> sein. Der
+Werksthypoten ist 76800.</p>
+<table>
+<thead>
+<tr>
+<th>Prüfen</th>
+<th>Wie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Baudrate</td>
+<td>am Bedienpanel der ComfoBox unter <em>Service → Expertenebene</em></td>
+</tr>
+<tr>
+<td>Neustart</td>
+<td>nach der Änderung <strong>zwingend</strong> neu starten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Die Baudrate wird nur beim Start gelesen. Ohne Neustart bleibt die ComfoBox bei 76800.</p>
+</blockquote>
+<h3 id="2-verdrahtung-prüfen">2. Verdrahtung prüfen</h3>
+<table>
+<thead>
+<tr>
+<th>Kabel</th>
+<th>Anschluss</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A</td>
+<td>A</td>
+</tr>
+<tr>
+<td>B</td>
+<td>B</td>
+</tr>
+</tbody></table>
+<p><strong>A und B vertauscht</strong> ist der zweithäufigste Fehler. Die ComfoBox antwortet dann
+<strong>gar nicht</strong>.</p>
+<h3 id="3-adapter-prüfen">3. Adapter prüfen</h3>
+<table>
+<thead>
+<tr>
+<th>Prüfung</th>
+<th>Befehl</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Adapter sichtbar?</td>
+<td><code>ls -l /dev/serial/by-id/</code></td>
+</tr>
+<tr>
+<td>Belegt?</td>
+<td><code>sudo fuser -v /dev/ttyUSB0</code></td>
+</tr>
+<tr>
+<td>USB-Gerät da?</td>
+<td>`lsusb</td>
+</tr>
+</tbody></table>
+<h3 id="4-zweiter-master">4. Zweiter Master?</h3>
+<p>Wenn eine <strong>direkte BACnet-Anbindung</strong> aus Home Assistant aktiv ist, konkurriert sie
+mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.</p>
+<blockquote>
+<p><strong>Es darf nur einen geben.</strong> Gateway <strong>oder</strong> Direktintegration.</p>
+</blockquote>
+<hr>
+<h2 id="keine-seriellen-ports-in-der-liste">Keine seriellen Ports in der Liste</h2>
+<p><strong>Symptom:</strong> Das Dropdown im Assistenten ist leer.</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Adapter nicht eingesteckt</td>
+<td>einstecken, <em>Erneut suchen</em> klicken</td>
+</tr>
+<tr>
+<td>Kein Treiber</td>
+<td>CH340-/FTDI-Treiber des Betriebssystems installieren</td>
+</tr>
+<tr>
+<td>Falscher Port (Batterie, Serial-Konverter)</td>
+<td>andere USB-Buchse</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Adapter wird manchmal erst später erkannt</strong> – besonders nach einem Neustart
+des NAS. Das Gateway wartet von allein und verbindet sich, sobald der Port da ist.</p>
+</blockquote>
+<hr>
+<h2 id="permission-denied">Permission denied</h2>
+<p><strong>Symptom:</strong> Das Gateway startet, aber keine Werte kommen. Im Protokoll:
+<code>Access denied</code> oder <code>UnauthorizedAccessException</code>.</p>
+<p><strong>Lösung:</strong> Der Benutzer im Container braucht die Gruppe <code>dialout</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Betrieb</th>
+<th>Prüfung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Docker</td>
+<td><code>group_add: [&quot;dialout&quot;]</code> in der Compose-Datei</td>
+</tr>
+<tr>
+<td>Synology</td>
+<td>die USB-Regel des Pakets setzt die Rechte (siehe <code>99-comfobox-serial.rules</code>)</td>
+</tr>
+<tr>
+<td>HA-Add-on</td>
+<td>der Supervisor mappt den Port mit passenden Rechten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Auf DSM hat die Gruppe <code>dialout</code> üblicherweise die <strong>GID 20</strong>. Im Zweifel die
+numerische GID eintragen.</p>
+</blockquote>
+<hr>
+<h2 id="device-or-resource-busy">Device or resource busy</h2>
+<p><strong>Symptom:</strong> Der Port ist belegt.</p>
+<p><strong>Ursache:</strong> Ein anderer Prozess hält den Anschluss offen – z. B. ein
+<code>serial-getty</code>, ein ModemManager oder ein zweites Gateway.</p>
+<pre><code class="language-bash">sudo fuser -v /dev/ttyUSB0
+</code></pre>
+<blockquote>
+<p><strong>Achtung:</strong> Läuft bereits ein altes Gateway (z. B. der Mono-Dienst auf einem
+Raspberry Pi), muss <strong>eines</strong> davon abgeschaltet werden. Zwei Gateway auf einem
+Bus sind genauso problematisch wie zwei Direktintegrationen.</p>
+</blockquote>
+<hr>
+<h2 id="home-assistant-entitäten-bleiben-unavailable">Home Assistant: Entitäten bleiben unavailable</h2>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Prüfung</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Gateway nicht erreichbar</td>
+<td><code>http://&lt;IP&gt;:8081/api/health</code></td>
+<td>Netzwerk, Firewall, Port</td>
+</tr>
+<tr>
+<td>Falscher Port in der Integration</td>
+<td>Add-on: <code>8099</code>, Docker/SPK: <code>8081</code></td>
+<td>korrigieren</td>
+</tr>
+<tr>
+<td>Falscher Token</td>
+<td>–</td>
+<td>neuen Token erzeugen und eintragen</td>
+</tr>
+<tr>
+<td>Broker-Discovery, aber kein Broker</td>
+<td>Broker-Eintrag im Gateway</td>
+<td>Broker eintragen oder Integration nutzen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Abstand halten:</strong> Ein <code>unavailable</code> ist <strong>besser</strong> als ein stehen gebliebener
+Wert. Ein alter Sollwert, der noch angezeigt wird, ist gefährlicher.</p>
+</blockquote>
+<hr>
+<h2 id="home-assistant-werte-sind-da-aber-schreiben-geht-nicht">Home Assistant: Werte sind da, aber Schreiben geht nicht</h2>
+<table>
+<thead>
+<tr>
+<th>Meldung</th>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>write_limit_exceeded</code></td>
+<td>Tageslimit erreicht</td>
+<td>Zähler prüfen; warten oder Limit erhöhen</td>
+</tr>
+<tr>
+<td><code>expert_mode_required</code></td>
+<td>Expertenmodus aus</td>
+<td>Expertenmodus einschalten (mit Vorsicht)</td>
+</tr>
+<tr>
+<td><code>value_out_of_range</code></td>
+<td>Wert außerhalb Min/Max</td>
+<td>gültigen Bereich aus der Entität nehmen</td>
+</tr>
+<tr>
+<td><code>read_only</code></td>
+<td>Wert ist nicht schreibbar</td>
+<td>–</td>
+</tr>
+<tr>
+<td><code>invalid_type</code></td>
+<td>falscher Typ (Text für eine Zahl)</td>
+<td>Zahl mit <strong>Punkt</strong> senden</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Zahlenformat:</strong> <code>22.5</code> ist richtig, <code>22,5</code> wird abgelehnt – auch auf einem
+deutschen System.</p>
+</blockquote>
+<hr>
+<h2 id="der-neustart-schlägt-fehl">Der Neustart schlägt fehl</h2>
+<table>
+<thead>
+<tr>
+<th>Betrieb</th>
+<th>Befehl</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Docker</td>
+<td><code>docker compose restart gateway</code></td>
+</tr>
+<tr>
+<td>Synology</td>
+<td><code>synopkg restart ComfoBoxGateway</code></td>
+</tr>
+<tr>
+<td>HA-Add-on</td>
+<td>Add-on neu starten</td>
+</tr>
+<tr>
+<td>Home Assistant</td>
+<td><code>comfobox.restart</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Bleibt es bei <code>offline</code>, prüfen Sie, ob der Broker erreichbar ist. Fehlt der
+Broker, kann sich der Gateway nicht sauber abmelden.</p>
+</blockquote>
+<hr>
+<h2 id="werte-sind-veraltet">Werte sind veraltet</h2>
+<p><strong>Symptom:</strong> In der Web-Oberfläche steht ein alter Wert; in Home Assistant ist die
+Entität <code>unavailable</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Adapter gezogen</td>
+<td>Adapter einstecken</td>
+</tr>
+<tr>
+<td>ComfoBox ausgeschaltet</td>
+<td>einschalten</td>
+</tr>
+<tr>
+<td>Port verstellt</td>
+<td>Assistent erneut durchlaufen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Gateway kennzeichnet veraltete Werte</strong> (älter als drei Abfragezyklen) und
+zeigt sie als „veraltet&quot; an – nicht als aktuellen Wert. Das ist Absicht.</p>
+</blockquote>
+<hr>
+<h2 id="expertenmodus">Expertenmodus</h2>
+<p>Der Expertenmodus gibt zusätzliche Parameter frei, die das Regelverhalten der
+Heizung beeinflussen (Kurvenparameter, Grenzwerte).</p>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Aktivieren</td>
+<td>Konfiguration → Schreibschutz → Expertenmodus</td>
+</tr>
+<tr>
+<td>Bestätigung</td>
+<td>ja, mit Rückfrage</td>
+</tr>
+<tr>
+<td>Risiko</td>
+<td>falsche Werte können das Regelverhalten dauerhaft verändern</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Nur mit Fachwissen aktivieren.</strong> Ein falsch gesetzter Parameter lässt sich
+unter Umständen nur durch einen Service-Einsatz zurücksetzen.</p>
+</blockquote>
+<hr>
+<h2 id="alles-hilft-nicht">Alles hilft nicht</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>was Sie tun</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Diagnose → Protokoll</strong></td>
+<td>die letzten 1000 Log-Einträge, live, filterbar – <strong>der schnellste Weg</strong></td>
+</tr>
+<tr>
+<td><strong>Diagnose-Seite</strong></td>
+<td>Fehlerhistorie, Zustandsprüfungen, Rohdaten</td>
+</tr>
+<tr>
+<td><strong>Protokoll (Docker)</strong></td>
+<td><code>docker compose logs -f gateway</code></td>
+</tr>
+<tr>
+<td><strong>Protokoll (Synology)</strong></td>
+<td><code>ssh synology</code> → <code>synopkg</code> / Container-Manager</td>
+</tr>
+<tr>
+<td><strong>Protokoll (HA-Add-on)</strong></td>
+<td>Add-on → Protokoll</td>
+</tr>
+<tr>
+<td><strong>Test-Modus</strong></td>
+<td>in der Diagnose alle Rohdaten live mitlesen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bereiten Sie das vor</strong>, bevor Sie Support fragen: Version des Gateways, Version
+der ComfoBox-Software, Protokoll aus dem Diagnose-Bereich.</p>
+</blockquote>
+<h3 id="was-im-protokoll-nachsehen">Was im Protokoll nachsehen</h3>
+<table>
+<thead>
+<tr>
+<th>Symptom im Protokoll</th>
+<th>Bedeutung</th>
+<th>nächster Schritt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>no_iam</code></td>
+<td>die ComfoBox antwortet nicht</td>
+<td><a href="#1-baudrate-pr%C3%BCfen">Baudrate prüfen</a></td>
+</tr>
+<tr>
+<td><code>Permission denied</code></td>
+<td>der Container darf den Port nicht öffnen</td>
+<td><a href="#permission-denied">Permission denied</a></td>
+</tr>
+<tr>
+<td><code>Device or resource busy</code></td>
+<td>ein zweiter Master belegt den Bus</td>
+<td><a href="#4-zweiter-master">Ein zweiter Master?</a></td>
+</tr>
+<tr>
+<td><code>Publish failed</code></td>
+<td>der MQTT-Broker ist nicht erreichbar</td>
+<td><a href="/help/mqtt">MQTT einrichten</a></td>
+</tr>
+<tr>
+<td><code>timed out</code></td>
+<td>einzelne Werte kommen nicht</td>
+<td>Ggf. Baudrate oder Verkabelung</td>
+</tr>
+<tr>
+<td><code>write_limit_exceeded</code></td>
+<td>das Tageslimit ist erreicht</td>
+<td><a href="/help/bedienung#der-schreibschutz">Schreibschutz</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Tipp:</strong> Setzen Sie den Filter auf <strong>Level: Warnung oder höher</strong>, um die relevanten
+Zeilen ohne Rauschen zu sehen. Mit <strong>Live</strong> laufen neue Zeilen automatisch ein – Sie
+müssen die Seite nicht neu ladenen.</p>
+</blockquote>
+
+      </article>

@@ -9,6 +9,7 @@ using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Logging;
 using ComfoBox.Gateway.Mqtt;
 using ComfoBox.Gateway.Protection;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
@@ -61,6 +62,17 @@ builder.Services.AddGatewayApi(
     builder.Environment.ContentRootPath);
 
 // ---------------------------------------------------------------------------
+// Kompression (Brotli/Gzip): es gibt keinen nginx-Container, der komprimiert
+// (→ ADR-007).
+// ---------------------------------------------------------------------------
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+
+// ---------------------------------------------------------------------------
 // Host
 // ---------------------------------------------------------------------------
 Directory.CreateDirectory(
@@ -76,6 +88,18 @@ if (app.Environment.IsDevelopment())
 
 // Alle REST-/SSE-Endpunkte (/api/items, /api/status, /api/events, …).
 app.MapGatewayApi();
+
+// ---------------------------------------------------------------------------
+// Die Web-Oberfläche (Angular) wird aus dem selben Host ausgeliefert - es
+// gibt keinen nginx-Container (→ ADR-007).
+// ---------------------------------------------------------------------------
+app.UseResponseCompression();
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+// Der SPA-Fallback steht **nach** den API-Routen: sonst würde er /api/…
+// schlucken und index.html liefern.
+app.MapFallbackToFile("index.html");
 
 app.Run();
 

@@ -36,6 +36,17 @@ public sealed class BacnetMstpTransport : IBacnetTransport
     private readonly HashSet<MstpOutboundFrame> _outstanding = [];
     private readonly object _outstandingLock = new();
 
+    /// <summary>
+    /// Signalisiert dem Verbindungs-Thread, dass er den Wartezeitraum
+    /// abbrechen und den Port **sofort** neu öffnen soll.
+    /// </summary>
+    /// <remarks>
+    /// Ohne dieses Signal wartet der Thread nach einem Portfehler bis zu
+    /// 30 Sekunden (Backoff), bevor er den Port neu öffnet. Nach einem
+    /// Portwechsel aus der Oberfläche heraus soll das aber sofort passieren.
+    /// </remarks>
+    private readonly SemaphoreSlim _reconnectSignal = new(0, 1);
+
     private CancellationTokenSource? _shutdown;
     private Task? _runner;
     private ISerialPort? _port;
@@ -114,9 +125,8 @@ public sealed class BacnetMstpTransport : IBacnetTransport
             TaskScheduler.Default).Unwrap();
 
         _logger.LogInformation(
-            "MS/TP-Transport gestartet: Station {ThisStation}, Port {Port}",
-            _options.ThisStation,
-            _options.Serial.PortName);
+            "MS/TP-Transport gestartet: Station {ThisStation}",
+            _options.ThisStation);
     }
 
     /// <inheritdoc />
@@ -147,6 +157,30 @@ public sealed class BacnetMstpTransport : IBacnetTransport
         _shutdown = null;
 
         _logger.LogInformation("MS/TP-Transport gestoppt.");
+    }
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// <para>
+    /// Der Port wird geschlossen - die Schleife <see cref="RunAsync"/> öffnet
+    /// ihn neu. Das beendet den Zustandsautomaten: der nächste Lesevorgang
+    /// schlägt fehl, der Automat meldet einen Portfehler.
+    /// </para>
+    /// <para>
+    /// Die Wartezeit des Backoffs wird dabei **abgebrochen**: der Port wird
+    /// sofort neu geöffnet. Das ist wichtig, wenn der Portname aus der
+    /// Oberfläche heraus gewechselt wird - der Benutzer soll nicht 30
+    /// Sekunden warten.
+    /// </para>
+    /// </remarks>
+    public void RequestReconnect()
+    {
+        _logger.LogInformation("Ein Neuaufbau der seriellen Schnittstelle wurde angefordert.");
+
+        ClosePort();
+
+        // Der Verbindungs-Thread darf den Backoff abbrechen.
+        SignalReconnect();
     }
 
     /// <inheritdoc />
@@ -259,6 +293,7 @@ public sealed class BacnetMstpTransport : IBacnetTransport
         }
 
         _sendQueue.Clear();
+        _reconnectSignal.Dispose();
     }
 
     /// <summary>
@@ -278,7 +313,7 @@ public sealed class BacnetMstpTransport : IBacnetTransport
                 port.Open();
                 _logger.LogInformation(
                     "Serielle Schnittstelle geöffnet: {Port} @ {BaudRate}",
-                    _options.Serial.PortName,
+                    port.PortName,
                     _options.Serial.BaudRate);
 
                 backoff = _options.ReconnectDelay;
@@ -332,17 +367,62 @@ public sealed class BacnetMstpTransport : IBacnetTransport
             }
 
             // Exponentieller Backoff: 5 s, 10 s, 20 s, ... maximal 30 s.
-            try
-            {
-                await Task.Delay(backoff, cancellationToken).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
+            // Ein angeforderter Neuaufbau (z. B. nach einem Portwechsel) bricht
+            // die Wartezeit sofort ab.
+            if (!await WaitForReconnectAsync(backoff, cancellationToken).ConfigureAwait(false))
             {
                 break;
             }
 
             var doubled = TimeSpan.FromTicks(backoff.Ticks * 2);
             backoff = doubled > _options.MaxReconnectDelay ? _options.MaxReconnectDelay : doubled;
+        }
+    }
+
+    /// <summary>
+    /// Wartet auf das Ende des Backoffs - oder auf einen angeforderten
+    /// Neuaufbau.
+    /// </summary>
+    /// <param name="delay">Die Wartezeit des Backoffs.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>
+    /// <c>true</c>, wenn weitergearbeitet werden soll; <c>false</c>, wenn der
+    /// Transport beendet wird.
+    /// </returns>
+    private async Task<bool> WaitForReconnectAsync(TimeSpan delay, CancellationToken cancellationToken)
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(delay);
+
+        try
+        {
+            await _reconnectSignal.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Der Timeout ist der normale Fall (Backoff). Nur eine echte
+            // Abbruch-Anforderung beendet den Transport.
+            return !cancellationToken.IsCancellationRequested;
+        }
+
+        return !cancellationToken.IsCancellationRequested;
+    }
+
+    /// <summary>
+    /// Signalisiert dem Verbindungs-Thread den sofortigen Neuaufbau.
+    /// </summary>
+    private void SignalReconnect()
+    {
+        try
+        {
+            if (_reconnectSignal.CurrentCount == 0)
+            {
+                _reconnectSignal.Release();
+            }
+        }
+        catch (SemaphoreFullException)
+        {
+            // Ein Signal ist bereits gesetzt - das genügt.
         }
     }
 

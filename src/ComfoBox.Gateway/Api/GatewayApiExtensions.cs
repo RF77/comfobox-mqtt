@@ -1,5 +1,7 @@
 using ComfoBox.Domain.Items;
+using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Logging;
 using ComfoBox.Gateway.Mqtt;
 using ComfoBox.Gateway.Security;
@@ -58,8 +60,14 @@ public static class GatewayApiExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ApiOptions>>().Value);
         services.AddSingleton(sp => new ConfigStore(dataDirectory, sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ApiSecurityStore>();
+        services.AddSingleton<ISerialPortScanner, SerialPortScanner>();
+        services.AddSingleton<BacnetSerialManager>();
+        services.AddSingleton(sp => new ApiSessionStore(
+            sp.GetRequiredService<TimeProvider>(),
+            sp.GetRequiredService<IOptions<ApiOptions>>().Value.SessionLifetimeMinutes));
         services.AddSingleton(sp => new ApiAccessGuard(
             sp.GetRequiredService<ApiSecurityStore>(),
+            sp.GetRequiredService<ApiSessionStore>(),
             sp.GetRequiredService<ApiOptions>()));
         services.AddSingleton<SetupService>();
         services.AddSingleton<LogStreamBroker>();
@@ -89,17 +97,41 @@ public static class GatewayApiExtensions
     /// <summary>
     /// Abbildet alle Endpunkte der Schnittstelle.
     /// </summary>
-    /// <param name="app">Der Endpoint-Builder.</param>
-    public static void MapGatewayApi(this IEndpointRouteBuilder app)
+    /// <param name="app">Die Web-Anwendung.</param>
+    public static void MapGatewayApi(this WebApplication app)
     {
         ArgumentNullException.ThrowIfNull(app);
+
+        // Ein unbekannter API-Pfad bekommt **kein** HTML: die Schnittstelle
+        // antwortet immer mit JSON (bzw. 404), damit ein Client die
+        // index.html des SPA-Fallbacks nicht als „erfolgreiche Antwort"
+        // fehlinterpretiert.
+        app.Use(async (context, next) =>
+        {
+            // GetEndpoint() liefert nur dann einen Wert, wenn das Routing
+            // einen Endpunkt gefunden hat - sonst ist der Pfad unbekannt.
+            if (context.GetEndpoint() is null
+                && context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                context.Response.ContentType = "application/json; charset=utf-8";
+                await context.Response.WriteAsync(
+                    """{"error":"not_found","message":"Die angeforderte API-Ressource existiert nicht."}""");
+                return;
+            }
+
+            await next(context);
+        });
 
         app.MapItems();
         app.MapStatus();
         app.MapEvents();
         app.MapConfig();
+        app.MapSerial();
         app.MapService();
+        app.MapReconnect();
         app.MapTokens();
+        app.MapAuth();
         app.MapSetup();
         app.MapLogs();
     }

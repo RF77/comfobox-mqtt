@@ -1,0 +1,57 @@
+<p-card header="BACnet-Konfiguration">
+  <div class="cb-field">
+    <label for="bacnet-baudrate">Baudrate</label>
+    <p-select
+      inputId="bacnet-baudrate"
+      [options]="baudrates"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="setup.baudrate()"
+      (ngModelChange)="setup.baudrate.set($event)"
+    />
+    <span class="cb-hint">
+      Die ComfoBox muss auf 38400 Baud umgestellt und neu gestartet sein.
+    </span>
+  </div>
+
+  <div class="cb-field">
+    <label for="bacnet-master">Geräte-ID des Controllers</label>
+    <p-inputnumber
+      inputId="bacnet-master"
+      [ngModel]="setup.masterId()"
+      (ngModelChange)="setup.masterId.set($event ?? 1)"
+      [min]="0"
+      [max]="255"
+      [useGrouping]="false"
+    />
+    <span class="cb-hint">Meist 1. Der Wert muss zur Geräte-ID in der ComfoBox passen.</span>
+  </div>
+
+  <p-button
+    label="Verbindung testen"
+    icon="pi pi-plug"
+    [loading]="setup.testingBacnet()"
+    [disabled]="!setup.selectedPort()"
+    (onClick)="setup.testBacnet()"
+  />
+
+  @if (setup.bacnetResult(); as result) {
+    <p-message
+      [severity]="result.ok ? 'success' : 'error'"
+      styleClass="w-full cb-result"
+    >
+      <p>{{ result.message }}</p>
+      @if (!result.ok && result.hint) {
+        <p>{{ hintText(result.hint) }}</p>
+        @if (result.hint === 'no_iam') {
+          <p>
+            <a routerLink="/help/anschluss" fragment="baudrate">
+              Hilfe: Baudrate prüfen (ohne Anmeldung)
+            </a>
+          </p>
+        }
+      }
+      <p class="cb-hint">Dauer: {{ result.durationMs }} ms</p>
+    </p-message>
+  }
+</p-card>

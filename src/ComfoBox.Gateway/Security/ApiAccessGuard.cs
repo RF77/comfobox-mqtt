@@ -42,19 +42,26 @@ public sealed class ApiAccessGuard
     private const string IdentityKey = "ComfoBox.ApiIdentity";
 
     private readonly ApiSecurityStore _store;
+    private readonly ApiSessionStore _sessions;
     private readonly ApiOptions _options;
 
     /// <summary>
     /// Erzeugt die Zugriffskontrolle.
     /// </summary>
     /// <param name="store">Der Sicherheitsspeicher.</param>
+    /// <param name="sessions">Der Sitzungsspeicher (Cookie-Sitzungen).</param>
     /// <param name="options">Die API-Einstellungen.</param>
-    public ApiAccessGuard(ApiSecurityStore store, ApiOptions options)
+    public ApiAccessGuard(
+        ApiSecurityStore store,
+        ApiSessionStore sessions,
+        ApiOptions options)
     {
         ArgumentNullException.ThrowIfNull(store);
+        ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(options);
 
         _store = store;
+        _sessions = sessions;
         _options = options;
     }
 
@@ -137,15 +144,23 @@ public sealed class ApiAccessGuard
     }
 
     /// <summary>
-    /// Ermittelt die Identität aus dem Authorization-Header.
+    /// Ermittelt die Identität aus dem Authorization-Header oder dem Sitzungs-Cookie.
     /// </summary>
+    /// <remarks>
+    /// Drei Identitäten sind möglich:
+    /// <list type="bullet">
+    /// <item><c>Bearer &lt;token&gt;</c> - ein API-Token aus <c>config.json</c>;</item>
+    /// <item><c>Basic &lt;base64&gt;</c> - der Administrator (Benutzername/Passwort);</item>
+    /// <item>das Sitzungs-Cookie - die Web-Oberfläche (→ ADR-012).</item>
+    /// </list>
+    /// </remarks>
     private ApiIdentity Parse(HttpContext context)
     {
         var header = context.Request.Headers.Authorization.ToString();
 
         if (string.IsNullOrWhiteSpace(header))
         {
-            return ApiIdentity.Anonymous;
+            return ParseSession(context);
         }
 
         if (header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -164,6 +179,21 @@ public sealed class ApiAccessGuard
         }
 
         return ApiIdentity.Anonymous;
+    }
+
+    /// <summary>
+    /// Ermittelt die Identität aus dem Sitzungs-Cookie.
+    /// </summary>
+    /// <param name="context">Der HTTP-Kontext.</param>
+    /// <returns>Die Identität.</returns>
+    private ApiIdentity ParseSession(HttpContext context)
+    {
+        var token = context.Request.Cookies["cbk_session"];
+        var userName = _sessions.Validate(token);
+
+        return userName is null
+            ? ApiIdentity.Anonymous
+            : new ApiIdentity(true, userName, true, null);
     }
 
     /// <summary>

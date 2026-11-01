@@ -1,0 +1,338 @@
+<article class="prose">
+<p>Das Gateway bietet eine HTTP-Schnittstelle an. Damit lassen sich eigene
+Automatisierungen bauen – ohne MQTT und ohne die Web-Oberfläche.</p>
+<blockquote>
+<p><strong>Für die meisten Fälle brauchen Sie das nicht.</strong> Die
+<a href="/help/home-assistant">HACS-Integration</a> nutzt genau diese Schnittstelle.</p>
+</blockquote>
+<hr>
+<h2 id="zugang">Zugang</h2>
+<table>
+<thead>
+<tr>
+<th>Betriebsweg</th>
+<th>Adresse</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Docker / Synology</td>
+<td><code>http://&lt;IP&gt;:8081</code></td>
+</tr>
+<tr>
+<td>HA-Add-on</td>
+<td><code>http://&lt;HA-IP&gt;:8099</code></td>
+</tr>
+</tbody></table>
+<h3 id="authentifizierung">Authentifizierung</h3>
+<table>
+<thead>
+<tr>
+<th>Methode</th>
+<th>Verwendung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>API-Token</strong></td>
+<td>für Maschinen und Automatisierungen (<strong>empfohlen</strong>)</td>
+</tr>
+<tr>
+<td>Benutzername/Passwort</td>
+<td>für das Web-Interface im Browser</td>
+</tr>
+</tbody></table>
+<p>Für den API-Token:</p>
+<pre><code class="language-bash">curl -H &quot;Authorization: Bearer MEIN-TOKEN&quot; http://192.168.1.20:8081/api/status
+</code></pre>
+<blockquote>
+<p><strong>Token erzeugen:</strong> Web-Oberfläche → <em>Konfiguration → API-Token</em>. Der Token wird
+<strong>einmal</strong> angezeigt. Er wird nur als Hash gespeichert – niemand kann ihn
+wiederherstellen, nur widerrufen.</p>
+</blockquote>
+<hr>
+<h2 id="endpunkte">Endpunkte</h2>
+<table>
+<thead>
+<tr>
+<th>Methode</th>
+<th>Pfad</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>GET</code></td>
+<td><code>/api/status</code></td>
+<td>Geräteinfo, Verbindungen, Schreibzähler</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/items</code></td>
+<td>alle Werte mit Metadaten</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/items/{id}</code></td>
+<td>ein einzelner Wert</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/items/{id}</code></td>
+<td>Wert schreiben</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/health</code></td>
+<td>Zustandsprüfung</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/config</code></td>
+<td>Konfiguration lesen</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/api/config</code></td>
+<td>Konfiguration ändern</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/diagnostics/errors</code></td>
+<td>letzte Fehler</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/events</code></td>
+<td>Live-Werte (SSE)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/service/restart</code></td>
+<td>Gateway neu starten</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="werte-lesen">Werte lesen</h2>
+<pre><code class="language-bash">curl -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
+  http://192.168.1.20:8081/api/items
+</code></pre>
+<p>Antwort (gekürzt):</p>
+<pre><code class="language-json">[
+  {
+    &quot;id&quot;: &quot;zone_setpoint_normal&quot;,
+    &quot;group&quot;: &quot;Zone&quot;,
+    &quot;name&quot;: &quot;SetPointNormal&quot;,
+    &quot;description&quot;: &quot;Raumsollwert Normal&quot;,
+    &quot;valueType&quot;: &quot;float&quot;,
+    &quot;unit&quot;: &quot;°C&quot;,
+    &quot;isReadOnly&quot;: false,
+    &quot;min&quot;: 5,
+    &quot;max&quot;: 35,
+    &quot;value&quot;: 21.5,
+    &quot;lastUpdated&quot;: &quot;2026-10-31T10:22:41Z&quot;,
+    &quot;isStale&quot;: false
+  }
+]
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>stabiler Schlüssel – für Schreibvorgänge verwenden</td>
+</tr>
+<tr>
+<td><code>valueType</code></td>
+<td><code>float</code>, <code>enum</code> oder <code>bool</code></td>
+</tr>
+<tr>
+<td><code>min</code> / <code>max</code></td>
+<td>gültiger Bereich (bei <code>null</code>: kein Limit)</td>
+</tr>
+<tr>
+<td><code>isReadOnly</code></td>
+<td><code>true</code> = nur lesbar</td>
+</tr>
+<tr>
+<td><code>enumValues</code></td>
+<td>erlaubte Namen (bei <code>valueType = enum</code>)</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>aktueller Wert (<code>null</code> = noch nie gelesen)</td>
+</tr>
+<tr>
+<td><code>isStale</code></td>
+<td><code>true</code> = der Wert ist älter als drei Abfragezyklen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Zahlenformat:</strong> Die API liefert und erwartet <strong>immer</strong> einen Punkt als
+Dezimaltrennzeichen – unabhängig von den Einstellungen des Systems.</p>
+</blockquote>
+<hr>
+<h2 id="werte-schreiben">Werte schreiben</h2>
+<pre><code class="language-bash">curl -X PUT -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;value&quot;: 22.5}&#39; \
+  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Antwort</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>204</code></td>
+<td>geschrieben</td>
+</tr>
+<tr>
+<td><code>400</code></td>
+<td>ungültige Anfrage</td>
+</tr>
+<tr>
+<td><code>401</code></td>
+<td>Token fehlt oder ist ungültig</td>
+</tr>
+<tr>
+<td><code>403</code></td>
+<td>Expertenmodus nötig</td>
+</tr>
+<tr>
+<td><code>409</code></td>
+<td>Tageslimit erreicht oder Wert nicht schreibbar</td>
+</tr>
+<tr>
+<td><code>422</code></td>
+<td>Wert außerhalb des Bereichs / falscher Typ</td>
+</tr>
+<tr>
+<td><code>502</code></td>
+<td>die Heizung hat nicht geantwortet</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ein abgelehnter Schreibvorgang schreibt nichts.</strong> Es wird <strong>niemals</strong> ein
+Ersatzwert gesendet.</p>
+</blockquote>
+<hr>
+<h2 id="live-werte-sse">Live-Werte (SSE)</h2>
+<p>Für Automatisierungen, die nicht pollen wollen:</p>
+<pre><code class="language-bash">curl -N -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
+  http://192.168.1.20:8081/api/events
+</code></pre>
+<p>Beim Verbinden kommt ein <strong>Snapshot</strong> aller Werte, danach bei jeder Änderung ein
+einzelnes Ereignis:</p>
+<pre><code class="language-text">event: snapshot
+data: [{&quot;id&quot;:&quot;zone_setpoint_normal&quot;,&quot;value&quot;:21.5}, …]
+
+event: value
+data: {&quot;id&quot;:&quot;zone_setpoint_normal&quot;,&quot;value&quot;:22.5,&quot;timestamp&quot;:&quot;2026-10-31T10:23:02Z&quot;}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Ereignis</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>snapshot</code></td>
+<td>alle aktuellen Werte (einmalig beim Verbinden)</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>ein geänderter Wert</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bei Abbruch:</strong> Die Verbindung muss neu aufgebaut werden. Automatisierungen
+sollten das mit einer Wartezeit tun, damit kein Ansturm entsteht.</p>
+</blockquote>
+<hr>
+<h2 id="zustand">Zustand</h2>
+<pre><code class="language-bash">curl -H &quot;Authorization: Bearer MEIN-TOKEN&quot; http://192.168.1.20:8081/api/status
+</code></pre>
+<pre><code class="language-json">{
+  &quot;deviceId&quot;: &quot;comfobox1&quot;,
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;uptimeSeconds&quot;: 4523,
+  &quot;bacnet&quot;: { &quot;connected&quot;: true, &quot;port&quot;: &quot;/dev/ttyUSB0&quot;, &quot;lastError&quot;: null },
+  &quot;mqtt&quot;:   { &quot;connected&quot;: false, &quot;broker&quot;: &quot;core-mosquitto&quot; },
+  &quot;writes&quot;: { &quot;count&quot;: 17, &quot;limit&quot;: 200, &quot;resetsAt&quot;: &quot;2026-11-01T00:00:00Z&quot; }
+}
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>bacnet.connected</code></td>
+<td>antwortet die Heizung?</td>
+</tr>
+<tr>
+<td><code>mqtt.connected</code></td>
+<td>ist der Broker erreichbar?</td>
+</tr>
+<tr>
+<td><code>writes.count</code></td>
+<td>Schreibvorgänge heute</td>
+</tr>
+<tr>
+<td><code>writes.limit</code></td>
+<td>Tageslimit</td>
+</tr>
+<tr>
+<td><code>writes.resetsAt</code></td>
+<td>wann der Zähler zurückgesetzt wird</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="beispiel-sollwert-per-cronjob">Beispiel: Sollwert per Cronjob</h2>
+<pre><code class="language-bash">#!/bin/bash
+# Setzt den Raumsollwert auf 21.5 °C
+curl -s -X PUT \
+  -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  -d &#39;{&quot;value&quot;: 21.5}&#39; \
+  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+</code></pre>
+<blockquote>
+<p><strong>Beachten Sie das Tageslimit.</strong> Ein Cronjob, der stündlich schreibt, erreicht
+das Limit (200) nach gut acht Tagen. Lesen ist unbegrenzt, Schreiben nicht.</p>
+</blockquote>
+<hr>
+<h2 id="sicherheit">Sicherheit</h2>
+<table>
+<thead>
+<tr>
+<th>Empfehlung</th>
+<th>Begründung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Token statt Passwort</strong></td>
+<td>maschinen-tauglich, widerrufbar, kein Sitzungsmanagement</td>
+</tr>
+<tr>
+<td>Token nur im Gateway-Netz</td>
+<td>nicht ins Internet exponieren</td>
+</tr>
+<tr>
+<td>Für Zugriff von außen</td>
+<td>Reverse Proxy mit TLS <strong>und</strong> Authentifizierung</td>
+</tr>
+<tr>
+<td>Tokens regelmäßig prüfen</td>
+<td>widerrufene Tokens wirken sofort</td>
+</tr>
+</tbody></table>
+
+      </article>

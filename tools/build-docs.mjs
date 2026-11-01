@@ -138,24 +138,61 @@ function slugify(name) {
     .replace(/^-|-$/g, '');
 }
 
+// GitHub-Slug für Überschriften (Anker). "1. Baudrate prüfen" →
+// "1-baudrate-prüfen". Umlaute bleiben erhalten (wie auf GitHub).
+function slugifyHeading(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .replace(/\s+/g, '-');
+}
+
+// Anker aus dem Fließtext holen: "## Adapter erkennen" → "adapter-erkennen"
+function extractHeadings(body) {
+  const headings = [];
+  for (const line of body.split(/\r?\n/)) {
+    const match = /^(#{2,4})\s+(.*)$/.exec(line);
+    if (!match) continue;
+    const text = match[2].replace(/\s*\{#([^}]+)\}\s*$/, '').trim();
+    headings.push({ depth: match[1].length, text, slug: slugifyHeading(text) });
+  }
+  return headings;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Link-Prüfung (relative Links innerhalb der Benutzerdoku)
 // ─────────────────────────────────────────────────────────────────────────────
-function checkLinks(body, file, allSlugs) {
+function checkLinks(body, file, pages, ownAnchors) {
   const linkRe = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
   let match;
   while ((match = linkRe.exec(body)) !== null) {
     const target = match[1];
-    if (/^(https?:|mailto:|#)/.test(target)) continue;
+    if (/^(https?:|mailto:)/.test(target)) continue;
 
-    const [pathPart, anchor] = target.split('#');
-    if (!pathPart) continue;
+    const [pathPart, rawAnchor] = target.split('#');
+    // Anker können URL-kodiert sein ("%C3%BC" für "ü") - für den
+    // Vergleich wird der Anker dekodiert.
+    const anchor = rawAnchor ? decodeURIComponent(rawAnchor) : undefined;
+
+    // Anker auf dieselbe Seite: muss es dort auch geben.
+    if (!pathPart) {
+      if (anchor && !ownAnchors.has(anchor)) {
+        fail(`${file}: Anker "#${anchor}" existiert auf dieser Seite nicht`);
+      }
+      continue;
+    }
 
     // Link auf eine andere Seite der Benutzerdoku?
     if (pathPart.endsWith('.md')) {
       const targetSlug = slugify(basename(pathPart));
-      if (!allSlugs.has(targetSlug)) {
+      const targetPage = pages.get(targetSlug);
+      if (!targetPage) {
         fail(`${file}: Link auf unbekannte Seite "${target}"`);
+        continue;
+      }
+      if (anchor && !targetPage.anchors.has(anchor)) {
+        fail(`${file}: Anker "#${anchor}" existiert auf "${pathPart}" nicht`);
       }
       continue;
     }
@@ -168,23 +205,28 @@ function checkLinks(body, file, allSlugs) {
       }
       continue;
     }
-
-    if (anchor) {
-      // Anker auf eine bekannte Seite – der Anker selbst wird nicht geprüft.
-    }
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Interne Links umschreiben: `03-installation.md` → `installation.html`
+//
+// Wird auf dem **gerenderten** HTML angewendet (marked hat aus
+// `[Text](03-installation.md)` bereits `<a href="03-installation.md">`
+// gemacht).
 // ─────────────────────────────────────────────────────────────────────────────
 function rewriteInternalLinks(html) {
   return html.replace(
-    /\[([^\]]*)\]\(([^)\s#]*)\.md(#[^)\s]*)?\)/g,
-    (_match, text, path, anchor = '') => {
+    /href="([^"#?]+)\.md(#[^"]*)?"/gi,
+    (match, path, anchor = '') => {
+      // Absolute URLs (https://…) sind externe Links - die bleiben unberührt.
+      if (/^[a-z][a-z0-9+.-]*:/i.test(path) || path.startsWith('//')) {
+        return match;
+      }
+
       const target = basename(path);
       const slug = target === 'README.md' ? 'index' : slugify(target);
-      return `[${text}](${slug}.html${anchor})`;
+      return `href="${slug}.html${anchor}"`;
     },
   );
 }
@@ -266,6 +308,106 @@ ${body}
 </body>
 </html>
 `;
+}
+
+/**
+ * Das Fragment für die Web-Oberfläche.
+ *
+ * Die Web-Oberfläche lädt **kein** vollständiges HTML-Dokument, sondern nur
+ * den Inhalt der Seite. Ein komplettes Dokument einzufügen würde die
+ * Sidebar, den `<head>` und ein zweites `<h1>` in die Oberfläche bringen -
+ * der Benutzer sähe die Seite doppelt.
+ *
+ * Deshalb bekommt jede Seite zusätzlich `<slug>.part.html`:
+ *
+ * - nur `<h2>`/`<h3>`/`<h4>` mit `id` (Anker für Sprungmarken),
+ * - **kein** `<h1>` - die Oberfläche setzt den Titel selbst,
+ * - interne Links zeigen auf die SPA-Route `/help/<slug>` statt auf die
+ *   statische HTML-Datei,
+ * - kein `<html>`, kein `<head>`, keine Sidebar.
+ */
+function renderFragment({ body }) {
+  return `<article class="prose">
+${body}
+      </article>
+`;
+}
+
+/**
+ * Ersetzt die internen Links (`.md`/`.html`) durch die SPA-Routen
+ * (`/help/<slug>`) und hängt die Anker-IDs an die Überschriften.
+ */
+function prepareFragmentBody(html, headings) {
+  let result = html;
+
+  // Anker-IDs an die Überschriften hängen (erste Ebene h2, dann h3, h4 …).
+  const byLevel = new Map();
+  for (const heading of headings) {
+    if (!byLevel.has(heading.depth)) byLevel.set(heading.depth, []);
+    byLevel.get(heading.depth).push(heading);
+  }
+
+  // Der Renderer von marked erzeugt die Überschriften in Dokumentreihenfolge.
+  // Wir zählen sie deshalb pro Ebene durch.
+  const counters = new Map();
+  const usedIds = new Set();
+  result = result.replace(
+    /<h([2-4])>([\s\S]*?)<\/h\1>/g,
+    (match, level, inner) => {
+      const depth = Number(level);
+      const index = counters.get(depth) ?? 0;
+      counters.set(depth, index + 1);
+      const heading = byLevel.get(depth)?.[index];
+
+      if (!heading) {
+        return match;
+      }
+
+      // Der Text der Überschrift steht im gerenderten HTML – der Slug wird
+      // daraus berechnet, damit er zum Link-Anker passt.
+      const plain = inner
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s*\{#([^}]+)\}\s*$/, '')
+        .trim();
+      const explicit = /\{#([^}]+)\}/.exec(inner);
+      let id = explicit ? explicit[1] : slugifyHeading(plain);
+
+      // Doppelte Anker (zwei gleiche Überschriften) müssen eindeutig sein.
+      if (usedIds.has(id)) {
+        let suffix = 2;
+        while (usedIds.has(`${id}-${suffix}`)) suffix += 1;
+        id = `${id}-${suffix}`;
+      }
+      usedIds.add(id);
+
+      return `<h${level} id="${id}">${inner}</h${level}>`;
+    },
+  );
+
+  // Interne Links auf die SPA-Route umschreiben.
+  //
+  // Die Quell-Links zeigen auf `.md` (aus der Benutzerdoku) bzw. auf die
+  // statische HTML-Datei. In der Oberfläche müssen sie auf die Route
+  // `/help/<slug>` zeigen, sonst verlassen sie die Anwendung.
+  result = result.replace(
+    /href="([^"#?]+)\.(?:md|html)(#[^"]*)?"/gi,
+    (_match, slug, anchor = '') => {
+      // Anker dekodieren ("%C3%BC" → "ü"), damit er zur ID passt.
+      let clean = anchor;
+      try {
+        clean = anchor ? `#${decodeURIComponent(anchor.slice(1))}` : '';
+      } catch {
+        clean = anchor;
+      }
+      return `href="/help/${slug}${clean}"`;
+    },
+  );
+
+  // Die `<h1>` der Seite entfernen - die Oberfläche setzt den Titel selbst
+  // (sonst stünde er zweimal da).
+  result = result.replace(/^\s*<h1>[\s\S]*?<\/h1>\s*/i, '');
+
+  return result;
 }
 
 const STYLE = `/* Erzeugt von tools/build-docs.mjs – nicht von Hand bearbeiten. */
@@ -387,20 +529,22 @@ async function main() {
   }
 
   const pages = [];
-  const allSlugs = new Set();
+  const pagesBySlug = new Map();
 
   for (const file of files) {
     const fullPath = join(srcDir, file);
     const raw = await readFile(fullPath, 'utf8');
     const { meta, body } = parseFrontMatter(raw, file);
     const slug = file === 'README.md' ? 'index' : slugify(file);
-    allSlugs.add(slug);
-    pages.push({ file, fullPath, meta, body, slug });
+    const headings = extractHeadings(body);
+    const anchors = new Set(headings.map((h) => h.slug));
+    pages.push({ file, fullPath, meta, body, slug, headings, anchors });
+    pagesBySlug.set(slug, pages[pages.length - 1]);
   }
 
   // Links prüfen (alle Slugs sind jetzt bekannt)
   for (const page of pages) {
-    checkLinks(page.body, page.file, allSlugs);
+    checkLinks(page.body, page.file, pagesBySlug, page.anchors);
   }
 
   // Sortieren
@@ -459,6 +603,13 @@ async function main() {
       version: opts.version,
     });
     await writeFile(join(outDir, `${page.slug}.html`), fullHtml, 'utf8');
+
+    // Das Fragment für die Web-Oberfläche: nur der Inhalt, mit Anker-IDs
+    // und mit Links auf die SPA-Routen.
+    const fragment = renderFragment({
+      body: prepareFragmentBody(html, page.headings),
+    });
+    await writeFile(join(outDir, `${page.slug}.part.html`), fragment, 'utf8');
 
     indexJson.push({
       ...index.find((e) => e.slug === page.slug),

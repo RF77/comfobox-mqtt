@@ -1,0 +1,273 @@
+<article class="prose">
+<p>Das Add-on ist die bequemste Variante für Home Assistant auf <strong>HA OS</strong> oder
+<strong>Supervised</strong>: eine Installation, ein Port, die Oberfläche direkt in Home Assistant.</p>
+<blockquote>
+<p><strong>Voraussetzung:</strong> Home Assistant auf <strong>HA OS</strong> oder <strong>Supervised</strong>. Auf einem
+Home-Assistant-Container (z. B. auf einem NAS) gibt es keine Add-ons – dort
+nutzen Sie <a href="/help/installation">Docker oder Synology</a>.</p>
+</blockquote>
+<hr>
+<h2 id="installation">Installation</h2>
+<ol>
+<li><strong>Einstellungen → Add-ons → Add-on-Store</strong></li>
+<li>Menü (⋮) oben rechts → <strong>Repositories</strong></li>
+<li>Diese Adresse eintragen:
+<code>https://github.com/RF77/comfobox-mqtt/tree/main/deploy/ha-addon</code>
+→ <strong>Hinzufügen</strong></li>
+<li><strong>ComfoBox Gateway</strong> suchen → <strong>Installieren</strong></li>
+<li><strong>Starten</strong></li>
+</ol>
+<blockquote>
+<p><strong>Der erste Start dauert etwas länger</strong> – das Image wird geladen.</p>
+</blockquote>
+<hr>
+<h2 id="konfiguration">Konfiguration</h2>
+<p>Im Tab <strong>Konfiguration</strong> des Add-ons:</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+<th>Standard</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Serieller Port</strong></td>
+<td>Dropdown mit allen seriellen Anschlüssen</td>
+<td>–</td>
+</tr>
+<tr>
+<td><strong>Baudrate</strong></td>
+<td>Kommunikationsgeschwindigkeit</td>
+<td>38400</td>
+</tr>
+<tr>
+<td><strong>MQTT-Basis-Topic</strong></td>
+<td>Präfix aller Topics</td>
+<td><code>ComfoBox</code></td>
+</tr>
+<tr>
+<td><strong>Broker-Host</strong></td>
+<td>Adresse des Brokers (leer = ohne MQTT)</td>
+<td>–</td>
+</tr>
+<tr>
+<td><strong>Broker-Port</strong></td>
+<td>Port des Brokers</td>
+<td>1883</td>
+</tr>
+<tr>
+<td><strong>Broker-Benutzername</strong></td>
+<td>optional</td>
+<td>–</td>
+</tr>
+<tr>
+<td><strong>Broker-Passwort</strong></td>
+<td>optional</td>
+<td>–</td>
+</tr>
+<tr>
+<td><strong>TLS verwenden</strong></td>
+<td>verschlüsselte Broker-Verbindung</td>
+<td>aus</td>
+</tr>
+<tr>
+<td><strong>Home-Assistant-Discovery</strong></td>
+<td>Entitäten automatisch anmelden</td>
+<td>an</td>
+</tr>
+<tr>
+<td><strong>Log-Level</strong></td>
+<td>Detailgrad der Protokolle</td>
+<td>Information</td>
+</tr>
+</tbody></table>
+<h3 id="der-serielle-port">Der serielle Port</h3>
+<p>Das Dropdown zeigt alle <strong>seriellen</strong> Anschlüsse des Systems – bevorzugt mit
+stabilen Pfaden wie <code>/dev/serial/by-id/…</code>. Diese Pfade überleben Neustarts.</p>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Der Adapter fehlt im Dropdown</td>
+<td>USB-Adapter einstecken, Add-on neu starten</td>
+</tr>
+<tr>
+<td>Falscher Port gewählt</td>
+<td>Konfiguration ändern → Add-on neu starten</td>
+</tr>
+<tr>
+<td>„Permission denied“</td>
+<td>siehe <a href="/help/anschluss#adapter-erkennen">Anschluss</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Warum kein „alle Ports durchreichen&quot;?</strong>
+Weil das unnötig weitreichend wäre. Sie wählen genau <strong>einen</strong> Anschluss – das
+ist die schmalste Rechtevergabe, die funktioniert.</p>
+</blockquote>
+<h3 id="der-broker">Der Broker</h3>
+<table>
+<thead>
+<tr>
+<th>Variante</th>
+<th>Einstellung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Home-Assistants eigener Mosquitto</strong></td>
+<td><code>Broker-Host: core-mosquitto</code>, Port <code>1883</code></td>
+</tr>
+<tr>
+<td><strong>Externer Broker</strong></td>
+<td><code>Broker-Host: 192.168.1.10</code> + Zugangsdaten</td>
+</tr>
+<tr>
+<td><strong>Kein Broker</strong></td>
+<td><code>Broker-Host</code> leer lassen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ohne Broker</strong> läuft das Gateway ohne MQTT. Die Werte sind dann nur über die
+<a href="/help/home-assistant">HACS-Integration</a> erreichbar. Das ist ein legitimer
+Betriebszustand.</p>
+</blockquote>
+<hr>
+<h2 id="die-oberfläche">Die Oberfläche</h2>
+<p>Das Add-on bringt die Web-Oberfläche <strong>direkt in Home Assistant</strong> – als Panel in der
+linken Leiste.</p>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Menüeintrag</td>
+<td><strong>ComfoBox</strong> (mit Thermometer-Symbol)</td>
+</tr>
+<tr>
+<td>Zugriff</td>
+<td>ohne zusätzlichen Port, ohne zweiten Browser-Tab</td>
+</tr>
+<tr>
+<td>Rechte</td>
+<td>nur für Administratoren sichtbar</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wichtig:</strong> Das Panel ist <strong>nur</strong> die Oberfläche. Die HACS-Integration nutzt
+bewusst <strong>nicht</strong> diesen Weg, sondern den Port 8099 – eine Panel-Adresse enthält
+ein rotierendes Token und ist für Automatisierungen ungeeignet.</p>
+</blockquote>
+<hr>
+<h2 id="erreichbarkeit-für-die-integration">Erreichbarkeit für die Integration</h2>
+<table>
+<thead>
+<tr>
+<th>Zweck</th>
+<th>Adresse</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Web-Oberfläche</td>
+<td>Panel in Home Assistant</td>
+</tr>
+<tr>
+<td>Integration / Automatisierungen</td>
+<td><code>http://&lt;HA-IP&gt;:8099</code></td>
+</tr>
+</tbody></table>
+<p>Der Port <strong>8099</strong> wird auf dem Host freigegeben. Über ihn läuft die REST-Schnittstelle.</p>
+<blockquote>
+<p><strong>In der Firewall?</strong> Wenn die Integration keine Verbindung bekommt, prüfen Sie, ob
+Port 8099 zwischen den Geräten freigegeben ist.</p>
+</blockquote>
+<hr>
+<h2 id="überwachung">Überwachung</h2>
+<p>Der Home-Assistant-Supervisor überwacht das Add-on. Antwortet das Gateway nicht
+mehr, startet der Supervisor es neu.</p>
+<table>
+<thead>
+<tr>
+<th>Prüfung</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/api/health</code> antwortet nicht</td>
+<td>Neustart des Add-ons</td>
+</tr>
+<tr>
+<td>Container beendet sich</td>
+<td>Neustart des Add-ons</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Healthcheck prüft nur, ob der Prozess lebt</strong> – nicht, ob die Heizung
+antwortet. Ein gezogener USB-Adapter ist <strong>kein</strong> Grund für einen Neustart:
+Die Heizung läuft in diesem Fall mit ihrem letzten Sollwert weiter, und ein
+Neustart würde nichts bringen.</p>
+</blockquote>
+<hr>
+<h2 id="backups">Backups</h2>
+<p>Das Add-on wird <strong>im laufenden Betrieb</strong> gesichert. Enthalten sind:</p>
+<ul>
+<li><code>config.json</code> – Ihre Einstellungen inkl. Passwort-Hashes</li>
+<li><code>writes.json</code> – der Schreibzähler (<strong>wichtig!</strong>)</li>
+<li>Protokolldateien</li>
+</ul>
+<blockquote>
+<p><strong>Der Schreibzähler muss in jedem Backup sein.</strong> Fehlt er, beginnt der
+Schreibschutz für die Heizung von vorn.</p>
+</blockquote>
+<hr>
+<h2 id="aktualisieren">Aktualisieren</h2>
+<p><strong>Einstellungen → Add-ons → ComfoBox Gateway → Aktualisieren</strong></p>
+<blockquote>
+<p><strong>Vor dem Update</strong> prüfen, ob die Änderungen in Frage kommen – im Tab
+<strong>Changelog</strong> des Add-ons steht, was sich geändert hat.</p>
+</blockquote>
+<hr>
+<h2 id="problembehebung">Problembehebung</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Add-on startet nicht</td>
+<td>Port 8099 belegt</td>
+<td>Port im DSM/Host freigeben</td>
+</tr>
+<tr>
+<td><code>no_iam</code> im Protokoll</td>
+<td>ComfoBox auf 76800 Baud</td>
+<td>auf 38400 umstellen + neu starten</td>
+</tr>
+<tr>
+<td>Keine Werte in HA</td>
+<td>Broker fehlt</td>
+<td>Broker eintragen oder HACS-Integration nutzen</td>
+</tr>
+<tr>
+<td>Entitäten <code>unavailable</code></td>
+<td>Gateway nicht erreichbar</td>
+<td>Port 8099 in der Firewall freigeben</td>
+</tr>
+<tr>
+<td>Neustart-Schleife</td>
+<td>Port belegt</td>
+<td>Protokoll im Add-on ansehen</td>
+</tr>
+</tbody></table>
+
+      </article>

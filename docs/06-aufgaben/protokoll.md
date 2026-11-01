@@ -27,6 +27,76 @@
 
 ---
 
+## 2026-11-01 – Serielle Ports zur Laufzeit wählen (Aufgabe 5.13)
+
+**Ergebnis:** Die seriellen Ports werden **gescannt** (Hotplug), der Benutzer
+wählt sie in der Oberfläche aus, und die Umstellung ist **sofort** wirksam –
+**kein Neustart** des Gateways nötig. Der Hinweis steht prominent auf dem
+Dashboard, sobald BACnet nicht verbunden ist, und auf der Konfigurationsseite.
+**293 Tests grün** (46 BACnet + 30 Domain + 10 Contract + 207 Gateway).
+
+**Geänderte Dateien (neu – Gateway):**
+- `src/ComfoBox.Gateway/Bacnet/SerialPortSettings.cs` – die **laufenden** Parameter (Port + Baudrate)
+- `src/ComfoBox.Gateway/Bacnet/GatewaySerialPortFactory.cs` – die Fabrik liest die Parameter bei **jedem** Öffnen
+- `src/ComfoBox.Gateway/Bacnet/BacnetSerialManager.cs` – Test + Umstellung (persistieren → Laufzeit → Neuaufbau)
+- `src/ComfoBox.Gateway/Hardware/SerialPortScanner.cs` – die Port-Suche (`ports.json`, sonst `GetPortNames()`)
+- `src/ComfoBox.Gateway/Api/SerialEndpoints.cs` – `GET /api/config/serial-ports`, `POST /api/config/bacnet/test`, `PUT /api/config/bacnet`
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Bacnet/Bacnet/BacnetMstpTransport.cs` – `RequestReconnect()` bricht den Backoff **ab** (Semaphore-Signal)
+- `src/ComfoBox.Bacnet/Serial/ISerialPort.cs` + `SerialPortAdapter.cs` – `PortName` (nur Diagnose)
+- `src/ComfoBox.Gateway/GatewayServiceCollectionExtensions.cs` – `SerialPortSettings` + die neue Fabrik
+- `src/ComfoBox.Gateway/Api/GatewayApiExtensions.cs` – Scanner + Manager registriert, `MapSerial()`
+- `src/ComfoBox.Gateway/Api/StatusEndpoints.cs` + `ConfigEndpoints.cs` – melden den **laufenden** Port
+- `src/ComfoBox.Gateway/Setup/SetupService.cs` – nutzt jetzt den Scanner (keine Dopplung)
+
+**Geänderte Dateien (neu – Web):**
+- `src/ComfoBox.Web/src/app/core/api/serial.service.ts` – der API-Zugriff
+- `src/ComfoBox.Web/src/app/shared/serial-port-picker.ts` + `.html` + `.scss` – die Port-Auswahl (wiederverwendbar)
+
+**Geänderte Dateien (bearbeitet – Web):**
+- `src/ComfoBox.Web/src/app/features/config/config.html` + `config.ts` – Port-Auswahl in der BACnet-Karte
+- `src/ComfoBox.Web/src/app/features/dashboard/dashboard.html` + `dashboard.ts` + `dashboard.scss` – prominenter Hinweis
+
+**Tests (neu):**
+- `src/ComfoBox.Gateway.Tests/Api/SerialApiTests.cs` – 6 Tests (Portliste, Umstellung ohne Neustart, Status, ungültige Werte, Test)
+- `src/ComfoBox.Bacnet.Tests/SerialPortBehaviourTests.cs` – `Ein_Angeforderter_Neuaufbau_Ignoriert_Den_Backoff`
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **293 Tests grün, 0 Fehler**
+- `npm run lint` (src/ComfoBox.Web) → grün
+- `npm run build` (src/ComfoBox.Web) → Produktions-Build erfolgreich
+- **Live am Gateway** (Port 5199): `PUT /api/config/bacnet {"port":"COM7","baudrate":9600}` → **204**,
+  danach `/api/status` meldet `port: "COM7"` – **ohne Neustart** (der Log zeigt
+  den Neuaufbau in derselben Sekunde).
+
+**Offen / nicht gemacht:**
+- Der Setup-Assistent nutzt weiterhin seine eigene Port-Auswahl (Schritt 1) –
+  er schreibt die Konfiguration am Ende ohnehin mit Neustart. Die neue
+  Komponente ist bewusst **nicht** dort eingesetzt, um den Assistenten nicht
+  zu verkomplizieren.
+- Die SPA-Auslieferung (`wwwroot/`) ist unabhängig davon weiterhin offen
+  (Aufgabe 5.8) – der Docker-Stage fehlt ebenfalls (Phase 6).
+
+**Überraschungen:**
+- ⚠️ **Ein Portwechsel braucht zwei Dinge**, nicht eines: (a) die
+  `SerialPortSettings` (der Transport liest sie erst beim **Öffnen** des
+  Ports) und (b) das **Abbruch** des Backoffs. Ohne (b) wartet der Transport
+  bis zu 30 Sekunden, bevor er den neuen Port überhaupt versucht – der
+  Benutzer hätte „nichts passiert" gedacht.
+- ⚠️ **Der aktive Port lässt sich nicht testen**, indem man ihn öffnet – der
+  Gateway hält ihn selbst. `BacnetSerialManager.Test()` erkennt den aktiven
+  Port und meldet stattdessen den **Buszustand** (über `BacnetDevice`).
+  Der Health-Reporter ist dafür zu optimistisch: er meldet „online", obwohl
+  die Heizung gar nicht antwortet.
+- ⚠️ **`FakeSerialPort` musste `IsOpen` per Default auf `true` setzen** und
+  bei geschlossenem Port `SerialReadResult.Closed` liefern – sonst erkennt
+  der MS/TP-Automat keinen Portfehler und der A8-Regressionstest wird
+  wirkungslos.
+
+---
+
 ## 2026-10-31 – Phase 3 abgeschlossen: MQTT-Migration & HA-Discovery (Aufgaben 3.1–3.6)
 
 **Ergebnis:** Der Gateway publiziert alle **127 Topics**, abonniert die

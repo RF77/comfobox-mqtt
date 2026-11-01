@@ -1,0 +1,150 @@
+// Das Grundgerüst: Kopfleiste, Navigation, Inhaltsbereich.
+//
+// Die Farben kommen aus den Design-Tokens von Optimus UI - keine festen
+// Farben, sonst bricht der Dark-Mode.
+
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.cb-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.cb-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  // Semantische Tokens (nicht die Palette) - sonst bleibt die Kopfzeile im
+  // Dark-Mode weiß. Das eigene Seiten-Token sorgt dafür, dass die Kopfzeile
+  // denselben Grund hat wie die Seite (im Dark-Mode heller als die Cards).
+  background: var(--cb-page-background, var(--p-content-background));
+  border-bottom: 1px solid var(--p-content-border-color, var(--p-surface-300));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.cb-header-start,
+.cb-header-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cb-header-end {
+  margin-left: auto;
+}
+
+.cb-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.cb-nav {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.cb-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--p-border-radius-md, 0.5rem);
+  text-decoration: none;
+  color: var(--p-text-muted-color, inherit);
+  white-space: nowrap;
+}
+
+.cb-nav-link:hover,
+.cb-nav-link:focus-visible {
+  background: var(--p-content-hover-background, var(--p-surface-100));
+}
+
+.cb-nav-active {
+  background: var(--p-primary-color, var(--p-highlight-background));
+  color: var(--p-primary-contrast-color, #fff);
+}
+
+.cb-menu-button {
+  display: none;
+}
+
+.cb-health-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--p-text-muted-color, #94a3b8);
+  flex: 0 0 auto;
+}
+
+.cb-health-online {
+  background: var(--p-green-500, #22c55e);
+}
+
+.cb-health-degraded {
+  background: var(--p-amber-500, #f59e0b);
+}
+
+.cb-health-offline {
+  background: var(--p-red-500, #ef4444);
+}
+
+.cb-user {
+  font-size: 0.9rem;
+  color: var(--p-text-muted-color, inherit);
+  white-space: nowrap;
+}
+
+.cb-main {
+  flex: 1 1 auto;
+  padding: 1rem;
+  max-width: 90rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+// Ab 900 px ist die Navigation dauerhaft sichtbar.
+@media (min-width: 900px) {
+  .cb-menu-button {
+    display: none;
+  }
+
+  .cb-nav {
+    flex-wrap: nowrap;
+  }
+}
+
+// Unter 900 px klappt die Navigation ein.
+@media (max-width: 899px) {
+  .cb-menu-button {
+    display: inline-flex;
+  }
+
+  .cb-nav {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    padding: 0.5rem;
+    background: var(--cb-page-background, var(--p-content-background));
+    border-bottom: 1px solid var(--p-content-border-color, var(--p-surface-300));
+  }
+
+  .cb-nav-open {
+    display: flex;
+  }
+}

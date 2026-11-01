@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hilfe – ComfoBox Gateway</title>
+  <meta name="description" content="Anleitungen für Installation, Betrieb und Fehlersuche des ComfoBox Gateways">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Hilfe</h1>
+        <p class="description">Anleitungen für Installation, Betrieb und Fehlersuche des ComfoBox Gateways</p>
+        
+      </header>
+
+      <article class="prose">
+<h1>ComfoBox Gateway – Hilfe</h1>
+<p>Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
+<strong>ComfoBox Gateways</strong> für die Zehnder ComfoBox Series 5 (ELESTA).</p>
+<h2>Inhaltsverzeichnis</h2>
+<table>
+<thead>
+<tr>
+<th>Seite</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><a href="erste-schritte.html">Erste Schritte</a></td>
+<td>Installation, Anschluss und die ersten gelesenen Werte</td>
+</tr>
+<tr>
+<td><a href="anschluss.html">Anschluss</a></td>
+<td>Adapter, Verdrahtung, Baudrate, Fehlersuche am Kabel</td>
+</tr>
+<tr>
+<td><a href="installation.html">Installation</a></td>
+<td>Die vier Installationsmöglichkeiten im Vergleich</td>
+</tr>
+<tr>
+<td><a href="mqtt.html">MQTT</a></td>
+<td>Broker einrichten, Topics, Werte schreiben</td>
+</tr>
+<tr>
+<td><a href="home-assistant.html">Home Assistant</a></td>
+<td>Automatische Entitäten und die HACS-Integration</td>
+</tr>
+<tr>
+<td><a href="bedienung.html">Bedienung</a></td>
+<td>Web-Oberfläche, Werte schreiben, Schreibschutz, <strong>Protokoll ansehen</strong></td>
+</tr>
+<tr>
+<td><a href="ha-addon.html">HA-Add-on</a></td>
+<td>Installation als Add-on in Home Assistant</td>
+</tr>
+<tr>
+<td><a href="synology.html">Synology</a></td>
+<td>Installation als Paket auf der DS923+</td>
+</tr>
+<tr>
+<td><a href="fehlersuche.html">Fehlersuche</a></td>
+<td>Symptom, Ursache und Lösung</td>
+</tr>
+<tr>
+<td><a href="api.html">API</a></td>
+<td>Schnittstelle für eigene Automatisierungen</td>
+</tr>
+</tbody></table>
+<h2>Was Sie zuerst brauchen</h2>
+<table>
+<thead>
+<tr>
+<th>Komponente</th>
+<th>Anforderung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zehnder ComfoBox Series 5 (ELESTA)</td>
+<td>mit installierter Wärmepumpe oder Lüftungsgerät</td>
+</tr>
+<tr>
+<td>USB-RS485-Adapter</td>
+<td>die ComfoBox hat <strong>keinen</strong> eigenen Anschluss</td>
+</tr>
+<tr>
+<td>Home Assistant</td>
+<td>optional – nur wenn Sie die Werte dort nutzen wollen</td>
+</tr>
+<tr>
+<td>MQTT-Broker</td>
+<td>optional – nur für die MQTT-Anbindung</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Noch nicht eingerichtet?</strong> Beginnen Sie mit
+<a href="erste-schritte.html">Erste Schritte</a> – dort steht Schritt für Schritt, was zu tun ist.</p>
+</blockquote>
+<h2>Kurzfassung</h2>
+<ol>
+<li><strong>Anschließen:</strong> Adapter an A/B der ComfoBox, USB in den Computer oder das NAS</li>
+<li><strong>Baudrate:</strong> ComfoBox auf <strong>38400</strong> umstellen und <strong>neu starten</strong></li>
+<li><strong>Installieren:</strong> entweder als Synology-Paket, als Home-Assistant-Add-on,
+als Docker-Container oder – wenn Sie nur Home Assistant nutzen – direkt als
+HACS-Integration</li>
+<li><strong>Einrichten:</strong> den Assistenten durchlaufen, Benutzer und Passwort setzen</li>
+<li><strong>Fertig:</strong> die Werte erscheinen in der Web-Oberfläche und – falls gewünscht –
+in Home Assistant</li>
+</ol>
+<h2>Hilfe anzeigen</h2>
+<p>Diese Seiten sind in der Web-Oberfläche unter <strong>Hilfe</strong> eingebaut und
+funktionieren auch ohne Internetverbindung.</p>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <span></span>
+          <a class="nav-next" href="erste-schritte.html">Erste Schritte &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

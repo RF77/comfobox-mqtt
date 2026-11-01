@@ -1,0 +1,184 @@
+<section class="cb-diagnostics">
+  <h1 class="cb-page-title">Diagnose</h1>
+
+  <p-tabs value="checks">
+    <!-- Health-Checks -->
+    <p-tablist>
+      <p-tab value="checks">Health-Checks</p-tab>
+      <p-tab value="errors">Fehlerhistorie</p-tab>
+      <p-tab value="logs">Protokoll</p-tab>
+      <p-tab value="writes">Schreibvorgänge</p-tab>
+      <p-tab value="connections">Verbindungen</p-tab>
+    </p-tablist>
+
+    <p-tabpanels>
+      <p-tabpanel value="checks">
+        <p-table [value]="checks()" [tableStyle]="{ 'min-width': '100%' }">
+          <ng-template #header>
+            <tr>
+              <th>Komponente</th>
+              <th>Zustand</th>
+              <th>Meldung</th>
+              <th>Seit</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-check>
+            <tr>
+              <td>{{ check.name }}</td>
+              <td>
+                <p-tag
+                  [value]="check.state"
+                  [severity]="check.state === 'online' ? 'success' : check.state === 'degraded' ? 'warn' : 'danger'"
+                />
+              </td>
+              <td>{{ check.message }}</td>
+              <td>{{ formatRelative(check.changedAt) }}</td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="4">Noch keine Health-Checks vorhanden.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-tabpanel>
+
+      <!-- Fehlerhistorie -->
+      <p-tabpanel value="errors">
+        <div class="cb-toolbar">
+          <label class="cb-switch">
+            <span>Schweregrad:</span>
+            <select
+              class="cb-select"
+              [ngModel]="severity()"
+              (ngModelChange)="severity.set($event)"
+              aria-label="Fehler nach Schweregrad filtern"
+            >
+              <option [ngValue]="null">Alle</option>
+              @for (value of severities(); track value) {
+                <option [ngValue]="value">{{ value }}</option>
+              }
+            </select>
+          </label>
+
+          <p-button
+            icon="pi pi-refresh"
+            label="Neu laden"
+            [text]="true"
+            (onClick)="load()"
+          />
+        </div>
+
+        <p-table [value]="filteredErrors()" [tableStyle]="{ 'min-width': '100%' }">
+          <ng-template #header>
+            <tr>
+              <th>Zeit</th>
+              <th>Schweregrad</th>
+              <th>Quelle</th>
+              <th>Code</th>
+              <th>Meldung</th>
+            </tr>
+          </ng-template>
+          <ng-template #body let-error>
+            <tr>
+              <td>{{ formatDate(error.timestamp) }}</td>
+              <td>
+                <span class="cb-severity" [class]="severityClass(error.severity)">
+                  {{ error.severity }}
+                </span>
+              </td>
+              <td>{{ error.source }}</td>
+              <td><code>{{ error.code }}</code></td>
+              <td>
+                {{ error.message }}
+                @if (error.detail) {
+                  <div class="cb-detail">{{ error.detail }}</div>
+                }
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template #emptymessage>
+            <tr>
+              <td colspan="5">Keine Fehler aufgetreten.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      </p-tabpanel>
+
+      <!-- Protokoll (Log-Viewer) -->
+      <p-tabpanel value="logs">
+        <app-log-viewer />
+      </p-tabpanel>
+
+      <!-- Schreibvorgänge -->
+      <p-tabpanel value="writes">
+        @if (health.status(); as status) {
+          <div class="cb-tiles">
+            <p-card header="Schreibzähler (24 h)">
+              <div class="cb-tile">
+                <span class="cb-tile-value">
+                  {{ status.writes.count }} / {{ status.writes.limit }}
+                </span>
+                <span class="cb-tile-hint">
+                  Zurückgesetzt am {{ formatDate(status.writes.resetsAt) }}
+                </span>
+              </div>
+            </p-card>
+
+            <p-card header="Laufzeit">
+              <div class="cb-tile">
+                <span class="cb-tile-value">{{ formatUptime(status.uptimeSeconds) }}</span>
+                <span class="cb-tile-hint">Gestartet: {{ formatDate(health.health()?.startedAt) }}</span>
+              </div>
+            </p-card>
+          </div>
+        } @else {
+          <p-message severity="info" styleClass="w-full">
+            <p>Der Status wird geladen …</p>
+          </p-message>
+        }
+      </p-tabpanel>
+
+      <!-- Verbindungen -->
+      <p-tabpanel value="connections">
+        @if (health.status(); as status) {
+          <div class="cb-tiles">
+            <p-card header="BACnet">
+              <div class="cb-tile">
+                <p-tag
+                  [value]="status.bacnet.connected ? 'verbunden' : 'getrennt'"
+                  [severity]="status.bacnet.connected ? 'success' : 'danger'"
+                />
+                <span class="cb-tile-hint">Port: {{ status.bacnet.port }}</span>
+                @if (status.bacnet.lastError; as error) {
+                  <span class="cb-tile-error" role="alert">{{ error }}</span>
+                }
+              </div>
+            </p-card>
+
+            <p-card header="MQTT">
+              <div class="cb-tile">
+                <p-tag
+                  [value]="status.mqtt.connected ? 'verbunden' : 'getrennt'"
+                  [severity]="status.mqtt.connected ? 'success' : 'danger'"
+                />
+                <span class="cb-tile-hint">Broker: {{ status.mqtt.broker || '–' }}</span>
+              </div>
+            </p-card>
+
+            <p-card header="Gateway">
+              <div class="cb-tile">
+                <span class="cb-tile-value">{{ status.version }}</span>
+                <span class="cb-tile-hint">Gerät {{ status.deviceId }}</span>
+              </div>
+            </p-card>
+          </div>
+        } @else {
+          <p-message severity="info" styleClass="w-full">
+            <p>Der Status wird geladen …</p>
+          </p-message>
+        }
+      </p-tabpanel>
+    </p-tabpanels>
+  </p-tabs>
+</section>

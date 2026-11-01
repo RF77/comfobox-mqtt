@@ -1,0 +1,49 @@
+<section class="cb-help">
+  <h1 class="cb-page-title">Hilfe</h1>
+
+  <p class="cb-lead">
+    Anleitungen für die Inbetriebnahme, die Bedienung und die Fehlersuche. Die Seiten sind auch
+    ohne Internetverbindung verfügbar.
+  </p>
+
+  <span class="cb-search">
+    <i class="pi pi-search" aria-hidden="true"></i>
+    <input
+      pInputText
+      type="search"
+      [ngModel]="term()"
+      (ngModelChange)="term.set($event)"
+      placeholder="Hilfe durchsuchen …"
+      aria-label="Hilfe durchsuchen"
+    />
+  </span>
+
+  @if (help.error(); as error) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ error }}</p>
+    </p-message>
+  }
+
+  <div class="cb-help-grid">
+    @for (entry of results(); track entry.slug) {
+      <p-card>
+        <a class="cb-help-link" [routerLink]="['/help', entry.slug]">
+          <span class="cb-help-title">{{ entry.title }}</span>
+          <span class="cb-help-description">{{ entry.description }}</span>
+        </a>
+
+        @if (entry.tags.length > 0) {
+          <div class="cb-help-tags">
+            @for (tag of entry.tags; track tag) {
+              <p-tag [value]="tag" severity="secondary" />
+            }
+          </div>
+        }
+      </p-card>
+    } @empty {
+      <p-message severity="info" styleClass="w-full">
+        <p>Keine Seite gefunden. Versuchen Sie einen anderen Suchbegriff.</p>
+      </p-message>
+    }
+  </div>
+</section>

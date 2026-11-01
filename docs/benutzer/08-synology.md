@@ -113,15 +113,22 @@ Details: [Erste Schritte](01-erste-schritte.md)
 
 Wenn Sie den Adapter in eine andere USB-Buchse stecken:
 
+1. In der Web-Oberfläche: **Konfiguration → BACnet**
+2. Auf **Neu suchen** klicken
+3. Den neuen Port wählen und **Übernehmen** – der Gateway benutzt ihn **sofort**
+
+> **Sie müssen das Paket nicht neu installieren** und nichts auf der Kommandozeile
+> machen.
+
+Falls das Paket den Anschluss fest an den Container durchreicht (Option
+„Alle seriellen Ports durchreichen" **nicht** aktiv), muss der Container
+zusätzlich mit dem neuen Anschluss neu erstellt werden:
+
 1. In der Web-Oberfläche: **Konfiguration → Erneut einrichten**
 2. Schritt 1: neuen Port wählen
 3. **Übernehmen**
 
-Der Container wird dann mit dem neuen Anschluss neu erstellt. Das dauert etwa
-10 Sekunden.
-
-> **Sie müssen das Paket nicht neu installieren** und nichts auf der Kommandozeile
-> machen.
+Das dauert etwa 10 Sekunden.
 
 ---
 

@@ -93,6 +93,7 @@
 | 5.10 | **Login** + Cookie-Auth | ⬜ | 1.0 |
 | 5.11 | **Hilfe-Bereich** (`/help/:slug`) + Suche | ⬜ | 1.5 |
 | 5.12 | **Log-Viewer** (Live-Tail, Filter, Export) | ⬜ | 1.5 |
+| 5.13 | **Serielle Ports zur Laufzeit wählen** (ohne Neustart) | ✅ | 1.0 |
 
 ## Phase 6 – Container & Synology (4 PT)
 
@@ -163,13 +164,13 @@
 
 | Bereich | PT |
 |---|---|
-| Implementierung (Phase 0–8d) | 63 |
+| Implementierung (Phase 0–8d) | 64 |
 | Dokumentation (D.6 + D.9) | 9 |
-| **Gesamt** | **72** |
+| **Gesamt** | **73** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) von 63 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 1 PT (Phase 5, Aufgabe 5.13) von 64 PT.
 >
-> **Stand 2026-10-31:** 278 Tests grün (45 BACnet + 30 Domain + 10 Contract + 193 Gateway).
+> **Stand 2026-11-01:** 293 Tests grün (46 BACnet + 30 Domain + 10 Contract + 207 Gateway).
 
 ## Nächste Aufgabe
 

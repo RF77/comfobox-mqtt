@@ -59,16 +59,33 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.
 
 ## Keine seriellen Ports in der Liste
 
-**Symptom:** Das Dropdown im Assistenten ist leer.
+**Symptom:** Die Port-Auswahl (Konfiguration → BACnet oder Übersicht) ist leer.
 
 | Ursache | Lösung |
 |---|---|
-| Adapter nicht eingesteckt | einstecken, *Erneut suchen* klicken |
+| Adapter nicht eingesteckt | einstecken, *Neu suchen* klicken |
 | Kein Treiber | CH340-/FTDI-Treiber des Betriebssystems installieren |
 | Falscher Port (Batterie, Serial-Konverter) | andere USB-Buchse |
 
 > **Der Adapter wird manchmal erst später erkannt** – besonders nach einem Neustart
 > des NAS. Das Gateway wartet von allein und verbindet sich, sobald der Port da ist.
+> Sie können aber auch selbst suchen: *Neu suchen* in der Port-Auswahl.
+
+---
+
+## Die ComfoBox antwortet nicht
+
+**Symptom:** Die Übersicht meldet „BACnet nicht verbunden".
+
+| Ursache | Lösung |
+|---|---|
+| Falscher Port | Port-Auswahl: richtigen Port wählen, *Übernehmen* (wirkt sofort) |
+| Falsche Baudrate | Baudrate 38400 einstellen (Werks-Default 76800) |
+| ComfoBox steht noch auf 76800 | am Bedienpanel umstellen und neu starten |
+| Adapter abgezogen | einstecken, *Neu suchen* klicken |
+
+> **Ein Portwechsel ist sofort wirksam** – ein Neustart des Gateways ist nicht
+> nötig.
 
 ---
 

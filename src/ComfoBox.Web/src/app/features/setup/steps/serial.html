@@ -1,0 +1,63 @@
+<p-card header="Serielle Schnittstelle">
+  <p-message severity="info" styleClass="w-full cb-block">
+    <p class="font-semibold">Hinweis</p>
+    <p>
+      Die ComfoBox muss auf <b>38400 Baud</b> umgestellt und <b>neu gestartet</b> sein.
+      Steht sie noch auf 76800, antwortet sie nicht.
+    </p>
+  </p-message>
+
+  @if (setup.ports().length === 0) {
+    <p-message severity="warn" styleClass="w-full cb-block">
+      <p>Kein serieller Port gefunden. Bitte den USB-RS485-Adapter einstecken.</p>
+      <p>
+        <a routerLink="/help/anschluss" fragment="adapter-erkennen">
+          Hilfe: Adapter erkennen (ohne Anmeldung)
+        </a>
+      </p>
+    </p-message>
+
+    <p-button
+      label="Erneut suchen"
+      icon="pi pi-refresh"
+      [loading]="setup.loadingPorts()"
+      (onClick)="setup.reloadPorts()"
+    />
+  } @else {
+    <div class="cb-ports" role="radiogroup" aria-label="Serielle Ports">
+      @for (port of setup.ports(); track port.port) {
+        <div class="cb-port" [class.cb-port-selected]="setup.selectedPort() === port.port">
+          <p-radiobutton
+            name="serial"
+            [value]="port.port"
+            [ngModel]="setup.selectedPort()"
+            (ngModelChange)="setup.selectedPort.set($event)"
+            [inputId]="'port-' + port.port"
+            [ariaLabelledBy]="'port-label-' + port.port"
+          />
+
+          <label class="cb-port-body" [for]="'port-' + port.port">
+            <span class="cb-port-description" [id]="'port-label-' + port.port">
+              {{ port.description ?? port.port }}
+            </span>
+            <code class="cb-port-path">{{ port.port }}</code>
+            @if (port.stablePath) {
+              <span class="cb-port-stable">stabil: {{ port.stablePath }}</span>
+            }
+          </label>
+        </div>
+      }
+    </div>
+
+    <div class="cb-switch-row">
+      <p-toggleswitch
+        inputId="pass-all"
+        [ngModel]="setup.passAllDevices()"
+        (ngModelChange)="setup.passAllDevices.set($event)"
+      />
+      <label for="pass-all">
+        Alle seriellen Ports durchreichen (empfohlen – ermöglicht den Verbindungstest)
+      </label>
+    </div>
+  }
+</p-card>

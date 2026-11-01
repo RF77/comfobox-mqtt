@@ -1,0 +1,93 @@
+<p-card header="MQTT-Broker">
+  <p class="cb-hint cb-block">
+    Der Broker ist nur nötig, wenn Sie Home Assistant über MQTT anbinden möchten. Für die
+    Web-Oberfläche allein wird keiner benötigt.
+  </p>
+
+  <div class="cb-field">
+    <label for="mqtt-host">Host</label>
+    <input
+      pInputText
+      id="mqtt-host"
+      [ngModel]="setup.brokerHost()"
+      (ngModelChange)="setup.brokerHost.set($event)"
+      placeholder="homeassistant oder 192.168.1.10"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="cb-field">
+    <label for="mqtt-port">Port</label>
+    <p-inputnumber
+      inputId="mqtt-port"
+      [ngModel]="setup.brokerPort()"
+      (ngModelChange)="setup.brokerPort.set($event ?? 1883)"
+      [min]="1"
+      [max]="65535"
+      [useGrouping]="false"
+    />
+  </div>
+
+  <div class="cb-field">
+    <label for="mqtt-user">Benutzername</label>
+    <input
+      pInputText
+      id="mqtt-user"
+      [ngModel]="setup.brokerUsername()"
+      (ngModelChange)="setup.brokerUsername.set($event)"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="cb-field">
+    <label for="mqtt-password">Passwort</label>
+    <p-password
+      inputId="mqtt-password"
+      [ngModel]="setup.brokerPassword()"
+      (ngModelChange)="setup.brokerPassword.set($event)"
+      [feedback]="false"
+      [toggleMask]="true"
+      autocomplete="new-password"
+    />
+    <span class="cb-hint">
+      Das Passwort wird nur einmal im Klartext an das Gateway gesendet und dort gehasht.
+    </span>
+  </div>
+
+  <div class="cb-switch-row cb-block">
+    <p-toggleswitch
+      inputId="mqtt-tls"
+      [ngModel]="setup.useTls()"
+      (ngModelChange)="setup.useTls.set($event)"
+    />
+    <label for="mqtt-tls">TLS verwenden</label>
+  </div>
+
+  <p-button
+    label="Verbindung testen"
+    icon="pi pi-plug"
+    [loading]="setup.testingMqtt()"
+    [disabled]="!setup.brokerHost().trim()"
+    (onClick)="setup.testMqtt()"
+  />
+
+  @if (setup.mqttResult(); as result) {
+    <p-message
+      [severity]="result.ok ? 'success' : 'error'"
+      styleClass="w-full cb-result"
+    >
+      <p>{{ result.message }}</p>
+      @if (!result.ok && result.hint) {
+        <p>{{ hintText(result.hint) }}</p>
+        @if (result.hint === 'mqtt_unreachable') {
+          <p>
+            <a routerLink="/help/mqtt" fragment="broker-einrichten">
+              Hilfe: Broker einrichten (ohne Anmeldung)
+            </a>
+          </p>
+        }
+      }
+      <p class="cb-hint">Dauer: {{ result.durationMs }} ms</p>
+    </p-message>
+  }
+</p-card>

@@ -1,0 +1,98 @@
+:host {
+  display: block;
+}
+
+.cb-page-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.cb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.cb-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.cb-select {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--p-content-border-color, var(--p-surface-300));
+  border-radius: var(--p-border-radius-md, 0.5rem);
+  // Formularfelder haben im Dark-Mode eine eigene, dunklere Fläche - sonst
+  // verschmilzt das Auswahlfeld mit der Karte.
+  background: var(--p-form-field-background, var(--p-content-hover-background));
+  color: inherit;
+}
+
+.cb-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.cb-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.cb-tile-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.cb-tile-hint {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-tile-error {
+  font-size: 0.85rem;
+  color: var(--p-red-500, #ef4444);
+}
+
+.cb-severity {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+}
+
+.cb-severity-error {
+  color: var(--p-red-500, #ef4444);
+}
+
+.cb-severity-warning {
+  color: var(--p-amber-600, #d97706);
+}
+
+.cb-severity-info {
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-detail {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color, inherit);
+  margin-top: 0.2rem;
+}
+
+.cb-state-online {
+  color: var(--p-green-500, #22c55e);
+}
+
+.cb-state-degraded {
+  color: var(--p-amber-600, #d97706);
+}
+
+.cb-state-offline {
+  color: var(--p-red-500, #ef4444);
+}

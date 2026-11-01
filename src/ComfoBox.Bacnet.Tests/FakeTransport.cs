@@ -69,6 +69,12 @@ public sealed class FakeTransport : IBacnetTransport
     public Task StopAsync() => Task.CompletedTask;
 
     /// <inheritdoc />
+    public void RequestReconnect() => Reconnects++;
+
+    /// <summary>Wie oft wurde ein Neuaufbau angefordert?</summary>
+    public int Reconnects { get; private set; }
+
+    /// <inheritdoc />
     public Task<int> SendAsync(
         byte[] buffer,
         int offset,

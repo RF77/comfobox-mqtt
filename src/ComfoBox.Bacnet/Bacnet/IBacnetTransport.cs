@@ -64,6 +64,21 @@ public interface IBacnetTransport : IDisposable
     Task StopAsync();
 
     /// <summary>
+    /// Fordert einen Neuaufbau der Schnittstelle an.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Der Port wird geschlossen - die Hintergrundschleife öffnet ihn mit
+    /// Backoff neu. Das ist der Weg, wenn der Adapter neu eingesteckt wurde
+    /// oder die ComfoBox neu gestartet wurde.
+    /// </para>
+    /// <para>
+    /// Der Aufruf ist threadsicher und kann jederzeit erfolgen.
+    /// </para>
+    /// </remarks>
+    void RequestReconnect();
+
+    /// <summary>
     /// Sendet Nutzdaten an die Gegenstelle.
     /// </summary>
     /// <param name="buffer">Puffer, aus dem gelesen wird.</param>

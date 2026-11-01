@@ -1,0 +1,274 @@
+<article class="prose">
+<p>Es gibt <strong>zwei</strong> Wege, die ComfoBox in Home Assistant einzubinden. Sie können
+<strong>beide</strong> nutzen – sie greifen auf dieselben Daten zu.</p>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Broker nötig?</th>
+<th>Aufwand</th>
+<th>Vorteil</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>MQTT-Discovery</strong></td>
+<td><strong>ja</strong></td>
+<td>gering</td>
+<td>alle Werte automatisch, ohne Zusatzinstallation</td>
+</tr>
+<tr>
+<td><strong>HACS-Integration</strong></td>
+<td><strong>nein</strong></td>
+<td>mittel</td>
+<td>funktioniert <strong>ohne</strong> Broker, ein Gerät mit allen Werten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Sie brauchen nur eins.</strong> Die MQTT-Variante ist einfacher, wenn Sie ohnehin
+einen Broker betreiben (die meisten Home-Assistant-Installationen haben einen).
+Die HACS-Integration ist die richtige Wahl, wenn Sie keinen Broker einsetzen wollen.</p>
+</blockquote>
+<hr>
+<h2 id="variante-1-automatische-entitäten-über-mqtt">Variante 1 – Automatische Entitäten über MQTT</h2>
+<p>Das Gateway meldet seine Werte selbst bei Home Assistant an. Sie müssen <strong>nichts</strong>
+konfigurieren.</p>
+<h3 id="einrichtung">Einrichtung</h3>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>In den Assistenten den Broker eintragen und testen</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Discovery</strong> einschalten</td>
+</tr>
+<tr>
+<td>3</td>
+<td>In Home Assistant: <strong>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → MQTT</strong></td>
+</tr>
+<tr>
+<td>4</td>
+<td>denselben Broker eintragen wie im Gateway</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Discovery-Prefix</strong> ist standardmäßig <code>homeassistant</code>. Er muss in Home Assistant
+und im Gateway <strong>übereinstimmen</strong>.</p>
+</blockquote>
+<h3 id="was-erscheint">Was erscheint?</h3>
+<p>Ein Gerät <strong>ComfoBox</strong> mit allen 127 Werten als Entitäten.</p>
+<table>
+<thead>
+<tr>
+<th>Werttyp</th>
+<th>Entität in HA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zahl, nicht schreibbar</td>
+<td>Sensor</td>
+</tr>
+<tr>
+<td>Zahl, schreibbar</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>Auswahl, schreibbar</td>
+<td>Select</td>
+</tr>
+<tr>
+<td>Auswahl, nicht schreibbar</td>
+<td>Sensor mit Options-Liste</td>
+</tr>
+</tbody></table>
+<h3 id="verfügbarkeit">Verfügbarkeit</h3>
+<p>Ist das Gateway nicht erreichbar, werden die Entitäten <strong>unavailable</strong> – nicht
+„falsch&quot;. Das ist wichtig: Ein <code>unavailable</code> ist eindeutig, ein stehen gebliebener
+Wert wäre gefährlich.</p>
+<hr>
+<h2 id="variante-2-hacs-integration-ohne-broker">Variante 2 – HACS-Integration (ohne Broker)</h2>
+<p>Die Integration spricht <strong>direkt</strong> mit dem Gateway über dessen HTTP-Schnittstelle.
+Ein MQTT-Broker wird <strong>nicht</strong> benötigt.</p>
+<h3 id="installation">Installation</h3>
+<ol>
+<li><strong>HACS</strong> öffnen</li>
+<li>Menü → <strong>Integrationen → Repositories</strong> (oben rechts das Drei-Punkte-Menü)</li>
+<li>Diese Adresse eintragen:
+<code>https://github.com/RF77/comfobox-mqtt</code>
+→ <strong>Hinzufügen</strong></li>
+<li><strong>ComfoBox</strong> suchen → <strong>Herunterladen</strong></li>
+<li><strong>Home Assistant neu starten</strong></li>
+</ol>
+<h3 id="einrichtung-2">Einrichtung</h3>
+<ol>
+<li><strong>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → ComfoBox</strong></li>
+<li><strong>Adresse des Gateways</strong> eintragen:<ul>
+<li>im Add-on-Betrieb: <code>http://&lt;HA-IP&gt;:8099</code></li>
+<li>bei Docker/Synology: <code>http://&lt;Gateway-IP&gt;:8081</code></li>
+</ul>
+</li>
+<li><strong>API-Token</strong> eintragen</li>
+</ol>
+<blockquote>
+<p><strong>Woher bekomme ich den Token?</strong>
+In der Web-Oberfläche des Gateways unter <strong>Konfiguration → API-Token</strong> →
+<strong>Neuen Token erzeugen</strong>. Der Token wird <strong>einmal</strong> angezeigt – danach ist er
+nicht mehr abrufbar. Bewahren Sie ihn sicher auf.</p>
+</blockquote>
+<ol start="4">
+<li><strong>Hinzufügen</strong> klicken</li>
+</ol>
+<p>Fertig. Das Gerät <strong>ComfoBox ELESTA</strong> erscheint mit allen Werten.</p>
+<hr>
+<h2 id="werte-in-der-integration">Werte in der Integration</h2>
+<table>
+<thead>
+<tr>
+<th>Kategorie</th>
+<th>Anmerkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>nicht schreibbare Zahlen</td>
+<td>Sensoren</td>
+</tr>
+<tr>
+<td>schreibbare Zahlen</td>
+<td>Number-Entitäten mit <strong>genau</strong> dem gültigen Bereich</td>
+</tr>
+<tr>
+<td>schreibbare Auswahlwerte</td>
+<td>Select-Entitäten mit den Originalnamen</td>
+</tr>
+<tr>
+<td>schreibbare 0/1-Werte</td>
+<td>Schalter</td>
+</tr>
+<tr>
+<td>Sonderwerte</td>
+<td>BACnet-Verbindung, Broker-Verbindung, Schreibzähler, Version</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der gültige Bereich kommt direkt aus dem Gateway</strong> – die Integration erfindet
+keine Grenzen. So kann kein Wert außerhalb des erlaubten Bereichs gesetzt werden.</p>
+</blockquote>
+<h3 id="schreibvorgänge">Schreibvorgänge</h3>
+<p>Auch über die Integration greift der Schreibschutz:</p>
+<table>
+<thead>
+<tr>
+<th>Regel</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tageslimit (Standard 200)</td>
+<td>wird überschritten → der Schreibvorgang wird <strong>abgelehnt</strong></td>
+</tr>
+<tr>
+<td>Werte außerhalb Min/Max</td>
+<td>werden <strong>abgelehnt</strong></td>
+</tr>
+<tr>
+<td>Ungültiger Auswahlname</td>
+<td>wird <strong>abgelehnt</strong></td>
+</tr>
+</tbody></table>
+<h3 id="wenn-das-gateway-ausfällt">Wenn das Gateway ausfällt</h3>
+<p>Die Entitäten werden <strong>unavailable</strong>. Das ist beabsichtigt: Ein stehen gebliebener
+Sollwert wäre gefährlicher als ein sichtbarer Ausfall.</p>
+<hr>
+<h2 id="dienste-aktionen">Dienste (Aktionen)</h2>
+<table>
+<thead>
+<tr>
+<th>Dienst</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>comfobox.set_value</code></td>
+<td>Wert schreiben</td>
+</tr>
+<tr>
+<td><code>comfobox.restart</code></td>
+<td>Gateway neu starten</td>
+</tr>
+<tr>
+<td><code>comfobox.read_all</code></td>
+<td>alle Werte sofort neu lesen</td>
+</tr>
+</tbody></table>
+<p>Beispiel:</p>
+<pre><code class="language-yaml">service: comfobox.set_value
+target:
+  entity_id: number.comfobox_zone_setpoint_normal
+data:
+  value: 21.5
+</code></pre>
+<hr>
+<h2 id="neustart-aus-home-assistant">Neustart aus Home Assistant</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Wie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>MQTT</strong></td>
+<td>Schalter-Entität, die <code>ComfoBox/Command/Restart</code> sendet</td>
+</tr>
+<tr>
+<td><strong>HACS-Integration</strong></td>
+<td><code>comfobox.restart</code></td>
+</tr>
+<tr>
+<td><strong>Web-Oberfläche</strong></td>
+<td>Dashboard → <em>Gateway neu starten</em></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Achtung:</strong> Nach dem Neustart sind die Werte für etwa 10 Sekunden nicht
+verfügbar. Die Heizung arbeitet in dieser Zeit mit ihrem letzten Sollwert weiter.</p>
+</blockquote>
+<hr>
+<h2 id="zwei-wege-gleichzeitig">Zwei Wege gleichzeitig?</h2>
+<p>Ja – das ist unproblematisch. Beide greifen <strong>nur lesend</strong> auf dieselben Daten zu
+(die MQTT-Variante publiziert nur). Es entsteht kein Konflikt.</p>
+<blockquote>
+<p><strong>Anders wäre es nur, wenn das Gateway selbst noch auf den Bus schreibt</strong> – das
+ist genau der Fall, in dem der Schreibzähler zählt. Beide Wege zusammen erzeugen
+also <strong>keine</strong> doppelten Schreibvorgänge.</p>
+</blockquote>
+<hr>
+<h2 id="nächster-schritt">Nächster Schritt</h2>
+<table>
+<thead>
+<tr>
+<th>Sie möchten …</th>
+<th>Lesen Sie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>das Gateway als Add-on installieren</td>
+<td><a href="/help/ha-addon">HA-Add-on</a></td>
+</tr>
+<tr>
+<td>die Web-Oberfläche nutzen</td>
+<td><a href="/help/bedienung">Bedienung</a></td>
+</tr>
+<tr>
+<td>eigene Automatisierungen bauen</td>
+<td><a href="/help/api">API</a></td>
+</tr>
+</tbody></table>
+
+      </article>

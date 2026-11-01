@@ -1,0 +1,49 @@
+<div class="cb-setup">
+  <header class="cb-setup-header">
+    <h1>Einrichtung des ComfoBox-Gateways</h1>
+    <p class="cb-progress-text" role="status">
+      Schritt {{ setup.stepIndex() + 1 }} von {{ setup.steps.length }} ({{ progress() }} %)
+    </p>
+
+    <ol class="cb-steps" aria-label="Schritte der Einrichtung">
+      @for (item of items(); track item.route) {
+        <li
+          class="cb-step"
+          [class.cb-step-active]="item.active"
+          [class.cb-step-done]="item.completed"
+          [attr.aria-current]="item.active ? 'step' : null"
+        >
+          <a [routerLink]="item.route">{{ item.label }}</a>
+        </li>
+      }
+    </ol>
+  </header>
+
+  @if (setup.error(); as error) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ error }}</p>
+    </p-message>
+  }
+
+  <main class="cb-setup-body">
+    <router-outlet />
+  </main>
+
+  <footer class="cb-setup-footer">
+    <p-button
+      label="Zurück"
+      icon="pi pi-arrow-left"
+      [text]="true"
+      [disabled]="setup.stepIndex() === 0"
+      (onClick)="back()"
+    />
+
+    <p-button
+      label="Weiter"
+      icon="pi pi-arrow-right"
+      iconPos="right"
+      [disabled]="!setup.canAdvance() || setup.step() === 'done'"
+      (onClick)="next()"
+    />
+  </footer>
+</div>

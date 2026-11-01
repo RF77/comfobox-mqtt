@@ -1,0 +1,247 @@
+<article class="prose">
+<p>Die ComfoBox wird über einen <strong>USB-RS485-Adapter</strong> angesprochen. Die ComfoBox
+selbst hat keinen USB- oder Netzwerkanschluss für die Kommunikation.</p>
+<hr>
+<h2 id="adapter">Adapter</h2>
+<h3 id="unterstützte-chips">Unterstützte Chips</h3>
+<table>
+<thead>
+<tr>
+<th>Chip</th>
+<th>Kennung</th>
+<th>Bekannt aus</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>CH340 / CH341</strong></td>
+<td><code>1a86:7523</code></td>
+<td>der ursprüngliche Adapter dieses Projekts</td>
+</tr>
+<tr>
+<td><strong>FTDI FT232</strong></td>
+<td><code>0403:6001</code></td>
+<td>sehr verbreitet</td>
+</tr>
+<tr>
+<td><strong>Prolific PL2303</strong></td>
+<td><code>067b:2303</code></td>
+<td>günstige No-Name-Adapter</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Achtung bei No-Name-Adaptern:</strong> Viele Adapter mit CH340-Chip liefern
+instabile 5-V-Signale. Wenn die Verbindung sporadisch abbricht, testen Sie
+einen anderen Adapter oder einen mit eigener Spannungsversorgung.</p>
+</blockquote>
+<h3 id="qualitätsmerkmale">Qualitätsmerkmale</h3>
+<table>
+<thead>
+<tr>
+<th>Merkmal</th>
+<th>Empfehlung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Anschluss</td>
+<td><strong>Automatische Umschaltung</strong> (A/B) – das erspart Fehlverdrahtung</td>
+</tr>
+<tr>
+<td>Abschirmung</td>
+<td>ja, gegen Störungen durch die Heizungssteuerung</td>
+</tr>
+<tr>
+<td>Länge</td>
+<td>unter 3 m, sonst Qualitätsverlust</td>
+</tr>
+<tr>
+<td>galvanische Trennung</td>
+<td>ideal, verhindert Erdschleifen</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="verdrahtung">Verdrahtung</h2>
+<pre><code>   USB-RS485-Adapter                ComfoBox ELESTA
+  ┌─────────────────┐              ┌──────────────────┐
+  │  USB            │              │                  │
+  │   │             │              │                  │
+  │  [CH340]        │   A  ────────┤  A               │
+  │   │             │   B  ────────┤  B               │
+  │  [GND]      ───┼─── GND ──────┤  GND (optional)  │
+  │   │             │              │                  │
+  └─────────────────┘              └──────────────────┘
+        │
+       USB
+</code></pre>
+<blockquote>
+<p><strong>GND wird nur angeschlossen, wenn der Adapter es anbietet.</strong> Bei den meisten
+CH340-Adaptern ist der GND-Pin nicht belastbar relevant; er schützt aber vor
+Potentialdifferenzen zwischen Adapter und ComfoBox.</p>
+</blockquote>
+<blockquote>
+<p><strong>A und B dürfen nicht vertauscht werden.</strong> Die ComfoBox antwortet dann
+überhaupt nicht – auch nicht mit einem Timeout-Fehler, sondern komplett stumm.</p>
+</blockquote>
+<h3 id="polarität-bei-zweideutigkeit">Polarität bei Zweideutigkeit</h3>
+<p>Sind A und B unklar (z. B. bei Adaptern ohne Beschriftung):</p>
+<ol>
+<li>A/B <strong>vertauschen</strong></li>
+<li>ComfoBox neu starten</li>
+<li>Funktioniert es? → diePolarität war falsch, so belassen</li>
+</ol>
+<p>Der Anschluss ist in den meisten Fällen <strong>verworfen</strong> (A an A), aber nicht immer.</p>
+<hr>
+<h2 id="baudrate">Baudrate</h2>
+<table>
+<thead>
+<tr>
+<th>Einstellung</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Baudrate</td>
+<td><strong>38400</strong></td>
+</tr>
+<tr>
+<td>Parität</td>
+<td>keine</td>
+</tr>
+<tr>
+<td>Datenbits</td>
+<td>8</td>
+</tr>
+<tr>
+<td>Stoppbits</td>
+<td>1</td>
+</tr>
+</tbody></table>
+<p>Das ist die Werkseinstellung des ELESTA-Controllers <strong>nach</strong> der Umstellung.
+Vor der Umstellung spricht er mit 76800.</p>
+<blockquote>
+<p><strong>Die Baudrate lässt sich nur am Bedienpanel ändern</strong>, nicht über MQTT oder die
+Web-Oberfläche. Das Gateway kann sie nicht selbst herausfinden – es merkt sich
+nur, ob es eine Antwort bekommt.</p>
+</blockquote>
+<hr>
+<h2 id="adapter-erkennen">Adapter erkennen</h2>
+<h3 id="in-der-web-oberfläche">In der Web-Oberfläche</h3>
+<p>Öffnen Sie <strong>Hilfe → Erste Schritte → Adapter erkennen</strong> oder starten Sie den
+Assistenten erneut. Dort sehen Sie alle erkannten Anschlüsse:</p>
+<table>
+<thead>
+<tr>
+<th>Angezeigt</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/dev/ttyUSB0</code></td>
+<td>Adapter, flüchtiger Name – kann sich beim Neustart ändern</td>
+</tr>
+<tr>
+<td><code>/dev/serial/by-id/usb-…</code></td>
+<td><strong>stabiler Pfad</strong> – dieser ist besser</td>
+</tr>
+<tr>
+<td><code>/dev/ttyAMA0</code></td>
+<td>eingebaute serielle Schnittstelle des Systems</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Immer den <code>by-id</code>-Pfad wählen</strong>, wenn einer angeboten wird. Er enthält die
+Seriennummer des Adapters und überlebt Neustarts sowie das Umstecken an einen
+anderen USB-Port.</p>
+</blockquote>
+<h3 id="auf-der-kommandozeile-linux">Auf der Kommandozeile (Linux)</h3>
+<pre><code class="language-bash"># alle seriellen Geräte
+ls -l /dev/serial/by-id/ 2&gt;/dev/null
+ls -l /dev/ttyUSB* /dev/ttyACM* 2&gt;/dev/null
+
+# USB-Informationen
+lsusb | grep -i -E &#39;ch34|prolific|ftdi&#39;
+
+# belegte Ports (falls &quot;device busy&quot;)
+sudo fuser -v /dev/ttyUSB0
+</code></pre>
+<h3 id="wenn-der-port-nicht-auftaucht">Wenn der Port nicht auftaucht</h3>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Adapter nicht angesteckt</td>
+<td>einstecken, Seite neu laden</td>
+</tr>
+<tr>
+<td>kein Treiber</td>
+<td>CH340/FTDI-Treiber des NAS/HA-Betriebssystems installieren</td>
+</tr>
+<tr>
+<td>Port ohne Berechtigung</td>
+<td>Benutzer zur Gruppe <code>dialout</code> hinzufügen</td>
+</tr>
+<tr>
+<td>Adapter wird nach dem Reboot später erkannt</td>
+<td>das Gateway wartet mit Wiederholung – das ist normal</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="reichweite-und-störungen">Reichweite und Störungen</h2>
+<table>
+<thead>
+<tr>
+<th>Störquelle</th>
+<th>Wirkung</th>
+<th>Abhilfe</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Heizungssteuerung (Motoren, Relais)</td>
+<td>sporadischeTimeouts</td>
+<td>geschirmtes Kabel, Abstand zu Leitungen</td>
+</tr>
+<tr>
+<td>Netzteile ohne Erdung</td>
+<td>Masseschleife</td>
+<td>galvanische Trennung</td>
+</tr>
+<tr>
+<td>lange Leitung</td>
+<td>zufällige Fehler</td>
+<td>kürzeres Kabel oder Adapter mit Repeater</td>
+</tr>
+<tr>
+<td>parallel geschaltete Verbraucher</td>
+<td>falsche Antworten</td>
+<td><strong>nie</strong> den Bus parallel abgreifen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wichtig:</strong> Auf demselben RS485-Bus darf nur <strong>ein</strong> Gerät senden. Ein
+zweiter Master (z. B. eine direkte BACnet-Anbindung aus Home Assistant) führt
+zu widersprüchlichen Antworten. Nutzen Sie entweder das Gateway <strong>oder</strong> eine
+Direktintegration – nie beides.</p>
+</blockquote>
+<hr>
+<h2 id="nächster-schritt">Nächster Schritt</h2>
+<table>
+<thead>
+<tr>
+<th>Sie möchten …</th>
+<th>Lesen Sie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>das Gateway installieren</td>
+<td><a href="/help/erste-schritte">Erste Schritte</a></td>
+</tr>
+<tr>
+<td>den Anschluss prüfen, weil nichts kommt</td>
+<td><a href="/help/fehlersuche">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+
+      </article>

@@ -283,14 +283,43 @@ app.MapFallbackToFile("index.html");   // NACH den API-Routen!
 
 ---
 
+## 5.13 – Serielle Ports zur Laufzeit wählen · 1.0 PT
+
+| | | |
+|---|---|---|
+| **Ziel** | `src/ComfoBox.Gateway/Bacnet/`, `src/ComfoBox.Gateway/Hardware/`, `src/ComfoBox.Web/src/app/shared/serial-port-picker.ts` |  
+| **Bezug** | Phase 4 (`/api/config`), Phase 5.5 (Konfigurationsseite), 5.3 (Dashboard) |
+
+> **Zielsetzung:** Der Benutzer steckt den USB-RS485-Adapter oft erst **nach**
+> dem Start ein oder wechselt die USB-Buchse. Deshalb muss er den seriellen
+> Port **selbst auswählen** können – und zwar **ohne Neustart**.
+
+| Teil | Umsetzung |
+|---|---|
+| Port-Suche | `SerialPortScanner` – `ports.json` des Supervisors, sonst `SerialPort.GetPortNames()`; wird bei **jedem** Scan neu gelesen (Hotplug) |
+| Laufzeit-Parameter | `SerialPortSettings` (Port + Baudrate) – der MS/TP-Transport liest sie bei **jedem** Öffnen |
+| Umstellung | `BacnetSerialManager.Apply()` – schreibt die `config.json`, übernimmt die Laufzeitwerte, fordert den Neuaufbau an |
+| Sofort-Reconnect | `BacnetMstpTransport.RequestReconnect()` bricht den Backoff (bis 30 s) **ab** |
+| API | `GET /api/config/serial-ports`, `POST /api/config/bacnet/test`, `PUT /api/config/bacnet` |
+| Oberfläche | `app-serial-port-picker` – eingesetzt auf der Konfigurationsseite **und** prominent auf dem Dashboard, wenn BACnet nicht verbunden ist |
+
+**Akzeptanzkriterien:**
+- [ ] Die Ports werden **gescannt** (nicht aus der Konfiguration gelesen)
+- [ ] Ein **nachträglich** eingesteckter Adapter erscheint nach „Neu suchen"
+- [ ] Der gewählte Port ist **sofort** wirksam (kein Neustart)
+- [ ] Der Portwechsel überlebt einen Neustart (`config.json`)
+- [ ] Die Oberfläche zeigt den Hinweis **prominent**, wenn BACnet nicht verbunden ist
+- [ ] `/api/status` und `/api/config` melden den **laufenden** Port
+
+---
+
 ## Abnahme der Phase 5
 
 - [ ] Dashboard, Item-Browser, Konfiguration, Diagnose, Login, Assistent, Hilfe vorhanden
 - [ ] Fehlerbanner sichtbar und verständlich
 - [ ] **Log-Viewer** zeigt Live- und historische Einträge mit Filtern und Export
 - [ ] Schreibfehler → Serverwert wiederhergestellt
-- [ ] Live-Werte via SSE (kein Polling im Browser)
-- [ ] `npm run lint` grün, Produktions-Build erfolgreich
+- [ ] Live-Werte via SSE (kein Polling im Browser)- [ ] **Serielle Ports** sind scanbar und **ohne Neustart** umstellbar- [ ] `npm run lint` grün, Produktions-Build erfolgreich
 - [ ] Meilenstein **M3** erreicht: „UI bedient die Anlage“
 
 → Weiter mit [Phase 6](phase-6.md)

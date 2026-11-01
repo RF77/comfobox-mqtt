@@ -1,0 +1,102 @@
+<div class="cb-picker">
+  <div class="cb-picker-head">
+    <span class="cb-picker-current">
+      Aktuell eingestellt: <code>{{ currentText() }}</code>
+    </span>
+
+    <p-button
+      label="Neu suchen"
+      icon="pi pi-refresh"
+      [outlined]="true"
+      [loading]="scanning()"
+      (onClick)="scan()"
+    />
+  </div>
+
+  @if (ports().length === 0) {
+    <p-message severity="warn" styleClass="w-full">
+      <p>Kein serieller Port gefunden.</p>
+      <p>
+        Bitte den USB-RS485-Adapter einstecken und danach auf „Neu suchen" klicken. Falls der
+        Adapter an einem anderen Rechner hängt, muss er an diesen Gateway angeschlossen werden.
+      </p>
+    </p-message>
+  } @else {
+    <div class="cb-ports" role="radiogroup" [attr.aria-label]="'Serielle Ports'">
+      @for (port of ports(); track port.port) {
+        <div class="cb-port" [class.cb-port-selected]="selected() === port.port">
+          <p-radiobutton
+            [name]="groupName"
+            [value]="port.port"
+            [ngModel]="selected()"
+            (ngModelChange)="select($event)"
+            [inputId]="'serial-' + groupName + '-' + port.port"
+            [ariaLabelledBy]="'serial-label-' + groupName + '-' + port.port"
+          />
+
+          <label
+            class="cb-port-body"
+            [for]="'serial-' + groupName + '-' + port.port"
+          >
+            <span class="cb-port-description" [id]="'serial-label-' + groupName + '-' + port.port">
+              {{ port.description ?? port.port }}
+            </span>
+            <code class="cb-port-path">{{ port.port }}</code>
+            @if (port.stablePath) {
+              <span class="cb-port-stable">stabil: {{ port.stablePath }}</span>
+            }
+          </label>
+
+          @if (port.port === currentPort()) {
+            <p-tag value="aktiv" severity="success" />
+          }
+        </div>
+      }
+    </div>
+  }
+
+  <div class="cb-field">
+    <label [for]="'serial-baudrate-' + groupName">Baudrate</label>
+    <p-select
+      [inputId]="'serial-baudrate-' + groupName"
+      [options]="baudrates"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="baudrate()"
+      (ngModelChange)="selectBaudrate($event)"
+    />
+    <span class="cb-hint">
+      Die ComfoBox muss auf 38400 Baud umgestellt und neu gestartet sein (Werks-Default 76800).
+    </span>
+  </div>
+
+  <div class="cb-actions">
+    <p-button
+      label="Verbindung testen"
+      icon="pi pi-plug"
+      [outlined]="true"
+      [loading]="testing()"
+      [disabled]="!selected()"
+      (onClick)="test()"
+    />
+
+    <p-button
+      label="Übernehmen"
+      icon="pi pi-check"
+      [loading]="applying()"
+      [disabled]="!selected() || !changed()"
+      (onClick)="apply()"
+    />
+
+    <span class="cb-hint">
+      Wirkt sofort - der Gateway startet nicht neu.
+    </span>
+  </div>
+
+  @if (result(); as res) {
+    <p-message [severity]="res.ok ? 'success' : 'error'" styleClass="w-full cb-result">
+      <p>{{ res.message }}</p>
+      <p class="cb-hint">Dauer: {{ res.durationMs }} ms</p>
+    </p-message>
+  }
+</div>

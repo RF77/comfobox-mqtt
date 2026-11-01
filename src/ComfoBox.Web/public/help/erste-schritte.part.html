@@ -1,0 +1,218 @@
+<article class="prose">
+<p>Diese Anleitung führt Sie von der Lieferung bis zu den ersten gelesenen Werten.
+Sie dauert etwa 15 Minuten.</p>
+<hr>
+<h2 id="1-comfobox-auf-38400-baud-umstellen">1. ComfoBox auf 38400 Baud umstellen</h2>
+<blockquote>
+<p><strong>Das ist der häufigste Grund, warum nichts funktioniert.</strong>
+Die ComfoBox spricht nach dem Werksthypoten <strong>76800 Baud</strong>. Das Gateway
+erwartet <strong>38400 Baud</strong>.</p>
+</blockquote>
+<h3 id="wie-sie-die-baudrate-ändern">Wie Sie die Baudrate ändern</h3>
+<ol>
+<li>Öffnen Sie am Bedienpanel der ComfoBox das Menü <strong>Service</strong></li>
+<li>Wählen Sie <strong>Installationsassistent</strong> bzw. <strong>Expertenebene</strong></li>
+<li>Suchen Sie den Punkt <strong>Baudrate</strong> (bei manchen Geräten unter <em>Kommunikation</em>)</li>
+<li>Stellen Sie den Wert auf <strong>38400</strong> ein</li>
+<li><strong>Speichern</strong></li>
+<li><strong>Starten Sie die ComfoBox neu</strong> – die Änderung wird erst danach wirksam</li>
+</ol>
+<blockquote>
+<p><strong>Warum der Neustart?</strong> Die Baudrate wird nur beim Start des Kommunikations-
+prozesses gelesen. Ohne Neustart bleibt die ComfoBox bei 76800.</p>
+</blockquote>
+<p>Prüfen Sie, ob die ComfoBox antwortet, mit dem Tool <strong>„Kommunikation prüfen&quot;</strong>,
+sofern Ihr Gerät eines anbietet.</p>
+<hr>
+<h2 id="2-usb-rs485-adapter-anschließen">2. USB-RS485-Adapter anschließen</h2>
+<table>
+<thead>
+<tr>
+<th>Kabel am Adapter</th>
+<th>Anschluss an der ComfoBox</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>A</strong> (oder D+/RS485-)</td>
+<td><strong>A</strong></td>
+</tr>
+<tr>
+<td><strong>B</strong> (oder D-/RS485-)</td>
+<td><strong>B</strong></td>
+</tr>
+<tr>
+<td><strong>GND</strong></td>
+<td><strong>GND</strong> (falls vorhanden)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>A und B nicht vertauschen.</strong> Bei vertauschten Kabeln antwortet die ComfoBox
+gar nicht – das ist der zweithäufigste Fehler.</p>
+</blockquote>
+<p>Stecken Sie den Adapter in einen USB-Port des Computers, des NAS oder des
+Raspberry Pi.</p>
+<hr>
+<h2 id="3-software-installieren">3. Software installieren</h2>
+<p>Wählen Sie eine der vier Möglichkeiten:</p>
+<table>
+<thead>
+<tr>
+<th>Ihre Situation</th>
+<th>Empfehlung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Synology-NAS (DS923+)</td>
+<td><a href="/help/synology">Paket aus dem Paketzentrum</a></td>
+</tr>
+<tr>
+<td>Home Assistant auf HA OS / Supervised</td>
+<td><a href="/help/ha-addon">Add-on</a></td>
+</tr>
+<tr>
+<td>Eigenes Linux-System mit Docker</td>
+<td><a href="/help/installation#docker-container">Docker-Container</a></td>
+</tr>
+<tr>
+<td>Nur Home Assistant, ohne Docker</td>
+<td><a href="/help/home-assistant">HACS-Integration</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wichtig:</strong> Auf <strong>keinem</strong> System dürfen das Gateway und eine direkte
+BACnet-Verbindung gleichzeitig auf denselben Anschluss gelegt werden.
+Der Bus kann nur einen Sender auf einmal vertragen.</p>
+</blockquote>
+<hr>
+<h2 id="4-ersteinrichtung">4. Ersteinrichtung</h2>
+<p>Beim ersten Start fragt das Gateway nach seinen Einstellungen. Der Assistent
+begleitet Sie durch sechs Schritte:</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was Sie tun</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Seriellen Port wählen</strong> – die Liste zeigt alle erkannten Anschlüsse</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>BACnet prüfen</strong> – Baudrate 38400, Geräte-ID 1, dann <em>Verbindung testen</em></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>MQTT</strong> – Broker eintragen (optional) und <em>Verbindung testen</em></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Web-Zugang</strong> – Benutzername und Passwort setzen (mindestens 12 Zeichen)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Fertig</strong> – <em>Übernehmen und starten</em></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Keine seriellen Ports in der Liste?</strong>
+Der Adapter ist nicht erkannt. Stecken Sie ihn ab und stecken Sie ihn neu ein
+und klicken Sie auf <em>Erneut suchen</em>. Details: <a href="/help/anschluss">Anschluss</a>.</p>
+</blockquote>
+<blockquote>
+<p><strong>„Die ComfoBox antwortet nicht&quot;?</strong>
+Prüfen Sie die Baudrate (Schritt 1) und die Verdrahtung (Schritt 2).
+Details: <a href="/help/fehlersuche#die-comfobox-antwortet-nicht">Fehlersuche</a>.</p>
+</blockquote>
+<hr>
+<h2 id="5-erste-werte-sehen">5. Erste Werte sehen</h2>
+<p>Nach dem Neustart öffnet sich die Web-Oberfläche. Sie sehen:</p>
+<table>
+<thead>
+<tr>
+<th>Kachel</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Health-Banner</strong></td>
+<td>grün = alles in Ordnung, gelb = eingeschränkt, rot = nicht erreichbar</td>
+</tr>
+<tr>
+<td><strong>BACnet</strong></td>
+<td>verbunden oder getrennt</td>
+</tr>
+<tr>
+<td><strong>MQTT</strong></td>
+<td>verbunden oder getrennt (nur wenn ein Broker eingetragen ist)</td>
+</tr>
+<tr>
+<td><strong>Betriebsart</strong></td>
+<td>die aktuell gewählte Betriebsart der Lüftungsanlage</td>
+</tr>
+<tr>
+<td><strong>Raumsollwert</strong></td>
+<td>der aktuell gesetzte Sollwert in °C</td>
+</tr>
+</tbody></table>
+<p>Unter <strong>Geräte</strong> sehen Sie den vollständigen Katalog aller 127 Mess- und
+Stellwerte. Links neben jedem Wert steht, ob er <strong>schreibbar</strong> ist.</p>
+<hr>
+<h2 id="zugang-zur-web-oberfläche">Zugang zur Web-Oberfläche</h2>
+<table>
+<thead>
+<tr>
+<th>Installationsart</th>
+<th>Adresse</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Synology-Paket</td>
+<td><code>http://&lt;NAS-IP&gt;:8081/</code></td>
+</tr>
+<tr>
+<td>Home-Assistant-Add-on</td>
+<td><strong>Hilfe</strong>-Panel in Home Assistant</td>
+</tr>
+<tr>
+<td>Docker-Container</td>
+<td><code>http://&lt;Rechner-IP&gt;:8081/</code></td>
+</tr>
+</tbody></table>
+<p>Die Oberfläche ist passwortgeschützt. Das Passwort haben Sie in Schritt 4 des
+Assistenten vergeben.</p>
+<blockquote>
+<p><strong>Passwort vergessen?</strong>
+Im Docker-Betrieb: die Datei <code>config.json</code> im Datenverzeichnis bearbeiten und
+den Container neu starten. Im Synology-Betrieb: das Paket deinstallieren und
+neu installieren – die Konfiguration bleibt dabei erhalten.</p>
+</blockquote>
+<hr>
+<h2 id="nächster-schritt">Nächster Schritt</h2>
+<table>
+<thead>
+<tr>
+<th>Sie möchten …</th>
+<th>Lesen Sie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>die Installation im Detail</td>
+<td><a href="/help/installation">Installation</a></td>
+</tr>
+<tr>
+<td>Werte an Home Assistant übergeben</td>
+<td><a href="/help/home-assistant">Home Assistant</a></td>
+</tr>
+<tr>
+<td>Werte über MQTT nutzen</td>
+<td><a href="/help/mqtt">MQTT</a></td>
+</tr>
+<tr>
+<td>etwas nicht funktioniert</td>
+<td><a href="/help/fehlersuche">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+
+      </article>

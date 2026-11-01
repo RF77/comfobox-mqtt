@@ -11,6 +11,15 @@ namespace ComfoBox.Bacnet.Serial;
 /// </remarks>
 public interface ISerialPort : IDisposable
 {
+    /// <summary>
+    /// Der Name des Ports (z. B. <c>COM3</c> oder <c>/dev/ttyUSB0</c>).
+    /// </summary>
+    /// <remarks>
+    /// Der Name wird nur für die Diagnose (Log) gebraucht - der Transport
+    /// benutzt ihn, um den **tatsächlich** geöffneten Port zu melden.
+    /// </remarks>
+    string PortName { get; }
+
     /// <summary>Ist der Port aktuell geöffnet?</summary>
     bool IsOpen { get; }
 

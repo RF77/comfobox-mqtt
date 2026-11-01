@@ -144,6 +144,11 @@ public sealed class BacnetClient : IBacnetClient
     }
 
     /// <summary>
+    /// Fordert einen Neuaufbau der seriellen Schnittstelle an.
+    /// </summary>
+    public void RequestReconnect() => _transport.RequestReconnect();
+
+    /// <summary>
     /// Sendet ein WhoIs an alle Geräte im Bus.
     /// </summary>
     /// <param name="lowLimit">Untere Grenze der Geräte-Instanz oder -1.</param>

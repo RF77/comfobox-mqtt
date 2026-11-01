@@ -1,0 +1,36 @@
+:host {
+  display: block;
+}
+
+.cb-login {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.cb-login > * {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.cb-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+}
+
+.cb-field > label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.cb-hint {
+  font-size: 0.82rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-block {
+  display: block;
+  margin-bottom: 1rem;
+}

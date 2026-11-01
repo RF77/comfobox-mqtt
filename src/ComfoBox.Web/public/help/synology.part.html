@@ -1,0 +1,325 @@
+<article class="prose">
+<p>Das Gateway lässt sich als <strong>Paket</strong> auf der DS923+ installieren. Sie klicken
+<em>Installieren</em>, der Browser öffnet sich, und ein Assistent führt Sie durch die
+Einrichtung.</p>
+<blockquote>
+<p><strong>Voraussetzung:</strong> DSM 7.2.1 oder neuer mit <strong>Container Manager</strong>.
+Fehlt der Container Manager, installiert DSM ihn automatisch mit.</p>
+</blockquote>
+<hr>
+<h2 id="installation">Installation</h2>
+<h3 id="variante-a-aus-dem-paketzentrum-empfohlen">Variante A – aus dem Paketzentrum (empfohlen)</h3>
+<ol>
+<li>Kopieren Sie die Datei <code>ComfoBoxGateway_noarch-dsm7_&lt;version&gt;.spk</code> auf das NAS
+(z. B. per Samba-Freigabe oder <code>scp</code>)</li>
+<li><strong>Paketcenter → Installieren → Manuelle Installation</strong></li>
+<li>Datei auswählen → <strong>Installieren</strong></li>
+<li><strong>Fertig</strong> – das Browserfenster öffnet sich automatisch</li>
+</ol>
+<h3 id="variante-b-eigene-paketquelle-für-mehrere-installationen">Variante B – eigene Paketquelle (für mehrere Installationen)</h3>
+<p>Sie können die Paketquelle im DSM eintragen, dann erscheint das Paket in der
+normalen Liste:</p>
+<p><strong>Paketcenter → Einstellungen → Paketquelle → Hinzufügen</strong></p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Name</td>
+<td><code>ComfoBox</code></td>
+</tr>
+<tr>
+<td>URL</td>
+<td><code>https://&lt;Release-URL&gt;/packages.json</code></td>
+</tr>
+</tbody></table>
+<p>Danach: <strong>Paketcenter → Community → ComfoBox Gateway → Installieren</strong></p>
+<hr>
+<h2 id="was-bei-der-installation-passiert">Was bei der Installation passiert</h2>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was das Paket tut</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Voraussetzungen prüfen</td>
+<td>DSM-Version, Container Manager, freier Port 8081</td>
+</tr>
+<tr>
+<td>Verzeichnisse anlegen</td>
+<td>Konfiguration und Protokolle</td>
+</tr>
+<tr>
+<td>USB-Regel installieren</td>
+<td>stabiler Pfad für den Adapter, passende Rechte</td>
+</tr>
+<tr>
+<td>Ersten Port suchen</td>
+<td>alle seriellen Anschlüsse ermitteln</td>
+</tr>
+<tr>
+<td>Konfiguration anlegen</td>
+<td>mit „Einrichtung noch nicht abgeschlossen&quot;</td>
+</tr>
+<tr>
+<td>Container starten</td>
+<td>Compose-Datei erzeugen und starten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Es werden keine Parameter abgefragt.</strong> Das ist Absicht: die Installation soll
+<strong>ein Klick</strong> sein. Alles Weitere erledigt der Assistent danach.</p>
+</blockquote>
+<hr>
+<h2 id="der-assistent">Der Assistent</h2>
+<p>Nach der Installation öffnet sich automatisch <code>http://&lt;NAS-IP&gt;:8081/</code> und der
+Einrichtungsassistent startet:</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Seriellen Port wählen</strong> – alle erkannten Anschlüsse</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>BACnet prüfen</strong> – Baudrate 38400, Geräte-ID 1, Verbindungstest</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>MQTT</strong> – Broker eintragen und testen (optional)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Web-Zugang</strong> – Benutzername und Passwort</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Fertig</strong> – übernehmen, Neustart wird beobachtet</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Assistent ist wiederholbar.</strong> Sie können ihn jederzeit über
+<em>Konfiguration → Erneut einrichten</em> erneut durchlaufen – etwa wenn Sie den
+Adapter umgesteckt haben.</p>
+</blockquote>
+<p>Details: <a href="/help/erste-schritte">Erste Schritte</a></p>
+<hr>
+<h2 id="wichtige-pfade-auf-dem-nas">Wichtige Pfade auf dem NAS</h2>
+<table>
+<thead>
+<tr>
+<th>Pfad</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/var/packages/ComfoBoxGateway/target/</code></td>
+<td>Programm – wird beim Update ersetzt</td>
+</tr>
+<tr>
+<td><code>/var/packages/ComfoBoxGateway/var/</code></td>
+<td><strong>Konfiguration, Schreibzähler, Protokolle</strong></td>
+</tr>
+<tr>
+<td><code>/etc/udev/rules.d/99-comfobox-serial.rules</code></td>
+<td>USB-Regel</td>
+</tr>
+<tr>
+<td><code>/etc/systemd/system/comfobox-gateway.service</code></td>
+<td>Dienst für die Überwachung</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bei einem Update wird <code>target/</code> ersetzt, <code>var/</code> bleibt.</strong> Ihre Einstellungen
+und der Schreibzähler bleiben erhalten.</p>
+</blockquote>
+<hr>
+<h2 id="der-container">Der Container</h2>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Name</td>
+<td><code>comfobox-gateway</code></td>
+</tr>
+<tr>
+<td>Port</td>
+<td>8081 (Host) → 8080 (Container)</td>
+</tr>
+<tr>
+<td>Image</td>
+<td><code>ghcr.io/rf77/comfobox-gateway:&lt;version&gt;</code></td>
+</tr>
+<tr>
+<td>Rechte</td>
+<td>keine Administratorrechte, keine Sonderrechte</td>
+</tr>
+<tr>
+<td>Serieller Port</td>
+<td>genau der gewählte Anschluss</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Es läuft nur ein Prozess.</strong> Die Oberfläche wird direkt vom .NET-Host ausgeliefert –
+kein zusätzlicher Webserver.</p>
+</blockquote>
+<hr>
+<h2 id="serielle-ports-wechseln">Serielle Ports wechseln</h2>
+<p>Wenn Sie den Adapter in eine andere USB-Buchse stecken:</p>
+<ol>
+<li>In der Web-Oberfläche: <strong>Konfiguration → Erneut einrichten</strong></li>
+<li>Schritt 1: neuen Port wählen</li>
+<li><strong>Übernehmen</strong></li>
+</ol>
+<p>Der Container wird dann mit dem neuen Anschluss neu erstellt. Das dauert etwa
+10 Sekunden.</p>
+<blockquote>
+<p><strong>Sie müssen das Paket nicht neu installieren</strong> und nichts auf der Kommandozeile
+machen.</p>
+</blockquote>
+<hr>
+<h2 id="dienste">Dienste</h2>
+<table>
+<thead>
+<tr>
+<th>Befehl</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>synopkg start ComfoBoxGateway</code></td>
+<td>starten</td>
+</tr>
+<tr>
+<td><code>synopkg stop ComfoBoxGateway</code></td>
+<td>stoppen</td>
+</tr>
+<tr>
+<td><code>synopkg status ComfoBoxGateway</code></td>
+<td>Status abfragen</td>
+</tr>
+<tr>
+<td><code>synopkg restart ComfoBoxGateway</code></td>
+<td>neu starten</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Über SSH</strong> erreichbar. Die Befehle laufen auch, wenn der Container gerade
+kaputt ist.</p>
+</blockquote>
+<hr>
+<h2 id="protokolle">Protokolle</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Datei</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Container-Manager → <code>comfobox-gateway</code> → Protokoll</td>
+<td>live</td>
+</tr>
+<tr>
+<td>SSH</td>
+<td><code>/var/packages/ComfoBoxGateway/var/logs/</code></td>
+</tr>
+<tr>
+<td>Web-Oberfläche</td>
+<td><strong>Diagnose</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bei Supportfragen</strong> ist das Protokoll aus der Web-Oberfläche (Diagnose) der
+einfachste Weg – es ist ohne SSH erreichbar.</p>
+</blockquote>
+<hr>
+<h2 id="aktualisieren">Aktualisieren</h2>
+<p><strong>Paketcenter → ComfoBox Gateway → Aktualisieren</strong></p>
+<p>Der Container wird dabei automatisch neu erstellt. Konfiguration und Schreibzähler
+bleiben erhalten.</p>
+<hr>
+<h2 id="deinstallieren">Deinstallieren</h2>
+<p><strong>Paketcenter → ComfoBox Gateway → Deinstallieren</strong></p>
+<table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Verhalten</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Container</td>
+<td>wird entfernt</td>
+</tr>
+<tr>
+<td>Dienst, USB-Regel</td>
+<td>werden entfernt</td>
+</tr>
+<tr>
+<td><strong>Konfiguration und Schreibzähler</strong></td>
+<td><strong>bleiben erhalten</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Warum bleiben die Daten?</strong> Der Schreibzähler schützt die Elektronik der Heizung.
+Ein Deinstallieren darf ihn nicht zurücksetzen. Bei einer Neuinstallation wird
+die vorhandene Konfiguration wieder übernommen.</p>
+</blockquote>
+<hr>
+<h2 id="problembehebung">Problembehebung</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Installation schlägt fehl</td>
+<td>Container Manager fehlt</td>
+<td>DSM installiert ihn automatisch – ggf. von Hand</td>
+</tr>
+<tr>
+<td>„Port belegt&quot;</td>
+<td>8081 ist belegt</td>
+<td>Port in den Paketeinstellungen ändern</td>
+</tr>
+<tr>
+<td>Paket startet nicht</td>
+<td>Container Manager läuft nicht</td>
+<td>Container Manager starten</td>
+</tr>
+<tr>
+<td>Browser öffnet sich nicht</td>
+<td>Popup-Blocker</td>
+<td><code>http://&lt;NAS-IP&gt;:8081/</code> manuell aufrufen</td>
+</tr>
+<tr>
+<td>Werte fehlen</td>
+<td>falscher Serial-Port</td>
+<td>Assistent erneut durchlaufen</td>
+</tr>
+<tr>
+<td>Alles <code>unavailable</code></td>
+<td>USB-Adapter gezogen</td>
+<td>Adapter einstecken, ComfoBox neu starten</td>
+</tr>
+</tbody></table>
+
+      </article>

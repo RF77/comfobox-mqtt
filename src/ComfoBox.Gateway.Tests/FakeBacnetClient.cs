@@ -32,6 +32,9 @@ internal sealed class FakeBacnetClient : IBacnetClient
     /// <summary>Wird der Schreibvorgang fehlschlagen?</summary>
     public bool FailWrites { get; set; }
 
+    /// <summary>Wie oft wurde ein Neuaufbau der Schnittstelle angefordert?</summary>
+    public int Reconnects { get; private set; }
+
     /// <inheritdoc />
     public int Timeout { get; set; } = 1000;
 
@@ -58,6 +61,9 @@ internal sealed class FakeBacnetClient : IBacnetClient
 
     /// <inheritdoc />
     public Task StopAsync() => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public void RequestReconnect() => Reconnects++;
 
     /// <inheritdoc />
     public Task WhoIsAsync(int lowLimit = -1, int highLimit = -1, CancellationToken cancellationToken = default)

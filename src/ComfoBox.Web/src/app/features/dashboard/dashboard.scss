@@ -1,0 +1,63 @@
+:host {
+  display: block;
+}
+
+.cb-page-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.cb-section-title {
+  margin: 2rem 0 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.cb-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+}
+
+.cb-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+
+.cb-tile-label {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-tile-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.cb-tile-hint {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-tile-error {
+  font-size: 0.85rem;
+  color: var(--p-red-500, #ef4444);
+}
+
+.cb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+// Der Hinweis „BACnet nicht verbunden" soll auffallen - er steht direkt
+// unter der Überschrift und trägt einen roten Rand.
+.cb-alert-card {
+  display: block;
+  margin-bottom: 1rem;
+  border: 1px solid var(--p-red-500, #ef4444);
+  border-left-width: 4px;
+}

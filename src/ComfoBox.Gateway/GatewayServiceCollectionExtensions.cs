@@ -98,6 +98,16 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton(logBuffer);
         services.AddSingleton<IErrorCollector>(sp => new ErrorCollector(sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<IHealthReporter, HealthReporter>();
+
+        // Die zur Laufzeit geltenden Parameter der seriellen Schnittstelle.
+        // Sie starten mit den Werten aus der Konfiguration und werden bei
+        // einem Portwechsel aus der Oberfläche heraus aktualisiert.
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<BacnetOptions>>().Value;
+
+            return new SerialPortSettings(options.Port, options.Baudrate);
+        });
         services.AddSingleton<IValueCache>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<GatewayOptions>>().Value;
@@ -119,6 +129,7 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton<IBacnetClient>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<BacnetOptions>>().Value;
+            var settings = sp.GetRequiredService<SerialPortSettings>();
 
             var serial = new BacnetSerialOptions
             {
@@ -128,8 +139,11 @@ public static class GatewayServiceCollectionExtensions
                 WriteTimeoutMs = options.ItemTimeoutMs,
             };
 
+            // Die Fabrik liest ihre Parameter **bei jedem Öffnen** aus den
+            // SerialPortSettings - so kann der Port zur Laufzeit gewechselt
+            // werden, ohne dass der Gateway neu startet.
             var transport = new BacnetMstpTransport(
-                new SerialPortFactory(serial),
+                new GatewaySerialPortFactory(settings, options.ItemTimeoutMs),
                 new BacnetMstpOptions
                 {
                     ThisStation = (short)options.ThisStation,

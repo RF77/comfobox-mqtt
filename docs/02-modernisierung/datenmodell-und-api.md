@@ -223,6 +223,9 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 | `GET` | `/api/events` | SSE-Stream (Wertänderungen, Health) | `text/event-stream` |
 | `GET` | `/api/config` | Aktuelle Konfiguration (ohne Secrets) | `ConfigDto` |
 | `PUT` | `/api/config` | Konfiguration ändern (reload) | `204` |
+| `GET` | `/api/config/serial-ports` | Erkannte serielle Ports (Hotplug) | `SerialPort[]` |
+| `POST` | `/api/config/bacnet/test` | Seriellen Port prüfen | `TestResult` |
+| `PUT` | `/api/config/bacnet` | **Schnittstelle umstellen – wirkt sofort** | `204` |
 | `POST` | `/api/service/restart` | **Service neu starten** | `202` |
 | `POST` | `/api/service/reconnect/bacnet` | BACnet neu verbinden | `202` |
 | `POST` | `/api/service/reconnect/mqtt` | MQTT neu verbinden | `202` |
@@ -587,12 +590,21 @@ appsettings.json (im Image)        ← Defaults
 |---|---|
 | `PUT /api/config` | persistiert die geänderten Werte nach `config.json` (Modus 0600) |
 | Teile der Konfiguration | **nur** zur Laufzeit änderbar: `ExpertMode`, `PollIntervalSeconds`, `MaxNumberOfWritesPer24h`, `UseMqttRetain` |
-| **Nicht** änderbar zur Laufzeit | `Bacnet:Port`, `Bacnet:Baudrate`, `Mqtt:Brokers` → erfordern einen Neustart (Button in der UI) |
+| `PUT /api/config/bacnet` | **wirkt sofort**: `Bacnet:Port` und `Bacnet:Baudrate` werden übernommen, die Konfiguration wird geschrieben und der BACnet-Stack baut die Verbindung **ohne Neustart** neu auf |
+| **Nicht** änderbar zur Laufzeit | `Mqtt:Brokers` → erfordert einen Neustart (Button in der UI) |
 
 > **Umsetzung (Phase 4):** `PUT /api/config` schreibt die Werte in die
 > `config.json`; sie werden beim nächsten Start wirksam (die Options sind
 > unveränderliche Schnappschüsse). Der Neustart wird in der Oberfläche
 > angeboten.
+>
+> **Umsetzung (Phase 5, serielle Schnittstelle):** Der serielle Port ist die
+> **einzige** Einstellung, die ohne Neustart umgestellt werden kann. Grund:
+> Der Benutzer steckt den Adapter oft erst **nach** dem Start ein oder er
+> wechselt die USB-Buchse. `BacnetSerialManager` schreibt die Konfiguration,
+> aktualisiert die `SerialPortSettings` und fordert den Neuaufbau des
+> MS/TP-Transports an - der Backoff (bis 30 s) wird dabei abgebrochen, der
+> Port wird **sofort** neu geöffnet.
 
 > **Sicherheitsregel:** Konfigurationsänderungen, die Schreibzugriffe ermöglichen
 > (`ExpertMode = true`), erfordern eine explizite Bestätigung in der UI und werden

@@ -40,6 +40,9 @@ public sealed class SerialPortAdapter : ISerialPort
     }
 
     /// <inheritdoc />
+    public string PortName => _port.PortName;
+
+    /// <inheritdoc />
     public bool IsOpen => _port.IsOpen;
 
     /// <inheritdoc />

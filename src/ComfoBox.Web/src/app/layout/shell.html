@@ -1,0 +1,62 @@
+<div class="cb-shell">
+  <header class="cb-header">
+    <div class="cb-header-start">
+      <p-button
+        icon="pi pi-bars"
+        [text]="true"
+        [rounded]="true"
+        aria-label="Navigation ein- und ausblenden"
+        class="cb-menu-button"
+        (onClick)="menuOpen.set(!menuOpen())"
+      />
+
+      <a routerLink="/" class="cb-brand">
+        <i class="pi pi-sun" aria-hidden="true"></i>
+        <span>ComfoBox Gateway</span>
+      </a>
+    </div>
+
+    <nav class="cb-nav" [class.cb-nav-open]="menuOpen()" aria-label="Hauptnavigation">
+      @for (entry of navigation; track entry.route) {
+        <a
+          [routerLink]="entry.route"
+          routerLinkActive="cb-nav-active"
+          [routerLinkActiveOptions]="{ exact: entry.route === '/' }"
+          class="cb-nav-link"
+          (click)="closeMenu()"
+        >
+          <i [class]="entry.icon" aria-hidden="true"></i>
+          <span>{{ entry.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <div class="cb-header-end">
+      <span
+        class="cb-health-dot"
+        [class.cb-health-online]="health.healthy()"
+        [class.cb-health-degraded]="health.degraded()"
+        [class.cb-health-offline]="health.offline() || health.unreachable()"
+        [attr.aria-label]="'Zustand: ' + health.state()"
+        role="status"
+      ></span>
+
+      @if (session.userName(); as name) {
+        <span class="cb-user">{{ name }}</span>
+        <p-button
+          icon="pi pi-sign-out"
+          [text]="true"
+          [rounded]="true"
+          aria-label="Abmelden"
+          (onClick)="logout()"
+        />
+      }
+    </div>
+  </header>
+
+  <main class="cb-main">
+    <app-health-banner />
+
+    <router-outlet />
+  </main>
+</div>

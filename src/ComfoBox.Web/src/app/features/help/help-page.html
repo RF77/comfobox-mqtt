@@ -1,0 +1,52 @@
+<section class="cb-help">
+  <p>
+    <a routerLink="/help" class="cb-back-link">
+      <i class="pi pi-arrow-left" aria-hidden="true"></i>
+      Alle Hilfeseiten
+    </a>
+  </p>
+
+  @if (error(); as message) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ message }}</p>
+    </p-message>
+  }
+
+  @if (meta(); as entry) {
+    <p-card>
+      <ng-template #header>
+        <div class="cb-help-header">
+          <h1 class="cb-help-heading">{{ entry.title }}</h1>
+          <p-tag
+            [value]="entry.audience === 'user' ? 'Anleitung' : 'Referenz'"
+            severity="info"
+          />
+        </div>
+      </ng-template>
+
+      <p class="cb-help-description">{{ entry.description }}</p>
+
+      <div class="cb-help-content" [innerHTML]="html()"></div>
+
+      <ng-template #footer>
+        <div class="cb-help-footer">
+          <p-button
+            label="Zurück"
+            icon="pi pi-arrow-left"
+            [text]="true"
+            [disabled]="!previous()"
+            (onClick)="go(previous())"
+          />
+          <p-button
+            label="Weiter"
+            icon="pi pi-arrow-right"
+            iconPos="right"
+            [text]="true"
+            [disabled]="!next()"
+            (onClick)="go(next())"
+          />
+        </div>
+      </ng-template>
+    </p-card>
+  }
+</section>

@@ -51,6 +51,7 @@ internal static class StatusEndpoints
                 BacnetOptions bacnet,
                 MqttOptions mqtt,
                 BacnetDevice device,
+                SerialPortSettings serial,
                 IMqttClientProvider clients,
                 IWriteCounter counter) =>
             {
@@ -64,7 +65,10 @@ internal static class StatusEndpoints
                     Bacnet = new BacnetStatusDto
                     {
                         Connected = device.IsConnected,
-                        Port = bacnet.Port,
+
+                        // Der **laufende** Port - nicht der aus der Datei. Nach
+                        // einem Portwechsel wird hier der neue stehen.
+                        Port = serial.PortName,
                         LastError = device.LastError,
                     },
                     Mqtt = new MqttStatusDto

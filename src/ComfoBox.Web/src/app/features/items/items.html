@@ -1,0 +1,111 @@
+<section class="cb-items">
+  <h1 class="cb-page-title">Geräte</h1>
+
+  <div class="cb-toolbar">
+    <span class="cb-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        pInputText
+        type="search"
+        [ngModel]="items.search()"
+        (ngModelChange)="items.search.set($event)"
+        placeholder="Name, Beschreibung oder Topic suchen …"
+        aria-label="Items durchsuchen"
+      />
+    </span>
+
+    <div class="cb-filters">
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="items.onlyWritable()"
+        (ngModelChange)="items.onlyWritable.set($event)"
+        inputId="filter-writable"
+      />
+      <label for="filter-writable">Nur schreibbar</label>
+
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="items.onlyExpert()"
+        (ngModelChange)="items.onlyExpert.set($event)"
+        inputId="filter-expert"
+      />
+      <label for="filter-expert">Nur Expertenmodus</label>
+
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="items.onlyStale()"
+        (ngModelChange)="items.onlyStale.set($event)"
+        inputId="filter-stale"
+      />
+      <label for="filter-stale">Nur veraltet</label>
+    </div>
+
+    <div class="cb-toolbar-end">
+      <span class="cb-count">{{ visibleCount() }} von {{ items.count() }} Items</span>
+
+      <p-button
+        icon="pi pi-refresh"
+        [text]="true"
+        aria-label="Katalog neu laden"
+        (onClick)="reload()"
+      />
+
+      <p-button
+        icon="pi pi-filter-slash"
+        label="Filter zurücksetzen"
+        [text]="true"
+        [disabled]="
+          !items.search() &&
+          !items.onlyWritable() &&
+          !items.onlyExpert() &&
+          !items.onlyStale() &&
+          !items.group()
+        "
+        (onClick)="reset()"
+      />
+    </div>
+  </div>
+
+  @if (items.error(); as error) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ error }}</p>
+    </p-message>
+  }
+
+  @if (items.loading()) {
+    <p-message severity="info" styleClass="w-full">
+      <p>Der Item-Katalog wird geladen …</p>
+    </p-message>
+  }
+
+  @if (items.grouped().length === 0 && !items.loading()) {
+    <p-message severity="info" styleClass="w-full">
+      <p>Keine Items gefunden. Bitte die Suche oder die Filter anpassen.</p>
+    </p-message>
+  }
+
+  @for (group of items.grouped(); track group.group) {
+    <section class="cb-group">
+      <h2 class="cb-group-title">
+        <p-button
+          [label]="group.group + ' (' + group.items.length + ')'"
+          [text]="true"
+          [icon]="isCollapsed(group.group) ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"
+          (onClick)="toggleGroup(group.group)"
+        />
+      </h2>
+
+      @if (!isCollapsed(group.group)) {
+        <div class="cb-item-grid">
+          @for (item of group.items; track item.id) {
+            <app-item-value
+              [item]="item"
+              [saving]="items.saving().has(item.id)"
+              (write)="write($event)"
+            />
+          }
+        </div>
+      }
+    </section>
+  }
+</section>

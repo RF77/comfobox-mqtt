@@ -1,8 +1,10 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using ComfoBox.Bacnet;
 using ComfoBox.Gateway;
 using ComfoBox.Gateway.Api;
 using ComfoBox.Gateway.Logging;
+using ComfoBox.Gateway.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
@@ -181,6 +183,43 @@ internal sealed class GatewayApiFixture : IAsyncDisposable
         var text = await response.Content.ReadAsStringAsync();
         using var document = JsonDocument.Parse(text);
         return document.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Setzt den Administrator (so wie es der Assistent täte).
+    /// </summary>
+    /// <param name="userName">Der Benutzername.</param>
+    /// <param name="password">Das Passwort im Klartext.</param>
+    public void SetAdmin(string userName, string password)
+    {
+        var store = Services.GetRequiredService<ApiSecurityStore>();
+
+        store.SetAdmin(userName, PasswordHasher.Hash(password));
+        store.SetSetupCompleted(true);
+    }
+
+    /// <summary>
+    /// Meldet sich an und liefert das Sitzungskennzeichen (den Cookie-Wert).
+    /// </summary>
+    /// <param name="userName">Der Benutzername.</param>
+    /// <param name="password">Das Passwort im Klartext.</param>
+    /// <returns>Der Klartext des Sitzungs-Cookies.</returns>
+    public async Task<string> LoginAsync(string userName, string password)
+    {
+        var response = await Client.PostAsJsonAsync(
+            "/api/auth/login",
+            new { username = userName, password });
+
+        response.EnsureSuccessStatusCode();
+
+        var cookie = response.Headers.GetValues("Set-Cookie")
+            .First(c => c.StartsWith("cbk_session=", StringComparison.Ordinal));
+
+        var value = cookie["cbk_session=".Length..];
+
+        var separator = value.IndexOf(';', StringComparison.Ordinal);
+
+        return separator < 0 ? value : value[..separator];
     }
 
     /// <summary>

@@ -1,0 +1,107 @@
+:host {
+  display: block;
+}
+
+.cb-page-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.cb-lead {
+  margin: 0 0 1rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.cb-search input {
+  width: 100%;
+}
+
+.cb-help-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1rem;
+}
+
+.cb-help-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cb-help-title {
+  font-weight: 600;
+}
+
+.cb-help-description {
+  font-size: 0.88rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-help-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+}
+
+.cb-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 1rem;
+}
+
+.cb-help-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cb-help-heading {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+
+.cb-help-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+// Der Inhalt der Hilfeseite kommt per [innerHTML] aus dem Image.
+//
+// Wichtig: Die Styles dafür liegen **global** in `src/styles.scss`.
+// Die Komponenten-Styles (Emulated Encapsulation) treffen den eingefügten
+// HTML-Inhalt nicht - er hat kein `_ngcontent`-Attribut.
+
+// Die Anker der Überschriften - beim Sprung soll die Überschrift nicht
+// unter der Kopfleiste verschwinden.
+.cb-help-content :is(h2, h3, h4) {
+  scroll-margin-top: 4.5rem;
+}
+
+// Beim Drucken: nur der Inhalt, ohne Navigation und Karte.
+@media print {
+  .cb-help :is(.cb-back-link, .cb-help-footer, p-card .p-card-header, p-card .p-card-footer) {
+    display: none;
+  }
+
+  .cb-help-content {
+    font-size: 11pt;
+  }
+}

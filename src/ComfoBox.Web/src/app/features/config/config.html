@@ -1,0 +1,257 @@
+<section class="cb-config">
+  <h1 class="cb-page-title">Konfiguration</h1>
+
+  @if (config.error(); as error) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ error }}</p>
+    </p-message>
+  }
+
+  <!-- Allgemein -->
+  <p-card header="Allgemein" styleClass="cb-card">
+    <div class="cb-field">
+      <label for="config-base-topic">Basis-Topic</label>
+      <input
+        pInputText
+        id="config-base-topic"
+        [ngModel]="config.config()?.gateway?.baseTopic"
+        readonly
+      />
+      <span class="cb-hint">
+        Der Topic-Vertrag ist unverhandelbar - das Basis-Topic bleibt „ComfoBox".
+      </span>
+    </div>
+
+    <div class="cb-field">
+      <label for="config-poll">Poll-Intervall (Sekunden)</label>
+      <p-inputnumber
+        inputId="config-poll"
+        [ngModel]="pollInterval()"
+        (ngModelChange)="pollInterval.set($event)"
+        [min]="1"
+        [max]="3600"
+        [useGrouping]="false"
+      />
+      <span class="cb-hint">Wie oft die Heizung abgefragt wird. Kleiner = genauer, mehr Last.</span>
+    </div>
+
+    <div class="cb-field">
+      <label for="config-retain">Werte „retained" publizieren</label>
+      <p-toggleswitch
+        inputId="config-retain"
+        [ngModel]="useRetain()"
+        (ngModelChange)="useRetain.set($event)"
+      />
+      <span class="cb-hint">
+        Bei „aus" übernimmt Home Assistant die Werte nach einem Neustart nicht automatisch.
+      </span>
+    </div>
+  </p-card>
+
+  <!-- Schreibschutz -->
+  <p-card header="Schreibschutz" styleClass="cb-card">
+    <div class="cb-field">
+      <label for="config-writes">Maximale Schreibvorgänge je 24 h</label>
+      <p-inputnumber
+        inputId="config-writes"
+        [ngModel]="maxWrites()"
+        (ngModelChange)="maxWrites.set($event)"
+        [min]="0"
+        [max]="100000"
+        [useGrouping]="false"
+      />
+      <span class="cb-hint">
+        Der Zähler schützt den EEPROM der Heizung. 0 bedeutet: kein Limit.
+      </span>
+    </div>
+
+    <div class="cb-field">
+      <label for="config-expert">Experten-Modus</label>
+      <p-toggleswitch
+        inputId="config-expert"
+        [ngModel]="expertMode()"
+        (ngModelChange)="toggleExpertMode()"
+      />
+      <span class="cb-hint">
+        Erlaubt das Schreiben sensibler Parameter. Standard: aus.
+      </span>
+    </div>
+  </p-card>
+
+  <!-- BACnet / MQTT: nur Konfigurationsdatei -->
+  @if (config.config(); as cfg) {
+    <p-card header="BACnet (serielle Schnittstelle)" styleClass="cb-card">
+      <p-tag value="wirkt sofort" severity="success" />
+
+      <div class="cb-readonly-grid">
+        <div>
+          <span class="cb-label">Geräte-ID</span>
+          <span class="cb-value">{{ cfg.bacnet.deviceId }}</span>
+        </div>
+        <div>
+          <span class="cb-label">MSTP-Adresse</span>
+          <span class="cb-value">{{ cfg.bacnet.thisStation }}</span>
+        </div>
+        <div>
+          <span class="cb-label">Item-Timeout</span>
+          <span class="cb-value">{{ cfg.bacnet.itemTimeoutMs }} ms</span>
+        </div>
+      </div>
+
+      <app-serial-port-picker
+        [currentPort]="cfg.bacnet.port"
+        [currentBaudrate]="cfg.bacnet.baudrate"
+        (applied)="load()"
+      />
+    </p-card>
+
+    <p-card header="MQTT (nur Konfigurationsdatei)" styleClass="cb-card">
+      <p-tag value="Neustart erforderlich" severity="warn" />
+
+      <p-table [value]="cfg.mqtt.brokers" [tableStyle]="{ 'min-width': '100%' }">
+        <ng-template #header>
+          <tr>
+            <th>Broker</th>
+            <th>Port</th>
+            <th>Benutzer</th>
+            <th>Passwort</th>
+            <th>TLS</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-broker>
+          <tr>
+            <td>{{ broker.host }}</td>
+            <td>{{ broker.port }}</td>
+            <td>{{ broker.username ?? '–' }}</td>
+            <td>
+              @if (broker.passwordSet) {
+                <p-tag value="gesetzt" severity="success" />
+              } @else {
+                <span>–</span>
+              }
+            </td>
+            <td>{{ broker.useTls ? 'ja' : 'nein' }}</td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="5">Kein Broker konfiguriert.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
+  <!-- API-Token -->
+  <p-card header="API-Token" styleClass="cb-card">
+    <p class="cb-hint">
+      Ein Token erlaubt einem Programm (z. B. der Home-Assistant-Integration) den Zugriff auf die
+      Schnittstelle. Der Klartext ist nur beim Erzeugen sichtbar.
+    </p>
+
+    <div class="cb-token-create">
+      <label for="token-name">Name</label>
+      <input
+        pInputText
+        id="token-name"
+        [ngModel]="tokenName()"
+        (ngModelChange)="tokenName.set($event)"
+      />
+
+      <p-checkbox
+        [binary]="true"
+        [ngModel]="tokenAdmin()"
+        (ngModelChange)="tokenAdmin.set($event)"
+        inputId="token-admin"
+      />
+      <label for="token-admin">Administrative Rechte</label>
+
+      <p-button label="Token erzeugen" icon="pi pi-plus" (onClick)="createToken()" />
+    </div>
+
+    @if (createdToken(); as created) {
+      <p-message severity="warn" styleClass="w-full cb-token-created">
+        <p class="font-semibold">Token: {{ created.name }}</p>
+        <p>Bitte jetzt kopieren - danach ist der Klartext nicht mehr sichtbar.</p>
+        <code class="cb-token-value">{{ created.token }}</code>
+      </p-message>
+    }
+
+    <p-table [value]="tokenList()" [tableStyle]="{ 'min-width': '100%' }">
+      <ng-template #header>
+        <tr>
+          <th>Name</th>
+          <th>Id</th>
+          <th>Erstellt</th>
+          <th>Rechte</th>
+          <th></th>
+        </tr>
+      </ng-template>
+      <ng-template #body let-token>
+        <tr>
+          <td>{{ token.name }}</td>
+          <td><code>{{ token.id }}</code></td>
+          <td>{{ formatDate(token.createdAt) }}</td>
+          <td>
+            @if (token.isAdmin) {
+              <p-tag value="Administrator" severity="warn" />
+            } @else {
+              <p-tag value="Lesen/Schreiben" severity="info" />
+            }
+          </td>
+          <td>
+            <p-button
+              icon="pi pi-trash"
+              [text]="true"
+              severity="danger"
+              [attr.aria-label]="'Token ' + token.name + ' widerrufen'"
+              (onClick)="revoke(token)"
+            />
+          </td>
+        </tr>
+      </ng-template>
+      <ng-template #emptymessage>
+        <tr>
+          <td colspan="5">Es gibt noch kein Token.</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <!-- Diagnose -->
+  <p-card header="Diagnose" styleClass="cb-card">
+    <div class="cb-actions">
+      <p-button
+        label="Gateway neu starten"
+        icon="pi pi-power-off"
+        severity="danger"
+        [outlined]="true"
+        (onClick)="restart()"
+      />
+
+      <p-button
+        label="Neu laden"
+        icon="pi pi-refresh"
+        [outlined]="true"
+        (onClick)="load()"
+      />
+    </div>
+  </p-card>
+
+  <!-- Speichern -->
+  <div class="cb-actions cb-save">
+    <p-button
+      label="Änderungen speichern"
+      icon="pi pi-check"
+      [loading]="saving()"
+      (onClick)="save()"
+    />
+
+    <span class="cb-hint">
+      Die Änderungen werden in die <code>config.json</code> geschrieben und sind nach einem Neustart
+      wirksam.
+    </span>
+  </div>
+
+  <p-confirmdialog />
+</section>

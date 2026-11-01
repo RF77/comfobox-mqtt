@@ -39,3 +39,7 @@ secrets.yaml
 logs/
 data/
 write-counter.json
+
+# Testverzeichnisse des Gateways (Laufzeit-Artefakte)
+logs-test/
+data-test/
