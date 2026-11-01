@@ -81,30 +81,30 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 5.1 | Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura | ⬜ | 0.5 |
-| 5.2 | API-Client, Signal-Stores, SSE-Client | ⬜ | 1.0 |
-| 5.3 | Dashboard (Health, Verbindungen, Kacheln) | ⬜ | 1.5 |
-| 5.4 | Item-Browser + Schreiben (Analog/Enum) | ⬜ | 2.0 |
-| 5.5 | Konfigurationsseite | ⬜ | 1.0 |
-| 5.6 | Diagnoseseite | ⬜ | 0.5 |
-| 5.7 | Responsive, A11y, i18n (de) | ⬜ | 0.5 |
-| 5.8 | SPA-Auslieferung aus dem .NET-Host + Docker-Stage | ⬜ | 0.5 |
-| 5.9 | **Getting-Started-Assistent** (6 Schritte) | ⬜ | 2.5 |
-| 5.10 | **Login** + Cookie-Auth | ⬜ | 1.0 |
-| 5.11 | **Hilfe-Bereich** (`/help/:slug`) + Suche | ⬜ | 1.5 |
-| 5.12 | **Log-Viewer** (Live-Tail, Filter, Export) | ⬜ | 1.5 |
+| 5.1 | Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura | ✅ | 0.5 |
+| 5.2 | API-Client, Signal-Stores, SSE-Client | ✅ | 1.0 |
+| 5.3 | Dashboard (Health, Verbindungen, Kacheln) | ✅ | 1.5 |
+| 5.4 | Item-Browser + Schreiben (Analog/Enum) | ✅ | 2.0 |
+| 5.5 | Konfigurationsseite | ✅ | 1.0 |
+| 5.6 | Diagnoseseite | ✅ | 0.5 |
+| 5.7 | Responsive, A11y, i18n (de) | ✅ | 0.5 |
+| 5.8 | SPA-Auslieferung aus dem .NET-Host + Docker-Stage | ✅ | 0.5 |
+| 5.9 | **Getting-Started-Assistent** (6 Schritte) | 🟡 | 2.5 |
+| 5.10 | **Login** + Cookie-Auth | ✅ | 1.0 |
+| 5.11 | **Hilfe-Bereich** (`/help/:slug`) + Suche | ✅ | 1.5 |
+| 5.12 | **Log-Viewer** (Live-Tail, Filter, Export) | ✅ | 1.5 |
 | 5.13 | **Serielle Ports zur Laufzeit wählen** (ohne Neustart) | ✅ | 1.0 |
 
 ## Phase 6 – Container & Synology (4 PT)
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 6.1 | Dockerfile **ein** Image (Angular + .NET + Runtime, tini, Healthcheck) | ⬜ | 1.0 |
-| 6.2 | `compose.yaml` (mit `devices:`) | ⬜ | 0.5 |
-| 6.3 | CI: Image-Build + Push + Trivy (**Multi-Arch**) | ⬜ | 0.5 |
-| 6.4 | Test auf der DS923+ | ⬜ | 1.0 |
-| 6.5 | Backup/Restore, Monitoring, Alarmierung | ⬜ | 0.5 |
-| 6.6 | udev-Regel + stabiler `by-id`-Pfad | ⬜ | 0.5 |
+| 6.1 | Dockerfile **ein** Image (Angular + .NET + Runtime, tini, Healthcheck) | ✅ | 1.0 |
+| 6.2 | `compose.yaml` (mit `devices:`) | ✅ | 0.5 |
+| 6.3 | CI: Image-Build + Push + Trivy (**Multi-Arch**) | ✅ | 0.5 |
+| 6.4 | Test auf der DS923+ | ⛔ | 1.0 |
+| 6.5 | Backup/Restore, Monitoring, Alarmierung | ✅ | 0.5 |
+| 6.6 | udev-Regel + stabiler `by-id`-Pfad | ✅ | 0.5 |
 
 ## Phase 8 – Synology-Paket & Getting Started (13 PT)
 
@@ -168,16 +168,19 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **73** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 1 PT (Phase 5, Aufgabe 5.13) von 64 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 8 PT (Phase 5, Aufgaben 5.1–5.8 + 5.10–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) von 64 PT.
 >
 > **Stand 2026-11-01:** 293 Tests grün (46 BACnet + 30 Domain + 10 Contract + 207 Gateway).
+> Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
+> der Container läuft **healthy**, Trivy meldet 0 Funde, und Backup/Restore sind
+> real getestet. Offen bleibt Aufgabe **6.4** (Test auf der echten DS923+).
 
 ## Nächste Aufgabe
 
-> **5.1 – Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura** (0.5 PT)
-> Datei: `src/ComfoBox.Web/**` · Die Web-UI spricht nur mit der REST/SSE-API
-> des Gateways
-> Verifikation: `npm ci && npm run lint && npm start` grün, die Oberfläche
-> zeigt die Items aus `/api/items`
-> → Details: [phase-5.md](phase-5.md)
-> → **Prompt:** [prompts/Prompt-Phase-5.md](prompts/Prompt-Phase-5.md) (direkt kopierbar)
+> **6.4 – Test auf der DS923+** (1.0 PT)
+> Ort: die echte Synology DS923+ (Container Manager, DSM 7.2+)
+> Prüfliste: [phase-6.md §6.4](phase-6.md) (Container startet, `/dev/ttyUSB0`
+> sichtbar, `IAm` wird empfangen, Schreibvorgang, NAS-Neustart, Broker, LWT)
+> **Blockiert:** ohne die echte DS923+ nicht abschließbar. Ersatzweise auf einem
+> Linux-System mit USB-Adapter testen und die NAS-Prüfung verschieben.
+> → Details: [phase-6.md](phase-6.md)

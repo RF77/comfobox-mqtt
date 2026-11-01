@@ -25,8 +25,13 @@ Push / PR
    │     ├─ lint + build
    │     └─ (optional) Bundle-Size-Check
    │
+   ├─▶ container         (ubuntu-latest, Docker)
+   │     ├─ buildx build (linux/amd64)
+   │     ├─ Eigenschaften prüfen (kein Root, tini, UI im Image)
+   │     └─ Container starten, Health + SPA + SIGTERM prüfen
+   │
    └─▶ (nur bei Tag) docker-publish
-         ├─ buildx build (linux/amd64)
+         ├─ buildx build (linux/amd64, linux/arm64)
          ├─ Trivy-Scan
          ├─ push → ghcr.io
          └─ GitHub Release erstellen
@@ -111,6 +116,9 @@ jobs:
 
 ## 4. Workflow: `docker-publish.yml`
 
+> **Ein Image, nicht zwei** → [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md).
+> Gateway **und** Web-Oberfläche liegen in einem Image; es gibt kein `comfobox-web`.
+
 ````yaml
 name: docker-publish
 
@@ -133,17 +141,10 @@ jobs:
     permissions:
       contents: write
       packages: write
-    strategy:
-      matrix:
-        include:
-          - name: gateway
-            context: ./src/ComfoBox.Gateway
-            dockerfile: ./src/ComfoBox.Gateway/Dockerfile
-          - name: web
-            context: ./src/ComfoBox.Web
-            dockerfile: ./src/ComfoBox.Web/Dockerfile
     steps:
       - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
 
       - uses: docker/setup-buildx-action@v3
 
@@ -156,33 +157,53 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-${{ matrix.name }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            type=sha,format=long
 
       - uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          # Der Kontext ist das Repository-Wurzelverzeichnis: das Image
+          # braucht das .NET-Projekt UND die Angular-Oberfläche.
+          context: .
+          file: ./src/ComfoBox.Gateway/Dockerfile
           push: true
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
 
       - name: Trivy scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-${{ matrix.name }}:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}
           severity: CRITICAL,HIGH
           exit-code: '1'
           ignore-unfixed: true
 ````
 
-> **Nur `linux/amd64`:** Die DS923+ ist x86_64. `linux/arm64` würde die Build-Zeit verdoppeln,
-> ohne Nutzen. Bei Bedarf später ergänzen (`platforms: linux/amd64,linux/arm64`).
+> **Multi-Arch ist Pflicht:** Die DS923+ ist x86_64, das **HA-Add-on läuft auf dem
+> Raspberry Pi 5 (arm64)**. Ein reines `amd64`-Image liefert dort einen
+> „exec format error". QEMU emuliert arm64 beim Build – der Image-Aufbau ist
+> architekturunabhängig, deshalb verdoppelt sich die Build-Zeit nur für die
+> .NET-Schicht.
+
+## 4.1 Job `container` in `build-test.yml`
+
+Bei jedem PR wird das Image **einmal für amd64** gebaut und **echt** geprüft:
+
+| Prüfung | Zweck |
+|---|---|
+| `User == comfobox` | kein Root im Container |
+| `Entrypoint[0] == /sbin/tini` | PID 1 leitet SIGTERM weiter → LWT wird ausgelöst |
+| `/app/wwwroot/index.html` existiert | die Angular-UI ist im Image |
+| `GET /api/health` → 200 mit `"state"` | der Gateway antwortet |
+| `GET /` liefert HTML | die SPA wird aus dem .NET-Host ausgeliefert |
+| Health-Status = `healthy` | der Docker-Healthcheck greift |
+| `docker stop` → „Application is shutting down" | sauberes Herunterfahren |
 
 ## 5. Release-Prozess
 

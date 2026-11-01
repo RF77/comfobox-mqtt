@@ -20,18 +20,8 @@ permissions:
 
 jobs:
   publish:
-    name: Publish ${{ matrix.name }}
+    name: Publish comfobox-gateway
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: gateway
-            context: ./src/ComfoBox.Gateway
-            dockerfile: ./src/ComfoBox.Gateway/Dockerfile
-          - name: web
-            context: ./src/ComfoBox.Web
-            dockerfile: ./src/ComfoBox.Web/Dockerfile
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,28 +43,35 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-${{ matrix.name }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
             type=sha,format=long
 
+      # Ein Image für Gateway UND Web-Oberfläche (→ ADR-007).
+      # Der Kontext ist das Repository-Wurzelverzeichnis, weil das Image
+      # sowohl das .NET-Projekt als auch die Angular-Oberfläche braucht.
       - name: Build & Push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          context: .
+          file: ./src/ComfoBox.Gateway/Dockerfile
           push: true
-          platforms: linux/amd64
+          # Multi-Arch ist Pflicht: das HA-Add-on laeuft auf Raspberry Pi 5
+          # (arm64), das Synology-Paket auf x86_64.
+          platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
 
+      # Der Scan laeuft VOR dem Push-Erfolg: ein Image mit CRITICAL/HIGH darf
+      # nicht in der Registry landen (exit-code '1' bricht den Job ab).
       - name: Trivy scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-${{ matrix.name }}:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
@@ -97,8 +94,9 @@ jobs:
             echo '## Images'
             echo '```'
             echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}"
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-web:${{ github.ref_name }}"
             echo '```'
+            echo ''
+            echo 'Multi-Arch: linux/amd64, linux/arm64'
           } >> "$GITHUB_OUTPUT"
 
       - name: Create release

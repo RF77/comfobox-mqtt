@@ -21,8 +21,17 @@
 
 ## 2. Dockerfile – Gateway + UI
 
+> Die Datei liegt in [`src/ComfoBox.Gateway/Dockerfile`](../../src/ComfoBox.Gateway/Dockerfile).
+> Der Build-Kontext ist das **Repository-Wurzelverzeichnis** (das Image braucht
+> sowohl das .NET-Projekt als auch die Angular-Oberfläche):
+>
+> ````bash
+> docker build -f src/ComfoBox.Gateway/Dockerfile -t comfobox-gateway:local .
+> ````
+
 ````dockerfile
 # syntax=docker/dockerfile:1
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Angular-Build
 # ─────────────────────────────────────────────────────────────────────────────
@@ -34,7 +43,7 @@ COPY src/ComfoBox.Web/package.json src/ComfoBox.Web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 COPY src/ComfoBox.Web/ ./
-RUN npm run build -- --configuration production
+RUN npm run build
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 2: .NET-Build
@@ -43,14 +52,24 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
 WORKDIR /src
 
 # NuGet-Restore zuerst → Layer-Cache
-COPY src/Directory.Packages.props src/
-COPY src/*.props src/
+COPY src/global.json src/Directory.Build.props src/Directory.Packages.props ./
+COPY src/ComfoBox.Domain/ComfoBox.Domain.csproj src/ComfoBox.Domain/
+COPY src/ComfoBox.Domain/packages.lock.json src/ComfoBox.Domain/
+COPY src/ComfoBox.Bacnet/ComfoBox.Bacnet.csproj src/ComfoBox.Bacnet/
+COPY src/ComfoBox.Bacnet/packages.lock.json src/ComfoBox.Bacnet/
+COPY src/ComfoBox.Gateway/ComfoBox.Gateway.csproj src/ComfoBox.Gateway/
+COPY src/ComfoBox.Gateway/packages.lock.json src/ComfoBox.Gateway/
 RUN dotnet restore src/ComfoBox.Gateway/ComfoBox.Gateway.csproj
 
 COPY src/ src/
+
+# Die gebaute SPA an die Stelle, die das Gateway-csproj erwartet
+COPY --from=web-build /app/dist/ComfoBox.Web/browser \
+     src/ComfoBox.Web/dist/ComfoBox.Web/browser
+
 RUN dotnet publish src/ComfoBox.Gateway/ComfoBox.Gateway.csproj \
-        -c Release \
-        -o /app/publish \
+        --configuration Release \
+        --output /app/publish \
         --no-restore \
         /p:UseAppHost=false \
         /p:InvariantGlobalization=false
@@ -60,18 +79,17 @@ RUN dotnet publish src/ComfoBox.Gateway/ComfoBox.Gateway.csproj \
 # ─────────────────────────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 
-# Serielle Ports: der Paket-Namespace reicht auf Linux nicht aus,
-# das Gerät muss zusätzlich per --device durchgereicht werden.
-# tini sorgt für korrekte Signal-Weiterleitung (SIGTERM → Prozessende).
-RUN apk add --no-cache tini curl \
+# tini: PID 1 ohne Zombie-Reaping und ohne Signal-Weiterleitung.
+# curl:  nur für den Healthcheck.
+# icu-*: das Alpine-Basis-Image setzt DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
+#         (alpine bringt kein ICU mit) – die Oberfläche formatiert deutsch.
+RUN apk add --no-cache tini curl icu-libs icu-data-full \
  && addgroup -S comfobox -g 1001 \
  && adduser -S comfobox -u 1001 -G comfobox
 
 WORKDIR /app
 COPY --from=build /app/publish ./
-COPY --from=web-build /app/dist/ComfoBox.Web/browser ./wwwroot
 
-# Verzeichnisse für persistierte Daten und Logs
 RUN mkdir -p /var/lib/comfobox /var/log/comfobox \
  && chown -R comfobox:comfobox /app /var/lib/comfobox /var/log/comfobox
 
@@ -79,7 +97,9 @@ USER comfobox
 
 ENV ASPNETCORE_URLS=http://+:8080 \
     DOTNET_gcServer=1 \
-    COMFOBOX_CONFIG_FILE=/var/lib/comfobox/config.json
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false \
+    COMFOBOX_Gateway__DataDirectory=/var/lib/comfobox \
+    COMFOBOX_Logging__Directory=/var/log/comfobox
 
 EXPOSE 8080
 VOLUME ["/var/lib/comfobox"]
@@ -95,15 +115,21 @@ CMD ["dotnet", "ComfoBox.Gateway.dll"]
 
 | Entscheidung | Begründung |
 |---|---|
-| `alpine` statt `debian` | kleineres Image (~250 MB statt ~450 MB), läuft auf der DS923+ (x86_64) |
+| `alpine` statt `debian` | kleineres Image (~260 MB statt ~450 MB), läuft auf der DS923+ (x86_64) |
 | 3 Stages (node → sdk → aspnet) | im Runtime-Image ist **kein** Node und **kein** SDK |
 | `tini` als PID 1 | ohne PID-1 leidet der .NET-Prozess kein `SIGTERM` → `docker stop` dauert 10 s und killt hart → **LWT wird nicht ausgelöst**, HA bleibt im alten Zustand |
 | `USER comfobox` | kein Root im Container |
-| `InvariantGlobalization=false` | `de-DE`-Formatierung für die UI (`valueText`) – Payload bleibt invariant |
+| `InvariantGlobalization=false` + `icu-libs` | `de-DE`-Formatierung für die UI (`valueText`) – Payload bleibt invariant. **Achtung:** das Alpine-Basis-Image setzt `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true` – ohne ICU und ohne explizites `false` bricht die Formatierung. |
 | `HEALTHCHECK` mit `curl` | `curl` ist 1 MB – das Wegen ist den schlanken Runtime-Container wert |
 | `/p:UseAppHost=false` | kleineres Publish-Artefakt |
 | `VOLUME /var/lib/comfobox` | persistenter Schreibzähler (Befund A3) + `config.json` |
-| `COMFOBOX_CONFIG_FILE` | Zeiger auf die Konfigurationsdatei (siehe [konfiguration-und-secrets](konfiguration-und-secrets.md)) |
+| `.dockerignore` im Repo-Root | hält den Build-Kontext klein und verhindert, dass lokale Artefakte (`bin/`, `obj/`, `data/`, `logs/`) ins Image gelangen |
+
+> **Fallstrick:** Die Pfade in `.dockerignore` müssen **verankert** sein
+> (`/src/ComfoBox.Gateway/logs/`). Ein unbestimmtes `**/logs` entfernt auch den
+> Angular-Quellordner `src/ComfoBox.Web/src/app/features/diagnostics/logs/` aus dem
+> Build-Kontext – der Angular-Build bricht dann mit „Unknown reference" ab.
+> Dasselbe gilt für `.gitignore` in `src/`.
 
 > **Zu `tini`:** Das ist kein Luxus. Ohne PID-1 leitet Docker `SIGTERM` an PID 1, aber der
 > .NET-Prozess ist PID 1 → er bekommt es, aber ohne Zombie-Reaping und ohne korrektes
@@ -138,25 +164,34 @@ app.MapFallbackToFile("index.html");
 
 ## 4. compose.yaml (manueller Betrieb)
 
+> Die Datei liegt in [`deploy/compose/compose.yaml`](../../deploy/compose/compose.yaml).
+> Sie ist über eine `.env` (Vorlage: `.env.example`) parametrisiert – Image-Tag,
+> Port, Serial-Port, GID und Log-Verzeichnis.
+
 ````yaml
 name: comfobox
 
 services:
   gateway:
-    image: ghcr.io/<user>/comfobox-gateway:1.0.0
+    image: ${COMFOBOX_IMAGE:-ghcr.io/rf77/comfobox-gateway:1.0.0}
     container_name: comfobox-gateway
     restart: unless-stopped
     ports:
-      - "8081:8080"          # Web-UI + API
+      - "${COMFOBOX_WEB_PORT:-8081}:8080"          # Web-UI + API
     environment:
-      COMFOBOX_CONFIG_FILE: "/var/lib/comfobox/config.json"
+      COMFOBOX_Gateway__DataDirectory: /var/lib/comfobox
+      COMFOBOX_Logging__Directory: /var/log/comfobox
+      COMFOBOX_Bacnet__Port: "${COMFOBOX_SERIAL_PORT:-/dev/ttyUSB0}"
+      COMFOBOX_Bacnet__Baudrate: "${COMFOBOX_BACNET_BAUDRATE:-38400}"
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_gcServer: "1"
     devices:
-      - "/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0:/dev/ttyUSB0"
+      - "${COMFOBOX_SERIAL_DEVICE:-/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0}:/dev/ttyUSB0"
     group_add:
-      - "dialout"
+      - "${COMFOBOX_DIALOUT_GID:-20}"
     volumes:
       - comfobox-data:/var/lib/comfobox
-      - ./logs:/var/log/comfobox
+      - "${COMFOBOX_LOG_DIR:-./logs}:/var/log/comfobox"
     security_opt:
       - "no-new-privileges:true"
     healthcheck:
@@ -189,12 +224,31 @@ volumes:
 | Detail | Begründung |
 |---|---|
 | `devices:` mit `/dev/serial/by-id/…` | stabiler Pfad über Reboots hinweg |
-| `group_add: ["dialout"]` | Zugriff auf das Device-Node, falls nicht root |
+| `group_add: ["20"]` (numerische GID) | Zugriff auf das Device-Node, falls nicht root. `dialout` ist auf DSM die GID 20 – die **numerische** Form ist portabler als der Name. |
 | `restart: unless-stopped` | Neustart nach Crash/Neustart des NAS; **kein** Neustart bei `unhealthy` |
 | `8081:8080` | der einzige exponierte Port (UI **und** API) |
 | Volume `comfobox-data` | persistenter Schreibzähler (24-h-Limit) + `config.json` |
 | `security_opt: no-new-privileges` | Privilege-Escalation im Container verhindern |
 | **kein** `docker.sock` | der Container braucht keine Container-Orchestrierung |
+
+> **`docker compose down` niemals mit `-v`!** Das Volume `comfobox-data` enthält den
+> Schreibzähler – mit `-v` beginnt das 24-h-Fenster neu und der EEPROM-Schutz
+> wäre umgangen.
+
+### 4.0 Testen ohne Serial-Port
+
+Auf einem Entwickler-Rechner gibt es kein `/dev/ttyUSB0` – mit dem `devices:`-Block
+startet der Container dort gar nicht. Dafür gibt es einen Override in
+[`deploy/compose/compose.test.yaml`](../../deploy/compose/compose.test.yaml):
+
+````bash
+docker compose -f compose.yaml -f compose.test.yaml up -d
+````
+
+Er entfernt den `devices:`-Block (`!override`, braucht Compose ≥ 2.24) und meldet
+dem Gateway stattdessen den nicht vorhandenen Port `COM_TEST`. Der Gateway läuft
+dann normal: REST-API, Web-Oberfläche, MQTT – nur die BACnet-Abfrage liefert
+(erwartungsgemäß) keine Werte.
 
 ### 4.1 Template-Variante für den SPK-Betrieb
 
@@ -228,10 +282,13 @@ services:
 
 ## 5. Image-Größe
 
-| Image | Erwartete Größe |
-|---|---|
-| `comfobox-gateway` (inkl. UI) | ~250 MB (alpine + .NET 10 ASP.NET Runtime + ~2 MB Angular-Bundle) |
-| `comfobox-mosquitto` | ~25 MB |
+| Image | Erwartete Größe | Gemessen |
+|---|---|---|
+| `comfobox-gateway` (inkl. UI) | ~250 MB (alpine + .NET 10 ASP.NET Runtime + ~3 MB Angular-Bundle) | **261 MB** |
+| `comfobox-mosquitto` | ~25 MB | – |
+
+> Die 261 MB enthalten **auch die ICU-Datenbank** (`icu-data-full`, ca. 30 MB) für die
+> deutsche Formatierung. Ohne sie spart man 30 MB, verliert aber `de-DE`.
 
 **Optimierung bei Bedarf:**
 
@@ -239,7 +296,8 @@ services:
 |---|---|---|
 | `dotnet publish -p:PublishTrimmed=true` | ~40 MB | **Achtung:** Reflection (`System.Text.Json`) → Probleme. **Nicht empfohlen**, solange Reflection im Einsatz ist. |
 | `-p:PublishSingleFile=true` | ~30 MB | Startzeit höher, Debugging schwerer |
-| `chiseled`-Runtime-Images (`:10.0-alpine-chiseled`) | ~60 MB | kein Shell im Container |
+| `chiseled`-Runtime-Images (`:10.0-alpine-chiseled`) | ~60 MB | kein Shell im Container – **nicht** mit `curl` für den Healthcheck |
+| `icu-data-full` → `icu-data` | ~15 MB | nur die häufigsten Locales (de ist dabei) |
 
 > Auf einer DS923+ (4 GB RAM, AMD Ryzen R1600) ist ~275 MB Gesamtgröße irrelevant. **Priorität hat
 > Robustheit, nicht Größe.** → Kein Trimming.

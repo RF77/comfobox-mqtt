@@ -151,6 +151,29 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   sobald BACnet nicht verbunden ist
 - Phase 5 (Aufgabe 5.13): 7 neue Tests (Port-Umstellung ohne Neustart,
   Status, Validierung, Sofort-Reconnect) → **293 Tests grün**
+- Phase 6 (Aufgabe 6.1): `src/ComfoBox.Gateway/Dockerfile` – **ein** Image für
+  Gateway **und** Weboberfläche (ADR-007), 3 Stages (node → sdk → aspnet),
+  `tini` als PID 1, `USER comfobox`, ICU für die deutsche Formatierung,
+  Healthcheck (nur Erreichbarkeit) und `VOLUME /var/lib/comfobox`
+- Phase 6 (Aufgabe 6.1): `.dockerignore` – der Build-Kontext ist das
+  Repository-Wurzelverzeichnis (das Image braucht .NET **und** Angular)
+- Phase 6 (Aufgabe 6.2): `deploy/compose/compose.yaml` – der manuelle Betrieb,
+  parametrisiert über `.env` (Vorlage `.env.example`), mit `devices:`,
+  `group_add`, `security_opt` und **ohne** Docker-Socket
+- Phase 6 (Aufgabe 6.2): `deploy/compose/compose.test.yaml` – Override
+  **ohne** Serial-Port (Entwicklerrechner ohne `/dev/ttyUSB0`)
+- Phase 6 (Aufgabe 6.3): CI-Workflow `docker-publish.yml` auf **ein** Image
+  und **Multi-Arch** (`linux/amd64,linux/arm64`) umgestellt; Trivy-Scan vor
+  dem Push
+- Phase 6 (Aufgabe 6.3): CI-Job „container" in `build-test.yml` – baut das
+  Image und prüft **echt**: kein Root, tini als PID 1, die Angular-UI im
+  Image, Health-Endpunkt, SPA-Auslieferung und das saubere Herunterfahren
+- Phase 6 (Aufgabe 6.5): `deploy/backup/backup.sh`, `restore.sh` und
+  `backup-cron.sh` – die Sicherung enthält das Volume `comfobox-data` mit dem
+  **24-h-Schreibzähler**; die Wiederherstellung ist getestet
+- Phase 6 (Aufgabe 6.5): Benutzerdoku `docs/benutzer/08-monitoring.md` –
+  Health überwachen, HA-Alarmierung für `degraded`/`offline`, Backup und
+  Wiederherstellung
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
@@ -174,6 +197,20 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   **laufenden** Port (nicht mehr den aus der Konfigurationsdatei)
 
 ### Fixed
+- Phase 6: **`src/.gitignore` verschluckte den Angular-Quellordner
+  `src/ComfoBox.Web/src/app/features/diagnostics/logs/`** – die Regel `logs/`
+  (ohne Pfadpräfix) traf auch jeden Ordner namens `logs` im Quellcode. Der
+  LogViewer war dadurch **nicht im Repository** und der CI-Build wäre an
+  derselben Stelle gebrochen wie der lokale Docker-Build. Die Laufzeit-Regeln
+  sind jetzt verankert (`/ComfoBox.Gateway/logs/`). Dasselbe gilt für
+  `.dockerignore`
+- Phase 6: **`package-lock.json` war nicht synchron zu `package.json`**
+  (`@emnapi/*` in zwei Versionen) – `npm ci` schlug deshalb fehl. Das
+  Lock-File wurde plattformrein (unter Linux) neu erzeugt; danach
+  funktionieren **beide** Plattformen
+- Phase 6: **das Alpine-Basis-Image setzt
+  `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true`** – ohne `icu-libs` und ohne
+  explizites `false` bricht die deutsche Formatierung in der Oberfläche
 - Phase 5 (Aufgabe 5.13): ein angeforderter Neuaufbau der seriellen
   Schnittstelle wartet nicht mehr den Backoff (bis 30 s) ab – der Port wird
   **sofort** neu geöffnet

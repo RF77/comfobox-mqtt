@@ -181,25 +181,33 @@ services:
 
 ## 7. Backup & Restore
 
+Die Skripte liegen in [`deploy/backup/`](../../deploy/backup/):
+
+| Skript | Aufgabe |
+|---|---|
+| `backup.sh` | sichert das Volume `comfobox-data` (inkl. **Schreibzähler**) + die Logs |
+| `restore.sh` | stellt ein Archiv wieder her (stoppt den Container, schreibt das Volume zurück, startet neu) |
+| `backup-cron.sh` | Wrapper für den täglichen Cronjob (mit Protokoll und optionaler E-Mail) |
+
 ````bash
-# Backup
+# Backup (täglich per Cronjob oder DSM-Aufgabenplaner)
 cd /volume1/docker/comfobox
-docker compose stop gateway
-tar czf comfobox-backup-$(date +%F).tar.gz \
-    .env appsettings.json mosquitto/config comfobox-data
-docker compose start gateway
+./backup/backup.sh ./backup
 
 # Restore
-tar xzf comfobox-backup-2026-10-31.tar.gz
-docker compose up -d
+./backup/restore.sh ./backup/comfobox-backup-2026-11-01-030000.tar.gz
+curl -s http://localhost:8081/api/health
 ````
 
 | Was | Warum |
 |---|---|
+| `comfobox-data/` (Volume) | **Schreibzähler** – sonst beginnt das 24-h-Fenster neu; dazu die `config.json` (Passwort-Hash, API-Token) |
+| `logs/` | die JSON-Protokolle für die Fehlersuche |
 | `.env` | MQTT-Passwort, API-Key |
-| `appsettings.json` | Grundeinstellungen |
-| `comfobox-data/` | **Schreibzähler** – sonst beginnt das 24-h-Fenster neu |
 | `mosquitto/config/` | Broker-Konfiguration (ACLs, Passwortdatei) |
+
+> **Die Wiederherstellung ist getestet** – siehe
+> [Monitoring & Alarmierung §7](../benutzer/08-monitoring.md#7-wiederherstellung-testen).
 
 ## 8. Konfigurationsänderungen zur Laufzeit
 

@@ -27,6 +27,87 @@
 
 ---
 
+## 2026-11-01 – Container & Synology (Aufgaben 6.1–6.3, 6.5, 6.6)
+
+**Ergebnis:** Das Gateway läuft als **ein** Container-Image (Gateway **+** Angular-UI,
+261 MB, kein nginx). `docker build` ist grün, der Container startet **healthy**,
+die SPA wird aus dem .NET-Host ausgeliefert, `docker stop` beendet ihn in 0,5 s
+sauber per SIGTERM (tini) – und der **24-h-Schreibzähler übersteht einen
+Container-Neustart** aus dem Volume. Backup und Restore sind **real getestet**.
+
+**Geänderte Dateien (neu):**
+- `src/ComfoBox.Gateway/Dockerfile` – 3 Stages (node → sdk → aspnet), tini als PID 1,
+  `USER comfobox`, Healthcheck, VOLUME, ICU für die deutsche Formatierung
+- `.dockerignore` – Build-Kontext (Repo-Root als Kontext, weil das Image
+  .NET-Projekt **und** Angular braucht)
+- `deploy/compose/compose.yaml` – der manuelle Betrieb (parametrisiert über `.env`)
+- `deploy/compose/compose.test.yaml` – Override **ohne** Serial-Port (Entwicklerrechner)
+- `deploy/compose/.env.example` – die Vorlage ohne Secrets
+- `deploy/backup/backup.sh` + `restore.sh` + `backup-cron.sh` – Sicherung inkl. Schreibzähler
+- `docs/benutzer/08-monitoring.md` – Monitoring, HA-Alarmierung, Backup (Benutzerdoku)
+
+**Geänderte Dateien (bearbeitet):**
+- `.github/workflows/docker-publish.yml` – **ein** Image statt zwei, Multi-Arch
+  (`linux/amd64,linux/arm64`), Trivy vor dem Push
+- `src/.gitignore` + `.dockerignore` – die Laufzeit-Regeln **verankert**
+  (`/ComfoBox.Gateway/logs/` statt `logs/`)
+- `src/ComfoBox.Web/package-lock.json` – plattformrein neu erzeugt
+- `docs/03-deployment/containerisierung.md`, `konfiguration-und-secrets.md`,
+  `docs/02-modernisierung/health-und-status.md` – auf den Ist-Stand gebracht
+
+**Verifikation:**
+- `docker build -f src/ComfoBox.Gateway/Dockerfile -t comfobox-gateway:local .` → grün
+- Image: **261 MB**, `User: comfobox`, `Entrypoint: ["/sbin/tini","--"]`,
+  Healthcheck `curl -fsS http://localhost:8080/api/health`, ICU vorhanden,
+  `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false`
+- **Multi-Arch:** `docker buildx build --platform linux/arm64` → grün (QEMU, ~9 min),
+  `uname -m` = `aarch64`, gleiche Eigenschaften (`User`, `tini`, Healthcheck, Volume)
+- Trivy-Scan: **0 CRITICAL/HIGH**
+- `docker compose up -d` → `Up (healthy)`, `GET /api/health` → `200 {"state":"online"}`
+- `GET /` → 200 (1.322 B `index.html`), `GET /config` → 200 (**SPA-Fallback** greift)
+- `GET /help/monitoring.html` → 200 (14.132 B) – die neue Seite ist im Bundle
+- `docker stop` → **0,52 s**, Log: „Application is shutting down…" → MQTT beendet →
+  Polling beendet → Transport gestoppt (Shutdown-Reihenfolge korrekt)
+- Schreibzähler: Datei ins Volume gelegt → Container neu gestartet →
+  `GET /api/diagnostics/writes` → `{"count":1,…}` → **persistent** ✅
+- `docker compose down` (ohne `-v`) → das Volume `comfobox-data` **bleibt** ✅
+- Healthcheck bei nicht erreichbarem Broker → Container bleibt **healthy** ✅
+- Backup → Zählerdatei gelöscht → Restore → Volume wiederhergestellt → Container neu gestartet ✅
+- `node tools/build-docs.mjs` → 12 Seiten, grün
+- `pwsh -File tools/check-links.ps1` → 639 Links, **0 Probleme**
+
+**Offen / nicht gemacht:**
+- **6.4 (Test auf der DS923+)** – blockiert: die echte Synology und der
+  USB-Adapter stehen hier nicht zur Verfügung. Die Prüfliste steht in
+  [phase-6.md](phase-6.md); sie muss auf dem NAS abgearbeitet werden.
+- Der CI-Workflow wurde auf **ein** Image und Multi-Arch umgestellt, aber
+  **nicht ausgeführt** (kein Push auf ein Tag in dieser Session). Der Trivy-Scan
+  ist damit noch unverifiziert.
+
+**Überraschungen:**
+- ⚠️ **Der Angular-Ordner `features/diagnostics/logs/` war nie im Repository.**
+  `src/.gitignore` enthielt `logs/` (ohne Pfadpräfix) – das verschluckt jeden
+  Ordner namens `logs`, auch Quellcode. Der CI-Build wäre an derselben Stelle
+  gebrochen wie der lokale Docker-Build. **Regel:** Laufzeit-Regeln in
+  `.gitignore`/`.dockerignore` immer **verankern** (`/ComfoBox.Gateway/logs/`).
+- ⚠️ **`npm ci` scheiterte** – das Lock-File war nicht synchron zu `package.json`
+  (`@emnapi/*` in zwei Versionen). Ein Lock-File, das unter Windows mit `npm install`
+  erzeugt wurde, ist **nicht** plattformrein. Das Lock-File wurde deshalb im
+  Linux-Container neu erzeugt – danach funktionieren **beide** Plattformen.
+- ⚠️ **Das Alpine-Basis-Image setzt `DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true`.**
+  Ohne `icu-libs` und ohne explizites `false` bricht die deutsche Formatierung
+  in der Oberfläche. Das steht in keinem Dockerfile-Template.
+- ⚠️ **`--force-local` ist keine Option für BusyBox-tar** (Alpine, DSM) – und
+  GNU tar interpretiert einen Pfad mit Doppelpunkt (`C:/…`) als Remote-Host.
+  Die portable Lösung ist `cd <Verzeichnis> && tar xzf <Basisname>`.
+- ⚠️ **tar darf die Datei nicht einpacken, die es gerade schreibt** („file changed
+  as we read it") – das Archiv gehört in ein **zweites** Verzeichnis.
+- ⚠️ Ein temporäres Host-Verzeichnis lässt sich unter Windows **nicht** in den
+  Container mounten. Die Backup-Skripte übertragen das Archiv deshalb über
+  stdin/stdout statt über einen zweiten Mount.
+
+---
+
 ## 2026-11-01 – Serielle Ports zur Laufzeit wählen (Aufgabe 5.13)
 
 **Ergebnis:** Die seriellen Ports werden **gescannt** (Hotplug), der Benutzer

@@ -133,13 +133,13 @@ Phase 0 ──▶ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 
 | .NET SDK 10.0.400 | ✅ installiert |
 | Node.js 22 | ✅ installiert |
 | Git-Bash (`C:\Program Files\Git\bin\bash.exe`) | ✅ vorhanden |
-| Docker-Daemon | ⚠️ **nicht** verfügbar → Container-Aufgaben brauchen Docker Desktop |
+| Docker-Daemon | ✅ **läuft** (Docker Desktop 29.9.2, Linux-Container) |
 | Python 3.12 | ✅ installiert (`winget --scope user`, ohne Admin) |
 
 > **Hinweis für die Umgebung:** Python 3.12 ist seit 2026-10-31 installiert, die
-> HA-Integrationstests laufen grün. Es gibt weiterhin **keinen laufenden
-> Docker-Daemon** – die Aufgaben der Phase 6 sind daher **nicht vollständig
-> verifizierbar** (Docker Desktop starten).
+> HA-Integrationstests laufen grün. Der **Docker-Daemon läuft seit 2026-11-01** –
+> die Aufgaben 6.1–6.3, 6.5 und 6.6 sind verifiziert. Offen bleibt **6.4**
+> (Test auf der echten DS923+ – das Gerät steht hier nicht zur Verfügung).
 
 ## 7. Globale Regeln ( Kurzform)
 

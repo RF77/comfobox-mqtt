@@ -237,14 +237,18 @@ Health-Anzeige (Header-Banner + Statusseite) beschrieben.
 ### Docker-Healthcheck
 
 ````dockerfile
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://localhost:8080/api/health | grep -q '"state":"online"' || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=3 \
+    CMD curl -fsS http://localhost:8080/api/health || exit 1
 ````
 
-> Achtung: Der Healthcheck darf **nicht** nur `online` verlangen – ein `degraded`-Zustand (BACnet
-> weg) soll den Container **nicht** neu starten (Neustart löst das Problem nicht).
-> Besser: nur `offline` als unhealthy werten. Die konkrete Formulierung hängt von der
-> Container-Runtime ab und muss gegen die DS923+ getestet werden.
+> **Der Healthcheck prüft nur die Erreichbarkeit, nicht den Zustand.** Der Endpoint
+> antwortet immer mit HTTP 200 – auch im Zustand `degraded`. Ein `degraded`-Zustand
+> (Broker nicht erreichbar, Heizung antwortet nicht) darf den Container **nicht** neu
+> starten: Ein Neustart unterbricht die Heizungssteuerung für Sekunden und behebt das
+> Problem nicht.
+>
+> Die fachliche Zustandsbewertung macht der Health-Endpunkt selbst
+> (`GET /api/health` → `state`), nicht der Container-Runtime. → [Monitoring & Alarmierung](../benutzer/08-monitoring.md)
 
 ## 9. Verhalten bei Ausfällen (Soll)
 

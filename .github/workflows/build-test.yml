@@ -129,3 +129,77 @@ jobs:
             exit 1
           fi
           echo "src_old/ ist sauber (keine Build-Konfiguration)."
+  container:
+    name: Container-Image (ein Image, Gateway + UI)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Der Kontext ist das Repository-Wurzelverzeichnis: das Image braucht
+      # sowohl das .NET-Projekt als auch die Angular-Oberfläche (→ ADR-007).
+      # Es wird nur für amd64 gebaut – die Multi-Arch-Variante entsteht im
+      # docker-publish-Workflow.
+      - name: Image bauen
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./src/ComfoBox.Gateway/Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: comfobox-gateway:ci
+          cache-from: type=gha,scope=gateway
+          cache-to: type=gha,mode=max,scope=gateway
+
+      - name: Image-Eigenschaften prüfen
+        run: |
+          set -e
+          echo "--- Größe ---"
+          docker images comfobox-gateway:ci --format '{{.Size}}'
+
+          echo "--- Kein Root, tini als PID 1 ---"
+          test "$(docker inspect comfobox-gateway:ci --format '{{.Config.User}}')" = "comfobox"
+          test "$(docker inspect comfobox-gateway:ci --format '{{index .Config.Entrypoint 0}}')" = "/sbin/tini"
+
+          echo "--- Die Angular-UI liegt im Image ---"
+          docker run --rm --entrypoint sh comfobox-gateway:ci -c 'test -f /app/wwwroot/index.html'
+
+      - name: Container starten und prüfen
+        run: |
+          set -e
+          # Ohne Serial-Port: der CI-Läufer hat kein /dev/ttyUSB0.
+          docker run -d --name comfobox-ci \
+            -p 8081:8080 \
+            -e COMFOBOX_Bacnet__Port=COM_TEST \
+            comfobox-gateway:ci
+
+          # Auf den Healthcheck warten (max. 60 s).
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8081/api/health > /tmp/health.json 2>/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          cat /tmp/health.json
+          grep -q '"state"' /tmp/health.json
+
+          # Die SPA wird aus dem .NET-Host ausgeliefert.
+          curl -fsS http://localhost:8081/ | grep -qi '<html'
+
+          # Der Container muss als "healthy" gelten.
+          docker inspect comfobox-gateway:ci > /dev/null 2>&1 || true
+          STATUS=$(docker inspect --format '{{.State.Health.Status}}' comfobox-ci)
+          echo "Health-Status: $STATUS"
+          test "$STATUS" = "healthy"
+
+          # Sauberes Herunterfahren über SIGTERM (tini) prüfen.
+          docker stop -t 20 comfobox-ci
+          docker logs comfobox-ci 2>&1 | grep -q "Application is shutting down"
+          echo "Shutdown über SIGTERM: OK"
+
+          docker rm -f comfobox-ci

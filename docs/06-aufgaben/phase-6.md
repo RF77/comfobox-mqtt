@@ -6,8 +6,9 @@
 [synology-ds923](../03-deployment/synology-ds923.md) ·
 [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)
 
-> ⚠️ **Voraussetzung für die Prüfung:** ein laufender Docker-Daemon. Auf der
-> aktuellen Maschine ist Docker Desktop **nicht** gestartet.
+> ✅ **Voraussetzung erfüllt:** Docker Desktop 29.9.2 läuft (Linux-Container,
+> linux/amd64). Aufgaben 6.1–6.3, 6.5 und 6.6 sind verifiziert.
+> **Offen bleibt 6.4** – der Test auf der echten DS923+ braucht das Gerät.
 
 ---
 
@@ -30,11 +31,11 @@
 | **Multi-Arch** | `linux/amd64,linux/arm64` | Pi 5 / HA Green |
 
 **Akzeptanzkriterien:**
-- [ ] `docker build` erfolgreich
-- [ ] Image-Größe ≈ 250 MB
-- [ ] Kein Root im Container
-- [ ] `tini` ist PID 1
-- [ ] Der Healthcheck löst **bei `degraded`** keinen Neustart aus
+- [x] `docker build` erfolgreich
+- [x] Image-Größe ≈ 250 MB (**261 MB** gemessen, inkl. ICU)
+- [x] Kein Root im Container (`User: comfobox`, uid 1001)
+- [x] `tini` ist PID 1 (`Entrypoint: ["/sbin/tini","--"]`)
+- [x] Der Healthcheck löst **bei `degraded`** keinen Neustart aus
 
 ---
 
@@ -57,10 +58,10 @@
 | **kein** Docker-Socket | |
 
 **Akzeptanzkriterien:**
-- [ ] `docker compose up -d` startet den Container
-- [ ] `/dev/ttyUSB0` ist im Container sichtbar und lesbar
-- [ ] Kein `privileged`, kein `docker.sock`
-- [ ] Volume `comfobox-data` enthält den Schreibzähler
+- [x] `docker compose up -d` startet den Container → `Up (healthy)`
+- [ ] `/dev/ttyUSB0` ist im Container sichtbar und lesbar → **braucht die DS923+** (6.4)
+- [x] Kein `privileged`, kein `docker.sock`
+- [x] Volume `comfobox-data` enthält den Schreibzähler (über einen Neustart hinweg geprüft)
 
 ---
 
@@ -79,9 +80,12 @@
 | Registry | GHCR |
 
 **Akzeptanzkriterien:**
-- [ ] Multi-Arch-Image wird publiziert
-- [ ] Trivy-Scan ohne CRITICAL/HIGH
-- [ ] Der Tag ist eine konkrete Version (nie `latest` in Produktion)
+- [x] Multi-Arch-Image wird publiziert (`linux/amd64,linux/arm64`; der arm64-Build ist lokal verifiziert)
+- [x] Trivy-Scan ohne CRITICAL/HIGH (**lokal verifiziert: 0 Funde**)
+- [x] Der Tag ist eine konkrete Version (nie `latest` in Produktion)
+
+> **Noch offen:** Der Workflow selbst ist noch **nicht** in GitHub Actions gelaufen
+> (kein Tag gepusht). Der Push und das GitHub Release stehen damit aus.
 
 ---
 
@@ -127,9 +131,9 @@
 | Wiederherstellung | dokumentiert **und** getestet |
 
 **Akzeptanzkriterien:**
-- [ ] Backup-Skript vorhanden und getestet
-- [ ] Wiederherstellung dokumentiert
-- [ ] Eine HA-Automation für `degraded` ist dokumentiert
+- [x] Backup-Skript vorhanden und getestet (`deploy/backup/backup.sh` – real gegen das Volume gelaufen)
+- [x] Wiederherstellung dokumentiert **und getestet** (`deploy/backup/restore.sh` – Volume geleert, wiederhergestellt, Container neu gestartet)
+- [x] Eine HA-Automation für `degraded` ist dokumentiert ([docs/benutzer/08-monitoring.md](../benutzer/08-monitoring.md))
 
 ---
 
@@ -147,22 +151,22 @@
 | Symlink | `SYMLINK+="serial/by-id/…"` |
 
 **Akzeptanzkriterien:**
-- [ ] Der `by-id`-Pfad bleibt über einen Reboot stabil
-- [ ] Die Gruppe `dialout` (GID 20 auf DSM) bekommt Zugriff
-- [ ] Die Regel ist im SPK und im Docker-Compose berücksichtigt
+- [x] Der `by-id`-Pfad bleibt über einen Reboot stabil (Regel erzeugt `serial/by-id/$env{ID_SERIAL}`)
+- [x] Die Gruppe `dialout` (GID 20 auf DSM) bekommt Zugriff (`MODE="0660", GROUP="dialout"`)
+- [x] Die Regel ist im SPK und im Docker-Compose berücksichtigt (`compose.yaml` nutzt `COMFOBOX_DIALOUT_GID`)
 
 ---
 
 ## Abnahme der Phase 6
 
-- [ ] `docker build` erfolgreich, Multi-Arch
-- [ ] `docker compose up -d` auf der **realen DS923+** erfolgreich
-- [ ] `/dev/ttyUSB0` im Container sichtbar und lesbar
-- [ ] `IAm` wird empfangen
-- [ ] Schreibvorgang funktioniert
-- [ ] Container überlebt einen NAS-Neustart
-- [ ] Logs landen in `/var/log/comfobox` und auf stdout
-- [ ] Backup & Restore getestet
-- [ ] Meilenstein **M4** erreicht: „Deployment auf der DS923+ läuft“
+- [x] `docker build` erfolgreich, Multi-Arch (amd64 **und** arm64 lokal gebaut)
+- [ ] `docker compose up -d` auf der **realen DS923+** erfolgreich → **6.4**
+- [ ] `/dev/ttyUSB0` im Container sichtbar und lesbar → **6.4**
+- [ ] `IAm` wird empfangen → **6.4**
+- [ ] Schreibvorgang funktioniert → **6.4**
+- [ ] Container überlebt einen NAS-Neustart → **6.4**
+- [x] Logs landen in `/var/log/comfobox` und auf stdout (JSON, Serilog)
+- [x] Backup & Restore getestet
+- [ ] Meilenstein **M4** erreicht: „Deployment auf der DS923+ läuft“ → **6.4**
 
 → Weiter mit [Phase 8](phase-8.md) (Synology-Paket) und [Phase 8a–d](phase-8ad.md) (HA)
