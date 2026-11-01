@@ -1,7 +1,11 @@
 <section class="cb-diagnostics">
   <h1 class="cb-page-title">Diagnose</h1>
 
-  <p-tabs value="checks">
+  <!--
+    Die Tab-Auswahl ist ein Signal mit Two-Way-Binding: mit einem statischen
+    "value" ließe sich kein Tab wechseln (der aktive Tab blieb immer der erste).
+  -->
+  <p-tabs [(value)]="activeTab">
     <!-- Health-Checks -->
     <p-tablist>
       <p-tab value="checks">Health-Checks</p-tab>
@@ -9,11 +13,12 @@
       <p-tab value="logs">Protokoll</p-tab>
       <p-tab value="writes">Schreibvorgänge</p-tab>
       <p-tab value="connections">Verbindungen</p-tab>
+      <p-tab value="bus">BACnet-Bus</p-tab>
     </p-tablist>
 
     <p-tabpanels>
       <p-tabpanel value="checks">
-        <p-table [value]="checks()" [tableStyle]="{ 'min-width': '100%' }">
+        <p-table [value]="checks()" styleClass="cb-table-full">
           <ng-template #header>
             <tr>
               <th>Komponente</th>
@@ -69,7 +74,7 @@
           />
         </div>
 
-        <p-table [value]="filteredErrors()" [tableStyle]="{ 'min-width': '100%' }">
+        <p-table [value]="filteredErrors()" styleClass="cb-table-full">
           <ng-template #header>
             <tr>
               <th>Zeit</th>
@@ -112,6 +117,15 @@
 
       <!-- Schreibvorgänge -->
       <p-tabpanel value="writes">
+        <!--
+          Der Ladehinweis wird per CSS ein- und ausgeblendet, **nicht** per
+          `@if`: `p-tabpanel` projiziert seinen Content, und ein ersetzter
+          `@if`-Zweig bleibt dabei als sichtbare Waise im DOM stehen.
+        -->
+        <p-message severity="info" styleClass="w-full" [class.cb-hidden]="!!health.status()">
+          <p>Der Status wird geladen …</p>
+        </p-message>
+
         @if (health.status(); as status) {
           <div class="cb-tiles">
             <p-card header="Schreibzähler (24 h)">
@@ -132,15 +146,15 @@
               </div>
             </p-card>
           </div>
-        } @else {
-          <p-message severity="info" styleClass="w-full">
-            <p>Der Status wird geladen …</p>
-          </p-message>
         }
       </p-tabpanel>
 
       <!-- Verbindungen -->
       <p-tabpanel value="connections">
+        <p-message severity="info" styleClass="w-full" [class.cb-hidden]="!!health.status()">
+          <p>Der Status wird geladen …</p>
+        </p-message>
+
         @if (health.status(); as status) {
           <div class="cb-tiles">
             <p-card header="BACnet">
@@ -173,10 +187,157 @@
               </div>
             </p-card>
           </div>
-        } @else {
-          <p-message severity="info" styleClass="w-full">
-            <p>Der Status wird geladen …</p>
+        }
+      </p-tabpanel>
+
+      <!-- BACnet-Bus-Analyse (nur lesend) -->
+      <p-tabpanel value="bus">
+        <p-message severity="info" styleClass="w-full">
+          <p>
+            Die Analyse liest nur: sie stellt keine Anfragen an die ComfoBox und
+            schreibt keine Werte. Sie zeigt, ob ein MS/TP-Token durch den Ring läuft.
+          </p>
+          <p>
+            Der Token hat nur wenige Millisekunden Zeit (95 ms bis zur Übernahme).
+            Deshalb protokolliert der Gateway im laufenden Betrieb <b>keine</b>
+            Frames - die Auswertung passiert außerhalb des Bus-Takts.
+          </p>
+        </p-message>
+
+        <div class="cb-toolbar">
+          <label class="cb-switch">
+            <span>Dauer:</span>
+            <select
+              class="cb-select"
+              [ngModel]="bacnetDuration()"
+              (ngModelChange)="bacnetDuration.set($event)"
+              aria-label="Dauer der Beobachtung"
+            >
+              @for (value of bacnetDurations; track value) {
+                <option [ngValue]="value">{{ value }} s</option>
+              }
+            </select>
+          </label>
+
+          <label class="cb-switch">
+            <input
+              type="checkbox"
+              [ngModel]="bacnetPausePolling()"
+              (ngModelChange)="bacnetPausePolling.set($event)"
+            />
+            <span>Polling pausieren</span>
+          </label>
+
+          @if (observing()) {
+            <p-button
+              icon="pi pi-stop"
+              label="Beobachtung beenden"
+              severity="danger"
+              [outlined]="true"
+              [disabled]="bacnetBusy()"
+              (onClick)="stopBacnetObservation()"
+            />
+          } @else {
+            <p-button
+              icon="pi pi-play"
+              label="Beobachtung starten"
+              [disabled]="bacnetBusy()"
+              (onClick)="startBacnetObservation()"
+            />
+          }
+
+          <p-button
+            icon="pi pi-refresh"
+            label="Neu laden"
+            [text]="true"
+            (onClick)="loadBacnet()"
+          />
+        </div>
+
+        <!-- Der Ladehinweis wird per CSS gesteuert - siehe Kommentar oben. -->
+        <p-message
+          severity="info"
+          styleClass="w-full"
+          [class.cb-hidden]="!!bacnet()"
+        >
+          <p>Die Bus-Analyse wird geladen …</p>
+        </p-message>
+
+        @if (bacnet()) {
+          <p-message
+            [severity]="bacnet()!.totalEvents > 0 ? 'success' : 'warn'"
+            styleClass="w-full"
+          >
+            <p>{{ bacnet()!.verdict }}</p>
           </p-message>
+
+          <div class="cb-tiles">
+            <p-card header="Bus">
+              <div class="cb-tile">
+                <span class="cb-tile-value">{{ bacnet()!.totalEvents }}</span>
+                <span class="cb-tile-hint">
+                  Ereignisse in {{ bacnet()!.durationSeconds | number: '1.0-1' }} s
+                </span>
+              </div>
+            </p-card>
+
+            <p-card header="Schnittstelle">
+              <div class="cb-tile">
+                <span class="cb-tile-value">{{ bacnet()!.port || '–' }}</span>
+                <span class="cb-tile-hint">
+                  {{ bacnet()!.baudrate }} Baud · Station {{ bacnet()!.thisStation }}
+                </span>
+              </div>
+            </p-card>
+
+            <p-card header="Stationen gesehen">
+              <div class="cb-tile">
+                <span class="cb-tile-value">
+                  {{ bacnet()!.stationsSeen.length > 0 ? bacnet()!.stationsSeen.join(', ') : '–' }}
+                </span>
+                <span class="cb-tile-hint">
+                  {{ bacnet()!.pollingPaused ? 'Polling pausiert' : 'Polling läuft' }}
+                </span>
+              </div>
+            </p-card>
+          </div>
+
+          <div class="cb-tiles">
+            @for (entry of bacnetCounters(); track entry.kind) {
+              <p-card [header]="entry.label">
+                <div class="cb-tile">
+                  <span class="cb-tile-value">{{ entry.value }}</span>
+                </div>
+              </p-card>
+            }
+          </div>
+
+          <p-table [value]="bacnet()!.events" styleClass="cb-table-full">
+            <ng-template #header>
+              <tr>
+                <th>Zeit</th>
+                <th>Ereignis</th>
+                <th>Station</th>
+                <th>Frame</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-event>
+              <tr>
+                <td>{{ formatDate(event.timestamp) }}</td>
+                <td>{{ bacnetKindLabel(event.kind) }}</td>
+                <td>{{ event.station }}</td>
+                <td><code>{{ event.frameType }}</code></td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="4">
+                  Noch keine Ereignisse. Starte eine Beobachtung, um den
+                  Token-Umlauf zu sehen.
+                </td>
+              </tr>
+            </ng-template>
+          </p-table>
         }
       </p-tabpanel>
     </p-tabpanels>

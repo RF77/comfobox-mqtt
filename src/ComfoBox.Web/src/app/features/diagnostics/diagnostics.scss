@@ -39,6 +39,28 @@
   gap: 1rem;
 }
 
+// Die Tabelle nutzt die volle Breite.
+//
+// Hinweis: die Breite wird über eine CSS-Klasse gesetzt, **nicht** über
+// einen Binding-Ausdruck mit geschweiften Klammern
+// (`[tableStyle]="{ 'min-width': '100%' }"`). Angular zählt die Klammern
+// eines Binding-Ausdrucks beim Parsen des Control-Flows mit - in einem
+// `@if`-Block führt das zu einer falschen Blockzuordnung.
+:host ::ng-deep .cb-table-full table {
+  min-width: 100%;
+}
+
+// Blendet ein Element aus, ohne es aus dem DOM zu entfernen.
+//
+// Warum nicht `@if`? `p-tabpanel` projiziert seinen Content über
+// `<ng-content>` in ein `<ng-template>`, das per `ngTemplateOutlet`
+// gerendert wird. Wird dort ein `@if`-Zweig ersetzt, bleibt der alte
+// Zweig als **sichtbare Waise** im DOM stehen - der Nutzer sieht dann
+// gleichzeitig den Ladehinweis und die Daten.
+.cb-hidden {
+  display: none !important;
+}
+
 .cb-tile {
   display: flex;
   flex-direction: column;
