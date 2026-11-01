@@ -2,7 +2,10 @@ name: build-test
 
 on:
   push:
-    branches: [ main ]
+    # `main` ist der Zielbranch, `Upgrade` der Entwicklungsbranch. Ohne den
+    # Entwicklungsbranch gibt es dort **keine** automatische CI – der Code
+    # wird erst beim Zusammenführen geprüft.
+    branches: [ main, Upgrade ]
   pull_request:
   workflow_dispatch:
 

@@ -315,6 +315,15 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Geräte-ID (`{ClientId}-{DeviceId}`)
 
 ### Fixed
+- **Die CI lief seit Phase 0 nie – der Lauf war „rot", ohne dass ein Job
+  gestartet wurde.** GitHub hatte `build-test.yml` und `codeql.yml` schon bei
+  der **YAML-Validierung** abgelehnt (0 Jobs, 0 Sekunden):
+  - `build-test.yml`: `if: hashFiles(...)` auf **Job-Ebene** – `hashFiles` ist
+    in einer Job-Bedingung nicht erlaubt („Unrecognized function")
+  - `codeql.yml`: `paths-ignore` auf **Top-Level** („Unexpected value") und
+    `schedule:` fälschlich unter `pull_request:` verschachtelt
+  - Ein Lauf mit **0 Jobs** ist **nie** ein Code-Problem – immer zuerst die
+    Annotation des Laufs lesen
 - **Die Reiter der Diagnose-Seite ließen sich nicht umschalten.** `p-tabs`
   hatte ein statisches `value="checks"` – der Klick auf einen anderen Reiter
   änderte nichts. Die Auswahl hängt jetzt an einem Signal (`[(value)]`)

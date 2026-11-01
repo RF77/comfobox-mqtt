@@ -1378,6 +1378,22 @@ Archiv. **339 Tests grün**, Build 0 Warnungen / 0 Fehler.
   `docker stop` beendet ihn per SIGTERM in 0,5 s
 
 **Überraschungen:**
+- ⚠️ **Die CI lief seit Phase 0 nie.** Der Push nach `origin/Upgrade` zeigte
+  wieder „Failure" – aber mit **0 Jobs** und **0 Sekunden** Dauer. Die
+  Annotation des Laufs verriet den Grund:
+  - `build-test.yml` (Zeile 84): **„Unrecognized function: 'hashFiles'"** –
+    die Bedingung `if: hashFiles(...) != ''` stand auf **Job-Ebene** (sie
+    stammte aus Phase 0, als das Angular-Projekt noch nicht existierte).
+    `hashFiles` ist in einer Job-Bedingung **nicht erlaubt** → GitHub lehnt
+    die **ganze Datei** ab.
+  - `codeql.yml` (Zeile 21): **„Unexpected value 'paths-ignore'"** – der
+    Schlüssel stand auf **Top-Level** (er gehört **unter `on:`**). Zusätzlich
+    war `schedule:` unter `pull_request:` verschachtelt statt als Geschwister
+    → der Wochenlauf lief nie.
+  - **Merksatz:** Ein Lauf mit **0 Jobs** ist **nie** ein Code-Problem.
+    Immer zuerst die **Annotation** lesen. Und: die GitHub-API liefert für
+    diese Läufe weder Jobs noch Check-Runs – die Information steht **nur** in
+    der Oberfläche.
 - ⚠️ **Im MS/TP-Hot-Path darf nicht geloggt werden.** Der Token hat nur
   **95 ms** (`TUsageTimeout`) bis zur Übernahme – ein Log-Eintrag an dieser
   Stelle kostet Zeit und kann den Token kosten. Deshalb: der Zustandsautomat

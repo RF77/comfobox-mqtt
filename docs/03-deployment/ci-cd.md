@@ -51,6 +51,33 @@ Push Tag "v*"
 > nicht mehr und ist nur noch Referenz für Protokollverhalten und
 > Item-Metadaten.
 
+### ⚠️ Ein roter Lauf kann bedeuten: die Workflow-Datei ist ungültig
+
+> **Das ist die teuerste Falle der CI.** Ein syntaktisch gültiges YAML ist
+> **nicht** dasselbe wie ein von GitHub akzeptierter Workflow.
+
+| Symptom | Bedeutung |
+|---|---|
+| Lauf steht auf **Failure**, aber es gibt **0 Jobs** | GitHub hat die Datei **schon bei der Validierung** abgelehnt |
+| Keine Logs, kein „Annotations"-Panel mit Job-Details | die Validierung ist gescheitert, nicht der Code |
+| Der Lauf dauert **0 Sekunden** | es wurde nie etwas ausgeführt |
+
+Die Fehlermeldung steht in der **Annotation** des Laufs
+(→ Run-Seite → „Annotations"):
+
+| Meldung | Ursache | Lösung |
+|---|---|---|
+| `Unrecognized function: 'hashFiles'` | `hashFiles` steht in einer **Job**-Bedingung (`if:` auf Job-Ebene) | Bedingung entfernen oder den Job **immer** laufen lassen |
+| `Unexpected value 'paths-ignore'` | `paths-ignore` steht auf **Top-Level** der Datei | nach **`on:`** verschieben (dort filtert es die Trigger) |
+| `Unexpected value 'schedule'` | `schedule:` ist unter `pull_request:` verschachtelt | als **Geschwister** von `push`/`pull_request` einrücken |
+
+**Merksatz:** Ein Lauf mit **0 Jobs** ist **nie** ein Code-Problem. Erst die
+Annotation lesen, dann den Code.
+
+> **Die Konsequenz hier:** Durch den `hashFiles`-Fehler lief die CI **seit
+> Phase 0 nie** – alle Läufe waren „rot" ohne dass ein Job gestartet wurde.
+> Das ist auch der Grund, warum ein Fehler im Code so lange unbemerkt blieb.
+
 ## 3. Workflow: `build-test.yml`
 
 ````yaml
