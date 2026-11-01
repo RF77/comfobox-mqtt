@@ -94,9 +94,17 @@ public sealed class ValueCacheTests
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
+        // `SubscribeAsync` registriert den Abonnenten **synchron** - der
+        // Aufruf muss also nur vor dem Schreiben erfolgen, nicht in einem
+        // Nebenthread. Ein `Task.Delay(50)` als Synchronisation ist ein
+        // Wettlauf: auf einem belasteten CI-Läufer lief der Task nicht recht
+        //zeitig, das Update kam vor der Registrierung an und der Test
+        // lief in den Timeout.
+        var abochnung = cache.SubscribeAsync(cts.Token);
+
         var warten = Task.Run(async () =>
         {
-            await foreach (var value in cache.SubscribeAsync(cts.Token))
+            await foreach (var value in abochnung)
             {
                 return value;
             }
@@ -104,8 +112,6 @@ public sealed class ValueCacheTests
             return (CachedValue?)null;
         }, cts.Token);
 
-        // Der Abonnent muss erst registriert sein.
-        await Task.Delay(50);
         cache.Update("zone.set_point_normal", new AnalogValue(21.5f, 5f, 30f, "°C"));
 
         var empfangen = await warten;

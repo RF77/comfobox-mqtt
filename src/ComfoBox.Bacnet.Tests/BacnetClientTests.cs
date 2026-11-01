@@ -216,12 +216,20 @@ public sealed class BacnetClientTests
 
         try
         {
-            BacnetIamEventArgs? received = null;
-            client.IamReceived += (_, args) => received = args;
+            // Nicht auf eine feste Zeit warten: auf einem belasteten
+            // CI-Läufer waren 50 ms nicht immer genug, das Ereignis kam
+            // danach an und die Zusicherung schlug fehl.
+            var tcs = new TaskCompletionSource<BacnetIamEventArgs>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+
+            client.IamReceived += (_, args) => tcs.TrySetResult(args);
 
             transport.Respond(FakeTransport.BuildIam(deviceId: 7));
 
-            await Task.Delay(50);
+            var fertig = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(10)));
+            Assert.Same(tcs.Task, fertig);
+
+            var received = await tcs.Task;
 
             Assert.NotNull(received);
             Assert.Equal(7u, received.DeviceId);
