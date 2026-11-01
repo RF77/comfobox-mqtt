@@ -53,6 +53,12 @@ jobs:
           # Deshalb wird die Ausgabe gesichert, bei Fehlschlag werden die
           # fehlgeschlagenen Tests als **Annotation** ausgegeben (die stehen
           # direkt am Lauf) und das Log als Artefakt hochgeladen.
+          #
+          # Wichtig: GitHub startet das Skript mit `bash -e`. Ohne `set +e`
+          # bricht die fehlschlagende Pipeline das Skript ab, bevor die
+          # Diagnose laufen kann. `set -uo pipefail` allein reicht nicht -
+          # es **ergaenzt** `-e`, es hebt es nicht auf.
+          set +e
           set -uo pipefail
           dotnet test ComfoBox.sln -c Release --no-build --nologo \
             --collect:"XPlat Code Coverage" 2>&1 | tee /tmp/test.log
