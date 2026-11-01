@@ -1,0 +1,165 @@
+:host {
+  display: block;
+}
+
+.cb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.cb-toolbar-end {
+  justify-content: flex-end;
+}
+
+.cb-toolbar-end label {
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.cb-level-filter {
+  min-width: 12rem;
+}
+
+.cb-source-filter {
+  min-width: 12rem;
+}
+
+.cb-search-input {
+  flex: 1 1 12rem;
+}
+
+.cb-range-filter {
+  min-width: 11rem;
+}
+
+.cb-live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--p-green-500, #22c55e);
+  margin-left: 0.3rem;
+}
+
+.cb-live-reconnecting {
+  background: var(--p-amber-500, #f59e0b);
+}
+
+.cb-count {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+  white-space: nowrap;
+}
+
+.cb-log-viewport {
+  max-height: 32rem;
+  overflow-y: auto;
+  border: 1px solid var(--p-content-border-color, var(--p-surface-300));
+  border-radius: var(--p-border-radius-lg, 0.75rem);
+  padding: 0.5rem;
+  background: var(--p-content-background, var(--p-surface-50));
+  font-family: ui-monospace, 'Cascadia Mono', 'Consolas', monospace;
+  font-size: 0.83rem;
+}
+
+.cb-log-entry {
+  padding: 0.35rem 0.5rem;
+  border-left: 3px solid transparent;
+  border-bottom: 1px solid var(--p-content-border-color, var(--p-surface-200));
+}
+
+.cb-log-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cb-log-time {
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-log-level {
+  font-weight: 700;
+  min-width: 5.5rem;
+}
+
+.cb-log-source {
+  color: var(--p-text-muted-color, inherit);
+  word-break: break-all;
+}
+
+.cb-log-message {
+  margin: 0.2rem 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cb-log-properties {
+  margin: 0.2rem 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-log-properties span {
+  font-weight: 600;
+}
+
+.cb-log-exception {
+  margin: 0.3rem 0 0 1.5rem;
+  padding: 0.4rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--p-content-hover-background, var(--p-surface-200));
+  border-radius: var(--p-border-radius-md, 0.5rem);
+  font-size: 0.78rem;
+}
+
+.cb-log-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--p-text-muted-color, inherit);
+}
+
+// Die Level-Farben.
+.cb-level-debug {
+  border-left-color: var(--p-surface-400, #94a3b8);
+}
+
+.cb-level-debug .cb-log-level {
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-level-info {
+  border-left-color: var(--p-primary-color, #3b82f6);
+}
+
+.cb-level-warn {
+  border-left-color: var(--p-amber-500, #f59e0b);
+}
+
+.cb-level-warn .cb-log-level {
+  color: var(--p-amber-600, #d97706);
+}
+
+.cb-level-error {
+  border-left-color: var(--p-red-500, #ef4444);
+}
+
+.cb-level-error .cb-log-level {
+  color: var(--p-red-500, #ef4444);
+}
+
+.cb-level-fatal {
+  // `--p-red-900` ist im Dark-Mode fast schwarz und damit unlesbar.
+  border-left-color: var(--p-red-400, #f87171);
+  font-weight: 700;
+}
+
+.cb-level-fatal .cb-log-level {
+  color: var(--p-red-400, #f87171);
+}

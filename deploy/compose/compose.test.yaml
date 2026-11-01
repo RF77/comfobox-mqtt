@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ComfoBox MQTT – Compose-Override für lokale Tests OHNE Serial-Port.
+#
+# Wann? Auf einem Entwickler-Rechner (Windows/macOS) gibt es kein
+# /dev/ttyUSB0 – der Container würde mit dem devices:-Block gar nicht erst
+# starten. Dieser Override entfernt den devices:-Block und meldet dem
+# Gateway stattdessen einen nicht vorhandenen Port.
+#
+# Der Gateway läuft dann normal: REST-API, Web-Oberfläche, MQTT.
+# Nur die BACnet-Abfrage liefert (erwartungsgemäß) keine Werte.
+#
+# Nutzung:
+#   docker compose -f compose.yaml -f compose.test.yaml up -d
+#
+# Erfordert Docker Compose >= 2.24 (YAML-Tag !override).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  gateway:
+    # !override ersetzt die Liste komplett (statt sie zu ergänzen).
+    devices: !override []
+    environment:
+      COMFOBOX_Bacnet__Port: "COM_TEST"
+    volumes:
+      # Kein Bind-Mount auf ./logs – unter Windows würde das Verzeichnis
+      # mit den Rechten des Windows-Dateisystems gemountet.
+      - comfobox-data:/var/lib/comfobox

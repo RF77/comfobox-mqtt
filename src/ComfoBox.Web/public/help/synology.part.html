@@ -181,16 +181,23 @@ kein zusätzlicher Webserver.</p>
 <h2 id="serielle-ports-wechseln">Serielle Ports wechseln</h2>
 <p>Wenn Sie den Adapter in eine andere USB-Buchse stecken:</p>
 <ol>
-<li>In der Web-Oberfläche: <strong>Konfiguration → Erneut einrichten</strong></li>
-<li>Schritt 1: neuen Port wählen</li>
-<li><strong>Übernehmen</strong></li>
+<li>In der Web-Oberfläche: <strong>Konfiguration → BACnet</strong></li>
+<li>Auf <strong>Neu suchen</strong> klicken</li>
+<li>Den neuen Port wählen und <strong>Übernehmen</strong> – der Gateway benutzt ihn <strong>sofort</strong></li>
 </ol>
-<p>Der Container wird dann mit dem neuen Anschluss neu erstellt. Das dauert etwa
-10 Sekunden.</p>
 <blockquote>
 <p><strong>Sie müssen das Paket nicht neu installieren</strong> und nichts auf der Kommandozeile
 machen.</p>
 </blockquote>
+<p>Falls das Paket den Anschluss fest an den Container durchreicht (Option
+„Alle seriellen Ports durchreichen&quot; <strong>nicht</strong> aktiv), muss der Container
+zusätzlich mit dem neuen Anschluss neu erstellt werden:</p>
+<ol>
+<li>In der Web-Oberfläche: <strong>Konfiguration → Erneut einrichten</strong></li>
+<li>Schritt 1: neuen Port wählen</li>
+<li><strong>Übernehmen</strong></li>
+</ol>
+<p>Das dauert etwa 10 Sekunden.</p>
 <hr>
 <h2 id="dienste">Dienste</h2>
 <table>

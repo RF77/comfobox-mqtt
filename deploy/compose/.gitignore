@@ -1,0 +1,15 @@
+# Compose-Overrides und lokale Laufzeitdaten.
+#
+# Die .env enthaelt die Betriebswerte (Image-Tag, Port, Serial-Pfad). Sie kann
+# Passwoerter enthalten und darf deshalb **nicht** ins Repository.
+.env
+.env.*
+!.env.example
+
+# Das Log-Verzeichnis ist ein Bind-Mount auf den Host - die JSON-Protokolle
+# sind Betriebsdaten, kein Quellcode.
+/logs/
+
+# Lokale Overrides des Nutzers (z. B. eine eigene compose.local.yaml)
+compose.local.yaml
+compose.override.yaml

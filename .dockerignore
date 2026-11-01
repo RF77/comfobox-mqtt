@@ -1,0 +1,57 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Build-Kontext für das ComfoBox-Gateway-Image.
+#
+# Der Kontext ist das Repository-Wurzelverzeichnis, weil das Image sowohl
+# das .NET-Projekt (src/ComfoBox.Gateway) als auch die Web-Oberfläche
+# (src/ComfoBox.Web) braucht - ADR-007: ein Image für Gateway und UI.
+#
+# Alles, was nicht für den Build gebraucht wird, bleibt draußen: das hält
+# den Kontext klein und verhindert, dass lokale Artefakte (bin/obj) das
+# Image verfälschen.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Versionsverwaltung
+.git
+.gitattributes
+.gitignore
+.github
+
+# Legacy-Bestand: Archiv, wird nicht gebaut (siehe src_old/README)
+src_old/
+
+# Node / Angular
+**/node_modules
+**/dist
+**/.angular
+**/.nx
+
+# .NET
+**/bin
+**/obj
+**/*.user
+**/.vs
+**/TestResults
+
+# Doku, Tests und Werkzeuge gehören nicht ins Image
+docs
+custom_components
+deploy
+tools
+**/Tests
+**/TestResults
+
+# Betriebsdaten (Schreibzähler, Logs) dürfen nie ins Image.
+#
+# WICHTIG: Die Pfade sind verankert. Ein unbestimmtes "**/logs" würde auch
+# den Angular-Quellordner src/ComfoBox.Web/src/app/features/diagnostics/logs/
+# aus dem Build-Kontext entfernen - der Angular-Build bricht dann ab.
+/src/ComfoBox.Gateway/logs/
+/src/ComfoBox.Gateway/logs-test/
+/src/ComfoBox.Gateway/data/
+/src/ComfoBox.Gateway/data-test/
+/src/ComfoBox.Gateway/write-counter.json
+
+# Lokale Konfiguration mit Secrets
+**/.env
+**/config.json
+**/appsettings.*.local.json

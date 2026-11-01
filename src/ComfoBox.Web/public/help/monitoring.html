@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Monitoring und Alarmierung – ComfoBox Gateway</title>
+  <meta name="description" content="Health überwachen, Fehler erkennen und den Gateway alarmieren">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Monitoring und Alarmierung</h1>
+        <p class="description">Health überwachen, Fehler erkennen und den Gateway alarmieren</p>
+        <div class="tags"><span class="tag">betrieb</span><span class="tag">monitoring</span><span class="tag">home-assistant</span></div>
+      </header>
+
+      <article class="prose">
+<h1>Monitoring und Alarmierung</h1>
+<blockquote>
+<p>Diese Seite beschreibt, wie Sie den Zustand des Gateways überwachen und
+sich bei Störungen benachrichtigen lassen.</p>
+</blockquote>
+<h2>1. Die drei Überwachungspunkte</h2>
+<p>Das Gateway meldet seinen Zustand auf drei Wegen. Sie sollten <strong>mindestens</strong>
+einen davon überwachen.</p>
+<table>
+<thead>
+<tr>
+<th>Kanal</th>
+<th>Abfrage</th>
+<th>Was Sie sehen</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Health-Endpunkt</td>
+<td><code>GET /api/health</code></td>
+<td><code>online</code>, <code>degraded</code> oder <code>offline</code> mit einer Meldung je Komponente</td>
+</tr>
+<tr>
+<td>Status-Endpunkt</td>
+<td><code>GET /api/status</code></td>
+<td>Laufzeit, BACnet-Verbindung, MQTT-Broker, Schreibzähler</td>
+</tr>
+<tr>
+<td>MQTT-Topic</td>
+<td><code>ComfoBox/Status/Health</code></td>
+<td>Dasselbe wie der Health-Endpunkt, zusätzlich für Home Assistant</td>
+</tr>
+</tbody></table>
+<h3>Zustände</h3>
+<table>
+<thead>
+<tr>
+<th>Zustand</th>
+<th>Bedeutung</th>
+<th>Handlungsbedarf</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>online</code></td>
+<td>Alle Komponenten arbeiten</td>
+<td>keiner</td>
+</tr>
+<tr>
+<td><code>degraded</code></td>
+<td>Eine Komponente arbeitet nicht (z. B. kein Broker, Heizung antwortet nicht)</td>
+<td><strong>ja</strong> – aber <strong>kein</strong> Container-Neustart</td>
+</tr>
+<tr>
+<td><code>offline</code></td>
+<td>Das Gateway selbst läuft nicht mehr</td>
+<td><strong>ja</strong> – Container prüfen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wichtig:</strong> Ein <code>degraded</code>-Zustand ist <strong>kein</strong> Container-Problem. Ein Neustart würde
+die Heizungssteuerung für Sekunden unterbrechen und das Problem nicht beheben.
+Der Docker-Healthcheck prüft deshalb <strong>nur</strong>, ob der HTTP-Server antwortet.</p>
+</blockquote>
+<h2>2. Abfrage per Kommandozeile</h2>
+<pre><code class="language-bash"># Zustand (mit den Einzelprüfungen)
+curl -s http://NAS-IP:8081/api/health | jq .
+
+# Kurzform
+curl -s http://NAS-IP:8081/api/health | jq -r .state
+
+# Vollständiger Status
+curl -s http://NAS-IP:8081/api/status | jq .
+
+# nur der Schreibzähler
+curl -s http://NAS-IP:8081/api/diagnostics/writes | jq .
+</code></pre>
+<p>Beispielausgabe von <code>/api/health</code>:</p>
+<pre><code class="language-json">{
+  &quot;state&quot;: &quot;online&quot;,
+  &quot;message&quot;: &quot;Alle Komponenten sind in Ordnung.&quot;,
+  &quot;checks&quot;: [
+    {
+      &quot;name&quot;: &quot;Bacnet&quot;,
+      &quot;state&quot;: &quot;online&quot;,
+      &quot;message&quot;: &quot;Der BACnet-Bus ist erreichbar.&quot;,
+      &quot;changedAt&quot;: &quot;2026-11-01T08:33:43.3671945+00:00&quot;
+    }
+  ],
+  &quot;version&quot;: &quot;1.0.0&quot;,
+  &quot;uptimeSeconds&quot;: 3600,
+  &quot;startedAt&quot;: &quot;2026-11-01T08:33:47.2776305+00:00&quot;
+}
+</code></pre>
+<h2>3. Überwachung im Docker</h2>
+<pre><code class="language-bash"># Zustand des Containers
+docker compose ps
+
+# Health-Status im Detail
+docker inspect --format &#39;{{json .State.Health}}&#39; comfobox-gateway
+
+# Log seit dem letzten Start
+docker compose logs -f gateway
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Anzeige</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Up … (healthy)</code></td>
+<td>Der HTTP-Server antwortet.</td>
+</tr>
+<tr>
+<td><code>Up … (unhealthy)</code></td>
+<td>Der HTTP-Server antwortet <strong>nicht</strong> mehr → Neustart prüfen.</td>
+</tr>
+<tr>
+<td><code>Restarting</code></td>
+<td>Der Container stürzt beim Start ab → <code>docker compose logs</code> zeigt die Ursache.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Ein <code>unhealthy</code> führt <strong>nicht</strong> zu einem automatischen Neustart. Das ist Absicht:
+Ein Neustart würde bei einem nicht erreichbaren USB-Adapter nichts lösen.</p>
+</blockquote>
+<h2>4. Alarmierung in Home Assistant</h2>
+<p>Das Gateway veröffentlicht seinen Zustand <strong>retained</strong> auf
+<code>ComfoBox/Status/Health</code>. Home Assistant macht daraus den Sensor
+<code>sensor.comfobox_health</code> (bei der HACS-Integration) oder einen eigenen
+MQTT-Sensor.</p>
+<h3>4.1 Einfache Benachrichtigung</h3>
+<pre><code class="language-yaml"># configuration.yaml
+automation:
+  - alias: &quot;ComfoBox: Gateway gestört&quot;
+    triggers:
+      - trigger: state
+        entity_id: sensor.comfobox_health
+        to: degraded
+    actions:
+      - action: notify.mobile_app_iphone
+        data:
+          title: &quot;ComfoBox&quot;
+          message: &gt;-
+            Das Gateway meldet den Zustand „degraded“.
+            {{ state_attr(&#39;sensor.comfobox_health&#39;, &#39;message&#39;) }}
+</code></pre>
+<h3>4.2 Alarmierung mit Wiederholung und Eskalation</h3>
+<pre><code class="language-yaml">automation:
+  - alias: &quot;ComfoBox: Gateway gestört (mit Eskalation)&quot;
+    triggers:
+      - trigger: state
+        entity_id: sensor.comfobox_health
+        to: degraded
+        for: &quot;00:05:00&quot;
+    actions:
+      - action: notify.mobile_app_iphone
+        data:
+          title: &quot;ComfoBox: gestört&quot;
+          message: &gt;-
+            Der Gateway meldet seit 5 Minuten „degraded“.
+            Bitte die Diagnose in der Web-UI prüfen.
+
+      - action: notify.persistent_notification
+        data:
+          title: &quot;ComfoBox&quot;
+          message: &quot;Der Gateway ist gestört – siehe Web-UI → Diagnose.&quot;
+
+    # Nach 30 Minuten zusätzlich eine Meldung an eine weitere Instanz
+      - if:
+          - condition: template
+            value_template: &quot;{{ states(&#39;sensor.comfobox_health&#39;) == &#39;degraded&#39; }}&quot;
+        then:
+          - action: notify.email
+            data:
+              title: &quot;ComfoBox: weiterhin gestört&quot;
+              message: &quot;Seit 30 Minuten in Zustand degraded.&quot;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Baustein</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>for: &quot;00:05:00&quot;</code></td>
+<td>Erst alarmieren, wenn der Zustand <strong>anhält</strong> – ein kurzer Ausschlag bleibt still.</td>
+</tr>
+<tr>
+<td><code>state_attr(…, &#39;message&#39;)</code></td>
+<td>Die Meldung des Gateways mitnehmen (z. B. „Mqtt: Der Broker ist nicht erreichbar&quot;).</td>
+</tr>
+<tr>
+<td><code>notify.persistent_notification</code></td>
+<td>Eine Benachrichtigung in HA selbst, auch ohne Push-App.</td>
+</tr>
+</tbody></table>
+<h3>4.3 Alarm bei vollständigem Ausfall</h3>
+<p>Wenn das Gateway <strong>ausfällt</strong>, wird das Topic per <strong>Last Will</strong> auf <code>offline</code>
+gesetzt – auch ohne dass HA etwas tun muss. Die Entitäten werden dadurch
+<code>unavailable</code>.</p>
+<pre><code class="language-yaml">  - alias: &quot;ComfoBox: Gateway offline&quot;
+    triggers:
+      - trigger: state
+        entity_id: sensor.comfobox_health
+        to: offline
+    actions:
+      - action: notify.mobile_app_iphone
+        data:
+          title: &quot;ComfoBox: offline&quot;
+          message: &gt;-
+            Das Gateway ist nicht mehr erreichbar.
+            Container-Status prüfen: docker compose ps
+</code></pre>
+<h3>4.4 Sensor selbst anlegen (ohne HACS-Integration)</h3>
+<pre><code class="language-yaml">mqtt:
+  sensor:
+    - name: &quot;ComfoBox Health&quot;
+      state_topic: &quot;ComfoBox/Status/Health&quot;
+      availability_topic: &quot;ComfoBox/Status/Health&quot;
+      payload_available: &quot;online&quot;
+      payload_not_available: &quot;offline&quot;
+      device_class: enum
+      options: [&quot;online&quot;, &quot;degraded&quot;, &quot;offline&quot;]
+</code></pre>
+<h2>5. Alarmierung ohne Home Assistant</h2>
+<p>Wer kein Home Assistant betreibt, kann den MQTT-Topic direkt überwachen:</p>
+<pre><code class="language-bash"># einmalig
+mosquitto_sub -h BROKER -t &#39;ComfoBox/Status/Health&#39; -v
+
+# in einer Schleife, nur bei Zustandswechsel
+watch -n 30 &quot;mosquitto_sub -h BROKER -C 1 -t &#39;ComfoBox/Status/Health&#39; -v&quot;
+</code></pre>
+<h2>6. Backup</h2>
+<table>
+<thead>
+<tr>
+<th>Aspekt</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Was</strong></td>
+<td>das Volume <code>comfobox-data</code> (enthält <code>config.json</code> <strong>und</strong> den Schreibzähler) + die Logdateien</td>
+</tr>
+<tr>
+<td><strong>Wie</strong></td>
+<td><code>deploy/backup/backup.sh</code> (siehe unten)</td>
+</tr>
+<tr>
+<td><strong>Wann</strong></td>
+<td>täglich per Cronjob oder DSM-Aufgabenplaner</td>
+</tr>
+<tr>
+<td><strong>Aufbewahrung</strong></td>
+<td>die letzten 14 Sicherungen</td>
+</tr>
+<tr>
+<td><strong>Wiederherstellung</strong></td>
+<td><code>deploy/backup/restore.sh</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Schreibzähler gehört ins Backup.</strong> Er schützt das EEPROM der Heizung
+vor zu vielen Schreibvorgängen. Ohne ihn würde ein Wiederherstellen das
+24-Stunden-Fenster neu beginnen lassen.</p>
+</blockquote>
+<h3>6.1 Backup einrichten (manueller Betrieb)</h3>
+<pre><code class="language-bash">cd /volume1/docker/comfobox
+cp -r /pfad/zu/comfobox-mqtt/deploy/backup ./backup
+chmod +x ./backup/*.sh
+
+# einmalig testen
+./backup/backup.sh ./backup
+
+# täglich um 03:00 (DSM: Aufgabenplaner → Geplant: täglich)
+./backup/backup-cron.sh
+</code></pre>
+<h3>6.2 Wiederherstellung</h3>
+<pre><code class="language-bash"># 1. Container stoppen (das Skript macht das selbst)
+# 2. Restore ausführen
+./backup/restore.sh ./backup/comfobox-backup-2026-11-01-030000.tar.gz
+
+# 3. Prüfen
+curl -s http://localhost:8081/api/health
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Was passiert</th>
+<th>Warum</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Der Container wird gestoppt</td>
+<td>Sonst schreibt er während der Wiederherstellung in das Volume.</td>
+</tr>
+<tr>
+<td>Das Volume wird <strong>vollständig</strong> geleert und ersetzt</td>
+<td>Keine Altlasten aus dem vorherigen Zustand.</td>
+</tr>
+<tr>
+<td>Der Schreibzähler wird mit zurückgeschrieben</td>
+<td>Das 24-h-Fenster bleibt unverändert.</td>
+</tr>
+<tr>
+<td>Der Container wird neu gestartet</td>
+<td>Er lädt die wiederhergestellte Konfiguration.</td>
+</tr>
+</tbody></table>
+<h2>7. Wiederherstellung testen</h2>
+<p>Ein Backup, das nie getestet wurde, ist kein Backup. Der Test dauert zwei
+Minuten:</p>
+<pre><code class="language-bash"># 1. Aktuellen Zustand merken
+curl -s http://localhost:8081/api/diagnostics/writes
+
+# 2. Backup erstellen
+./backup/backup.sh ./backup
+
+# 3. Zählerdatei absichtlich löschen (Gegenprobe)
+docker run --rm -v comfobox-data:/data alpine rm -f /data/write-counter.json
+
+# 4. Restore
+./backup/restore.sh ./backup/comfobox-backup-&lt;Zeitstempel&gt;.tar.gz
+
+# 5. Kontrolle: der Zähler muss wieder da sein
+curl -s http://localhost:8081/api/diagnostics/writes
+</code></pre>
+<h2>8. Fehlerbilder</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Ursache</th>
+<th>Behebung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>degraded</code>, Meldung „Mqtt: …“</td>
+<td>Der Broker ist nicht erreichbar</td>
+<td>Broker-Adresse und Port prüfen, Netzwerk testen</td>
+</tr>
+<tr>
+<td><code>degraded</code>, Meldung „Bacnet: …“</td>
+<td>Die Heizung antwortet nicht</td>
+<td>Adapter prüfen, Baudrate (38400), Kabel</td>
+</tr>
+<tr>
+<td><code>offline</code></td>
+<td>Der Container läuft nicht</td>
+<td><code>docker compose ps</code>, <code>docker compose logs</code></td>
+</tr>
+<tr>
+<td><code>unhealthy</code></td>
+<td>Der HTTP-Server antwortet nicht</td>
+<td>Neustart: <code>docker compose restart gateway</code></td>
+</tr>
+<tr>
+<td>Schreibvorgänge werden abgelehnt</td>
+<td>Das 24-h-Limit ist erreicht</td>
+<td>Werte prüfen; Limit ggf. bewusst erhöhen</td>
+</tr>
+<tr>
+<td>Die Entitäten werden <code>unavailable</code></td>
+<td><code>ComfoBox/Status/Health</code> ist nicht <code>online</code></td>
+<td>Broker-Verbindung und Gateway-Status prüfen</td>
+</tr>
+</tbody></table>
+<h2>9. Weiterführende Seiten</h2>
+<ul>
+<li><a href="fehlersuche.html">Fehlersuche</a> – die häufigsten Symptome und ihre Ursache</li>
+<li><a href="synology.html">Synology</a> – Betrieb auf dem NAS</li>
+<li><a href="api.html">API</a> – alle Endpunkte im Detail</li>
+<li><a href="home-assistant.html">Home Assistant</a> – Einbindung und Entitäten</li>
+</ul>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="synology.html">&larr; Synology</a>
+          <a class="nav-next" href="fehlersuche.html">Fehlersuche &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -209,8 +209,8 @@ was Sie tun. Bei Rückfragen: <a href="/help/fehlersuche#expertenmodus">Experten
 </tr>
 <tr>
 <td>BACnet</td>
-<td>Port, Baudrate</td>
-<td><strong>erfordert Neustart</strong></td>
+<td><strong>Port, Baudrate</strong></td>
+<td><strong>wirkt sofort – kein Neustart nötig</strong></td>
 </tr>
 <tr>
 <td>Diagnose</td>
@@ -221,6 +221,42 @@ was Sie tun. Bei Rückfragen: <a href="/help/fehlersuche#expertenmodus">Experten
 <blockquote>
 <p><strong>Felder mit dem Hinweis „Neustart erforderlich&quot;</strong> werden erst nach einem Neustart
 wirksam. Sie finden einen Knopf dafür direkt auf der Seite.</p>
+</blockquote>
+<h3 id="den-seriellen-port-wechseln">Den seriellen Port wechseln</h3>
+<p>Unter <strong>Konfiguration → BACnet</strong> und auf der <strong>Übersicht</strong> (dort prominent,
+sobald die Heizung nicht antwortet) finden Sie die Port-Auswahl.</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was passiert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Neu suchen</strong></td>
+<td>Der Gateway fragt das Betriebssystem nach seriellen Ports ab</td>
+</tr>
+<tr>
+<td>Port wählen</td>
+<td>Die gefundenen Ports stehen zur Auswahl bereit</td>
+</tr>
+<tr>
+<td><strong>Verbindung testen</strong></td>
+<td>Der Port wird geöffnet und geprüft</td>
+</tr>
+<tr>
+<td><strong>Übernehmen</strong></td>
+<td>Der Gateway benutzt den neuen Port <strong>sofort</strong></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Kein Neustart nötig.</strong> Der Gateway schreibt die Wahl in die Konfiguration
+und baut die Verbindung zur Heizung sofort neu auf. Nach einem Neustart des
+Betriebssystems ist der Port weiterhin richtig eingestellt.</p>
+</blockquote>
+<blockquote>
+<p><strong>Der Adapter wird manchmal erst später erkannt</strong> – besonders nach einem
+Neustart des NAS. Dann einfach auf <strong>Neu suchen</strong> klicken.</p>
 </blockquote>
 <hr>
 <h2 id="diagnose">Diagnose</h2>

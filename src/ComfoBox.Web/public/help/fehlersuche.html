@@ -22,6 +22,7 @@
         <li><a href="bedienung.html">Bedienung</a></li>
         <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
         <li><a href="synology.html">Synology</a></li>
+        <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
         <li><a href="api.html">API</a></li>
       </ul>
     </nav>
@@ -111,7 +112,7 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.</p>
 </blockquote>
 <hr>
 <h2>Keine seriellen Ports in der Liste</h2>
-<p><strong>Symptom:</strong> Das Dropdown im Assistenten ist leer.</p>
+<p><strong>Symptom:</strong> Die Port-Auswahl (Konfiguration → BACnet oder Übersicht) ist leer.</p>
 <table>
 <thead>
 <tr>
@@ -121,7 +122,7 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.</p>
 </thead>
 <tbody><tr>
 <td>Adapter nicht eingesteckt</td>
-<td>einstecken, <em>Erneut suchen</em> klicken</td>
+<td>einstecken, <em>Neu suchen</em> klicken</td>
 </tr>
 <tr>
 <td>Kein Treiber</td>
@@ -134,7 +135,39 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.</p>
 </tbody></table>
 <blockquote>
 <p><strong>Der Adapter wird manchmal erst später erkannt</strong> – besonders nach einem Neustart
-des NAS. Das Gateway wartet von allein und verbindet sich, sobald der Port da ist.</p>
+des NAS. Das Gateway wartet von allein und verbindet sich, sobald der Port da ist.
+Sie können aber auch selbst suchen: <em>Neu suchen</em> in der Port-Auswahl.</p>
+</blockquote>
+<hr>
+<h2>Die ComfoBox antwortet nicht</h2>
+<p><strong>Symptom:</strong> Die Übersicht meldet „BACnet nicht verbunden&quot;.</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Falscher Port</td>
+<td>Port-Auswahl: richtigen Port wählen, <em>Übernehmen</em> (wirkt sofort)</td>
+</tr>
+<tr>
+<td>Falsche Baudrate</td>
+<td>Baudrate 38400 einstellen (Werks-Default 76800)</td>
+</tr>
+<tr>
+<td>ComfoBox steht noch auf 76800</td>
+<td>am Bedienpanel umstellen und neu starten</td>
+</tr>
+<tr>
+<td>Adapter abgezogen</td>
+<td>einstecken, <em>Neu suchen</em> klicken</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ein Portwechsel ist sofort wirksam</strong> – ein Neustart des Gateways ist nicht
+nötig.</p>
 </blockquote>
 <hr>
 <h2>Permission denied</h2>
@@ -426,7 +459,7 @@ müssen die Seite nicht neu ladenen.</p>
 
       <footer class="page-footer">
         <nav class="pager">
-          <a class="nav-prev" href="synology.html">&larr; Synology</a>
+          <a class="nav-prev" href="monitoring.html">&larr; Monitoring und Alarmierung</a>
           <a class="nav-next" href="api.html">API &rarr;</a>
         </nav>
         <p class="version">ComfoBox Gateway 1.0.0</p>

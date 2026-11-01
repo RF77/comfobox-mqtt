@@ -35,11 +35,16 @@ appsettings.override.json
 appsettings.*.local.json
 secrets.yaml
 
-# Laufzeit des Gateways (Schreibzähler, Logs)
-logs/
-data/
-write-counter.json
+# Laufzeit des Gateways (Schreibzähler, Logs).
+#
+# WICHTIG: Diese Regeln sind auf das Gateway-Projekt verankert. Ein
+# unbestimmtes "logs/" (ohne Pfadpräfix) würde auch den Angular-Quellordner
+# src/ComfoBox.Web/src/app/features/diagnostics/logs/ verschlucken – der
+# LogViewer wäre dann nicht im Repository und der CI-Build bräche ab.
+/ComfoBox.Gateway/logs/
+/ComfoBox.Gateway/data/
+/ComfoBox.Gateway/write-counter.json
 
 # Testverzeichnisse des Gateways (Laufzeit-Artefakte)
-logs-test/
-data-test/
+/ComfoBox.Gateway/logs-test/
+/ComfoBox.Gateway/data-test/

@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ComfoBox MQTT – Gateway (manueller Betrieb)
+#
+# → Spec: docs/03-deployment/containerisierung.md §4
+# → ADR:  docs/05-entscheidungen/adr-007-ein-container-image.md
+#
+# Nutzung:
+#   cp .env.example .env      # Werte anpassen (Image-Tag, Port, Serial-Port)
+#   docker compose up -d
+#   docker compose logs -f gateway
+#
+# WICHTIG:
+#   * `docker compose down` – NIEMALS mit `-v`! Das Volume comfobox-data
+#     enthält den 24-h-Schreibzähler (EEPROM-Schutz, Befund A3).
+#   * Es gibt KEINEN Docker-Socket und KEIN privileged: der Container
+#     braucht beides nicht.
+#   * Passwörter gehören NICHT hierher, sondern in die config.json im
+#     Volume (Modus 0600) – sonst tauchen sie in `docker inspect` auf.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: comfobox
+
+services:
+  gateway:
+    # Aus der Registry (kein build:) – auf dem NAS wird das Image gepullt.
+    image: ${COMFOBOX_IMAGE:-ghcr.io/rf77/comfobox-gateway:1.0.0}
+    container_name: comfobox-gateway
+    restart: unless-stopped
+
+    ports:
+      # 8081 ist der Port, den das Synology-Paket im DSM öffnet.
+      - "${COMFOBOX_WEB_PORT:-8081}:8080"
+
+    environment:
+      # Die Konfiguration kommt aus config.json im Volume; diese Variablen
+      # sind der Fallback, wenn die Datei noch nicht existiert.
+      COMFOBOX_Gateway__DataDirectory: /var/lib/comfobox
+      COMFOBOX_Logging__Directory: /var/log/comfobox
+      COMFOBOX_Bacnet__Port: "${COMFOBOX_SERIAL_PORT:-/dev/ttyUSB0}"
+      COMFOBOX_Bacnet__Baudrate: "${COMFOBOX_BACNET_BAUDRATE:-38400}"
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_gcServer: "1"
+
+    # Serielle Schnittstelle. Der by-id-Pfad ist reboot-stabil – /dev/ttyUSB0
+    # kann sich nach einem Neustart ändern.
+    devices:
+      - "${COMFOBOX_SERIAL_DEVICE:-/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0}:/dev/ttyUSB0"
+
+    # Zugriff auf das Device-Node ohne Root. Auf DSM und Debian ist
+    # "dialout" die GID 20 – deshalb wird die numerische GID verwendet.
+    group_add:
+      - "${COMFOBOX_DIALOUT_GID:-20}"
+
+    volumes:
+      # Persistenter 24-h-Schreibzähler + config.json (EEPROM-Schutz!)
+      - comfobox-data:/var/lib/comfobox
+      - "${COMFOBOX_LOG_DIR:-./logs}:/var/log/comfobox"
+
+    security_opt:
+      - no-new-privileges:true
+
+    healthcheck:
+      # Prüft nur die Erreichbarkeit – ein Zustand "degraded" (kein Broker,
+      # kein Heizungsgerät) ist kein Container-Problem.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  comfobox-data:
+    name: comfobox-data

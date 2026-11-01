@@ -1,0 +1,151 @@
+<section class="cb-logs">
+  <div class="cb-toolbar">
+    <p-multiSelect
+      [options]="levelOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="logs.filters().levels"
+      (ngModelChange)="logs.patchFilters({ levels: $event })"
+      placeholder="Level"
+      [maxSelectedLabels]="3"
+      styleClass="cb-level-filter"
+      aria-label="Level-Filter"
+    />
+
+    <p-select
+      [options]="logs.sources()"
+      [ngModel]="logs.filters().source"
+      (ngModelChange)="logs.patchFilters({ source: $event })"
+      placeholder="Alle Quellen"
+      [showClear]="true"
+      styleClass="cb-source-filter"
+      aria-label="Quellen-Filter"
+    />
+
+    <input
+      pInputText
+      type="search"
+      [ngModel]="logs.filters().search"
+      (ngModelChange)="logs.patchFilters({ search: $event })"
+      placeholder="Textsuche …"
+      class="cb-search-input"
+      aria-label="Volltextsuche"
+    />
+
+    <p-select
+      [options]="rangeOptions"
+      optionLabel="label"
+      optionValue="value"
+      [ngModel]="logs.filters().range"
+      (ngModelChange)="logs.patchFilters({ range: $event })"
+      styleClass="cb-range-filter"
+      aria-label="Zeitbereich"
+    />
+  </div>
+
+  <div class="cb-toolbar cb-toolbar-end">
+    <p-checkbox
+      [binary]="true"
+      [ngModel]="logs.live()"
+      (ngModelChange)="logs.live.set($event)"
+      inputId="log-live"
+    />
+    <label for="log-live">
+      Live
+      @if (streamState() === 'connected') {
+        <span class="cb-live-dot" aria-hidden="true"></span>
+      } @else if (streamState() === 'reconnecting') {
+        <span class="cb-live-dot cb-live-reconnecting" aria-hidden="true"></span>
+      }
+    </label>
+
+    <p-checkbox
+      [binary]="true"
+      [ngModel]="logs.autoScroll()"
+      (ngModelChange)="logs.autoScroll.set($event)"
+      inputId="log-autoscroll"
+    />
+    <label for="log-autoscroll">Auto-Scroll</label>
+
+    <span class="cb-count">{{ count() }} Einträge</span>
+
+    <p-button
+      icon="pi pi-refresh"
+      [text]="true"
+      aria-label="Protokoll neu laden"
+      (onClick)="reload()"
+    />
+
+    <p-button
+      icon="pi pi-filter-slash"
+      label="Filter zurücksetzen"
+      [text]="true"
+      (onClick)="reset()"
+    />
+
+    <p-button
+      icon="pi pi-download"
+      label="Exportieren"
+      [outlined]="true"
+      (onClick)="export()"
+    />
+
+    <p-button
+      icon="pi pi-trash"
+      label="Protokoll leeren"
+      severity="danger"
+      [outlined]="true"
+      (onClick)="clear()"
+    />
+  </div>
+
+  @if (logs.error(); as error) {
+    <p-message severity="error" styleClass="w-full">
+      <p>{{ error }}</p>
+    </p-message>
+  }
+
+  @if (streamState() === 'reconnecting') {
+    <p-message severity="warn" styleClass="w-full">
+      <p>Die Verbindung zum Protokoll wird wiederhergestellt …</p>
+    </p-message>
+  }
+
+  <div class="cb-log-viewport" #viewport role="log" aria-live="polite" aria-label="Protokoll">
+    @for (entry of logs.visible(); track entry.timestamp + entry.message) {
+      <article class="cb-log-entry" [class]="levelClass(entry.level)">
+        <header class="cb-log-head">
+          <span class="cb-log-time">{{ formatTime(entry.timestamp) }}</span>
+          <span class="cb-log-level">{{ entry.level }}</span>
+          <span class="cb-log-source">{{ entry.source }}</span>
+
+          <p-button
+            icon="pi pi-copy"
+            [text]="true"
+            size="small"
+            [attr.aria-label]="'Eintrag kopieren: ' + entry.message"
+            (onClick)="copy(entry)"
+          />
+        </header>
+
+        <p class="cb-log-message">{{ entry.message }}</p>
+
+        @if (entry.properties && (entry.properties | keyvalue); as properties) {
+          @if (properties.length > 0) {
+            <ul class="cb-log-properties">
+              @for (property of properties; track property.key) {
+                <li><span>{{ property.key }}</span> = {{ property.value }}</li>
+              }
+            </ul>
+          }
+        }
+
+        @if (entry.exception) {
+          <pre class="cb-log-exception">{{ entry.exception }}</pre>
+        }
+      </article>
+    } @empty {
+      <p class="cb-log-empty">Keine Einträge vorhanden.</p>
+    }
+  </div>
+</section>
