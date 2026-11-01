@@ -34,6 +34,13 @@ public sealed class BacnetMstpOptions
     /// <summary>
     /// Frame-Protokollierung auf Debug-Level.
     /// </summary>
+    /// <remarks>
+    /// <b>Ohne Wirkung im laufenden Betrieb:</b> der MS/TP-Token hat nur
+    /// wenige Millisekunden Zeit. Ein Log-Eintrag im Hot-Path würde das
+    /// Zeitfenster sprengen und den Bus stören. Die Zustände werden stattdessen
+    /// über <see cref="IMstpObserver"/> gesammelt und **außerhalb** des
+    /// Zustandsautomaten ausgewertet - siehe <see cref="MstpEventRecorder"/>.
+    /// </remarks>
     public bool StateLogging { get; init; }
 
     /// <summary>

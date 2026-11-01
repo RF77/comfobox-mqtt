@@ -154,6 +154,7 @@ public static class GatewayApiExtensions
         app.MapAuth();
         app.MapSetup();
         app.MapLogs();
+        app.MapBacnetDiagnostics();
     }
 
     /// <summary>

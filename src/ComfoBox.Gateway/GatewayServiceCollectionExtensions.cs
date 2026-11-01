@@ -156,6 +156,10 @@ public static class GatewayServiceCollectionExtensions
             // Die Fabrik liest ihre Parameter **bei jedem Öffnen** aus den
             // SerialPortSettings - so kann der Port zur Laufzeit gewechselt
             // werden, ohne dass der Gateway neu startet.
+            //
+            // Der Ringpuffer der Bus-Ereignisse wird als Beobachter
+            // übergeben: er schreibt im Hot-Path **nur** in vorbelegte
+            // Arrays - ohne Log, ohne I/O, ohne Sperre.
             var transport = new BacnetMstpTransport(
                 new GatewaySerialPortFactory(settings, options.ItemTimeoutMs),
                 new BacnetMstpOptions
@@ -164,7 +168,8 @@ public static class GatewayServiceCollectionExtensions
                     MaxMaster = (byte)options.MaxMaster,
                     Serial = serial,
                 },
-                sp.GetRequiredService<ILogger<BacnetMstpTransport>>());
+                sp.GetRequiredService<ILogger<BacnetMstpTransport>>(),
+                sp.GetRequiredService<MstpEventRecorder>());
 
             var client = new BacnetClient(transport, sp.GetRequiredService<ILogger<BacnetClient>>())
             {
@@ -176,9 +181,23 @@ public static class GatewayServiceCollectionExtensions
         });
         services.AddSingleton<BacnetDevice>();
 
+        // Der Ringpuffer der MS/TP-Ereignisse. Er wird vom Zustandsautomaten
+        // allokationsfrei gefüllt und von der Bus-Analyse ausgewertet.
+        services.AddSingleton<MstpEventRecorder>();
+
+        // Die Bus-Analyse: sie liest den Token-Umlauf mit, ohne die ComfoBox
+        // zu verändern. Das Logging passiert in ihr - **nicht** im Hot-Path
+        // des Zustandsautomaten.
+        services.AddSingleton<BacnetBusAnalyzer>();
+
+        // Das Polling wird als Singleton registriert, damit die Bus-Analyse
+        // es für die Dauer einer Beobachtung pausieren kann.
+        services.AddSingleton<BacnetPollingService>();
+
         if (startBackgroundServices)
         {
-            services.AddHostedService<BacnetPollingService>();
+            services.AddHostedService(sp => sp.GetRequiredService<BacnetPollingService>());
+            services.AddHostedService(sp => sp.GetRequiredService<BacnetBusAnalyzer>());
         }
 
         // -------------------------------------------------------------------

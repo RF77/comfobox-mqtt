@@ -32,6 +32,7 @@ public sealed class BacnetMstpTransport : IBacnetTransport
     private readonly ILogger<BacnetMstpTransport> _logger;
     private readonly ISerialPortFactory _portFactory;
     private readonly BacnetMstpOptions _options;
+    private readonly IMstpObserver? _observer;
     private readonly ConcurrentQueue<MstpOutboundFrame> _sendQueue = new();
     private readonly HashSet<MstpOutboundFrame> _outstanding = [];
     private readonly object _outstandingLock = new();
@@ -57,10 +58,15 @@ public sealed class BacnetMstpTransport : IBacnetTransport
     /// <param name="portFactory">Erzeugt die serielle Schnittstelle.</param>
     /// <param name="options">Konfiguration.</param>
     /// <param name="logger">Logger.</param>
+    /// <param name="observer">
+    /// Optionaler Beobachter für die Bus-Analyse. Er wird im Hot-Path des
+    /// Tokens aufgerufen und darf dort weder allokieren noch loggen.
+    /// </param>
     public BacnetMstpTransport(
         ISerialPortFactory portFactory,
         BacnetMstpOptions options,
-        ILogger<BacnetMstpTransport> logger)
+        ILogger<BacnetMstpTransport> logger,
+        IMstpObserver? observer = null)
     {
         ArgumentNullException.ThrowIfNull(portFactory);
         ArgumentNullException.ThrowIfNull(options);
@@ -69,6 +75,7 @@ public sealed class BacnetMstpTransport : IBacnetTransport
         _portFactory = portFactory;
         _options = options;
         _logger = logger;
+        _observer = observer;
     }
 
     /// <summary>
@@ -323,7 +330,8 @@ public sealed class BacnetMstpTransport : IBacnetTransport
                     _options,
                     _sendQueue,
                     OnFrameReceived,
-                    _logger);
+                    _logger,
+                    _observer);
 
                 // Der Zustandsautomat blockiert - er läuft auf dem
                 // Long-Running-Thread dieses Transports.

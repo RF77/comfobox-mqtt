@@ -25,6 +25,15 @@ namespace ComfoBox.Gateway.Bacnet;
 /// </remarks>
 public sealed class BacnetPollingService : BackgroundService
 {
+    /// <summary>
+    /// Die Wartezeit, während der das Polling pausiert ist.
+    /// </summary>
+    /// <remarks>
+    /// Kurz genug, damit eine Pause schnell wirkt - lang genug, damit der
+    /// Gateway nicht in einer engen Schleife CPU verbraucht.
+    /// </remarks>
+    private static readonly TimeSpan PauseDelay = TimeSpan.FromSeconds(1);
+
     private readonly BacnetDevice _device;
     private readonly IBacnetClient _client;
     private readonly IItemCatalog _catalog;
@@ -32,6 +41,7 @@ public sealed class BacnetPollingService : BackgroundService
     private readonly ILogger<BacnetPollingService> _logger;
     private readonly TimeSpan _pollInterval;
     private readonly int _secondaryPollFactor;
+    private int _paused;
 
     /// <summary>
     /// Erzeugt den Polling-Dienst.
@@ -66,6 +76,21 @@ public sealed class BacnetPollingService : BackgroundService
         _pollInterval = TimeSpan.FromSeconds(gatewayOptions.Value.PollIntervalSeconds);
         _secondaryPollFactor = gatewayOptions.Value.SecondaryPollFactor;
     }
+
+    /// <summary>
+    /// Ist das Polling pausiert?
+    /// </summary>
+    /// <remarks>
+    /// Während einer Bus-Analyse wird nicht gepollt: die Abfragen des
+    /// Gateways würden den Token belegen und den Umlauf stören.
+    /// </remarks>
+    public bool IsPaused => Volatile.Read(ref _paused) != 0;
+
+    /// <summary>
+    /// Pausiert das Polling oder lässt es wieder laufen.
+    /// </summary>
+    /// <param name="paused"><c>true</c> pausiert, <c>false</c> setzt fort.</param>
+    public void SetPaused(bool paused) => Volatile.Write(ref _paused, paused ? 1 : 0);
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -102,6 +127,14 @@ public sealed class BacnetPollingService : BackgroundService
         {
             try
             {
+                if (IsPaused)
+                {
+                    // Während der Bus-Analyse wird nicht gepollt. Der Token
+                    // soll ungestört am Ring entlanglaufen.
+                    await Task.Delay(PauseDelay, stoppingToken).ConfigureAwait(false);
+                    continue;
+                }
+
                 if (cycle == 0)
                 {
                     await _device.ReadItemsAsync(once, stoppingToken).ConfigureAwait(false);

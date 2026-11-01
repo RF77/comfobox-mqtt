@@ -71,6 +71,7 @@ internal sealed class MstpStateMachine
     private readonly BacnetMstpOptions _options;
     private readonly ConcurrentQueue<MstpOutboundFrame> _sendQueue;
     private readonly Action<byte[], BacnetAddress> _frameReceived;
+    private readonly IMstpObserver? _observer;
     private readonly byte[] _localBuffer = new byte[MaxBufferLength];
 
     private short _thisStation;
@@ -94,18 +95,24 @@ internal sealed class MstpStateMachine
     /// <param name="sendQueue">Warteschlange der zu sendenden Frames.</param>
     /// <param name="frameReceived">Callback für empfangene NPDU/APDU-Nutzdaten.</param>
     /// <param name="logger">Logger.</param>
+    /// <param name="observer">
+    /// Optionaler Beobachter für die Bus-Analyse. Er wird im Hot-Path
+    /// aufgerufen und darf dort weder allokieren noch loggen.
+    /// </param>
     public MstpStateMachine(
         ISerialPort port,
         BacnetMstpOptions options,
         ConcurrentQueue<MstpOutboundFrame> sendQueue,
         Action<byte[], BacnetAddress> frameReceived,
-        ILogger logger)
+        ILogger logger,
+        IMstpObserver? observer = null)
     {
         _port = port;
         _options = options;
         _sendQueue = sendQueue;
         _frameReceived = frameReceived;
         _logger = logger;
+        _observer = observer;
 
         _thisStation = options.ThisStation;
         _maxMaster = options.MaxMaster;
@@ -130,11 +137,18 @@ internal sealed class MstpStateMachine
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (_options.StateLogging)
-                {
-                    _logger.LogDebug("MSTP-Zustand: {State}", state);
-                }
-
+                // **Kein Logging in diesem Pfad.**
+                //
+                // Der MS/TP-Token hat nur wenige Millisekunden Zeit
+                // (TUsageTimeout = 95 ms). Ein Log-Eintrag - Datei, Konsole
+                // oder Console-Handler - kostet I/O und würde das Zeitfenster
+                // sprengen: der Token ginge verloren, der Master suchte einen
+                // Nachfolger, der Bus kollabierte.
+                //
+                // Die Zustände werden deshalb **gesammelt**, nicht geschrieben:
+                // der Beobachter (IMstpObserver) schreibt sie in einen
+                // allokationsfreien Ringpuffer. Die Auswertung passiert
+                // außerhalb dieses Threads.
                 switch (state)
                 {
                     case MstpState.Reset:
@@ -242,6 +256,14 @@ internal sealed class MstpStateMachine
                                 {
                                     _frameCount = 0;
                                     _soleMaster = false;
+
+                                    // Der Token wurde übernommen - das ist das
+                                    // Ereignis, auf das die Analyse zeigt.
+                                    _observer?.OnMstpEvent(
+                                        MstpEventKind.TokenReceived,
+                                        sourceAddress,
+                                        (byte)frameType);
+
                                     return MstpState.ReceivedToken;
                                 }
 
@@ -312,6 +334,13 @@ internal sealed class MstpStateMachine
     {
         while (!cancellationToken.IsCancellationRequested)
         {
+            // Eine Warteschleife: der Master fragt der Reihe nach alle
+            // Stationen ab, bis sich eine meldet.
+            _observer?.OnMstpEvent(
+                MstpEventKind.PollForMaster,
+                _pollStation,
+                (byte)BacnetMstpFrameTypes.FRAME_TYPE_POLL_FOR_MASTER);
+
             SendFrame(BacnetMstpFrameTypes.FRAME_TYPE_POLL_FOR_MASTER, _pollStation);
 
             var status = GetNextMessage(
@@ -368,6 +397,11 @@ internal sealed class MstpStateMachine
 
             _soleMaster = true;
             _frameCount = 0;
+
+            // Kein anderer Knoten hat sich gemeldet - es gibt (noch) keinen
+            // zweiten Teilnehmer auf dem Bus.
+            _observer?.OnMstpEvent(MstpEventKind.SoleMaster, (byte)_thisStation, 0);
+
             return MstpState.DeclareSoleMaster;
         }
 
@@ -432,6 +466,9 @@ internal sealed class MstpStateMachine
             _frameCount = _maxInfoFrames;
             return MstpState.NothingToSend;
         }
+
+        // Der Token wurde für einen eigenen Frame benutzt.
+        _observer?.OnMstpEvent(MstpEventKind.TokenUsed, (byte)_thisStation, (byte)frame.FrameType);
 
         SendFrame(frame);
         _frameCount++;
@@ -508,6 +545,12 @@ internal sealed class MstpStateMachine
     {
         for (var i = 0; i <= _retryToken; i++)
         {
+            // Der Token wandert weiter - das ist der sichtbare "Umlauf".
+            _observer?.OnMstpEvent(
+                MstpEventKind.TokenPassed,
+                _nextStation,
+                (byte)BacnetMstpFrameTypes.FRAME_TYPE_TOKEN);
+
             SendFrame(BacnetMstpFrameTypes.FRAME_TYPE_TOKEN, _nextStation);
 
             var status = GetNextMessage(
@@ -544,6 +587,10 @@ internal sealed class MstpStateMachine
     /// </summary>
     private MstpState AnswerDataRequest()
     {
+        // Das Gateway ist reiner Client: es kann keine Anfrage beantworten
+        // und sagt das dem Bus.
+        _observer?.OnMstpEvent(MstpEventKind.ReplyPosted, _replySource, 0);
+
         SendFrame(BacnetMstpFrameTypes.FRAME_TYPE_REPLY_POSTPONED, _replySource);
         return MstpState.DeferredReply;
     }
@@ -572,6 +619,9 @@ internal sealed class MstpStateMachine
         {
             return;
         }
+
+        // Eine BACnet-Nutzlast ist angekommen (nicht nur ein MS/TP-Frame).
+        _observer?.OnMstpEvent(MstpEventKind.DataReceived, sourceAddress, 0);
 
         var payload = new byte[messageLength];
         Array.Copy(_localBuffer, MSTP.MSTP_HEADER_LENGTH, payload, 0, messageLength);
@@ -629,13 +679,12 @@ internal sealed class MstpStateMachine
             frame.Sent.TrySetResult(true);
         }
 
-        if (_options.StateLogging)
-        {
-            _logger.LogDebug(
-                "MSTP-Frame gesendet: {FrameType} an {Destination}",
-                frame.FrameType,
-                frame.DestinationAddress.ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
-        }
+        // **Kein Logging im Hot-Path** - siehe Run(). Der Beobachter
+        // bekommt das Ereignis allokationsfrei mitgeteilt.
+        _observer?.OnMstpEvent(
+            MstpEventKind.FrameSent,
+            (byte)_thisStation,
+            (byte)frame.FrameType);
     }
 
     /// <summary>
@@ -827,13 +876,9 @@ internal sealed class MstpStateMachine
             }
         }
 
-        if (_options.StateLogging)
-        {
-            _logger.LogDebug(
-                "MSTP-Frame empfangen: {FrameType} von {Source}",
-                frameType,
-                sourceAddress.ToString("X2", System.Globalization.CultureInfo.InvariantCulture));
-        }
+        // **Kein Logging im Hot-Path** - siehe Run(). Der Beobachter
+        // bekommt das Ereignis allokationsfrei mitgeteilt.
+        _observer?.OnMstpEvent(MstpEventKind.FrameReceived, sourceAddress, (byte)frameType);
 
         return GetMessageStatus.Good;
     }
