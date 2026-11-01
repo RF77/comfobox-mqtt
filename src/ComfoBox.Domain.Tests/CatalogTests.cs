@@ -239,8 +239,16 @@ public sealed class CatalogTests
     [Fact]
     public void Die_Domain_Hat_Keine_Externen_Abhaengigkeiten()
     {
-        // Layerregel: die Domäne ist framework-frei.
-        var erlaubt = new[] { "System", "ComfoBox.Domain" };
+        // Layerregel: die Domäne ist framework-frei - sie darf **kein**
+        // NuGet-Paket referenzieren.
+        //
+        // `netstandard` ist dabei **kein** fremdes Paket, sondern die
+        // .NET-Standard-Fassade des Frameworks. Sie erscheint ausschließlich,
+        // wenn der Test mit dem Coverage-Collector instrumentiert wird
+        // (coverlet schreibt die instrumentierten Assemblies mit einem
+        // Verweis auf netstandard2.0 um). Ohne Coverage referenziert die
+        // Domäne nur `System.Runtime` und `System.Collections`.
+        var erlaubt = new[] { "System", "netstandard", "ComfoBox.Domain" };
 
         var fremde = typeof(ItemDefinition).Assembly.GetReferencedAssemblies()
             .Select(a => a.Name!)
