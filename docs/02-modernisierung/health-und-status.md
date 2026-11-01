@@ -204,6 +204,21 @@ internal sealed class HealthReporter(
 | `GET /api/diagnostics/logs` | **Log-Einträge** (letzte 1000, filterbar) – siehe [logging.md §6](logging.md#6-api) |
 | `GET /api/diagnostics/logs/stream` | **Live-Log-Tail** per SSE |
 | `GET /api/diagnostics/writes` | Schreibzähler-Historie (24 h) |
+| `GET /api/diagnostics/bacnet` | **Bus-Analyse**: Token-Umlauf auf dem MS/TP-Bus |
+| `POST /api/diagnostics/bacnet/observe` | Beobachtung starten (3 … 300 s) |
+| `DELETE /api/diagnostics/bacnet/observe` | Beobachtung beenden, Polling läuft weiter |
+
+### 6.1 Bus-Analyse (nur lesend)
+
+Die Bus-Analyse zeigt, ob auf dem MS/TP-Bus überhaupt ein Token herumgeht.
+Sie ist **rein lesend**: sie stellt keine Anfragen an die ComfoBox und
+schreibt keine Werte.
+
+> **Timing:** der MS/TP-Token hat nur wenige Millisekunden Zeit (95 ms bis
+> zur Übernahme). Der Gateway protokolliert deshalb **nichts** im laufenden
+> Betrieb – die Zustände werden in einen allokationsfreien Ringpuffer
+> geschrieben und **außerhalb** des Bus-Takts ausgewertet. Ein Log-Eintrag
+> im Hot-Path würde den Token verlieren und den Bus zum Erliegen bringen.
 
 Beispiel:
 

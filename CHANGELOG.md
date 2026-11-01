@@ -219,8 +219,39 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Phase 8d (Aufgabe 8d.1): `GET /api/config` meldet jetzt auch
   `Mqtt:EnableDiscovery`; die Oberfläche zeigt den Schalter in der
   MQTT-Karte
+- **BACnet-Bus-Analyse** (nur lesend): `GET /api/diagnostics/bacnet`,
+  `POST`/`DELETE /api/diagnostics/bacnet/observe`. Sie zeigt, ob auf dem
+  MS/TP-Bus ein Token herumgeht – Zähler, gesehenen Stationen, den
+  Ereignisverlauf und eine Bewertung in einem Satz
+- `ComfoBox.Bacnet.IMstpObserver` + `MstpEventRecorder` – ein
+  **allokationsfreier** Ringpuffer für die MS/TP-Ereignisse. Der
+  Zustandsautomat meldet Token-Übernahme, Weitergabe, PFM-Runden und Frames
+  **ohne** Log und **ohne** Sperre
+- `ComfoBox.Gateway.Bacnet.BacnetBusAnalyzer` – wertet den Ringpuffer
+  **außerhalb** des Bus-Takts aus (eigener Thread, 1 s-Takt) und schreibt
+  dort erst das Log
+- Neue Oberflächen-Seite „BACnet-Bus" in der Diagnose: Beobachtung
+  starten/beenden, Zähler und Ereignistabelle
+- `BacnetPollingService.SetPaused()` – während einer Beobachtung pausiert
+  das Polling, damit der Token ungestört am Ring entlangläuft
+- CI-Workflow `.github/workflows/synology-spk.yml` – baut das Synology-Paket
+  **eigenständig** (Tag-Push oder `workflow_dispatch`), hängt es als
+  Release-Asset an und kopiert es optional per SSH auf die NAS
 
 ### Changed
+- **Der Legacy-Code wird von der CI nicht mehr angefasst:** der Job
+  `legacy-check` ist entfernt, CodeQL ignoriert `src_old/` (`paths-ignore`).
+  Grund: `src_old/` ist Archiv (net452, C# 6) – der Code lief seit dem
+  24.10. nicht mehr und ist nur noch Referenz
+- CI: das Synology-Paket wird nicht mehr im `docker-publish.yml` gebaut, sondern
+  im eigenen Workflow `synology-spk.yml` – die Release-Notizen bleiben dadurch
+  an einer Stelle
+- **Kein Logging mehr im Hot-Path des MS/TP-Automaten.** Der Token hat nur
+  95 ms Zeit bis zur Übernahme; ein Log-Eintrag an dieser Stelle hätte den
+  Token verloren und den Bus blockiert. Die Zustände werden nun gesammelt
+  und außerhalb ausgewertet
+- Die Artefakte liegen **außerhalb** des 500-MB-Limits des GitHub-Free-
+  Kontos: Release-Assets (2 GB pro Datei) und GHCR als Registry-Speicher
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
 - Phase 8b (Aufgabe 8b.2): die `options.json` des HA-Add-ons hat jetzt
   **Vorrang vor den Umgebungsvariablen** (und vor der `config.json`).
@@ -284,6 +315,20 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Geräte-ID (`{ClientId}-{DeviceId}`)
 
 ### Fixed
+- **Die Reiter der Diagnose-Seite ließen sich nicht umschalten.** `p-tabs`
+  hatte ein statisches `value="checks"` – der Klick auf einen anderen Reiter
+  änderte nichts. Die Auswahl hängt jetzt an einem Signal (`[(value)]`)
+- **Ein per `@if` ersetzter Zweig blieb als sichtbarer „Waisen"-Zweig im DOM.**
+  `p-tabpanel` projiziert seinen Inhalt per `ng-template` + `*ngTemplateOutlet`;
+  ein ersetzter `@if`/`@else`-Zweig wird **nicht** aus dem DOM entfernt. Der
+  Ladehinweis „Die Bus-Analyse wird geladen …" blieb deshalb dauerhaft
+  sichtbar, obwohl die Analyse längst fertig war. Der Hinweis wird jetzt
+  **per CSS-Klasse** geschaltet (`display: none`), nicht per Kontrollfluss
+- **Der CI-Lauf war rot, ohne dass der Code defekt war:** die
+  `package-lock.json` des Angular-Projekts enthielt im Root-Eintrag **keine
+  Abhängigkeiten** – `npm ci` bricht in diesem Fall mit `EUSAGE` ab und der
+  Job „Build (Angular)" wurde rot. Die Lock-Datei ist konsistent; der
+  Workflow meldet eine Drift jetzt mit einem klaren Hinweis
 - Phase 7 (Aufgabe 7.0): **zwei Gateways am selben Broker haben sich gegenseitig
   verdrängt** – beide meldeten sich mit `comfobox-gateway-{Hostname}` an, der
   Broker trennte die ältere Sitzung (*Session taken over*) und deren Last-Will

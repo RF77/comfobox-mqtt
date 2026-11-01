@@ -272,7 +272,21 @@ npm test              # falls Tests vorhanden (Vitest/Karma)
 > { "/api": { "target": "http://localhost:8080", "secure": false } }
 > ````
 
-## 12. Definition of Done (UI)
+## 12. Optimus-Fallstricke
+
+> Diese Fallen sind **in diesem Projekt schon passiert** – nicht neu erfinden.
+
+| Falle | Symptom | Regel |
+|---|---|---|
+| `p-tabpanel` projiziert per `ng-template` + `*ngTemplateOutlet` | ein per `@if`/`@else` **ersetzter** Zweig bleibt als sichtbarer „Waisen"-Zweig im DOM (der Leave-Pfad greift dort nicht) | Ladehinweise **per CSS-Klasse** schalten: `[class.cb-hidden]` + `display: none !important` |
+| `p-message` per `@if` entfernen | die Meldung bleibt (in einem Hintergrund-Tab feuert `animationend` nie) | Schweregrad umschalten statt entfernen |
+| statisches `value` auf `p-tabs` | die Reiter lassen sich nicht umschalten | `[(value)]` mit einem Signal |
+| `aria-label` als Attribut auf `<p-button>` | der innere `<button>` bekommt **keinen** zugänglichen Namen | Optimus erwartet die **Eigenschaft** `ariaLabel` |
+| `readonly`-Array an `[value]` von `p-table` | TS4104 | Modell-Listen `mutable` |
+| `takeUntilDestroyed()` ohne Argument in `ngOnInit` | NG0203 | `DestroyRef` übergeben (`ngOnInit` ist kein Injektionskontext) |
+| `page.mouse.click` im VS-Code-Browser | kein DOM-Ereignis (der Tab ist nicht sichtbar) | `element.click()` per `page.evaluate` |
+
+## 13. Definition of Done (UI)
 
 - [ ] `npm run lint` grün, keine `any`
 - [ ] Produktions-Build erfolgreich

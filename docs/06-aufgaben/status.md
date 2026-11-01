@@ -120,6 +120,30 @@
 | 8.8 | Getting-Started-Assistent | ✅ | 2.5 |
 | 8.9 | SPK-Build in CI + Release-Artefakt | ✅ | 0.5 |
 
+## Phase 8e – CI-Bereinigung & Bus-Analyse (3 PT)
+
+| # | Aufgabe | Status | PT |
+|---|---|---|---|
+| 8e.1 | **Legacy-CI abschalten** (`legacy-check` entfernt, CodeQL ignoriert `src_old/`) | ✅ | 0.5 |
+| 8e.2 | **Eigenständiger SPK-Workflow** + Artefakte außerhalb des 500-MB-Limits (Release-Assets, GHCR, NAS-Kopie) | ✅ | 1.0 |
+| 8e.3 | **BACnet-Bus-Analyse** (nur lesend, ohne Logging im Hot-Path) + Oberflächen-Tab | ✅ | 1.5 |
+
+> **8e.1:** Der Job `legacy-check` (Prüfung von `src_old/`) ist entfernt –
+> `src_old/` ist Archiv (net452, C# 6), der Code lief seit dem 24.10. nicht
+> mehr. CodeQL scant nur noch `src/`.
+>
+> **8e.2:** `.github/workflows/synology-spk.yml` baut das `.spk` eigenständig
+> (Tag-Push oder `workflow_dispatch`), hängt es per `gh release upload` an
+> das Release und kopiert es optional per SSH auf die NAS. Das **500-MB-Limit**
+> des GitHub-Free-Kontos gilt nur für das Repository – Release-Assets (2 GB
+> pro Datei) und GHCR sind davon **nicht** betroffen.
+>
+> **8e.3:** `GET /api/diagnostics/bacnet` zeigt, ob auf dem MS/TP-Bus ein Token
+> herumgeht (Zähler, Stationen, Ereignisse, Bewertung). Der Zustandsautomat
+> protokolliert **nichts mehr** im Hot-Path – der Token hat nur 95 ms Zeit bis
+> zur Übernahme. Die Ereignisse gehen in einen allokationsfreien Ringpuffer
+> (`MstpEventRecorder`) und werden außerhalb des Bus-Takts ausgewertet.
+
 ## Phase 8a–8d – Home-Assistant-Ökosystem (14 PT)
 
 | # | Aufgabe | Status | PT |
@@ -186,13 +210,16 @@
 
 > **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) + 14 PT (Phase 8a–8d, Aufgaben 8a.1–8d.1) + 1 PT (Phase 7, Aufgabe 7.0) von 64 PT.
 >
-> **Stand 2026-11-01:** **327 Tests grün** (46 BACnet + 30 Domain + 10 Contract + 241 Gateway),
+> **Stand 2026-11-01:** **339 Tests grün** (52 BACnet + 30 Domain + 10 Contract + 247 Gateway),
 > **12 Werkzeug-Tests** und **35 HA-Integrationstests** grün. Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
 > der Container läuft **healthy**, Trivy meldet 0 Funde, und Backup/Restore sind
 > real getestet. Das **Synology-Paket** ist vollständig (Icon, Setup-API,
 > Assistent, CI-Build) – offen bleibt nur der Test auf der echten DS923+
 > (Aufgabe **6.4**). Das **HA-Ökosystem** ist komplett: HACS-Integration (35
-> Tests), Add-on mit Options-Mapping und Release-Workflow.
+> Tests), Add-on mit Options-Mapping und Release-Workflow. Die **Legacy-CI ist
+> abgeschaltet**, das Synology-Paket hat einen **eigenständigen Workflow**
+> (Release-Assets + GHCR liegen außerhalb des 500-MB-Limits), und die
+> **Bus-Analyse** zeigt nur lesend, ob ein MS/TP-Token im Umlauf ist.
 
 ## Nächste Aufgabe
 

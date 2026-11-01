@@ -11,6 +11,28 @@
 > Offen bleibt nur **6.4** (Test auf der echten DS923+) und der **CI-Lauf**
 > (es wurde noch kein Tag gepusht).
 
+> **Nachtrag 2026-11-01 (CI & Bus-Analyse):**
+>
+> 1. **Der Legacy-CI ist abgeschaltet.** Der Job `legacy-check` ist entfernt,
+>    CodeQL ignoriert `src_old/`. `src_old/` ist Archiv – der Code lief seit
+>    dem 24.10. nicht mehr.
+> 2. **Das Synology-Paket hat einen eigenen Workflow**
+>    (`.github/workflows/synology-spk.yml`): baut das `.spk` eigenständig
+>    (Tag-Push oder `workflow_dispatch`), hängt es als Release-Asset an und
+>    kopiert es optional per SSH auf die NAS.
+>    **Artefakt-Ablage außerhalb des 500-MB-Limits:** Release-Assets (2 GB pro
+>    Datei) und GHCR – das 500-MB-Limit gilt nur für das Repository selbst.
+> 3. **Die Bus-Analyse** (`/api/diagnostics/bacnet`) zeigt nur lesend, ob auf
+>    dem MS/TP-Bus ein Token herumgeht. Der Zustandsautomat **protokolliert
+>    nichts mehr** im Hot-Path (der Token hat nur 95 ms Zeit) – die Ereignisse
+>    gehen in einen allokationsfreien Ringpuffer und werden außerhalb
+>    ausgewertet.
+>
+> **Ursache des roten CI-Laufs (31.10. / 01.11.):** die `package-lock.json`
+> enthielt im Root-Eintrag keine Abhängigkeiten – `npm ci` brach mit `EUSAGE`
+> ab. Die Lock-Datei ist inzwischen konsistent; der Workflow meldet eine
+> Drift jetzt mit einem klaren Hinweis.
+
 ---
 
 ## 8.1 – SPK-Skelett · 1.0 PT ✅
@@ -141,22 +163,30 @@
 
 | | |
 |---|---|
-| **Datei** | `.github/workflows/docker-publish.yml` (Ergänzung) |
+| **Datei** | `.github/workflows/synology-spk.yml` (eigenständig) |
 
 | Schritt | Wert |
 |---|---|
 | Bauen | `deploy/synology-spk/build-spk.sh` |
 | Prüfen | `deploy/synology-spk/tools/check-shell.sh` |
-| Hochladen | GitHub Release als Artefakt |
+| Hochladen | GitHub Release **als Release-Asset** (`gh release upload`) |
+| Kopieren | optional per SSH auf die NAS (`NAS_SSH_*`-Secrets) |
 | `packages.json` | wird beim Release aktualisiert |
 
 **Akzeptanzkriterien:**
-- [x] Das `.spk` liegt im GitHub Release (Job `spk` → Artefakt → Release)
+- [x] Das `.spk` liegt im GitHub Release (Job `release` → `gh release upload`)
 - [x] `packages.json` zeigt auf die neue Version (mit MD5-Prüfsumme)
 - [x] `bash -n` läuft in der CI (`check-shell.sh` im Job `spk`)
+- [x] Das Paket lässt sich **auch ohne** Image-Publish bauen (`workflow_dispatch`)
+- [x] Die Artefakte liegen **außerhalb** des 500-MB-Limits des Free-Kontos
+      (Release-Assets + GHCR)
+- [x] Optional: Kopie auf die NAS per SSH (`NAS_SSH_HOST`, `NAS_SSH_USER`,
+      `NAS_SSH_KEY`, `NAS_TARGET_DIR`)
 
 > **Noch offen:** Der Workflow ist noch **nicht** gelaufen (kein Tag gepusht).
 > Der Push und das GitHub Release stehen damit aus – wie bei 6.3.
+> Der Workflow lässt sich **jederzeit** von Hand anstoßen
+> (*Actions → synology-spk → Run workflow*).
 
 ---
 

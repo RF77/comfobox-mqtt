@@ -214,6 +214,8 @@ node tools/build-docs.mjs
 | Der Log-Ringpuffer zeigt **Secrets** | Logging | Redaktion vor dem Speichern (`••••`) |
 | `pytest-socket` blockiert **jede** Socket-Erstellung | HA-Tests | unter Windows braucht asyncio ein TCP-Self-Pipe → `pytest_socket.disable_socket` im conftest ersetzen |
 | `aiodns` braucht unter Windows einen **SelectorEventLoop** | HA-Tests | im Test `ThreadedResolver` statt `AsyncResolver` |
+| `p-tabpanel` behält ersetzte `@if`-Zweige im DOM | Angular/Optimus | Ladehinweise per CSS-Klasse schalten, nicht per Kontrollfluss |
+| Im MS/TP-Hot-Path wird **nicht geloggt** | BACnet | der Token hat nur 95 ms – Ereignisse sammeln, erst danach auswerten |
 | Am Session-Ende kommt der **nächste Prompt** | Arbeitsweise | siehe [docs/06-aufgaben/README.md §3.4](../docs/06-aufgaben/README.md#34-der-nächste-prompt) |
 
 ## 9. Detailliertere Regeln

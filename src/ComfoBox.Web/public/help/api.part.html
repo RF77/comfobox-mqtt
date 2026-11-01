@@ -107,6 +107,21 @@ auf den ansonsten offenen Endpunkten. Ohne Header bleibt alles erreichbar
 </tr>
 <tr>
 <td><code>GET</code></td>
+<td><code>/api/diagnostics/bacnet</code></td>
+<td>Bus-Analyse: läuft ein MS/TP-Token? (nur lesend)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/diagnostics/bacnet/observe</code></td>
+<td>Bus-Analyse starten (3 … 300 s)</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/api/diagnostics/bacnet/observe</code></td>
+<td>Bus-Analyse beenden</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
 <td><code>/api/events</code></td>
 <td>Live-Werte (SSE)</td>
 </tr>

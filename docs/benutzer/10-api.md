@@ -60,6 +60,9 @@ curl -H "Authorization: Bearer MEIN-TOKEN" http://192.168.1.20:8081/api/status
 | `GET` | `/api/config` | Konfiguration lesen |
 | `PUT` | `/api/config` | Konfiguration ändern |
 | `GET` | `/api/diagnostics/errors` | letzte Fehler |
+| `GET` | `/api/diagnostics/bacnet` | Bus-Analyse: läuft ein MS/TP-Token? (nur lesend) |
+| `POST` | `/api/diagnostics/bacnet/observe` | Bus-Analyse starten (3 … 300 s) |
+| `DELETE` | `/api/diagnostics/bacnet/observe` | Bus-Analyse beenden |
 | `GET` | `/api/events` | Live-Werte (SSE) |
 | `POST` | `/api/service/restart` | Gateway neu starten |
 

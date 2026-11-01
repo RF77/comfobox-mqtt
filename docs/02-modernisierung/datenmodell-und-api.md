@@ -241,6 +241,9 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 | `GET` | `/api/diagnostics/logs/stream` | **Live-Log-Tail** per SSE | `text/event-stream` |
 | `DELETE` | `/api/diagnostics/logs` | Log-Puffer leeren | `204` |
 | `GET` | `/api/diagnostics/writes` | Schreibzähler-Historie | `WriteStats` |
+| `GET` | `/api/diagnostics/bacnet` | **Bus-Analyse** (Token-Umlauf, nur lesend) | `BacnetAnalysisDto` |
+| `POST` | `/api/diagnostics/bacnet/observe` | Beobachtung starten (3 … 300 s) | `BacnetAnalysisDto` |
+| `DELETE` | `/api/diagnostics/bacnet/observe` | Beobachtung beenden | `BacnetAnalysisDto` |
 | `GET` | `/api/setup/state` | Ist das Setup abgeschlossen? | `SetupState` |
 | `GET` | `/api/setup/ports` | Erkannte serielle Ports | `SerialPort[]` |
 | `GET` | `/api/setup/ports/suggest` | Freien Web-UI-Port vorschlagen | `int` |

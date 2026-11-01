@@ -35,7 +35,21 @@ Push / PR
          ├─ Trivy-Scan
          ├─ push → ghcr.io
          └─ GitHub Release erstellen
+
+Push Tag "v*"
+   │
+   └─▶ synology-spk     (ubuntu-latest)
+         ├─ Shell-Skripte prüfen (bash -n + Parser-Test)
+         ├─ SPK bauen (~40 KB) + packages.json
+         ├─ Release-Asset anhängen (gh release upload)
+         └─ optional: per SSH auf die NAS kopieren
 ```
+
+> **Der Legacy-Code (`src_old/`) wird von der CI nicht angefasst.** Der frühere
+> Job `legacy-check` ist entfernt, CodeQL ignoriert `src_old/` (→ `paths-ignore`).
+> Grund: `src_old/` ist Archiv (net452, C# 6), der Code lief seit dem 24.10.
+> nicht mehr und ist nur noch Referenz für Protokollverhalten und
+> Item-Metadaten.
 
 ## 3. Workflow: `build-test.yml`
 
@@ -204,6 +218,34 @@ Bei jedem PR wird das Image **einmal für amd64** gebaut und **echt** geprüft:
 | `GET /` liefert HTML | die SPA wird aus dem .NET-Host ausgeliefert |
 | Health-Status = `healthy` | der Docker-Healthcheck greift |
 | `docker stop` → „Application is shutting down" | sauberes Herunterfahren |
+
+## 4.2 Workflow: `synology-spk.yml`
+
+> **Das Synology-Paket bekommt einen eigenen Workflow.** So lässt sich das
+> `.spk` auch **ohne** Image-Publish erzeugen (z. B. nur eine Paket-Korrektur),
+> und die Release-Notizen werden nicht doppelt gepflegt.
+
+| Trigger | Wirkung |
+|---|---|
+| Push auf Tag `v*` | SPK bauen, als Release-Asset anhängen, auf die NAS kopieren |
+| `workflow_dispatch` | SPK on demand bauen (Version, Revision, Release, NAS-Kopie) |
+| `workflow_call` | Aufruf aus anderen Workflows |
+
+### Wohin die Artefakte?
+
+| Artefakt | Ablage | Limit |
+|---|---|---|
+| `.spk` (~40 KB) | **GitHub-Release-Asset** | 2 GB pro Datei |
+| `packages.json` | **GitHub-Release-Asset** | 2 GB pro Datei |
+| Container-Image | **GHCR** (`ghcr.io/rf77/comfobox-gateway`) | Registry-Speicher |
+| Paket-Archiv | **NAS** (per SSH, optional) | Volume des NAS |
+
+> **Das 500-MB-Limit des GitHub-Free-Kontos gilt nur für das Repository
+> selbst** (die Git-Objekte) – nicht für Release-Assets und nicht für die
+> Container-Registry. Das SPK ist mit ~40 KB vernachlässigbar, das Image liegt
+> in GHCR. Wer trotzdem eine Kopie **auf dem NAS** haben will, hinterlegt die
+> Secrets `NAS_SSH_HOST`, `NAS_SSH_USER`, `NAS_SSH_KEY` und `NAS_TARGET_DIR`
+> – der Workflow kopiert das Paket dann direkt auf das DSM.
 
 ## 5. Release-Prozess
 

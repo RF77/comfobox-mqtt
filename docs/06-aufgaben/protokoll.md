@@ -27,6 +27,84 @@
 
 ---
 
+## 2026-11-01 – Legacy-CI aus, SPK-Workflow, Bus-Analyse (Aufgaben 8e.1–8e.3)
+
+**Ergebnis:**
+- Der **Legacy-CI ist abgeschaltet**: der Job `legacy-check` ist aus
+  `build-test.yml` entfernt, CodeQL ignoriert `src_old/` (`paths-ignore`).
+  `src_old/` ist Archiv (net452, C# 6) – der Code lief seit dem 24.10. nicht
+  mehr.
+- Der **rote CI-Lauf** ist erklärt: die `package-lock.json` enthielt im
+  Root-Eintrag **keine Abhängigkeiten** → `npm ci` brach mit `EUSAGE` ab
+  (der Angular-Job wurde rot). Die Lock-Datei ist konsistent; der Workflow
+  prüft die Drift jetzt **vor** `npm ci` und nennt die Ursache.
+- **Neuer Workflow** `.github/workflows/synology-spk.yml`: baut das `.spk`
+  eigenständig (Tag-Push oder `workflow_dispatch`), hängt es per
+  `gh release upload` an das Release und kopiert es optional per SSH auf die
+  NAS. Die Artefakte liegen damit **außerhalb** des 500-MB-Limits des
+  GitHub-Free-Kontos (Release-Assets: 2 GB pro Datei; Images: GHCR).
+- **BACnet-Bus-Analyse** (nur lesend): `GET /api/diagnostics/bacnet`,
+  `POST`/`DELETE /api/diagnostics/bacnet/observe` + Tab „BACnet-Bus" in der
+  Diagnose. Sie zeigt Zähler, gesehene Stationen, den Ereignisverlauf und
+  eine Bewertung in einem Satz („Der Token läuft im Umlauf …").
+- **Kein Logging mehr im Hot-Path** des MS/TP-Automaten. Der Token hat 95 ms
+  Zeit bis zur Übernahme; ein Log-Eintrag dort hätte den Token verloren. Die
+  Ereignisse gehen in einen allokationsfreien Ringpuffer
+  (`MstpEventRecorder`) und werden **außerhalb** ausgewertet.
+
+**Geänderte Dateien:**
+- `.github/workflows/build-test.yml` – `legacy-check` entfernt, Lock-Datei-Prüfung
+- `.github/workflows/codeql.yml` – `paths-ignore` für `src_old/`
+- `.github/workflows/docker-publish.yml` – SPK-Job raus (→ eigener Workflow)
+- `.github/workflows/synology-spk.yml` – **neu**
+- `src/ComfoBox.Bacnet/Bacnet/MstpEvent.cs`, `IMstpObserver.cs`,
+  `MstpEventRecorder.cs` – **neu**
+- `src/ComfoBox.Bacnet/Bacnet/MstpStateMachine.cs` – Beobachter statt Logging
+- `src/ComfoBox.Bacnet/Bacnet/BacnetMstpTransport.cs` – Beobachter durchreichen
+- `src/ComfoBox.Gateway/Bacnet/BacnetBusAnalyzer.cs` – **neu**
+- `src/ComfoBox.Gateway/Bacnet/BacnetPollingService.cs` – `SetPaused()`
+- `src/ComfoBox.Gateway/Api/BacnetDiagnosticsEndpoints.cs`,
+  `Api/Models/BacnetAnalysisDtos.cs` – **neu**
+- `src/ComfoBox.Web/src/app/core/api/bacnet.service.ts`,
+  `core/models/bacnet.model.ts` – **neu**
+- `src/ComfoBox.Web/src/app/features/diagnostics/diagnostics.{ts,html}` – Tab
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `dotnet test src/ComfoBox.sln -c Release` → **339 Tests grün** (+12 neu)
+- `npm run lint` + `npm run build --configuration production` → grün
+- Live-Test: `GET/POST/DELETE /api/diagnostics/bacnet` gegen den laufenden
+  Gateway (Antwort mit Zählern und Bewertung; `POST` mit 1 s → HTTP 400)
+- `bash deploy/synology-spk/tools/check-shell.sh` → grün
+
+**Offen / nicht gemacht:**
+- Das **Synology-Paket wurde noch nicht installiert** (6.4 braucht die
+  DS923+). Der Release-Workflow ist **noch nicht gelaufen** – es wurde kein
+  Tag gepusht. Von Hand anstoßen: *Actions → synology-spk → Run workflow*.
+- Die Bus-Analyse ist **nicht** mit echter Hardware getestet (kein Adapter am
+  Rechner) – sie ist gegen den laufenden Gateway und die Attrappen geprüft.
+
+**Überraschungen:**
+- ⚠️ **Die GitHub-API liefert für abgeschlossene Läufe keine Jobs.** Weder
+  `/actions/runs/{id}/jobs` noch `/attempts/1/jobs` noch die
+  Commit-Status-API gaben etwas her (die Check-Suite existierte, ihre
+  Check-Runs waren leer). Der Fehler ließ sich nur durch **Nachbauen** des
+  Laufs finden: `git worktree add <pfad> <sha>` + dieselben Schritte lokal.
+  **Merksatz:** Bei „der CI-Lauf ist rot, aber ich sehe nichts" → den Commit
+  in einem Worktree auschecken und die Schritte nachstellen.
+- ⚠️ **`npm ci` scheitert mit `EUSAGE` statt mit einem Hinweis auf die
+  Ursache.** Die Meldung („can only install with an existing package-lock.json")
+  ist irreführend – die Datei *war* da, nur ohne Abhängigkeiten im
+  Root-Eintrag. **Merksatz:** Bei `EUSAGE` zuerst den Root-Eintrag der
+  Lock-Datei prüfen (`node -e "console.log(Object.keys(require('./package-lock.json').packages['']))"`).
+- ⚠️ **`Math.Min(long, int)` kompiliert nicht** und bindet stattdessen die
+  generische Überladung → `CS1503`. Immer casten: `Math.Min((int)Math.Min(a, (long)b))`.
+- ⚠️ **`p-table` verlangt ein veränderliches Array.** `readonly BacnetEvent[]`
+  aus dem Modell ergab `TS4104` im Template. Die API liefert ohnehin ein
+  veränderliches Array – das Modell muss das abbilden.
+
+---
+
 ## 2026-11-01 – Vergleich ohne Gerät (Aufgabe 7.0, ADR-013)
 
 **Ergebnis:** Der Parallelvergleich aus Phase 7 ist **ohne ComfoBox und ohne
@@ -1241,6 +1319,88 @@ OpenAPI-Dokument (`/swagger`, nur im Development-Modus).
   leerer 500 ohne Exception-Text kostete Zeit. Abhilfe: den Testhost mit
   `dotnet test --logger "console;verbosity=detailed"` laufen lassen – dann
   steht die Server-Exception im Log (`fail: Microsoft.AspNetCore.Server.Kestrel[13]`).
+
+---
+
+## 2026-11-01 – Synology-Paket per CI & BACnet-Bus-Analyse
+
+**Ergebnis:** Drei Wünsche sind umgesetzt: (1) das Synology-Paket wird **per
+GitHub Action** gebaut und als **Release-Asset** bereitgestellt (nicht im
+Repository – damit greift das 500-MB-Limit des Free-Accounts nicht),
+(2) die Oberfläche kann den **seriellen Port auswählen**, (3) es gibt ein
+**Analyse-Werkzeug**, das **nur lesend** zeigt, ob auf dem MS/TP-Bus ein Token
+herumgeht. Zusätzlich ist die **Legacy-CI abgeschaltet** – `src_old/` ist
+Archiv. **339 Tests grün**, Build 0 Warnungen / 0 Fehler.
+
+**Geänderte Dateien (neu):**
+- `.github/workflows/synology-spk.yml` – baut das `.spk` eigenständig
+  (Tag-Push oder `workflow_dispatch`), prüft die Shell-Skripte, hängt das
+  Paket als Release-Asset an und kopiert es optional per SSH auf die NAS
+- `src/ComfoBox.Bacnet/Bacnet/MstpEvent.cs` + `IMstpObserver.cs` +
+  `MstpEventRecorder.cs` – **allokationsfreier** Ringpuffer für die
+  MS/TP-Ereignisse (parallele Arrays, keine Sperre, kein Log)
+- `src/ComfoBox.Gateway/Bacnet/BacnetBusAnalyzer.cs` – wertet den Ringpuffer
+  **außerhalb** des Bus-Takts aus und schreibt **erst dort** das Log
+- `src/ComfoBox.Gateway/Api/BacnetDiagnosticsEndpoints.cs` +
+  `Api/Models/BacnetAnalysisDtos.cs` – `GET /api/diagnostics/bacnet`,
+  `POST`/`DELETE /api/diagnostics/bacnet/observe`
+- `src/ComfoBox.Web/src/app/core/api/bacnet.service.ts` +
+  `core/models/bacnet.model.ts` – Client und Modell
+- `src/ComfoBox.Bacnet.Tests/MstpEventRecorderTests.cs` (6 Tests) und
+  `src/ComfoBox.Gateway.Tests/Api/BacnetDiagnosticsApiTests.cs` (5 Tests)
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Bacnet/Bacnet/MstpStateMachine.cs` – **alle** `LogDebug`-Aufrufe
+  aus `Run()`, `SendFrame()` und `GetNextMessage()` entfernt; meldet stattdessen
+  `MstpEventKind`-Ereignisse
+- `src/ComfoBox.Gateway/Bacnet/BacnetPollingService.cs` – jetzt **Singleton**,
+  mit `SetPaused(bool)`: während einer Beobachtung pausiert das Polling, damit
+  der Token ungestört am Ring entlangläuft
+- `src/ComfoBox.Web/src/app/features/diagnostics/{diagnostics.ts,html,scss}` –
+  neuer Reiter „BACnet-Bus"
+- `.github/workflows/build-test.yml` – der Job `legacy-check` ist **entfernt**;
+  zusätzlich eine Drift-Prüfung der `package-lock.json` **vor** `npm ci`
+- `.github/workflows/codeql.yml` – `paths-ignore` für `src_old/` und `docs/Mono/`
+- `.github/workflows/docker-publish.yml` – der SPK-Job ist raus (nur noch der
+  neue Workflow baut das Paket)
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **339 Tests grün** (30 Domain +
+  10 Contract + 52 BACnet + 247 Gateway)
+- `npm run lint` → grün; `npm run build --configuration production` → grün
+- `bash deploy/synology-spk/tools/check-shell.sh` → grün
+- `node tools/build-docs.mjs` → 6 HTML-Seiten; `tools/check-links.ps1` →
+  105 Dateien / 653 Links / **0 Probleme**
+- API live geprüft: `GET` liefert den Zustand, `POST` mit ungültiger Dauer
+  → **400**, `DELETE` beendet die Beobachtung
+- `docker build` + `docker run` → Container **healthy**, SPA wird ausgeliefert,
+  `docker stop` beendet ihn per SIGTERM in 0,5 s
+
+**Überraschungen:**
+- ⚠️ **Im MS/TP-Hot-Path darf nicht geloggt werden.** Der Token hat nur
+  **95 ms** (`TUsageTimeout`) bis zur Übernahme – ein Log-Eintrag an dieser
+  Stelle kostet Zeit und kann den Token kosten. Deshalb: der Zustandsautomat
+  meldet **Ereignisse** in einen vorbelegten Ringpuffer, und **erst dort**
+  (außerhalb des Bus-Takts) wird bewertet und geloggt.
+- ⚠️ **Der CI-Lauf war rot, ohne dass der Code defekt war.** Die
+  `package-lock.json` enthielt im Root-Eintrag **keine Abhängigkeiten** –
+  `npm ci` bricht damit mit `EUSAGE` ab. Die Lock-Datei war konsistent; der
+  Workflow prüft die Drift jetzt **vor** `npm ci` und sagt, was zu tun ist.
+- ⚠️ **CodeQL kennt kein `paths-ignore` beim Init.** Es muss in die
+  `config:`-Sektion – sonst ignoriert der Scan `src_old/` nicht.
+- ⚠️ **`p-tabpanel` projiziert per `ng-template` + `*ngTemplateOutlet`.** Ein
+  per `@if`/`@else` **ersetzter** Zweig bleibt als sichtbarer „Waisen"-Zweig im
+  DOM stehen (der Leave-Pfad greift dort nicht). **Regel:** Ladehinweise in
+  einem `p-tabpanel` **per CSS-Klasse** schalten (`[class.cb-hidden]` mit
+  `display: none !important`), nicht per Kontrollfluss.
+- ⚠️ **Ein statisches `value` auf `p-tabs` macht die Reiter starr.** Der
+  aktive Reiter hängt an `[(value)]` mit einem Signal – sonst lassen sich die
+  Reiter nicht umschalten.
+- ⚠️ **`p-table` erwartet ein veränderbares Array.** `readonly BacnetEvent[]`
+  erzeugt TS4104 – die Modell-Listen sind deshalb `mutable`.
+- ⚠️ **`Math.Min(long, int)` kompiliert nicht** (`CS1503`) – den Schnittwert
+  erst auf `long` casten und dann auf `int` zurück.
 
 ---
 
