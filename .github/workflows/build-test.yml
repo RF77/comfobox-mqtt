@@ -79,9 +79,10 @@ jobs:
   web:
     name: Build (Angular)
     runs-on: ubuntu-latest
-    # Das Angular-Projekt entsteht erst in Phase 5.1 - der Job wird dann
-    # automatisch aktiviert.
-    if: hashFiles('src/ComfoBox.Web/package.json') != ''
+    # Kein `if: hashFiles(...)` auf Job-Ebene: `hashFiles` ist in einer
+    # Job-Bedingung nicht erlaubt - GitHub lehnt dann die **ganze** Datei ab
+    # ("Unrecognized function: 'hashFiles'") und startet **keinen** Job.
+    # Das Angular-Projekt existiert seit Phase 5.1, der Job läuft also immer.
     defaults:
       run:
         working-directory: src/ComfoBox.Web
