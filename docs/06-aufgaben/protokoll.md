@@ -27,6 +27,306 @@
 
 ---
 
+## 2026-11-01 – Vergleich ohne Gerät (Aufgabe 7.0, ADR-013)
+
+**Ergebnis:** Der Parallelvergleich aus Phase 7 ist **ohne ComfoBox und ohne
+CH340-Adapter** durchführbar. Der Gateway bekommt einen optionalen
+Simulationsbetrieb (`Bacnet:Simulation=true`), das Vergleichswerkzeug
+`tools/compare-payloads/` kann live und gegen eine Aufzeichnung vergleichen.
+Die Probe mit **zwei** Gateway-Instanzen am selben Broker ist grün – und hat
+**zwei echte Fehler** gefunden, die den Umschaltpunkt unvorhersehbar gemacht
+hätten: die **Client-ID-Kollision** (*Session taken over*) und die
+**Discovery-Kollision** (gleiche `unique_id`s → die Entitäten hätten sich
+gegenseitig überschrieben).
+
+**Geänderte Dateien (neu):**
+- `src/ComfoBox.Gateway/Bacnet/SimulatedBacnetClient.cs` – der BACnet-Client
+  ohne Gerät: deterministische Werte aus dem Item-Katalog, optionale
+  Wert-Datei (`Bacnet:SimulationValuesPath`)
+- `src/ComfoBox.Gateway/Mqtt/MqttClientId.cs` – die wirksame Client-ID
+  (`{ClientId}-{DeviceId}`)
+- `src/ComfoBox.Gateway.Tests/Bacnet/SimulatedBacnetClientTests.cs` – 12 Tests
+- `tools/compare-payloads/` – das Vergleichswerkzeug (CLI, Katalog, Regeln,
+  Aufzeichnung) + 12 Tests + README
+- `docs/05-entscheidungen/adr-013-vergleich-ohne-geraet.md` – die Entscheidung
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Configuration/BacnetOptions.cs` – `Simulation`,
+  `SimulationValuesPath`
+- `src/ComfoBox.Gateway/Configuration/MqttOptions.cs` – `DiscoveryIdentifier`
+- `src/ComfoBox.Gateway/GatewayServiceCollectionExtensions.cs` – der simulierte
+  Client ersetzt den echten, wenn die Simulation aktiv ist
+- `src/ComfoBox.Gateway/Mqtt/MqttConnectionManager.cs` – die Client-ID enthält
+  jetzt die Geräte-ID
+- `src/ComfoBox.Gateway/Mqtt/MqttStatusPublisher.cs` – meldet die wirksame
+  Client-ID
+- `src/ComfoBox.Gateway/Mqtt/HomeAssistantDiscovery.cs` – die Kennung ist
+  konfigurierbar statt konstant
+- `src/ComfoBox.Gateway/Api/{StatusEndpoints,Models/StatusReport}.cs` –
+  `bacnet.simulated` im Status
+- `src/ComfoBox.Web/src/app/core/models/status.model.ts` – `simulated` im Modell
+- `src/ComfoBox.Web/src/app/features/dashboard/dashboard.{ts,html}` – die
+  Simulation wird angezeigt (eigene Karte, Status „simulation"), der
+  BACnet-Hinweis erscheint erst, wenn der Status geladen ist
+- `docs/06-aufgaben/phase-7.md` – neue Aufgabe **7.0** (Probe ohne Gerät)
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **327 Tests grün**
+  (46 BACnet + 30 Domain + 10 Contract + 241 Gateway) – vorher 313, **+14**
+- `python -m pytest tools/compare-payloads/tests -q` → **12 Tests grün**
+- **Probe:** zwei Gateways (`BaseTopic=ComfoBox` / `ComfoBox2`, Simulation,
+  Poll-Intervall 5 s) an einem mosquitto im Docker:
+  - beide gleichzeitig verbunden (`mqtt.connected: true`), Broker-Log zeigt
+    `comfobox-gateway-{Host}-comfobox1` und `…-comfobox2` (je mit `-will`)
+  - **Vergleich live gegen live:** 125 Topics verglichen, **keine
+    Abweichung**, Exit-Code **0**
+  - **Vergleich Aufzeichnung gegen live** (Golden Master): 125 Topics,
+    **keine Abweichung**, Exit-Code **0**
+  - **Gegenprobe:** eine manipulierte Aufzeichnung (Zahlenwert um 0,5
+    verschoben, Enum-Name verfälscht) → **2 Abweichungen** erkannt, Exit-Code
+    **1**
+- `/api/status` meldet `"simulated": true` und `"clientId"` die wirksame ID
+- **Oberfläche im Browser**: das Dashboard zeigt im Simulationsbetrieb eine
+  eigene Karte („Simulation – Simulationsbetrieb, keine ComfoBox"), die
+  Status-Kachel meldet **„simulation"** statt „verbunden", und der
+  BACnet-Hinweis („Die ComfoBox antwortet nicht") bleibt weg.
+**Offen / nicht gemacht:**
+- Der **echte** Vergleich gegen das alte Gateway (7.2) braucht eine
+  Aufzeichnung am System mit dem CH340-Adapter – am Notebook nicht möglich.
+  Das Werkzeug ist dafür fertig (`record` + `--old-file`).
+- Der BACnet-**Transport** wird im Simulationsbetrieb nicht durchlaufen
+  (MSTP, CRC, Token-Passing). Er ist durch die Golden-Tests abgedeckt.
+- **6.4** (Test auf der echten DS923+) bleibt blockiert.
+
+**Überraschungen:**
+- ⚠️ **Zwei Gateways am selben Broker haben sich gegenseitig verdrängt.**
+  Beide meldeten sich mit `comfobox-gateway-{Hostname}` an → der Broker trennte
+  die ältere Sitzung (*Session taken over*) und deren LWT meldete das andere
+  Gateway als `offline`. Ein Endlos-Verbinden/Trennen. Die Doku der Option
+  sagte es zwar („für den Parallelbetrieb muss die ID konfiguriert werden"),
+  aber das ist genau die Art Fußangel, die den Umschaltpunkt ruiniert. **Fix:**
+  die wirksame Client-ID enthält jetzt die Geräte-ID.
+- ⚠️ **Die HA-Discovery-Kennung war eine Konstante** (`comfobox`). Zwei
+  Instanzen publizierten damit auf **denselben** Discovery-Topics → ihre
+  Entitäten hätten sich gegenseitig überschrieben (Aufgabe 7.3 wäre nie
+  erfüllbar gewesen). **Fix:** `Mqtt:DiscoveryIdentifier` (Standard bleibt
+  `comfobox` → bestehende HA-Installationen behalten ihre Entitäten).
+- ⚠️ **Der Legacy zeigt in `src_old` zweimal auf dieselbe BACnet-Objekt-Id
+  864** (`KühlraumsollAbstStandby` 0–10 K und `RestartDelay` 20–60 min). Am
+  echten Gerät lesen beide Topics denselben Rohwert. Die Simulation muss den
+  Wert deshalb an die **Objekt-Id** binden, nicht an das Topic – sonst
+  widersprechen sich die beiden Topics. Der Vergleich in 7.2 muss damit
+  rechnen, dass zwei Topics denselben Wert tragen.
+- ⚠️ **`docs/topics.json` hat ein UTF-8-BOM.** `json.loads(Path(...).read_text())`
+  scheitert mit „Unexpected UTF-8 BOM" – `encoding="utf-8-sig"` verwenden.
+- ⚠️ **Die Verfügbarkeitsregel braucht den Sekundär-Zyklus.** Sekundäre Items
+  werden nur jeden `SecondaryPollFactor`-Zyklus gelesen (Standard 5). Zwei
+  Gateways lesen sie nicht im Gleichtakt → die Zeitstempel-Differenz bis zu
+  einem ganzen Zyklus ist normal und **kein** Fehler. Die Regel rechnet jetzt
+  mit `poll-interval × secondary-factor`.
+- ⚠️ **Ein `MQTT-URI` mit `#` lässt sich nicht mit `urlparse` zerlegen** – das
+  `#` beginnt dort ein Fragment. Der Topic-Filter beginnt außerdem **ohne**
+  Schrägstrich (`ComfoBox/#`, nicht `/ComfoBox/#`).
+- ⚠️ **Der Browser liefert die alte Oberfläche aus dem Cache.** Die SPA wird
+  aus `wwwroot` des Ausgabeordners bedient – nach einem `npm run build` muss
+  der Gateway neu gebaut und gestartet werden, sonst liefert er das alte
+  Bundle. Im VS-Code-Browser hilft nur ein Reload **ohne** Cache (CDP
+  `Network.setCacheDisabled`), sonst bleibt das alte `main-*.js` geladen.
+- ⚠️ **Optimus UI hält eine per `@if` entfernte Meldung per Leave-Animation im
+  DOM** – in einem unsichtbaren Browser-Tab feuert `animationend` nie. Der
+  Hinweis „BACnet nicht verbunden" blieb deshalb stehen, obwohl der Status
+  „verbunden" war. Der Hinweis erscheint jetzt **erst**, wenn der Status
+  geladen ist (`statusKnown()`) – damit blinkt er beim Start nicht mehr auf.
+
+---
+
+
+## 2026-11-01 – Home-Assistant-Ökosystem (Aufgaben 8a.6, 8b.2, 8c.1, 8d.1)
+
+**Ergebnis:** Das HA-Ökosystem ist **vollständig**. Die HA-Integration hat
+**35 grüne Tests** (API-Client, Coordinator, Entity-Mapping, Schreibpfade),
+das Add-on liest seine Optionen aus `/data/options.json`, der Release-Workflow
+publiziert Image + HACS-Release + Add-on-Release, und die Token-API ist an der
+Oberfläche angebunden und **im Browser verifiziert**. Beim Testen sind
+**drei echte Fehler** gefunden und behoben worden (Plattformen stürzten ab,
+der Service `set_value` schrieb auf die falsche Id, die Icon-Buttons hatten
+keinen zugänglichen Namen).
+
+**Geänderte Dateien (neu):**
+- `custom_components/comfobox/tests/test_api_client.py` – 10 Tests (Mock per
+  `aioresponses`): Status, Items, Schreiben, Neustart, 401/403, 500, Timeout,
+  Verbindung und „der Token erscheint in keiner Fehlermeldung"
+- `custom_components/comfobox/tests/test_coordinator.py` – 8 Tests:
+  Normalfall, reservierter Statusschlüssel, 401 → `ConfigEntryAuthFailed`,
+  Ausfall → `UpdateFailed`, letzter Stand bleibt erhalten, Intervall
+- `custom_components/comfobox/tests/test_entity_mapping.py` – 12 Tests:
+  Item → Plattform (sensor/number/select/switch/binary_sensor), Min/Max und
+  Enum-Namen **unverändert**, genau **ein** Gerät, stabile Unique-Ids,
+  veraltete Werte → `unavailable`, alle drei Schreibpfade, der Service
+  `set_value` und die Ablehnung fremder Entitäten
+- `src/ComfoBox.Gateway/Configuration/AddOnOptionsProvider.cs` – liest
+  `/data/options.json` und mappt die Optionen
+- `src/ComfoBox.Gateway/Configuration/AddOnOptionsSource.cs` – der
+  `IConfigurationSource` dazu
+- `src/ComfoBox.Gateway.Tests/Configuration/AddOnOptionsProviderTests.cs` –
+  9 Tests (Zuordnung jedes Feldes, fehlende Datei, leere Werte, kein Broker,
+  vorhandener Broker, kaputter Wert, kaputte Datei, Präzedenz, Hermetizität
+  gegen eine verunreinigte Umgebung)
+- `.github/workflows/ha-release.yml` – Versionsprüfung + HACS-/hassfest-
+  Validierung + Releases für Integration und Add-on
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Configuration/GatewayConfiguration.cs` – die
+  `options.json` wird **zuletzt** hinzugefügt (höchste Priorität)
+- `src/ComfoBox.Gateway/Configuration/{Gateway,Mqtt,Logging}Options.cs` –
+  neue Optionen `AddOnOptionsPath`, `EnableDiscovery`, `Level`
+- `src/ComfoBox.Gateway/Program.cs` – Log-Level aus der Konfiguration,
+  Probleme beim Lesen der Optionen landen im Log
+- `src/ComfoBox.Gateway/Mqtt/HomeAssistantDiscovery.cs` – `Mqtt:EnableDiscovery=false`
+  schaltet die Discovery ab
+- `src/ComfoBox.Gateway/Security/ApiAccessGuard.cs` – neue Prüfung
+  `RequireValidCredential`
+- `src/ComfoBox.Gateway/Api/GatewayApiExtensions.cs` – die Prüfung läuft für
+  **alle** `/api`-Anfragen
+- `src/ComfoBox.Gateway/Api/{ConfigEndpoints,Models/ConfigDtos}.cs` –
+  `Mqtt:EnableDiscovery` in `/api/config`
+- `src/ComfoBox.Web/src/app/core/models/config.model.ts` + `config.html` –
+  die Discovery-Schalter in der MQTT-Karte
+- `custom_components/comfobox/{sensor,number,select,switch}.py` –
+  überspringen den reservierten Statuseintrag, benutzen die Entitätsklasse
+  der Plattform
+- `custom_components/comfobox/services.py` – die Item-Id kommt aus dem
+  Entity-Registry
+- `.github/workflows/docker-publish.yml` – das Image trägt zusätzlich den
+  Versions-Tag **ohne** „v"
+- `deploy/ha-addon/comfobox/config.yaml` – der Image-Tag trägt die Version
+- `src/ComfoBox.Web/src/app/**` – `ariaLabel` statt `aria-label` bei den
+  Icon-Buttons (`config.html`, `shell.html`, `log-viewer.html`, `items.html`)
+- `docs/` – ADR-012, `datenmodell-und-api.md`, `ha-integration.md`,
+  `installationsstufen.md`, `07-ha-addon.md`, `10-api.md`, `CHANGELOG.md`
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → **0 Warnungen, 0 Fehler**
+- `dotnet test src/ComfoBox.sln -c Release` → **313 Tests grün**
+  (46 BACnet + 30 Domain + 10 Contract + 227 Gateway) – vorher 301, **+12**
+- **Hermetizitäts-Nachweis:** derselbe Testlauf in einer **vermuteten**
+  Umgebung (mit `COMFOBOX_*`-Variablen aus einer manuellen Gateway-Sitzung)
+  → ebenfalls **313 grün**
+- `pytest custom_components/comfobox/tests -v` → **35 Tests grün** – vorher 3, **+32**
+- `ruff check custom_components/comfobox` → **All checks passed!**
+- Golden-Fixture `bacnet-frames.json` → SHA256 **unverändert**
+  (`F95AA763…CE681B`)
+- `docs/topics.json` → SHA256 **unverändert** (`67D7485B…C1463`)
+- `node tools/build-docs.mjs` → 12 Seiten, kein Abbruch
+- `pwsh -File tools/check-links.ps1` → 646 Links, **0 Probleme**
+- `bash deploy/synology-spk/tools/check-shell.sh` → grün
+- `npm run lint` + `npm run build -- --configuration production` → grün
+- **Options-Mapping am laufenden Gateway**: `options.json` mit
+  `device`/`baudrate`/`broker_*`/`use_tls`/`enable_discovery`/`log_level` →
+  `GET /api/config` liefert **exakt** diese Werte (`/dev/ttyUSB0`, `57600`,
+  `broker.local:8883`, `useTls: true`, `enableDiscovery: false`); das Logfile
+  enthält `Debug`-Einträge (also greift `log_level`)
+- **Token-API am laufenden Gateway**: `POST` → 201 (Klartext **einmal**),
+  `GET /api/status` mit Token → 200, mit falschem Token → **401**, ohne Token
+  → 200 (LAN-Modus), `DELETE` → 204, danach mit dem widerrufenen Token → 401
+- **HA-Client gegen das laufende Gateway**: `get_status` → `comfobox1`,
+  `get_items` → **127** Items, falscher Token → `AuthenticationError`
+- **Oberfläche im Browser** (Gateway auf Port 5199): Token erzeugen →
+  Klartext sichtbar, Token in der Liste; „Token widerrufen" → Bestätigungs-
+  dialog mit korrektem deutschen Text → Token verschwindet aus der Liste
+
+**Offen / nicht gemacht:**
+- **6.4** (Test auf der echten DS923+) bleibt blockiert – das Gerät steht hier
+  nicht zur Verfügung.
+- Der **CI-Workflow ist noch nicht gelaufen** (kein Tag gepusht). Der
+  Multi-Arch-Publish, der HACS-Release und das SPK-Release stehen damit aus.
+  Der Workflow ist aber **lokal geprüft**: die Versionslogik läuft mit
+  Git-Bash durch (Tag ↔ `manifest.json` ↔ `config.yaml` ↔ Image-Tag).
+- **Phase 7** (Parallelbetrieb & Umschaltung) ist die nächste Phase.
+
+**Überraschungen:**
+- ⚠️ **Die HA-Plattformen sind nie gelaufen.** `sensor.py`, `number.py`,
+  `select.py` und `switch.py` iterierten über **alle** Einträge des
+  Coordinator-Caches – auch über den reservierten Statuseintrag
+  `__status__`. Ergebnis: `AttributeError: 'GatewayStatus' object has no
+  attribute 'is_read_only'` – **die gesamte Integration wäre in Home
+  Assistant gescheitert**. Der manuelle Review aus Phase 8a hatte das nicht
+  gefunden, weil der Config-Flow-Test die Plattformen nie einrichtet.
+  **Merksatz:** Eine HA-Integration braucht einen Test, der die **Entitäten**
+  aufbaut – nicht nur den Config Flow.
+- ⚠️ **Die Entitäten waren gar keine Entitäten.** Sie erbt von
+  `ComfoBoxEntity` (das ist nur ein `CoordinatorEntity`), aber nicht von
+  `SensorEntity`/`NumberEntity`/… → kein Zustand, keine Plattform-
+  Eigenschaften, keine Min/Max. Der Fix: je Plattform eine eigene Klasse.
+- ⚠️ **`entity_id` ≠ Item-Id.** Der Service `comfobox.set_value` hat die
+  Item-Id durch Abschneiden des Entity-Präfixes gebildet. Die Item-Ids des
+  Gateways enthalten aber einen **Punkt** (`zone.set_point_normal`), die
+  `entity_id` einen **Unterstrich** → jeder Schreibvorgang über den Service
+  scheiterte mit `404 item_not_found`. **Merksatz:** Die Item-Id kommt aus
+  dem **Entity-Registry** (`unique_id`), nicht aus der `entity_id`.
+- ⚠️ **`aria-label` auf `<p-button>` kommt **nicht** beim inneren `<button>`
+  an.** Optimus erwartet die **Eigenschaft** `ariaLabel` (Alias: `ariaLabel`,
+  nicht `aria-label`). Ein statisches `aria-label="…"` landet als Attribut auf
+  dem **Host-Element** – der innere Knopf bleibt ohne zugänglichen Namen.
+  Betroffen waren **alle** Icon-Buttons (Menü, Abmelden, neu laden, kopieren,
+  Token widerrufen). **Merksatz:** Bei Optimus-Komponenten immer `ariaLabel`
+  (in eckigen Klammern bei dynamischen Werten).
+- ⚠️ **Ein falscher Token wurde von `/api/status` akzeptiert.** Der Endpunkt
+  ist offen (LAN-Modus) – und die HA-Integration prüft ihren Token genau
+  dort. Ein falscher Token wäre als gültig durchgegangen, die Einrichtung
+  hätte „erfolgreich" gemeldet, und der Nutzer hätte den Fehler erst Wochen
+  später gesehen. **Fix:** ein vorgelegtes, aber ungültiges `Authorization`
+  wird **immer** mit `401` beantwortet – auch auf den offenen Endpunkten.
+  Ohne Header bleibt der LAN-Modus unverändert. → ADR-012 ergänzt.
+- ⚠️ **`IConfigurationProvider` ist nicht `IConfigurationSource`.** Der
+  Provider muss in eine Quelle verpackt werden, die ihn in den
+  Konfigurations-Baum hängt. Und: `ConfigurationManager.Add(IConfigurationSource)`
+  ist **nicht** öffentlich – der Aufruf braucht den Cast
+  `((IConfigurationBuilder)configuration).Add(source)`.
+- ⚠️ **Die `options.json` muss stärker sein als die Umgebungsvariablen.**
+  Das Image setzt `COMFOBOX_Bacnet__Port=/dev/ttyUSB0` als Vorgabe – wäre die
+  Umgebungsvariable stärker, wäre die Portwahl des Add-ons wirkungslos. Die
+  Kette ist jetzt durchgängig aufsteigend:
+  `Umgebung → config.json → options.json`.
+- ⚠️ **Der Supervisor schreibt **alle** Optionen** – auch die, die der Nutzer
+  nicht angefasst hat. Ein leerer Broker-Host erzeugt sonst einen Broker
+  **ohne Host** → `ValidateOnStart` schlägt fehl → der Container startet
+  nicht. Deshalb werden die Broker-Optionen nur übernommen, wenn ein Broker
+  benannt ist (aus der Datei **oder** aus der `config.json`).
+- ⚠️ **HACS findet eine Custom-Integration über die **Releases**:** der
+  Tag muss exakt der Version in der `manifest.json` entsprechen (HACS lädt
+  über den Tag-Namen). Der Auslöser ist deshalb der Tag `v<version>`, das
+  Release entsteht aber **ohne** „v".
+- ⚠️ **Der HA-Supervisor zieht das Image mit dem Versions-Tag** – ohne ihn
+  findet er das Image nicht. Das Add-on-Manifest braucht also
+  `image: ghcr.io/rf77/comfobox-gateway:<version>` (nicht nur den Namen).
+- ⚠️ **`dotnet ComfoBox.Gateway.dll` braucht das **Arbeitsverzeichnis** des
+  Ausgabeordners** – sonst fehlen `appsettings.json` und `wwwroot`, und
+  `ValidateOnStart` bricht ab (`Mqtt:Brokers muss mindestens einen Broker …
+  enthalten`). Mit `Start-Process -WorkingDirectory` ist das zuverlässig;
+  ein `Set-Location` in derselben Zeile wird vom Terminal-Tool manchmal
+  verschluckt.
+- ⚠️ **`page.reload({ waitUntil: 'networkidle' })` schafft es nie** – der
+  SSE-Stream (`/api/events`) hält die Verbindung offen, der Reload läuft in
+  einen Timeout (10 s). `waitUntil: 'domcontentloaded'` + `waitForTimeout`
+  funktioniert.
+- ⚠️ **`ruff format` ist im Repo nicht einheitlich** – 7 Dateien (auch
+  Altbestand) weichen vom Formatierer ab. `ruff check` (der eigentliche
+  Lint) ist grün; die neuen Dateien habe ich formatiert.
+- ⚠️ **Ein Test, der `AddGatewaySources` aufruft, ist von der Umgebung
+  abhängig.** `AddGatewaySources` liest `COMFOBOX_*` aus der **Prozess**
+  -Umgebung. Ein manuell gestarteter Gateway setzt `COMFOBOX_Bacnet__Port`
+  in der Shell → der Wert leckt in den nächsten `dotnet test` → der Test
+  schlägt fehl, obwohl der Code korrekt ist. **Merksatz:** Tests, die die
+  Konfiguration aufbauen, müssen die Variablen **explizit setzen** (und
+  danach zurücksetzen) – nicht darauf vertrauen, dass die Shell sauber ist.
+  Die betroffenen Tests setzen jetzt `COMFOBOX_Bacnet__Port`,
+  `COMFOBOX_Gateway__DataDirectory` und `COMFOBOX_Gateway__AddOnOptionsPath`
+  selbst.
+
+---
+
 ## 2026-11-01 – Synology-Paket & Getting-Started-Assistent (Aufgaben 8.1–8.9)
 
 **Ergebnis:** Das Synology-Paket ist **vollständig**: Icon (256×256, reproduzierbar
@@ -946,7 +1246,13 @@ OpenAPI-Dokument (`/swagger`, nur im Development-Modus).
 
 ## Nächste Session
 
-**Aufgabe 5.1** – Angular-22-Projekt, `ng add @openng/optimus-ui`, Preset Aura
-→ [phase-5.md](phase-5.md)
-→ **Prompt:** [prompts/Prompt-Phase-5.md](prompts/Prompt-Phase-5.md)
+**Phase 7** – Parallelbetrieb & Umschaltung (7.1–7.5): zwei Gateways
+nebeneinander (unterschiedlicher `BaseTopic`), maschineller Payload-Vergleich
+(`old` vs. `new`), dann Umschaltung auf `ComfoBox`
+→ [phase-7.md](phase-7.md)
+→ **Prompt:** [prompts/Prompt-Phase-7.md](prompts/Prompt-Phase-7.md)
+
+> **Noch offen aus Phase 6:** 6.4 (Test auf der echten DS923+) – die Hardware
+> steht hier nicht zur Verfügung. Ein CI-Release ist ebenfalls noch nicht
+> gelaufen (kein Tag gepusht).
 

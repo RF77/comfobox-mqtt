@@ -129,27 +129,38 @@
 | 8a.3 | Coordinator (10-s-Intervall, `unavailable` statt Flackern) | ✅ | 1.0 |
 | 8a.4 | Plattformen `sensor`/`number`/`select`/`switch`/`binary_sensor` | ✅ | 2.5 |
 | 8a.5 | Services + Übersetzungen | ✅ | 0.5 |
-| 8a.6 | Tests (Config Flow ✅ · Client, Coordinator, Mapping offen) | 🟡 | 1.5 |
+| 8a.6 | Tests (Config Flow · Client, Coordinator, Mapping) | ✅ | 1.5 |
 | 8b.1 | HA-Add-on-Manifest | ✅ | 1.0 |
-| 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | ⬜ | 1.0 |
+| 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | ✅ | 1.0 |
 | 8b.3 | Add-on-Doku + Übersetzungen (de/en) | ✅ | 1.0 |
-| 8c.1 | Multi-Arch-Publish (`amd64` + `arm64`) + HACS-Release | ⬜ | 2.0 |
-| 8d.1 | Token-API im Gateway | ⬜ | 1.0 |
+| 8c.1 | Multi-Arch-Publish (`amd64` + `arm64`) + HACS-Release | ✅ | 2.0 |
+| 8d.1 | Token-API in der Oberfläche | ✅ | 1.0 |
 
 > **Hinweis zu 8d.1:** Die Endpunkte `/api/security/tokens` **existieren bereits**
 > (`src/ComfoBox.Gateway/Api/TokenEndpoints.cs`, `ApiSecurityStore.CreateToken`) –
-> offen ist die **Anbindung an die Oberfläche** (Token erzeugen, Name, widerrufen)
-> und die Verifikation der HA-Integration damit.
+> offen war die **Anbindung an die Oberfläche** (Token erzeugen, Name, widerrufen)
+> und die Verifikation der HA-Integration damit. **Beides ist erledigt** – die
+> Oberfläche wurde im Browser verifiziert, die HA-Integration gegen das laufende
+> Gateway getestet.
 
-## Phase 7 – Parallelbetrieb & Umschaltung (3 PT)
+## Phase 7 – Parallelbetrieb & Umschaltung (4 PT)
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
+| 7.0 | **Probe ohne Gerät** (Simulator + Vergleichstool, ADR-013) | ✅ | 1.0 |
 | 7.1 | Neues Gateway mit `BaseTopic=ComfoBox2` parallel starten | ⬜ | 0.5 |
-| 7.2 | Payload-Vergleichstool (`old` vs. `new`) | ⬜ | 1.0 |
+| 7.2 | Payload-Vergleichstool (`old` vs. `new`) | 🟡 | 1.0 |
 | 7.3 | HA-Discovery mit `ComfoBox2` testen | ⬜ | 0.5 |
 | 7.4 | Umschaltung auf `ComfoBox`, HA-Entitäten aufräumen | ⬜ | 0.5 |
 | 7.5 | Alten Dienst stilllegen, Doku aktualisieren | ⬜ | 0.5 |
+
+> **7.0** ist am 2026-11-01 fertig und verifiziert: der Simulationsbetrieb
+> (`Bacnet:Simulation=true`), das Vergleichswerkzeug
+> (`tools/compare-payloads/`) und die Probe mit **zwei** Gateways am selben
+> Broker. Die Probe hat **zwei echte Fehler** gefunden: die Client-ID-Kollision
+> (*Session taken over*) und die Discovery-Kollision (gleiche `unique_id`s).
+> **7.2** ist damit zur Hälfte fertig (Werkzeug + Regeln + Tests stehen) –
+> offen ist der Lauf gegen das **echte** alte Gateway.
 
 ## Dokumentation (parallel, nicht in der PT-Summe)
 
@@ -173,28 +184,35 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **73** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) von 64 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) + 14 PT (Phase 8a–8d, Aufgaben 8a.1–8d.1) + 1 PT (Phase 7, Aufgabe 7.0) von 64 PT.
 >
-> **Stand 2026-11-01:** **301 Tests grün** (46 BACnet + 30 Domain + 10 Contract + 215 Gateway).
-> Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
+> **Stand 2026-11-01:** **327 Tests grün** (46 BACnet + 30 Domain + 10 Contract + 241 Gateway),
+> **12 Werkzeug-Tests** und **35 HA-Integrationstests** grün. Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
 > der Container läuft **healthy**, Trivy meldet 0 Funde, und Backup/Restore sind
 > real getestet. Das **Synology-Paket** ist vollständig (Icon, Setup-API,
 > Assistent, CI-Build) – offen bleibt nur der Test auf der echten DS923+
-> (Aufgabe **6.4**).
+> (Aufgabe **6.4**). Das **HA-Ökosystem** ist komplett: HACS-Integration (35
+> Tests), Add-on mit Options-Mapping und Release-Workflow.
 
 ## Nächste Aufgabe
 
-> **Phase 8a–8d – Home-Assistant-Ökosystem** (14 PT, davon 8.5 PT offen)
-> Ort: [phase-8ad.md](phase-8ad.md)
+> **Phase 7 – Parallelbetrieb & Umschaltung** (4 PT offen)
+> Ort: [phase-7.md](phase-7.md)
 >
 > | # | Aufgabe | Status | PT |
 > |---|---|---|---|
-> | 8a.6 | HA-Integrationstests (API-Client, Coordinator, Entity-Mapping) | 🟡 | 1.5 |
-> | 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | ⬜ | 1.0 |
-> | 8c.1 | Multi-Arch-Publish + HACS-Release | ⬜ | 2.0 |
-> | 8d.1 | Token-API in der Oberfläche | ⬜ | 1.0 |
+> | 7.1 | Neues Gateway mit `BaseTopic=ComfoBox2` parallel starten | ⬜ | 0.5 |
+> | 7.2 | Payload-Vergleichstool (`old` vs. `new`) | 🟡 | 1.0 |
+> | 7.3 | HA-Discovery mit `ComfoBox2` testen | ⬜ | 0.5 |
+> | 7.4 | Umschaltung auf `ComfoBox`, HA-Entitäten aufräumen | ⬜ | 0.5 |
+> | 7.5 | Alten Dienst stilllegen, Doku aktualisieren | ⬜ | 0.5 |
 >
-> **Wichtig:** Der Multi-Arch-Publish (8c.1) hängt an der CI – der
-> Image-Tag muss zum Release-Tag passen, sonst findet der HA-Supervisor das
-> Image nicht.
-> → Details: [phase-8ad.md](phase-8ad.md)
+> **7.2** braucht noch den Lauf gegen das **echte** alte Gateway: die
+> Aufzeichnung (`record`) wird am System mit dem CH340-Adapter gemacht, der
+> Vergleich läuft danach offline.
+>
+> **Wichtig:** Der Parallelbetrieb braucht **zwei** Instanzen – eine mit
+> `BaseTopic=ComfoBox` (alt) und eine mit `BaseTopic=ComfoBox2` (neu). Das
+> Tool `tools/port-bacnet/` und die Fixture `docs/topics.json` sind die
+> Grundlage für den Payload-Vergleich.
+> → Details: [phase-7.md](phase-7.md)

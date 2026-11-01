@@ -58,6 +58,8 @@ export interface BacnetStatusDto {
   readonly connected: boolean;
   /** Der serielle Port, z. B. `/dev/ttyUSB0`. */
   readonly port: string;
+  /** Läuft der Gateway im Simulationsbetrieb (ohne ComfoBox)? */
+  readonly simulated: boolean;
   /** Der letzte Fehler (oder `null`). */
   readonly lastError: string | null;
 }

@@ -209,6 +209,13 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 > **Unabhängig vom Modus:** Die `/api/setup/*`-Endpunkte sind **nach** der
 > Ersteinrichtung immer geschützt - sie können die Konfiguration und damit
 > auch das Administrator-Passwort überschreiben.
+>
+> **Und:** Wer **ein** `Authorization`-Header vorlegt und damit **nicht**
+> authentifiziert wird, bekommt **immer** `401` – auch auf den offenen
+> Endpunkten. Ohne Header bleibt alles wie bisher (LAN-Modus). Grund: die
+> HA-Integration prüft ihren Token über `GET /api/status` – ein falscher Token
+> darf dort nicht als gültig durchgehen.
+> → [ADR-012](../05-entscheidungen/adr-012-api-zugriffskontrolle.md)
 
 ### 3.1 Endpunkte
 

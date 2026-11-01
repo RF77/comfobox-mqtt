@@ -123,6 +123,26 @@ public static class GatewayApiExtensions
             await next(context);
         });
 
+        // Ein **ungültiges** Zugangsmittel wird immer abgelehnt - auch auf
+        // den offenen Endpunkten. Sonst hält die Home-Assistant-Integration
+        // einen falschen Token für gültig (sie prüft ihn über /api/status).
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+            {
+                var guard = context.RequestServices.GetRequiredService<ApiAccessGuard>();
+                var denied = guard.RequireValidCredential(context);
+
+                if (denied is not null)
+                {
+                    await denied.ExecuteAsync(context);
+                    return;
+                }
+            }
+
+            await next(context);
+        });
+
         app.MapItems();
         app.MapStatus();
         app.MapEvents();

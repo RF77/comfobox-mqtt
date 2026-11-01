@@ -26,9 +26,13 @@ async def async_setup_entry(
 
     entities: list[ComfoBoxEntity] = []
     for item in coordinator.data.values():
+        # Der Status liegt unter dem reservierten Schluessel - er ist kein Item.
+        if not isinstance(item, ComfoBoxItem):
+            continue
+
         if item.is_read_only or item.is_enum:
             continue
-        entities.append(ComfoBoxEntity(coordinator, item, info, _description(item)))
+        entities.append(ComfoBoxNumber(coordinator, item, info, _description(item)))
 
     async_add_entities(entities)
 

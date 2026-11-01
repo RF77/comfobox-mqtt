@@ -56,6 +56,15 @@ public sealed record BacnetStatusDto
     public required string Port { get; init; }
 
     /// <summary>
+    /// Läuft der Gateway im Simulationsbetrieb (ohne ComfoBox)?
+    /// </summary>
+    /// <remarks>
+    /// Siehe ADR-013. In diesem Betrieb werden keine Werte von einem Gerät
+    /// gelesen - die Werte kommen aus dem Katalog oder aus einer Wert-Datei.
+    /// </remarks>
+    public bool Simulated { get; init; }
+
+    /// <summary>
     /// Der letzte Fehler (oder <c>null</c>).
     /// </summary>
     public string? LastError { get; init; }

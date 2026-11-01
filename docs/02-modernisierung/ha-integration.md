@@ -134,6 +134,12 @@ else:
     await async_config_entry_first_refresh()
 ````
 
+> **Warum funktioniert die Token-Prüfung über `/api/status`?**
+> Der Endpunkt ist zwar offen, aber: wer einen **ungültigen** Token
+> vorlegt, bekommt **immer** `401` (→ [ADR-012](../05-entscheidungen/adr-012-api-zugriffskontrolle.md)).
+> Die Integration erkennt einen falschen Token damit **sofort** – beim
+> Einrichten, nicht erst Wochen später.
+
 | Fehler | Meldung (de) |
 |---|---|
 | `cannot_connect` | „Das Gateway ist unter dieser Adresse nicht erreichbar." |

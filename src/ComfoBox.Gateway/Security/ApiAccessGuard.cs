@@ -85,6 +85,51 @@ public sealed class ApiAccessGuard
     }
 
     /// <summary>
+    /// Prüft, ob der Aufrufer ein **gültiges** Zugangsmittel vorlegt.
+    /// </summary>
+    /// <param name="context">Der HTTP-Kontext.</param>
+    /// <returns>
+    /// <c>null</c>, wenn alles in Ordnung ist - sonst die Fehlerantwort
+    /// (<c>401</c>).
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// Diese Prüfung läuft für **jede** Anfrage unter <c>/api</c> - auch für
+    /// die offenen Endpunkte (Status, Items, Diagnose).
+    /// </para>
+    /// <para>
+    /// <b>Warum?</b> „Offen" heißt: es ist <i>kein</i> Zugangsmittel
+    /// nötig. Wer **aber** eines vorlegt und es ist falsch, muss eine
+    /// Rückmeldung bekommen - sonst hält die Home-Assistant-Integration einen
+    /// falschen Token für gültig und meldet erst Monate später, dass nichts
+    /// mehr geht. Das entspricht der HTTP-Semantik: eine ungültige Identität
+    /// wird abgelehnt, auch wenn die Ressource ohnehin offen ist.
+    /// </para>
+    /// <para>
+    /// Ohne <c>Authorization</c>-Header (also im LAN-Modus oder mit dem
+    /// Sitzungs-Cookie der Oberfläche) wird nichts beanstandet.
+    /// </para>
+    /// </remarks>
+    public IResult? RequireValidCredential(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var header = context.Request.Headers.Authorization.ToString();
+
+        if (string.IsNullOrWhiteSpace(header))
+        {
+            // Kein Zugangsmittel vorgelegt - das ist im LAN-Modus erlaubt.
+            return null;
+        }
+
+        var identity = GetIdentity(context);
+
+        return identity.IsAuthenticated
+            ? null
+            : Unauthorized(context, identity);
+    }
+
+    /// <summary>
     /// Prüft, ob der Aufrufer administrative Rechte hat.
     /// </summary>
     /// <param name="context">Der HTTP-Kontext.</param>

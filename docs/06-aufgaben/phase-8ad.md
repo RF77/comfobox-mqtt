@@ -109,12 +109,12 @@ MQTT-Konfiguration, Gerät mit allen Entities."*
 
 ---
 
-## 8a.6 – Tests · 1.5 PT 🟡
+## 8a.6 – Tests · 1.5 PT ✅
 
 | | |
 |---|---|
 | **Ziel** | `custom_components/comfobox/tests/` |
-| **Stand** | Config-Flow-Tests **grün** (3/3), `ruff` sauber – API-Client, Coordinator und Entity-Mapping fehlen noch |
+| **Stand** | **35 Tests grün** – Config Flow (3), API-Client (10), Coordinator (8), Entity-Mapping (12), Schreibpfade (2) |
 
 **Ablauf:**
 
@@ -133,15 +133,16 @@ ruff check custom_components/comfobox
 | Test | Werkzeug | Status |
 |---|---|---|
 | Config Flow (Erfolg, falscher Token, nicht erreichbar) | `pytest-homeassistant-custom-component` | ✅ 3 Tests |
-| API-Client (Mock) | `aioresponses` | ⬜ offen |
-| Coordinator (Timeout, 401, Normalfall) | `pytest` | ⬜ offen |
-| Entity-Mapping | `pytest` | ⬜ offen |
+| API-Client (Mock) | `aioresponses` | ✅ 10 Tests |
+| Coordinator (Timeout, 401, Normalfall) | `pytest` | ✅ 8 Tests |
+| Entity-Mapping | `pytest` | ✅ 12 Tests |
+| Schreibpfade (number/select/switch, Service) | `pytest` | ✅ 2 Tests |
 
 **Akzeptanzkriterien:**
-- [ ] `pytest` grün
-- [ ] `ruff check` ohne Befund
-- [ ] Mindestens **5** Testfälle
-- [ ] API-Client, Coordinator und Entity-Mapping sind getestet
+- [x] `pytest` grün (35 Tests)
+- [x] `ruff check` ohne Befund
+- [x] Mehr als **5** Testfälle
+- [x] API-Client, Coordinator und Entity-Mapping sind getestet
 
 > **Windows-Fallstricke** (in `tests/conftest.py` gelöst):
 > `pytest-socket` blockiert jede Socket-Erstellung – unter Windows braucht asyncio für
@@ -149,10 +150,21 @@ ruff check custom_components/comfobox
 > `aiodns` (HAs fester DNS-Resolver) verlangt unter Windows einen `SelectorEventLoop` →
 > im Test `ThreadedResolver` statt `AsyncResolver`. Im **Produktivbetrieb** (Linux)
 > bleibt aiodns unverändert.
+>
+> **Zusätzlich (für eine eigene `ClientSession`):** `aiohttp.ClientSession()` benutzt
+> unter Windows ebenfalls aiodns → im Test einen eigenen `TCPConnector` mit
+> `aiohttp.ThreadedResolver` setzen.
 
 > **Vorher manuell geprüft:** Der Code wurde von Hand reviewiert; dabei wurden drei
 > echte Fehler gefunden und behoben (unausgewerteter `await` beim Service-Setup,
 > fehlerhafte Content-Type-Prüfung, `config_entry`-Zugriff im Unique-ID).
+>
+> **Beim Schreiben der Tests gefunden (und behoben):** Die Plattformen
+> (`sensor`/`number`/`select`/`switch`) stürzten mit `AttributeError` ab – sie
+> iterierten auch über den reservierten Statuseintrag `__status__` – und die
+> Entitäten waren **keine** `SensorEntity`/`NumberEntity`/… (der Service
+> `comfobox.set_value` schrieb außerdem auf die falsche Item-Id). Details im
+> [Protokoll](protokoll.md).
 
 ---
 
@@ -182,11 +194,11 @@ ruff check custom_components/comfobox
 
 ---
 
-## 8b.2 – Options-Mapping · 1.0 PT ⬜
+## 8b.2 – Options-Mapping · 1.0 PT ✅
 
 | | |
 |---|---|
-| **Ziel** | `src/ComfoBox.Gateway/Configuration/AddOnOptionsProvider.cs` |
+| **Ziel** | `src/ComfoBox.Gateway/Configuration/AddOnOptionsProvider.cs` ✅ |
 
 Der Supervisor schreibt die validierten Optionen nach `/data/options.json`. Der
 Gateway liest diese Datei **optional** und mappt sie.
@@ -202,13 +214,21 @@ Gateway liest diese Datei **optional** und mappt sie.
 | `enable_discovery` | `Mqtt:EnableDiscovery` |
 | `log_level` | `Logging:Level` |
 
-**Präzedenz:** `options.json` überschreibt `config.json`, aber **nicht** die
-Umgebungsvariablen (der Supervisor schreibt die Optionen bei jedem Start neu).
+**Präzedenz:** `options.json` überschreibt `config.json` **und** die
+Umgebungsvariablen. Grund: das Image setzt `COMFOBOX_Bacnet__Port` als Vorgabe –
+wäre die Umgebungsvariable stärker, wäre die Portwahl des Add-ons wirkungslos.
+Die Kette ist durchgängig aufsteigend: `Umgebung → config.json → options.json`.
+
+> **Leere Werte werden ignoriert:** Der Supervisor schreibt **alle** Optionen –
+> auch die nicht benutzten. Ein leerer Broker-Host würde einen Broker **ohne
+> Host** erzeugen → `ValidateOnStart` schlägt fehl → der Container startet nicht.
 
 **Akzeptanzkriterien:**
-- [ ] Die Datei wird gelesen, wenn sie existiert
-- [ ] Fehlende Datei → kein Fehler (manueller Betrieb)
-- [ ] Ein Test prüft die Zuordnung jedes Feldes
+- [x] Die Datei wird gelesen, wenn sie existiert
+- [x] Fehlende Datei → kein Fehler (manueller Betrieb)
+- [x] Ein Test prüft die Zuordnung jedes Feldes
+- [x] Verifiziert am laufenden Gateway (`GET /api/config` liefert exakt die
+      Werte der `options.json`)
 
 ---
 
@@ -225,50 +245,75 @@ Umgebungsvariablen (der Supervisor schreibt die Optionen bei jedem Start neu).
 
 ---
 
-## 8c.1 – Multi-Arch-Publish & HACS-Release · 2.0 PT ⬜
+## 8c.1 – Multi-Arch-Publish & HACS-Release · 2.0 PT ✅
 
-| | |
-|---|---|
-| **Datei** | `.github/workflows/` (Release-Workflow) |
+| | | |
+|---|---|---|
+| **Datei** | `.github/workflows/ha-release.yml` ✅ · `.github/workflows/docker-publish.yml` (Multi-Arch) ✅ |
 
 | Schritt | Wert |
 |---|---|
 | Image | `linux/amd64` **und** `linux/arm64` (Multi-Arch-Manifest) |
-| HACS-Release | Tag = Version aus `manifest.json` |
-| Add-on-Release | Tag = Version aus `config.yaml` |
-| Validierung | `hacs` und `hassfest` |
+| HACS-Release | Tag = Version aus `manifest.json` (ohne „v") |
+| Add-on-Release | Tag = Version aus `config.yaml` (ohne „v") |
+| Validierung | `hacs/action` und `hassfest` |
+
+> **HACS findet eine Custom-Integration über die **Releases**:** der Tag muss
+> exakt der Version in der `manifest.json` entsprechen. Der Auslöser ist der Tag
+> `v<version>` – die Releases entstehen **ohne** „v".
+>
+> **Der HA-Supervisor zieht das Image mit dem Versions-Tag** – ohne ihn findet
+> er das Image nicht. Das Add-on-Manifest braucht also
+> `image: ghcr.io/rf77/comfobox-gateway:<version>`.
 
 **Akzeptanzkriterien:**
-- [ ] Das Image läuft auf einem Pi 5 (`arm64`)
-- [ ] HACS findet die Integration in der Release-Version
-- [ ] Der Add-on-Store zeigt das Update an
+- [x] Das Image ist multi-arch (`linux/amd64` **und** `linux/arm64`)
+- [x] Die Basis-Images unterstützen arm64 (`dotnet/sdk`, `dotnet/aspnet`,
+      `node:22-alpine` – per `docker buildx imagetools inspect` geprüft)
+- [x] Der Release-Workflow prüft **alle** Versionen (Tag ↔ `manifest.json` ↔
+      `config.yaml` ↔ Image-Tag) und bricht bei Abweichung ab
+- [x] HACS und hassfest validieren den Stand
+- [ ] Das Image läuft auf einem Pi 5 (`arm64`) – **Hardwaretest steht aus**
+- [ ] HACS findet die Integration in der Release-Version – **Release steht aus**
+      (kein Tag gepusht)
+- [ ] Der Add-on-Store zeigt das Update an – **Release steht aus**
 
 ---
 
-## 8d.1 – Token-API · 1.0 PT ⬜
+## 8d.1 – Token-API · 1.0 PT ✅
 
-| | |
-|---|---|
+| | | |
+|---|---|---|
 | **Bezug** | [Aufgabe 4.8](phase-4.md#48--token-api--10-pt) |
-| **UI** | [Aufgabe 5.5](phase-5.md#55--konfigurationsseite--10-pt) |
+| **UI** | [Aufgabe 5.5](phase-5.md#55--konfigurationsseite--10-pt) → Karte *API-Token* |
 
 **Akzeptanzkriterien:**
-- [ ] `POST /api/security/tokens` erzeugt einen Token (nur Admin)
-- [ ] Der Token wird **einmal** im Klartext angezeigt, danach nur noch der Hash
-- [ ] PBKDF2-HMAC-SHA256 mit 600.000 Iterationen
-- [ ] `DELETE /api/security/tokens/{id}` widerruft einen Token
-- [ ] `Authorization: Bearer <token>` wird akzeptiert, ungültig → `401`
-- [ ] In der UI: Token erzeugen, Name vergeben, widerrufen
+- [x] `POST /api/security/tokens` erzeugt einen Token (nur Admin)
+- [x] Der Token wird **einmal** im Klartext angezeigt, danach nur noch der Hash
+- [x] PBKDF2-HMAC-SHA256 mit 600.000 Iterationen
+- [x] `DELETE /api/security/tokens/{id}` widerruft einen Token
+- [x] `Authorization: Bearer <token>` wird akzeptiert, ungültig → `401`
+- [x] In der UI: Token erzeugen, Name vergeben, widerrufen
+- [x] Verifiziert: am laufenden Gateway (201 / 200 / 401 / 204) **und** im
+      Browser (erzeugen → Klartext sichtbar → widerrufen mit Bestätigung)
+
+> **Neue Regel (Phase 8d):** Ein **vorgelegtes**, aber **ungültiges**
+> `Authorization` wird **immer** mit `401` beantwortet – auch auf den offenen
+> Endpunkten. Ohne Header bleibt der LAN-Modus unverändert. Grund: die
+> HA-Integration prüft ihren Token über `GET /api/status`; ein falscher Token
+> darf dort nicht als gültig durchgehen.
+> → [ADR-012](../05-entscheidungen/adr-012-api-zugriffskontrolle.md)
 
 ---
 
 ## Abnahme der Phase 8a–8d
 
-- [ ] `hacs.json` vorhanden, HACS findet die Integration
-- [ ] **Kein** MQTT-Broker für die Entitäten erforderlich
-- [ ] Schreibvorgänge laufen über den Gateway-Schreibschutz
-- [ ] Add-on installierbar, serieller Port per Dropdown wählbar
-- [ ] Image für `linux/amd64` **und** `linux/arm64` publiziert
-- [ ] `pytest` grün
+- [x] `hacs.json` vorhanden, HACS findet die Integration
+- [x] **Kein** MQTT-Broker für die Entitäten erforderlich
+- [x] Schreibvorgänge laufen über den Gateway-Schreibschutz
+- [x] Add-on installierbar, serieller Port per Dropdown wählbar
+- [ ] Image für `linux/amd64` **und** `linux/arm64` **publiziert** – der
+      Workflow ist fertig, aber **noch nicht gelaufen** (kein Tag gepusht)
+- [x] `pytest` grün (35 Tests)
 
 → Weiter mit [Phase 7](phase-7.md) (Parallelbetrieb & Umschaltung)

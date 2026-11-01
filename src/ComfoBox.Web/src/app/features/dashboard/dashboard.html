@@ -1,8 +1,21 @@
 <section class="cb-dashboard">
   <h1 class="cb-page-title">Übersicht</h1>
 
+  <!-- Simulationsbetrieb: der Gateway liest KEINE ComfoBox. -->
+  @if (bacnetSimulated()) {
+    <p-card header="Simulation" styleClass="cb-card cb-alert-card">
+      <p-message severity="warn" styleClass="w-full">
+        <p class="font-semibold">Simulationsbetrieb - keine ComfoBox</p>
+        <p>
+          Der Gateway liest keine echte ComfoBox. Die angezeigten Werte stammen aus dem
+          Item-Katalog und sind nicht echt. Das ist für Tests gedacht, nicht für den Betrieb.
+        </p>
+      </p-message>
+    </p-card>
+  }
+
   <!-- BACnet-Hinweis: prominent, wenn der Bus nicht antwortet. -->
-  @if (!bacnetConnected()) {
+  @if (statusKnown() && !bacnetConnected() && !bacnetSimulated()) {
     <p-card header="BACnet nicht verbunden" styleClass="cb-card cb-alert-card">
       <p-message severity="error" styleClass="w-full">
         <p class="font-semibold">Die ComfoBox antwortet nicht</p>
@@ -29,8 +42,8 @@
       <div class="cb-tile">
         <span class="cb-tile-label">Status</span>
         <p-tag
-          [value]="bacnetConnected() ? 'verbunden' : 'getrennt'"
-          [severity]="bacnetConnected() ? 'success' : 'danger'"
+          [value]="bacnetSimulated() ? 'simulation' : bacnetConnected() ? 'verbunden' : 'getrennt'"
+          [severity]="bacnetSimulated() ? 'warn' : bacnetConnected() ? 'success' : 'danger'"
         />
         <span class="cb-tile-hint">{{ bacnetPort() }}</span>
         @if (bacnetError(); as error) {

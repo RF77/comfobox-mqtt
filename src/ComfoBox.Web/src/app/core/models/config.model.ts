@@ -66,6 +66,8 @@ export interface MqttConfigDto {
   readonly keepAliveSeconds: number;
   /** Das Präfix der Discovery-Topics. */
   readonly discoveryPrefix: string;
+  /** Ist die Home-Assistant-Discovery aktiviert? */
+  readonly enableDiscovery: boolean;
   /** Werden die Item-Werte retained publiziert? */
   readonly useMqttRetain: boolean;
   /** Das Intervall der Status-Publishes in Sekunden. */

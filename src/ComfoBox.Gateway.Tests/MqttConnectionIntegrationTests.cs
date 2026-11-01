@@ -149,6 +149,46 @@ public sealed class MqttConnectionIntegrationTests : IAsyncLifetime, IDisposable
     }
 
     [Fact]
+    public async Task Zwei_Gateways_Mit_Verschiedener_Geraete_ID_Verdraengen_Sich_Nicht()
+    {
+        // Regression aus der Probe fuer Phase 7: beide Gateways meldeten
+        // sich mit derselben Client-ID an - der Broker trennte die aeltere
+        // Sitzung ("Session taken over") und deren LWT meldete das andere
+        // Gateway als "tot". Die Geraete-ID gehoert deshalb in die ID.
+        var options = new MqttOptions
+        {
+            Brokers = [new MqttBrokerOptions { Host = "127.0.0.1", Port = _port }],
+            ClientId = "comfobox-test",
+            KeepAliveSeconds = 15,
+        };
+
+        var topics = new MqttTopicMap(new ItemCatalog(), BaseTopic, expertModeEnabled: false);
+        var factory = new MqttConnectionFactory(options, topics);
+        var registry = new MqttClientRegistry();
+
+        using var manager = new MqttConnectionManager(
+            options,
+            topics,
+            factory,
+            registry,
+            new HealthReporter(),
+            new ErrorCollector(),
+            [],
+            new GatewayOptions { BaseTopic = BaseTopic, DeviceId = "comfobox2" },
+            NullLogger<MqttConnectionManager>.Instance);
+
+        Assert.Equal("comfobox-test-comfobox2", manager.ClientId);
+
+        await manager.StartAsync(CancellationToken.None);
+
+        await WaitForAsync(() => registry.IsConnected, TimeSpan.FromSeconds(20));
+
+        Assert.True(
+            registry.IsConnected,
+            "Das zweite Gateway hat sich nicht am Broker angemeldet.");
+    }
+
+    [Fact]
     public void Das_Keepalive_Ist_Mindestens_15_Sekunden()
     {
         var options = new MqttOptions
@@ -186,6 +226,7 @@ public sealed class MqttConnectionIntegrationTests : IAsyncLifetime, IDisposable
             new HealthReporter(),
             new ErrorCollector(),
             [],
+            new GatewayOptions(),
             NullLogger<MqttConnectionManager>.Instance);
 
         await _manager.StartAsync(CancellationToken.None);

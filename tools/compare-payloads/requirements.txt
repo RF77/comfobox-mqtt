@@ -1,0 +1,3 @@
+# Nur der Live-Modus (MQTT) braucht paho-mqtt.
+# Der Vergleich selbst laeuft mit der Standardbibliothek.
+paho-mqtt>=1.6,<2

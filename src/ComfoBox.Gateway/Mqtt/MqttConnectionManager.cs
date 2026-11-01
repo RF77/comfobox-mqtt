@@ -28,6 +28,7 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     private readonly IErrorCollector _errors;
     private readonly IReadOnlyList<IMqttConnectionHandler> _handlers;
     private readonly ILogger<MqttConnectionManager> _logger;
+    private readonly string _clientId;
 
     private readonly List<BrokerConnection> _connections = [];
     private readonly List<Task> _runs = [];
@@ -43,6 +44,7 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     /// <param name="health">Der Health-Reporter.</param>
     /// <param name="errors">Die Fehler-Senke.</param>
     /// <param name="handlers">Die Handler, die nach jedem Connect laufen.</param>
+    /// <param name="gatewayOptions">Die Grundeinstellungen (Geräte-ID).</param>
     /// <param name="logger">Logger.</param>
     public MqttConnectionManager(
         MqttOptions mqttOptions,
@@ -52,6 +54,7 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
         IHealthReporter health,
         IErrorCollector errors,
         IEnumerable<IMqttConnectionHandler> handlers,
+        GatewayOptions gatewayOptions,
         ILogger<MqttConnectionManager> logger)
     {
         ArgumentNullException.ThrowIfNull(mqttOptions);
@@ -61,6 +64,7 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
         ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(errors);
         ArgumentNullException.ThrowIfNull(handlers);
+        ArgumentNullException.ThrowIfNull(gatewayOptions);
         ArgumentNullException.ThrowIfNull(logger);
 
         _mqttOptions = mqttOptions;
@@ -71,7 +75,18 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
         _errors = errors;
         _handlers = [.. handlers];
         _logger = logger;
+
+        // Die Client-ID wird um die Geräte-ID ergänzt: zwei Gateways auf
+        // demselben Broker (Parallelbetrieb, Aufgabe 7.1) verdrängen sich
+        // sonst gegenseitig - der Broker trennt die ältere Sitzung und
+        // deren LWT meldet das andere Gateway als "tot".
+        _clientId = MqttClientId.Effective(mqttOptions.ClientId, gatewayOptions.DeviceId);
     }
+
+    /// <summary>
+    /// Die wirksame Client-ID (mit der Geräte-ID).
+    /// </summary>
+    public string ClientId => _clientId;
 
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -84,7 +99,7 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
                 broker,
                 _factory,
                 _topics,
-                _mqttOptions.ClientId,
+                _clientId,
                 _registry,
                 OnConnectedAsync,
                 _logger);

@@ -15,12 +15,15 @@ public sealed class HomeAssistantDiscoveryTests
 
     private static readonly string[] GeraeteIds = ["comfobox"];
 
-    private static HomeAssistantDiscovery CreateDiscovery(bool expertMode = false)
+    private static HomeAssistantDiscovery CreateDiscovery(
+        bool expertMode = false,
+        string discoveryIdentifier = "comfobox")
     {
         var options = new MqttOptions
         {
             Brokers = [new MqttBrokerOptions { Host = "localhost", Port = 1883 }],
             DiscoveryPrefix = "homeassistant",
+            DiscoveryIdentifier = discoveryIdentifier,
         };
 
         var gateway = new GatewayOptions { BaseTopic = "ComfoBox", ExpertMode = expertMode };
@@ -31,6 +34,28 @@ public sealed class HomeAssistantDiscoveryTests
             options,
             gateway,
             NullLogger<HomeAssistantDiscovery>.Instance);
+    }
+
+    [Fact]
+    public void Die_Discovery_Kennung_ist_konfigurierbar()
+    {
+        // Aufgabe 7.3: im Parallelbetrieb müssen sich die unique_ids der
+        // beiden Gateways unterscheiden - sonst ueberschreiben sich die
+        // Entitaeten in Home Assistant.
+        var item = Catalog.All[0];
+        var standard = CreateDiscovery();
+        var parallel = CreateDiscovery(discoveryIdentifier: "comfobox2");
+
+        Assert.StartsWith("comfobox_", standard.UniqueId(item), StringComparison.Ordinal);
+        Assert.StartsWith("comfobox2_", parallel.UniqueId(item), StringComparison.Ordinal);
+        Assert.NotEqual(standard.UniqueId(item), parallel.UniqueId(item));
+
+        // Auch die Discovery-Topics muessen sich unterscheiden.
+        Assert.NotEqual(
+            standard.DiscoveryTopic(item, writable: false),
+            parallel.DiscoveryTopic(item, writable: false));
+
+        Assert.NotEqual(standard.DeviceTopic, parallel.DeviceTopic);
     }
 
     [Fact]
@@ -187,7 +212,8 @@ public sealed class HomeAssistantDiscoveryTests
     [Fact]
     public void Die_Unique_Id_Ist_Stabil_Und_Eindeutig()
     {
-        var ids = Catalog.All.Select(HomeAssistantDiscovery.UniqueId).ToList();
+        var discovery = CreateDiscovery();
+        var ids = Catalog.All.Select(discovery.UniqueId).ToList();
 
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
         Assert.All(ids, id => Assert.StartsWith("comfobox_", id, StringComparison.Ordinal));

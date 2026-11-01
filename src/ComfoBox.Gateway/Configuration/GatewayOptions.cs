@@ -66,6 +66,23 @@ public sealed class GatewayOptions
     public string DataDirectory { get; init; } = "data";
 
     /// <summary>
+    /// Der Pfad der Optionsdatei des Home-Assistant-Add-ons.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Der Supervisor schreibt die Optionen des Add-ons nach
+    /// <c>/data/options.json</c>. Der Gateway liest die Datei **optional** -
+    /// im manuellen Betrieb (Docker Compose, Synology-Paket) gibt es sie nicht.
+    /// </para>
+    /// <para>
+    /// Relative Pfade werden gegen das Arbeitsverzeichnis des Prozesses
+    /// aufgelöst.
+    /// </para>
+    /// </remarks>
+    [Required]
+    public string AddOnOptionsPath { get; init; } = AddOnOptionsProvider.DefaultPath;
+
+    /// <summary>
     /// Das Poll-Intervall in Sekunden (Legacy-Stand: 60 s).
     /// </summary>
     [Range(1, 3600)]

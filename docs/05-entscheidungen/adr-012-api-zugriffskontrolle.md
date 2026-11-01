@@ -62,6 +62,30 @@ PBKDF2-Hash (`pbkdf2-sha256$600000$…`), die Tokens über denselben Hash.
 > Administrator-Passwort. Ein offener Setup-Endpunkt wäre eine
 > Passwort-Änderung durch jeden im LAN.
 
+### Ein ungültiges Zugangsmittel wird immer abgelehnt
+
+> **Regel (Phase 8d, 2026-11-01):** Wer **ein** `Authorization`-Header vorlegt
+> und damit **nicht** authentifiziert wird, bekommt **immer** `401` – auch auf
+> den offenen Endpunkten.
+
+| Situation | Antwort |
+|---|---|
+| **kein** `Authorization`-Header | wie bisher: `200` (LAN-Modus) |
+| **gültiger** Bearer-Token oder Basic-Auth | `200` |
+| **ungültiger** Bearer-Token oder Basic-Auth | `401` |
+
+> **Warum?** Die Home-Assistant-Integration prüft ihren Token über
+> `GET /api/status`. Ohne diese Regel würde ein **falscher** Token dort als
+> gültig durchgehen – die Einrichtung würde erfolgreich melden, und der
+> Nutzer bekäme erst Wochen später den eigentlichen Fehler zu sehen. Ein
+> ungültiger Token muss **sofort** als solcher erkannt werden.
+>
+> Das entspricht der HTTP-Semantik: eine vorgelegte, aber ungültige
+> Identität wird abgelehnt – auch bei einer ansonsten offenen Ressource.
+>
+> **Ohne** Header ändert sich **nichts**: der LAN-Modus (Dokumentierter
+> Betrieb) und die Web-Oberfläche (Sitzungs-Cookie) bleiben unberührt.
+
 ### Das Tokenformat
 
 ```

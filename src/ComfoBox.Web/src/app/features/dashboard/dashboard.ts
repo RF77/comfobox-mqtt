@@ -117,6 +117,25 @@ export class DashboardComponent {
   /** Der letzte BACnet-Fehler. */
   readonly bacnetError = computed(() => this.health.status()?.bacnet.lastError ?? null);
 
+  /**
+   * Läuft der Gateway im Simulationsbetrieb?
+   *
+   * <p>Im Simulationsbetrieb liest der Gateway **keine** ComfoBox - die Werte
+   * kommen aus dem Katalog. Das muss in der Oberfläche sichtbar sein, damit
+   * niemand die Werte für echte hält.
+   */
+  readonly bacnetSimulated = computed(() => this.health.status()?.bacnet.simulated ?? false);
+
+  /**
+   * Ist der Status schon geladen?
+   *
+   * <p>Vor dem ersten Abruf der Status-API ist der BACnet-Zustand
+   * <b>unbekannt</b>. Der Hinweis „BACnet nicht verbunden" darf erst dann
+   * erscheinen, wenn der Gateway wirklich sagt, dass der Bus nicht antwortet -
+   * sonst blinkt er beim Start kurz auf.
+   */
+  readonly statusKnown = computed(() => this.health.status() !== null);
+
   /** Die eingestellte Baudrate der seriellen Schnittstelle. */
   readonly bacnetBaudrate = computed(() => this.config.config()?.bacnet.baudrate ?? null);
 

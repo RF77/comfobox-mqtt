@@ -48,6 +48,10 @@ Im Tab **Konfiguration** des Add-ons:
 | **Home-Assistant-Discovery** | Entitäten automatisch anmelden | an |
 | **Log-Level** | Detailgrad der Protokolle | Information |
 
+> **Die Optionen sind stärker als die `config.json`.** Der Supervisor schreibt
+> sie bei jedem Start neu – deshalb überschreiben sie auch die Vorgaben des
+> Images. Ein leerer Broker-Host heißt: **kein Broker**.
+
 ### Der serielle Port
 
 Das Dropdown zeigt alle **seriellen** Anschlüsse des Systems – bevorzugt mit

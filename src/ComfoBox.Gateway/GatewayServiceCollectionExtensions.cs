@@ -73,6 +73,9 @@ public static class GatewayServiceCollectionExtensions
         services.AddOptions<LoggingOptions>()
             .Bind(configuration.GetSection(LoggingOptions.SectionName))
             .ValidateDataAnnotations()
+            .Validate(
+                o => LoggingOptions.IsValidLevel(o.Level),
+                $"Logging:Level muss einer der folgenden Werte sein: {string.Join(", ", LoggingOptions.AllowedLevels)}.")
             .ValidateOnStart();
 
         // Die Options-Klassen selbst als Singleton - mehrere Dienste brauchen sie
@@ -130,6 +133,17 @@ public static class GatewayServiceCollectionExtensions
         {
             var options = sp.GetRequiredService<IOptions<BacnetOptions>>().Value;
             var settings = sp.GetRequiredService<SerialPortSettings>();
+
+            // Simulationsbetrieb: kein serieller Port, keine ComfoBox.
+            // Die Werte kommen aus dem Katalog (deterministisch) oder aus
+            // einer Wert-Datei. Siehe ADR-013.
+            if (options.Simulation)
+            {
+                return new SimulatedBacnetClient(
+                    sp.GetRequiredService<IItemCatalog>(),
+                    sp.GetRequiredService<ILogger<SimulatedBacnetClient>>(),
+                    options.SimulationValuesPath);
+            }
 
             var serial = new BacnetSerialOptions
             {

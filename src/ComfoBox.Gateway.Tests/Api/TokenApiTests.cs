@@ -157,6 +157,60 @@ public sealed class TokenApiTests
     }
 
     /// <summary>
+    /// Ein ungültiger Token wird auch auf den **offenen** Endpunkten
+    /// abgelehnt - die Home-Assistant-Integration prüft ihren Token über
+    /// <c>/api/status</c> und würde einen falschen Token sonst für gültig
+    /// halten.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Ungueltiger_Token_Ergibt_401_Auch_Bei_Offenen_Endpunkten()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/status");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "cbk_gibtsnicht_secret");
+
+        var response = await fixture.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Ein gültiger Token wird auch auf den offenen Endpunkten akzeptiert.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Gueltiger_Token_Wird_Auch_Bei_Offenen_Endpunkten_Akzeptiert()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var created = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.PostAsync("/api/security/tokens", Json("{\"name\":\"ha\"}")));
+
+        var plaintext = created.GetProperty("token").GetString()!;
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/status");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", plaintext);
+
+        var response = await fixture.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Ohne Zugangsmittel bleiben die offenen Endpunkte erreichbar
+    /// (LAN-Modus).
+    /// </summary>
+    [Fact]
+    public async Task Ohne_Zugangsmittel_Bleiben_Die_Offenen_Endpunkte_Erreichbar()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.GetAsync("/api/status");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>
     /// Der Administrator kann sich mit Basic-Authentifizierung anmelden.
     /// </summary>
     [Fact]

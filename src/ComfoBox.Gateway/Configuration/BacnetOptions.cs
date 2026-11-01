@@ -68,6 +68,33 @@ public sealed class BacnetOptions
     public int Retries { get; init; } = 3;
 
     /// <summary>
+    /// Läuft der Gateway ohne echte ComfoBox?
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// In diesem Fall wird der BACnet-Client durch
+    /// <see cref="Bacnet.SimulatedBacnetClient"/> ersetzt: Es wird kein
+    /// serieller Port geöffnet, die Werte kommen aus dem Item-Katalog
+    /// (deterministisch) oder aus einer Wert-Datei.
+    /// </para>
+    /// <para>
+    /// Zweck: der Parallelvergleich aus Phase 7 (zwei Gateways nebeneinander)
+    /// und die automatisierten Tests - ohne ComfoBox und ohne USB-Adapter.
+    /// Siehe ADR-013.
+    /// </para>
+    /// </remarks>
+    public bool Simulation { get; init; }
+
+    /// <summary>
+    /// Pfad zu einer JSON-Datei mit Wert-Overrides für die Simulation.
+    /// </summary>
+    /// <remarks>
+    /// Format: <c>{ "values": { "Zone/OperationMode": "Comfort", "Zone/Temp": 21.5 } }</c>.
+    /// Ohne Datei werden die generierten (deterministischen) Werte verwendet.
+    /// </remarks>
+    public string? SimulationValuesPath { get; init; }
+
+    /// <summary>
     /// Prüft, ob die Baudrate von BACnet unterstützt wird.
     /// </summary>
     /// <param name="baudrate">Die zu prüfende Baudrate.</param>

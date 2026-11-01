@@ -28,10 +28,42 @@ public sealed class LoggingOptions
     public string Directory { get; init; } = "logs";
 
     /// <summary>
+    /// Der globale Minimal-Level der Protokollierung.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Mögliche Werte: <c>Trace</c>, <c>Debug</c>, <c>Information</c>,
+    /// <c>Warning</c>, <c>Error</c>, <c>Fatal</c>.
+    /// </para>
+    /// <para>
+    /// Der Wert ist **nicht** der Level des In-Memory-Ringpuffers - dafür ist
+    /// <see cref="RingBufferOptions.MinimumLevel"/> zuständig.
+    /// </para>
+    /// </remarks>
+    [Required]
+    public string Level { get; init; } = "Information";
+
+    /// <summary>
     /// Die Anzahl der aufbewahrten Log-Dateien.
     /// </summary>
     [Range(1, 365)]
     public int RetainedFileCount { get; init; } = 14;
+
+    /// <summary>
+    /// Die bekannten Log-Level.
+    /// </summary>
+    public static readonly string[] AllowedLevels =
+        ["Verbose", "Debug", "Information", "Warning", "Error", "Fatal"];
+
+    /// <summary>
+    /// Prüft, ob der Name eines Log-Levels bekannt ist.
+    /// </summary>
+    /// <param name="level">Der Name des Levels.</param>
+    public static bool IsValidLevel(string? level)
+    {
+        return !string.IsNullOrWhiteSpace(level)
+            && AllowedLevels.Contains(level, StringComparer.OrdinalIgnoreCase);
+    }
 
     /// <summary>
     /// Der In-Memory-Ringpuffer für den Log-Viewer der Web-UI.

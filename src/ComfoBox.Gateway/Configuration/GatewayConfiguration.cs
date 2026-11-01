@@ -54,6 +54,10 @@ public static class GatewayConfiguration
     /// </summary>
     /// <param name="configuration">Die Konfiguration des Hosts.</param>
     /// <param name="contentRootPath">Der Arbeitsverzeichnis-Pfad.</param>
+    /// <param name="onWarning">
+    /// Wird aufgerufen, wenn die Optionen des Add-ons nicht lesbar sind
+    /// (z. B. eine kaputte <c>options.json</c>).
+    /// </param>
     /// <remarks>
     /// <para>
     /// Die Reihenfolge der Aufrufe ist die Präzedenz: erst die
@@ -64,8 +68,18 @@ public static class GatewayConfiguration
     /// erst nach einem Neustart wirksam (außer über <c>PUT /api/config</c>,
     /// das die Datei selbst schreibt).
     /// </para>
+    /// <para>
+    /// <b>Add-on-Betrieb:</b> Die <c>options.json</c> des Home-Assistant-
+    /// Supervisors wird **zuletzt** hinzugefügt. Sie überschreibt damit sowohl
+    /// die <c>config.json</c> als auch die Umgebungsvariablen - das Image
+    /// setzt <c>COMFOBOX_Bacnet__Port</c> als Vorgabe, und die Portwahl des
+    /// Add-ons muss stärker sein.
+    /// </para>
     /// </remarks>
-    public static void AddGatewaySources(ConfigurationManager configuration, string contentRootPath)
+    public static void AddGatewaySources(
+        ConfigurationManager configuration,
+        string contentRootPath,
+        Action<string>? onWarning = null)
     {
         ArgumentNullException.ThrowIfNull(configuration);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentRootPath);
@@ -77,5 +91,38 @@ public static class GatewayConfiguration
         var path = Path.Combine(directory, ConfigStore.FileName);
 
         configuration.AddJsonFile(path, optional: true, reloadOnChange: true);
+
+        // Die Optionen des Home-Assistant-Add-ons (optional).
+        var optionsPath = ResolveAddOnOptionsPath(configuration, contentRootPath);
+        var provider = new AddOnOptionsProvider(optionsPath, key => configuration[key], onWarning);
+
+        // Der ConfigurationManager implementiert Add(IConfigurationSource) nur
+        // explizit - deshalb der Cast.
+        ((IConfigurationBuilder)configuration).Add(new AddOnOptionsSource(provider));
+    }
+
+    /// <summary>
+    /// Ermittelt den Pfad der Optionsdatei des Add-ons.
+    /// </summary>
+    /// <param name="configuration">Die Konfiguration.</param>
+    /// <param name="contentRootPath">Der Arbeitsverzeichnis-Pfad.</param>
+    /// <returns>
+    /// Der absolute Pfad der <c>options.json</c> (oder der Standardpfad,
+    /// wenn nichts konfiguriert ist).
+    /// </returns>
+    public static string ResolveAddOnOptionsPath(IConfiguration configuration, string contentRootPath)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        ArgumentException.ThrowIfNullOrWhiteSpace(contentRootPath);
+
+        var configured = configuration.GetSection(GatewayOptions.SectionName)[nameof(GatewayOptions.AddOnOptionsPath)];
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            configured = new GatewayOptions().AddOnOptionsPath;
+        }
+
+        return Path.IsPathRooted(configured)
+            ? configured
+            : Path.GetFullPath(Path.Combine(contentRootPath, configured));
     }
 }

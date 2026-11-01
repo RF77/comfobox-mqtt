@@ -59,6 +59,7 @@ internal static class ConfigEndpoints
                         ClientId = mqtt.ClientId,
                         KeepAliveSeconds = mqtt.KeepAliveSeconds,
                         DiscoveryPrefix = mqtt.DiscoveryPrefix,
+                        EnableDiscovery = mqtt.EnableDiscovery,
                         UseMqttRetain = mqtt.UseMqttRetain,
                         StatusIntervalSeconds = mqtt.StatusIntervalSeconds,
                         Brokers = mqtt.Brokers

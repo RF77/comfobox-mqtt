@@ -28,7 +28,8 @@ public sealed class MqttOptions
     /// <remarks>
     /// <para>
     /// Die Client-ID muss je Installation eindeutig sein - zwei Gateways mit
-    /// derselben ID verdrängen sich gegenseitig beim Broker. Der Legacy
+    /// derselben ID verdrängen sich gegenseitig beim Broker (der Broker
+    /// trennt die ältere Sitzung: „Session taken over"). Der Legacy
     /// hängte den Zeitstempel an (<c>ComfoBox{ticks}</c>) - das erzeugte bei
     /// jedem Connect eine neue Sitzung.
     /// </para>
@@ -37,9 +38,36 @@ public sealed class MqttOptions
     /// trotzdem auf verschiedenen Rechnern eindeutig. Für den Parallelbetrieb
     /// (zwei Gateways auf einem Host) muss die ID konfiguriert werden.
     /// </para>
+    /// <para>
+    /// Die **wirksame** Client-ID ergänzt die Geräte-ID
+    /// (<c>Gateway:DeviceId</c>): <c>{ClientId}-{DeviceId}</c>. Damit
+    /// verdrängen sich zwei Gateways auf demselben Broker auch dann nicht,
+    /// wenn sie auf demselben Host laufen - vorausgesetzt, sie haben
+    /// verschiedene Geräte-IDs.
+    /// </para>
     /// </remarks>
     [Required]
     public string ClientId { get; init; } = $"comfobox-gateway-{Environment.MachineName}";
+
+    /// <summary>
+    /// Die Kennung des Geräts in der Home-Assistant-Discovery.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Aus dieser Kennung entstehen die Discovery-Topics und die
+    /// <c>unique_id</c>s der Entitäten. Der Standard <c>comfobox</c> ist
+    /// unverändert - bestehende Home-Assistant-Installationen behalten ihre
+    /// Entitäten.
+    /// </para>
+    /// <para>
+    /// Für den Parallelbetrieb (Aufgabe 7.3) muss die Kennung **verschieden**
+    /// sein: sonst überschreiben sich die Entitäten beider Gateways
+    /// gegenseitig und der Umschaltpunkt wird unvorhersehbar.
+    /// </para>
+    /// </remarks>
+    [Required]
+    [RegularExpression(@"^\S+$", ErrorMessage = "Mqtt:DiscoveryIdentifier darf nicht leer sein.")]
+    public string DiscoveryIdentifier { get; init; } = "comfobox";
 
     /// <summary>
     /// Das Keep-Alive in Sekunden.
@@ -61,6 +89,24 @@ public sealed class MqttOptions
     [Required]
     [RegularExpression(@"^\S+$", ErrorMessage = "Mqtt:DiscoveryPrefix darf keine Leerzeichen enthalten.")]
     public string DiscoveryPrefix { get; init; } = "homeassistant";
+
+    /// <summary>
+    /// Soll die Home-Assistant-Discovery publiziert werden?
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Werden die Werte über die <b>HA-Integration</b> bezogen (ohne
+    /// MQTT-Broker), ist die Discovery überflüssig - sie würde zusätzliche
+    /// Entitäten anlegen, die der Nutzer nicht braucht.
+    /// </para>
+    /// <para>
+    /// Das Image kann mit <c>COMFOBOX_Mqtt__EnableDiscovery=false</c> bzw.
+    /// über die Option <c>enable_discovery</c> des Add-ons abgeschaltet
+    /// werden. Der Topic-Vertrag bleibt unberührt - es werden schlicht keine
+    /// Discovery-Payloads publiziert.
+    /// </para>
+    /// </remarks>
+    public bool EnableDiscovery { get; init; } = true;
 
     /// <summary>
     /// Sollen die Item-Werte retained publiziert werden?

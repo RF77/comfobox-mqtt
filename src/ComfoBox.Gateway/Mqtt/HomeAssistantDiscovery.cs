@@ -28,7 +28,6 @@ namespace ComfoBox.Gateway.Mqtt;
 /// </remarks>
 public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
 {
-    private const string DeviceIdentifier = "comfobox";
     private const string Manufacturer = "Zehnder";
     private const string Model = "ComfoBox Series 5 (ELESTA)";
     private const string OriginName = "comfobox-gateway";
@@ -72,6 +71,14 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     {
         ArgumentNullException.ThrowIfNull(client);
 
+        if (!_options.EnableDiscovery)
+        {
+            // Der Nutzer hat die Discovery abgeschaltet - meist, weil er die
+            // Werte ueber die HA-Integration bezieht (ohne Broker).
+            _logger.LogInformation("Home-Assistant-Discovery ist abgeschaltet (Mqtt:EnableDiscovery=false).");
+            return;
+        }
+
         var count = 0;
 
         foreach (var item in _catalog.All)
@@ -105,6 +112,16 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     public string DeviceTopic => $"{_options.DiscoveryPrefix}/device/{DeviceIdentifier}/config";
 
     /// <summary>
+    /// Die Kennung des Geräts in der Discovery.
+    /// </summary>
+    /// <remarks>
+    /// Konfigurierbar über <c>Mqtt:DiscoveryIdentifier</c> - für den
+    /// Parallelbetrieb müssen zwei Gateways verschiedene Kennungen haben,
+    /// sonst überschreiben sich ihre Entitäten (Aufgabe 7.3).
+    /// </remarks>
+    public string DeviceIdentifier => _options.DiscoveryIdentifier;
+
+    /// <summary>
     /// Die Plattform eines Items.
     /// </summary>
     /// <param name="item">Das Item.</param>
@@ -130,7 +147,7 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// </summary>
     /// <param name="item">Das Item.</param>
     /// <returns>Die Id, z. B. <c>comfobox_zone_set_point_normal</c>.</returns>
-    public static string UniqueId(ItemDefinition item)
+    public string UniqueId(ItemDefinition item)
     {
         ArgumentNullException.ThrowIfNull(item);
         return $"{DeviceIdentifier}_{item.Id.Replace('.', '_')}";
@@ -290,7 +307,7 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// Die Geräte-Referenz für die Entitäten.
     /// </summary>
     /// <returns>Die Referenz.</returns>
-    private static Dictionary<string, object?> BuildDevice()
+    private Dictionary<string, object?> BuildDevice()
         => new(StringComparer.Ordinal)
         {
             ["identifiers"] = new[] { DeviceIdentifier },

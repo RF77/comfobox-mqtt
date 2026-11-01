@@ -36,6 +36,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
     private readonly IWriteCounter _writeCounter;
     private readonly BacnetOptions _bacnetOptions;
     private readonly MqttOptions _options;
+    private readonly GatewayOptions _gatewayOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<MqttStatusPublisher> _logger;
     private readonly DateTimeOffset _startedAt;
@@ -50,6 +51,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
     /// <param name="writeCounter">Der Schreibzähler.</param>
     /// <param name="bacnetOptions">Die BACnet-Einstellungen.</param>
     /// <param name="options">Die MQTT-Einstellungen.</param>
+    /// <param name="gatewayOptions">Die Grundeinstellungen (Geräte-ID).</param>
     /// <param name="timeProvider">Die Zeitquelle.</param>
     /// <param name="logger">Logger.</param>
     public MqttStatusPublisher(
@@ -60,6 +62,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
         IWriteCounter writeCounter,
         BacnetOptions bacnetOptions,
         MqttOptions options,
+        GatewayOptions gatewayOptions,
         TimeProvider timeProvider,
         ILogger<MqttStatusPublisher> logger)
     {
@@ -70,6 +73,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
         ArgumentNullException.ThrowIfNull(writeCounter);
         ArgumentNullException.ThrowIfNull(bacnetOptions);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(gatewayOptions);
         ArgumentNullException.ThrowIfNull(timeProvider);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -80,6 +84,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
         _writeCounter = writeCounter;
         _bacnetOptions = bacnetOptions;
         _options = options;
+        _gatewayOptions = gatewayOptions;
         _timeProvider = timeProvider;
         _logger = logger;
         _startedAt = timeProvider.GetUtcNow();
@@ -242,6 +247,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
             port = _bacnetOptions.Port,
             baudrate = _bacnetOptions.Baudrate,
             deviceId = _bacnetOptions.DeviceId,
+            simulated = _bacnetOptions.Simulation,
         });
     }
 
@@ -258,7 +264,7 @@ public sealed class MqttStatusPublisher : BackgroundService, IMqttConnectionHand
         return JsonSerializer.Serialize(new
         {
             state,
-            clientId = _options.ClientId,
+            clientId = MqttClientId.Effective(_options.ClientId, _gatewayOptions.DeviceId),
             keepAlive = _options.KeepAliveSeconds,
             brokers = _options.Brokers.Count,
         });

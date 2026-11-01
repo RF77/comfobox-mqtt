@@ -45,6 +45,18 @@ jobs:
         id: namespace
         run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
+      # Die Version **ohne** "v" - das HA-Add-on zieht das Image mit genau
+      # diesem Tag (sonst findet der Supervisor das Image nicht).
+      - name: Version ermitteln
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
       - name: Meta
         id: meta
         uses: docker/metadata-action@v5
@@ -52,6 +64,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway
           tags: |
             type=ref,event=tag
+            type=raw,value=${{ steps.version.outputs.version }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
             type=sha,format=long
 
@@ -77,7 +90,7 @@ jobs:
       - name: Trivy scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway:${{ steps.version.outputs.version }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
@@ -172,17 +185,22 @@ jobs:
           {
             echo '## Images'
             echo '```'
-            echo "${{ env.REGISTRY }}/rf77/comfobox-gateway:${{ github.ref_name }}"
+            echo "${{ env.REGISTRY }}/rf77/comfobox-gateway:${{ steps.version.outputs.version }}"
             echo '```'
             echo ''
             echo 'Multi-Arch: linux/amd64, linux/arm64'
             echo ''
             echo '## Synology-Paket'
             echo '```'
-            echo 'ComfoBoxGateway_noarch-dsm7_${{ github.ref_name }}-0001.spk'
+            echo 'ComfoBoxGateway_noarch-dsm7_${{ steps.version.outputs.version }}-0001.spk'
             echo '```'
             echo ''
             echo 'Installation: DSM → Paketcenter → Installieren → Manuelle Installation.'
+            echo ''
+            echo '## Home Assistant'
+            echo ''
+            echo '- Integration (HACS): `custom_components/comfobox`'
+            echo '- Add-on: `comfobox` (Port 8099)'
           } >> "$GITHUB_OUTPUT"
 
       - name: Create release

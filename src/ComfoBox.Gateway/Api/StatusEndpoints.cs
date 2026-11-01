@@ -69,6 +69,7 @@ internal static class StatusEndpoints
                         // Der **laufende** Port - nicht der aus der Datei. Nach
                         // einem Portwechsel wird hier der neue stehen.
                         Port = serial.PortName,
+                        Simulated = bacnet.Simulation,
                         LastError = device.LastError,
                     },
                     Mqtt = new MqttStatusDto

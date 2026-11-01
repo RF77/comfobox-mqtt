@@ -40,6 +40,12 @@ curl -H "Authorization: Bearer MEIN-TOKEN" http://192.168.1.20:8081/api/status
 > **einmal** angezeigt. Er wird nur als Hash gespeichert – niemand kann ihn
 > wiederherstellen, nur widerrufen.
 
+> **Ein falscher Token wird sofort erkannt:** Liegt ein `Authorization`-Header
+> vor, der nicht gültig ist, antwortet der Gateway **immer** mit `401` – auch
+> auf den ansonsten offenen Endpunkten. Ohne Header bleibt alles erreichbar
+> (LAN-Modus). So erkennt die Home-Assistant-Integration einen falschen Token
+> **beim Einrichten** und nicht erst Wochen später.
+
 ---
 
 ## Endpunkte

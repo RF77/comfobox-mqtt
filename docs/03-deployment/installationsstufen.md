@@ -131,12 +131,27 @@ liest diese Datei **optional** und mappt sie:
 | `enable_discovery` | `bool?` | `Mqtt:EnableDiscovery` |
 | `log_level` | `list(…)` | `Logging:Level` |
 
-> **Präzedenz:** `options.json` **überschreibt** `config.json`, aber **nicht** die
-> Umgebungsvariablen. Grund: der Supervisor schreibt die Optionen bei jedem Start neu –
-> ein Env-Override wäre stillschweigend wirkungslos.
+> **Präzedenz:** Die Kette ist durchgängig aufsteigend:
+> `Umgebungsvariablen` → `config.json` → `options.json`.
+> Die `options.json` hat damit **Vorrang vor beiden**.
+>
+> **Warum auch vor den Umgebungsvariablen?** Das Image setzt
+> `COMFOBOX_Bacnet__Port=/dev/ttyUSB0` als Vorgabe. Wäre die Umgebungsvariable
+> stärker, wäre die Portwahl des Add-ons – der Kern des Add-ons – wirkungslos.
+> Der Supervisor schreibt die Optionen bei jedem Start neu; ein Env-Override
+> wäre stillschweigend wirkungslos.
 >
 > **Implementierung:** `ComfoBox.Gateway/Configuration/AddOnOptionsProvider.cs` –
-> ein `IConfigurationProvider`, der `/data/options.json` einliest, sofern die Datei existiert.
+> ein `IConfigurationProvider`, der `/data/options.json` einliest, sofern die Datei
+> existiert. Der Pfad ist über `Gateway:AddOnOptionsPath` konfigurierbar
+> (Standard: `/data/options.json`).
+>
+> **Leere Werte werden ignoriert:** Der Supervisor schreibt **alle** Optionen –
+> auch die, die der Nutzer nicht angefasst hat (mit dem Standardwert). Ein leerer
+> Broker-Host würde einen Broker **ohne Host** erzeugen; `ValidateOnStart` würde
+> fehlschlagen und der Container würde nicht starten. Deshalb werden die
+> Broker-Optionen nur übernommen, wenn ein Broker benannt ist – aus der Datei
+> oder aus der `config.json`.
 
 ### 5.2 Der Broker im Add-on
 

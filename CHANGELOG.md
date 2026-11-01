@@ -202,9 +202,41 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   DSM-Paketcenter) und legt beides im GitHub Release ab
 - Phase 8: `deploy/synology-spk/tools/test-config-parse.sh` – Test für den
   JSON-Zugriff des Supervisors auf die `config.json`
+- Phase 8a (Aufgabe 8a.6): **35 Tests** der HA-Integration (`pytest`) –
+  API-Client (Mock), Coordinator (Normalfall, Timeout, 401) und das
+  Entity-Mapping (Item → Plattform, Min/Max, Enum-Namen, Unique-Ids, Gerät)
+- Phase 8b (Aufgabe 8b.2): `AddOnOptionsProvider` – liest
+  `/data/options.json` des HA-Supervisors und mappt die Optionen auf die
+  Gateway-Konfiguration (`Bacnet:Port`, `Bacnet:Baudrate`,
+  `Gateway:BaseTopic`, `Mqtt:Brokers:0:*`, `Mqtt:EnableDiscovery`,
+  `Logging:Level`)
+- Phase 8b (Aufgabe 8b.2): neue Optionen `Gateway:AddOnOptionsPath` (Pfad
+  der `options.json`), `Mqtt:EnableDiscovery` und `Logging:Level`
+- Phase 8c (Aufgabe 8c.1): Workflow `.github/workflows/ha-release.yml` –
+  prüft die Versionen (Tag ↔ `manifest.json` ↔ `config.yaml` ↔ Image-Tag),
+  validiert mit `hacs/action` und `hassfest` und erzeugt die Releases für
+  die Integration (HACS) und das Add-on
+- Phase 8d (Aufgabe 8d.1): `GET /api/config` meldet jetzt auch
+  `Mqtt:EnableDiscovery`; die Oberfläche zeigt den Schalter in der
+  MQTT-Karte
 
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
+- Phase 8b (Aufgabe 8b.2): die `options.json` des HA-Add-ons hat jetzt
+  **Vorrang vor den Umgebungsvariablen** (und vor der `config.json`).
+  Grund: das Image setzt `COMFOBOX_Bacnet__Port=/dev/ttyUSB0` als Vorgabe –
+  wäre die Umgebungsvariable stärker, wäre die Portwahl des Add-ons
+  wirkungslos
+- Phase 8d (Aufgabe 8d.1): **ein ungültiges `Authorization`-Header wird
+  immer mit `401` beantwortet** – auch auf den offenen Endpunkten. Ohne
+  Header bleibt der LAN-Modus unverändert. Grund: die HA-Integration prüft
+  ihren Token über `GET /api/status`; ein falscher Token darf dort nicht als
+  gültig durchgehen (→ ADR-012)
+- Phase 8d (Aufgabe 8d.1): das Image des HA-Add-ons trägt jetzt den
+  **Versions-Tag** (`ghcr.io/rf77/comfobox-gateway:1.0.0`) – ohne ihn findet
+  der Supervisor das Image nicht
+- Phase 8c (Aufgabe 8c.1): das Image wird zusätzlich mit dem Versions-Tag
+  **ohne** „v" publiziert – das ist der Tag, den der HA-Supervisor zieht
 - Phase 8: **die `config.json` des Synology-Pakets folgt dem Schema der
   .NET-Konfiguration** (`Bacnet`, `Mqtt`, `Api`, `Gateway`, `Supervisor`).
   Die Spec zeigte vorher die Kleinbuchstaben-Abschnitte – damit hätte der
@@ -235,8 +267,51 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   „nur Konfigurationsdatei"
 - Phase 5 (Aufgabe 5.13): `GET /api/status` und `GET /api/config` melden den
   **laufenden** Port (nicht mehr den aus der Konfigurationsdatei)
+- Phase 7 (Aufgabe 7.0): **Simulationsbetrieb** – `Bacnet:Simulation=true`
+  ersetzt den BACnet-Client durch einen, der ohne Gerät antwortet
+  (deterministische Werte aus dem Item-Katalog, optional über
+  `Bacnet:SimulationValuesPath`). `/api/status` meldet `"simulated": true`
+  (ADR-013)
+- Phase 7 (Aufgabe 7.0): **`tools/compare-payloads/`** – der
+  Payload-Vergleich aus Aufgabe 7.2: live (`--old mqtt://…`) oder gegen eine
+  Aufzeichnung (`--old-file`), mit `record` zum Aufzeichnen. Zahlen mit
+  Toleranz 0.01, Enums **exakt**, Exit-Code ≠ 0 bei Abweichungen
+- Phase 7 (Aufgabe 7.0): `Mqtt:DiscoveryIdentifier` – die Kennung der
+  Home-Assistant-Discovery ist konfigurierbar (Standard unverändert
+  `comfobox`). Für den Parallelbetrieb müssen zwei Gateways verschiedene
+  Kennungen haben
+- Phase 7 (Aufgabe 7.0): die **wirksame MQTT-Client-ID** enthält jetzt die
+  Geräte-ID (`{ClientId}-{DeviceId}`)
 
 ### Fixed
+- Phase 7 (Aufgabe 7.0): **zwei Gateways am selben Broker haben sich gegenseitig
+  verdrängt** – beide meldeten sich mit `comfobox-gateway-{Hostname}` an, der
+  Broker trennte die ältere Sitzung (*Session taken over*) und deren Last-Will
+  meldete das andere Gateway als `offline`. Die wirksame Client-ID enthält jetzt
+  die Geräte-ID
+- Phase 7 (Aufgabe 7.0): die Kennung der Home-Assistant-Discovery war eine
+  Konstante (`comfobox`) → zwei Instanzen publizierten auf denselben
+  Discovery-Topics und hätten sich die Entitäten gegenseitig überschrieben.
+  Die Kennung ist jetzt konfigurierbar (`Mqtt:DiscoveryIdentifier`)
+- Phase 8a (Aufgabe 8a.6): die Plattformen `sensor`, `number`, `select` und
+  `switch` brachen mit `AttributeError: 'GatewayStatus' object has no
+  attribute 'is_read_only'` ab – sie iterierten über **alle** Einträge des
+  Coordinator-Caches, auch über den reservierten Status-Eintrag
+  `__status__`. Sie überspringen ihn jetzt (und benutzen die Entitätsklasse
+  der Plattform)
+- Phase 8a (Aufgabe 8a.6): die Entitäten der Plattformen waren **keine**
+  `SensorEntity`/`NumberEntity`/`SelectEntity`/`SwitchEntity` – sie hatten
+  damit weder einen Zustand noch die Plattform-Eigenschaften
+- Phase 8a (Aufgabe 8a.6): der Service `comfobox.set_value` ermittelte die
+  Item-Id durch Abschneiden des Entity-Präfixes. Die Item-Ids des Gateways
+  enthalten aber einen **Punkt** (`zone.set_point_normal`), die `entity_id`
+  einen Unterstrich → jeder Schreibvorgang über den Service scheiterte mit
+  `404 item_not_found`. Der Service liest jetzt die Item-Id aus dem
+  Entity-Registry (über die `unique_id`)
+- Phase 8d (Aufgabe 8d.1): die Icon-Buttons der Oberfläche (Token widerrufen,
+  Navigation, Abmelden, neu laden, Eintrag kopieren) hatten **keinen
+  zugänglichen Namen**: `aria-label` als Attribut auf `<p-button>` erreicht
+  den inneren `<button>` nicht. Optimus erwartet die Eigenschaft `ariaLabel`
 - Phase 8: der Assistent zeigte nach einem Klick auf die Schrittliste oder den
   Browser-Zurück den **falschen Schritt** (Fortschritt und „Weiter" liefen auseinander);
   jetzt wird der Zustand bei jeder Navigation mit der URL synchronisiert

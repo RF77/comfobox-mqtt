@@ -6,6 +6,7 @@ from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
+    SensorEntity,
     SensorEntityDescription,
     SensorStateClass,
 )
@@ -42,15 +43,28 @@ async def async_setup_entry(
 
     entities: list[ComfoBoxEntity] = []
     for item in coordinator.data.values():
+        # Der Status liegt unter dem reservierten Schluessel - er ist kein Item.
+        if not isinstance(item, ComfoBoxItem):
+            continue
+
         # Beschreibbare Items werden als number/select/switch angelegt,
         # nicht doppelt als Sensor.
         if not item.is_read_only:
             continue
         entities.append(
-            ComfoBoxEntity(coordinator, item, info, _description_for(item))
+            ComfoBoxSensor(coordinator, item, info, _description_for(item))
         )
 
     async_add_entities(entities)
+
+
+class ComfoBoxSensor(ComfoBoxEntity, SensorEntity):
+    """Ein schreibgeschuetzter Wert."""
+
+    @property
+    def native_value(self) -> Any:
+        """Der Wert aus dem Coordinator-Cache."""
+        return self.item.value
 
 
 def _description_for(item: ComfoBoxItem) -> SensorEntityDescription:

@@ -150,6 +150,11 @@ public sealed record MqttConfigDto
     public required string DiscoveryPrefix { get; init; }
 
     /// <summary>
+    /// Ist die Home-Assistant-Discovery aktiviert?
+    /// </summary>
+    public required bool EnableDiscovery { get; init; }
+
+    /// <summary>
     /// Werden die Item-Werte retained publiziert?
     /// </summary>
     public required bool UseMqttRetain { get; init; }

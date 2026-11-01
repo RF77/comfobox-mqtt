@@ -22,6 +22,30 @@ config.json                  (vom Assistenten geschrieben – höchste Prioritä
 > (Doppel-Unterstrich) in Hierarchie. Mit dem Präfix `COMFOBOX_` wird
 > `COMFOBOX_Gateway__BaseTopic` zu `Gateway:BaseTopic`.
 
+### Zwei Gateways nebeneinander (Parallelbetrieb)
+
+Für den Parallelbetrieb (Phase 7) laufen zwei Gateways am selben Broker. Drei
+Einstellungen müssen **verschieden** sein, sonst arbeiten die Instanzen
+gegeneinander:
+
+| Einstellung | Wirkung, wenn beide gleich sind |
+|---|---|
+| `Gateway:BaseTopic` | beide publizieren auf denselben Topics |
+| `Gateway:DeviceId` | gleiche MQTT-Client-ID → der Broker trennt die ältere Sitzung (*Session taken over*) und deren Last-Will meldet das andere Gateway als `offline` |
+| `Mqtt:DiscoveryIdentifier` | gleiche Discovery-Topics und gleiche `unique_id`s → die Entitäten überschreiben sich in Home Assistant |
+
+> Die wirksame MQTT-Client-ID ist `{Mqtt:ClientId}-{Gateway:DeviceId}` – die
+> Geräte-ID ist also automatisch Teil der Client-ID.
+
+### Vergleich ohne Gerät
+
+`Bacnet:Simulation=true` lässt den Gateway **ohne ComfoBox** laufen: die Werte
+kommen aus dem Item-Katalog (deterministisch), es wird kein serieller Port
+geöffnet. `/api/status` meldet dann `"simulated": true`. Das ist für die
+Prüfung des Parallelbetriebs ohne USB-Adapter gedacht (siehe
+[ADR-013](../05-entscheidungen/adr-013-vergleich-ohne-geraet.md)) – **nicht**
+für den Produktivbetrieb.
+
 ## 2. Environment-Variable-Schema
 
 `Microsoft.Extensions.Configuration` übersetzt `__` (Doppel-Unterstrich) in Hierarchie:
@@ -43,6 +67,7 @@ config.json                  (vom Assistenten geschrieben – höchste Prioritä
 | `COMFOBOX_Mqtt__Brokers__0__UseTls` | Mqtt | Brokers[0].UseTls | `false` |
 | `COMFOBOX_Mqtt__EnableDiscovery` | Mqtt | EnableDiscovery | `true` |
 | `COMFOBOX_Mqtt__DiscoveryPrefix` | Mqtt | DiscoveryPrefix | `homeassistant` |
+| `COMFOBOX_Mqtt__DiscoveryIdentifier` | Mqtt | DiscoveryIdentifier | `comfobox` |
 | `COMFOBOX_Mqtt__EmbedBroker` | Mqtt | EmbedBroker | `false` |
 | `COMFOBOX_Logging__Level` | Logging | Level | `Information` |
 | `COMFOBOX_Logging__Directory` | Logging | Directory | `/var/log/comfobox` |

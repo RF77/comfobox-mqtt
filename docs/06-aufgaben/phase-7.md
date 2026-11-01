@@ -11,6 +11,69 @@
 
 ---
 
+## 7.0 – Probe ohne Gerät · 1.0 PT
+
+| | |
+|---|---|
+| **Zweck** | den Parallelbetrieb **ohne ComfoBox und ohne USB-Adapter** prüfen |
+| **Werkzeug** | `tools/compare-payloads/` + `Bacnet:Simulation=true` |
+| **Spec** | [ADR-013](../05-entscheidungen/adr-013-vergleich-ohne-geraet.md) |
+
+> **Warum:** Auf dem Entwicklungsrechner gibt es keinen CH340-Adapter. Die
+> Vergleichs-Mechanik (unterschiedliches `BaseTopic`, LWT, Discovery,
+> Umschaltung) lässt sich trotzdem vollständig prüfen – nur die *Werte* kommen
+> aus der Simulation statt vom Gerät.
+
+### 7.0.1 Zwei Instanzen im Simulationsbetrieb
+
+```bash
+# Broker (lokal)
+docker run -d --name comfobox-mosquitto -p 1883:1883 eclipse-mosquitto:2 \
+    mosquitto -c /mosquitto-no-auth.conf
+
+# Alte Seite
+COMFOBOX_Gateway__BaseTopic=ComfoBox \
+COMFOBOX_Gateway__DeviceId=comfobox1 \
+COMFOBOX_Mqtt__DiscoveryIdentifier=comfobox \
+COMFOBOX_Bacnet__Simulation=true \
+COMFOBOX_Gateway__PollIntervalSeconds=5 \
+dotnet ComfoBox.Gateway.dll
+
+# Neue Seite (zweiter Prozess, eigener Daten- und Log-Ordner)
+COMFOBOX_Gateway__BaseTopic=ComfoBox2 \
+COMFOBOX_Gateway__DeviceId=comfobox2 \
+COMFOBOX_Mqtt__DiscoveryIdentifier=comfobox2 \
+COMFOBOX_Bacnet__Simulation=true \
+COMFOBOX_Gateway__PollIntervalSeconds=5 \
+dotnet ComfoBox.Gateway.dll
+```
+
+> ⚠️ **`Gateway:DeviceId` und `Mqtt:DiscoveryIdentifier` müssen verschieden
+> sein.** Sonst verdrängen sich die beiden Instanzen am Broker (*Session taken
+> over*) und überschreiben sich ihre Home-Assistant-Entitäten.
+
+### 7.0.2 Vergleich
+
+```bash
+python tools/compare-payloads/compare_payloads.py \
+    --old mqtt://localhost:1883/ComfoBox/# \
+    --new mqtt://localhost:1883/ComfoBox2/# \
+    --duration 300 --poll-interval 60 --secondary-factor 5
+```
+
+**Akzeptanzkriterien:**
+- [ ] Beide Instanzen sind gleichzeitig am Broker (`/api/status` → `mqtt.connected: true`)
+- [ ] Der Vergleich meldet **keine** Abweichung (Exit-Code 0)
+- [ ] Der Vergleich **erkennt** eine manipulierte Payload (Exit-Code ≠ 0) – die Gegenprobe
+- [ ] Die Discovery-Topics der beiden Instanzen sind verschieden
+- [ ] `Bacnet:Simulation=true` ist im Status sichtbar (`bacnet.simulated: true`)
+
+> **Grenze:** Im Simulationsbetrieb wird der BACnet-Transport (MSTP, CRC,
+> Token-Passing) **nicht** durchlaufen. Er ist durch die Golden-Tests
+> abgedeckt. Der Vergleich prüft die Schichten *oberhalb* des Busses.
+
+---
+
 ## 7.1 – Parallel starten · 0.5 PT
 
 | | |
@@ -46,6 +109,10 @@ docker run -d --name comfobox-new \
 
 **Zweck:** Zeigen, dass alte und neue Implementierung **dieselben** Werte
 publizieren.
+
+> **Zwei Modi:** live (`--old mqtt://…`) gegen eine Aufzeichnung des alten
+> Gateways (`--old-file`). Der Aufzeichnungs-Modus ist der *Golden Master*:
+> er macht den Vergleich reproduzierbar und ohne Broker möglich.
 
 | Vergleich | Regel |
 |---|---|

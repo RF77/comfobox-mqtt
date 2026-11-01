@@ -82,6 +82,11 @@ nutzen Sie <a href="/help/installation">Docker oder Synology</a>.</p>
 <td>Information</td>
 </tr>
 </tbody></table>
+<blockquote>
+<p><strong>Die Optionen sind stärker als die <code>config.json</code>.</strong> Der Supervisor schreibt
+sie bei jedem Start neu – deshalb überschreiben sie auch die Vorgaben des
+Images. Ein leerer Broker-Host heißt: <strong>kein Broker</strong>.</p>
+</blockquote>
 <h3 id="der-serielle-port">Der serielle Port</h3>
 <p>Das Dropdown zeigt alle <strong>seriellen</strong> Anschlüsse des Systems – bevorzugt mit
 stabilen Pfaden wie <code>/dev/serial/by-id/…</code>. Diese Pfade überleben Neustarts.</p>

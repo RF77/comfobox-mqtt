@@ -108,6 +108,23 @@
     <p-card header="MQTT (nur Konfigurationsdatei)" styleClass="cb-card">
       <p-tag value="Neustart erforderlich" severity="warn" />
 
+      <div class="cb-readonly-grid">
+        <div>
+          <span class="cb-label">Discovery</span>
+          <span class="cb-value">
+            @if (cfg.mqtt.enableDiscovery) {
+              <p-tag value="aktiv" severity="success" />
+            } @else {
+              <p-tag value="aus" severity="info" />
+            }
+          </span>
+        </div>
+        <div>
+          <span class="cb-label">Discovery-Präfix</span>
+          <span class="cb-value">{{ cfg.mqtt.discoveryPrefix }}</span>
+        </div>
+      </div>
+
       <p-table [value]="cfg.mqtt.brokers" [tableStyle]="{ 'min-width': '100%' }">
         <ng-template #header>
           <tr>
@@ -204,7 +221,7 @@
               icon="pi pi-trash"
               [text]="true"
               severity="danger"
-              [attr.aria-label]="'Token ' + token.name + ' widerrufen'"
+              [ariaLabel]="'Token ' + token.name + ' widerrufen'"
               (onClick)="revoke(token)"
             />
           </td>

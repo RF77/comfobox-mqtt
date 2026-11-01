@@ -162,6 +162,7 @@ public sealed class HealthAndStatusTests : IDisposable
             _counter,
             new BacnetOptions { Port = "COM3", Baudrate = 38400, DeviceId = 1 },
             options,
+            new GatewayOptions { BaseTopic = "ComfoBox", DeviceId = "comfobox1" },
             TimeProvider.System,
             NullLogger<MqttStatusPublisher>.Instance);
     }

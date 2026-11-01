@@ -20,7 +20,9 @@ homeassistant: "2024.11.0"
 # Image
 # ─────────────────────────────────────────────────────────────────────────────
 # Multi-Arch-Image; der Supervisor zieht den Tag, der "version" entspricht.
-image: "ghcr.io/rf77/comfobox-gateway"
+# Ohne den Versions-Tag findet der Supervisor das Image nicht - die CI
+# (ha-release.yml) prüft das bei jedem Release.
+image: "ghcr.io/rf77/comfobox-gateway:1.0.0"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Optionen

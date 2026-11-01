@@ -1,0 +1,170 @@
+name: ha-release
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Release des Home-Assistant-Ökosystems:
+#
+#   * HACS-Integration  → GitHub-Release mit dem Tag = Version aus
+#                          custom_components/comfobox/manifest.json
+#   * HA-Add-on         → GitHub-Release mit dem Tag = Version aus
+#                          deploy/ha-addon/comfobox/config.yaml
+#
+# HACS findet eine Custom-Integration über die **Releases** des Repositories:
+# der Tag des Releases muss exakt der Version in der manifest.json entsprechen
+# (HACS lädt die Dateien über den Tag-Namen herunter). Deshalb wird hier ein
+# Release **ohne** "v" erzeugt - der Auslöser ist der Tag "v<version>".
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (z. B. 1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Versionen prüfen (HACS + Add-on)
+    runs-on: ubuntu-latest
+    outputs:
+      integration: ${{ steps.version.outputs.integration }}
+      addon: ${{ steps.version.outputs.addon }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Versionen ermitteln und vergleichen
+        id: version
+        run: |
+          set -euo pipefail
+
+          INTEGRATION=$(jq -r .version custom_components/comfobox/manifest.json)
+          ADDON=$(grep -E '^version:' deploy/ha-addon/comfobox/config.yaml \
+            | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')
+          IMAGE=$(grep -E '^image:' deploy/ha-addon/comfobox/config.yaml \
+            | head -1 | sed -E 's/^image:[[:space:]]*"([^"]*)".*$/\1/')
+
+          echo "Integration (manifest.json): ${INTEGRATION}"
+          echo "Add-on      (config.yaml) : ${ADDON}"
+          echo "Image      (config.yaml) : ${IMAGE}"
+
+          if [ -z "${INTEGRATION}" ] || [ -z "${ADDON}" ]; then
+            echo "::error::Die Versionen konnten nicht gelesen werden."
+            exit 1
+          fi
+
+          # Der Auslöser ist der Tag "v<version>" - der Workflow-Dispatch nutzt
+          # die Version direkt.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EXPECTED="${{ inputs.version }}"
+          else
+            EXPECTED="${GITHUB_REF_NAME#v}"
+          fi
+
+          if [ "${EXPECTED}" != "${INTEGRATION}" ]; then
+            echo "::error::Der Tag (${EXPECTED}) passt nicht zur Version der Integration (${INTEGRATION})."
+            exit 1
+          fi
+
+          if [ "${EXPECTED}" != "${ADDON}" ]; then
+            echo "::error::Der Tag (${EXPECTED}) passt nicht zur Version des Add-ons (${ADDON})."
+            exit 1
+          fi
+
+          # Der Supervisor zieht das Image mit dem Versions-Tag - ohne ihn
+          # findet er das Image nicht.
+          case "${IMAGE}" in
+            *":${ADDON}") ;;
+            *)
+              echo "::error::Das Image (${IMAGE}) traegt nicht den Versions-Tag des Add-ons (:${ADDON})."
+              exit 1
+              ;;
+          esac
+
+          echo "integration=${INTEGRATION}" >> "$GITHUB_OUTPUT"
+          echo "addon=${ADDON}" >> "$GITHUB_OUTPUT"
+
+      - name: HACS prüfen
+        uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands
+
+      - name: Add-on prüfen (hassfest)
+        uses: home-assistant/actions/hassfest@master
+        with:
+          config-file: deploy/ha-addon/comfobox/config.yaml
+
+  release:
+    name: HACS- und Add-on-Release
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Das Archiv enthält die Dateien des Add-ons - der Supervisor lädt es
+      # aus dem Release, wenn der Nutzer eine bestimmte Version installiert.
+      - name: Add-on-Archiv bauen
+        run: |
+          set -euo pipefail
+
+          cd deploy/ha-addon/comfobox
+          tar czf "comfobox-${{ needs.validate.outputs.addon }}.tar.gz" \
+            config.yaml DOCS.md CHANGELOG.md translations
+
+      - name: Release-Notizen schreiben
+        run: |
+          set -euo pipefail
+
+          cat > release-notes.md <<EOF
+          ## Home-Assistant-Integration
+
+          \`custom_components/comfobox\` - Version ${{ needs.validate.outputs.integration }}
+
+          Installation: HACS → Integration → ComfoBox → Hinzufügen.
+          Adresse und Token werden im Config-Flow abgefragt; das Token erzeugt
+          der Nutzer in der Web-Oberfläche des Gateways (Konfiguration → API-Token).
+
+          ## Home-Assistant-Add-on
+
+          \`comfobox\` - Version ${{ needs.validate.outputs.addon }}
+
+          Installation: HACS → Add-on Store → ComfoBox Gateway → Installieren.
+          Das Add-on nutzt dasselbe Image wie Docker und Synology-Paket.
+
+          \`\`\`
+          ghcr.io/rf77/comfobox-gateway:${{ needs.validate.outputs.addon }}
+          \`\`\`
+
+          Multi-Arch: linux/amd64, linux/arm64 (Raspberry Pi 4/5, HA Green).
+          EOF
+
+      - name: Release der Integration (HACS)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.integration }}
+          target_commitish: ${{ github.sha }}
+          name: ComfoBox-Integration ${{ needs.validate.outputs.integration }}
+          body_path: release-notes.md
+          fail_on_unmatched_files: false
+          files: |
+            CHANGELOG.md
+
+      - name: Release des Add-ons
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.validate.outputs.addon }}
+          target_commitish: ${{ github.sha }}
+          name: ComfoBox-Add-on ${{ needs.validate.outputs.addon }}
+          body_path: release-notes.md
+          fail_on_unmatched_files: false
+          files: |
+            deploy/ha-addon/comfobox/comfobox-*.tar.gz

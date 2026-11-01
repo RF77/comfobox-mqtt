@@ -20,8 +20,15 @@ var builder = WebApplication.CreateBuilder(args);
 // ---------------------------------------------------------------------------
 // Konfiguration (Phase 4): die Umgebungsvariablen COMFOBOX_* und die
 // config.json im Datenverzeichnis. Die Datei hat Vorrang vor den Variablen.
+// Die Optionen des HA-Add-ons (/data/options.json) haben wiederum Vorrang vor
+// der config.json - sie werden zuletzt hinzugefügt.
 // ---------------------------------------------------------------------------
-GatewayConfiguration.AddGatewaySources(builder.Configuration, builder.Environment.ContentRootPath);
+var configurationWarnings = new List<string>();
+
+GatewayConfiguration.AddGatewaySources(
+    builder.Configuration,
+    builder.Environment.ContentRootPath,
+    configurationWarnings.Add);
 
 // ---------------------------------------------------------------------------
 // Logging (ADR-011): Serilog ist der einzige Provider, der Code schreibt
@@ -36,7 +43,7 @@ var logBuffer = new InMemoryLogSink(
 
 builder.Host.UseSerilog((context, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
-    .MinimumLevel.Information()
+    .MinimumLevel.Is(ParseLevel(loggingOptions.Level))
     .Enrich.FromLogContext()
     .Enrich.WithProperty("Application", "ComfoBox.Gateway")
     .Enrich.WithProperty("Version", typeof(Program).Assembly.GetName().Version?.ToString() ?? "0.0.0")
@@ -79,6 +86,13 @@ Directory.CreateDirectory(
     GatewayConfiguration.ResolveDataDirectory(builder.Configuration, builder.Environment.ContentRootPath));
 
 var app = builder.Build();
+
+// Probleme beim Lesen der Konfiguration gehören in den Log - sie stehen
+// sonst nur im Bildschirm des Nutzers.
+foreach (var warning in configurationWarnings)
+{
+    app.Logger.LogWarning("{Konfiguration}", warning);
+}
 
 // Die Swagger-Oberfläche ist **nur** im Development-Modus erreichbar.
 if (app.Environment.IsDevelopment())

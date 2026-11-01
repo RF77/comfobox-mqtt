@@ -85,6 +85,13 @@ Automatisierungen bauen – ohne MQTT und ohne die Web-Oberfläche.</p>
 <strong>einmal</strong> angezeigt. Er wird nur als Hash gespeichert – niemand kann ihn
 wiederherstellen, nur widerrufen.</p>
 </blockquote>
+<blockquote>
+<p><strong>Ein falscher Token wird sofort erkannt:</strong> Liegt ein <code>Authorization</code>-Header
+vor, der nicht gültig ist, antwortet der Gateway <strong>immer</strong> mit <code>401</code> – auch
+auf den ansonsten offenen Endpunkten. Ohne Header bleibt alles erreichbar
+(LAN-Modus). So erkennt die Home-Assistant-Integration einen falschen Token
+<strong>beim Einrichten</strong> und nicht erst Wochen später.</p>
+</blockquote>
 <hr>
 <h2>Endpunkte</h2>
 <table>
