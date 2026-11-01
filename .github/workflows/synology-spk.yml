@@ -1,0 +1,248 @@
+name: synology-spk
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Synology-Paket (.spk) bereitstellen
+#
+# Das Paket enthält **keinen** Code – es ist ein Wrapper, der das
+# Container-Image (ghcr.io/rf77/comfobox-gateway) startet. Das SPK selbst
+# ist ~40 KB; das Image liegt in der Registry.
+#
+# Wohin die Artefakte?
+#   * GitHub **Release-Assets** – zählen NICHT zum Repository und damit
+#     NICHT zum 500-MB-Limit des Free-Kontos (Release-Assets sind separat
+#     gespeichert, Limit pro Datei: 2 GB).
+#   * **GHCR** (ghcr.io/rf77/comfobox-gateway) – Registry-Speicher, ebenfalls
+#     außerhalb des Repository-Limits.
+#   * optional direkt auf die **NAS** (per SSH) – die Datei liegt dann auf
+#     dem DSM und kann über das Paketcenter installiert werden.
+#
+# Trigger:
+#   * Push eines Tags "v<version>"  → Release-Assets + NAS-Kopie
+#   * workflow_dispatch              → On Demand (z. B. nur SPK, ohne Image)
+#   * workflow_call                  → Aufruf aus docker-publish.yml
+# ═════════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (z. B. 1.0.0)'
+        required: true
+        type: string
+      revision:
+        description: 'Revision (fortlaufend, z. B. 0001)'
+        required: false
+        default: '0001'
+        type: string
+      publish:
+        description: 'Als Release-Asset veröffentlichen'
+        required: false
+        default: true
+        type: boolean
+      copy_to_nas:
+        description: 'Zusätzlich per SSH auf die NAS kopieren'
+        required: false
+        default: false
+        type: boolean
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      revision:
+        required: false
+        default: '0001'
+        type: string
+      publish:
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write   # Release-Assets anlegen/ergänzen
+
+concurrency:
+  group: synology-spk-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  spk:
+    name: SPK bauen
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      revision: ${{ steps.version.outputs.revision }}
+      spk: ${{ steps.build.outputs.spk }}
+      checksum: ${{ steps.build.outputs.checksum }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Die Version aus dem Tag ("v1.2.3" → 1.2.3) oder aus dem Dispatch.
+      - name: Version ermitteln
+        id: version
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.version }}"
+            REVISION="${{ inputs.revision }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+            REVISION="0001"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"
+
+      # Die Shell-Skripte des Pakets müssen syntaktisch in Ordnung sein –
+      # ein Fehler hier wäre auf dem NAS nicht mehr sichtbar.
+      - name: Shell-Skripte prüfen
+        run: bash deploy/synology-spk/tools/check-shell.sh
+
+      - name: SPK bauen
+        id: build
+        run: |
+          set -euo pipefail
+          cd deploy/synology-spk
+          bash build-spk.sh "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.revision }}"
+
+          SPK="ComfoBoxGateway_noarch-dsm7_${{ steps.version.outputs.version }}-${{ steps.version.outputs.revision }}.spk"
+          echo "spk=${SPK}" >> "$GITHUB_OUTPUT"
+          echo "checksum=$(md5sum "dist/${SPK}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
+          ls -la dist/
+
+      # Die Paketquelle des DSM ("Paketcenter → Einstellungen → Paketquelle")
+      # zeigt auf diese Datei. Ohne sie findet der Nutzer kein Update.
+      - name: Paketquelle schreiben
+        run: |
+          set -euo pipefail
+          cd deploy/synology-spk
+          VERSION="${{ steps.version.outputs.version }}"
+          REVISION="${{ steps.version.outputs.revision }}"
+          SPK="${{ steps.build.outputs.spk }}"
+          CHECKSUM="${{ steps.build.outputs.checksum }}"
+          cat > dist/packages.json <<EOF
+          {
+            "name": "ComfoBox Gateway",
+            "description": "MQTT-Gateway für die Zehnder ComfoBox Series 5 mit Web-Oberfläche",
+            "maintainer": "RF77",
+            "maintainer_url": "https://github.com/${{ github.repository }}",
+            "distributor": "RF77",
+            "distributor_url": "https://github.com/${{ github.repository }}",
+            "support_url": "https://github.com/${{ github.repository }}/issues",
+            "packages": [
+              {
+                "arch": "noarch",
+                "version": "${VERSION}-${REVISION}",
+                "url": "https://github.com/${{ github.repository }}/releases/latest/download/${SPK}",
+                "checksum": "${CHECKSUM}"
+              }
+            ]
+          }
+          EOF
+          cat dist/packages.json
+
+      # Artefakte des Laufs – befristet, nicht Teil des Repositorys.
+      - name: Artefakte hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: spk-${{ steps.version.outputs.version }}-${{ steps.version.outputs.revision }}
+          path: |
+            deploy/synology-spk/dist/*.spk
+            deploy/synology-spk/dist/packages.json
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Release-Asset veröffentlichen
+    needs: spk
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Artefakt herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: spk-${{ needs.spk.outputs.version }}-${{ needs.spk.outputs.revision }}
+          path: dist
+
+      # `gh release upload` hängt Dateien an ein Release, **ohne** die
+      # Release-Notizen zu überschreiben. Das ist wichtig: die Notizen
+      # werden vom Image-Workflow (docker-publish.yml) geschrieben.
+      - name: Release-Asset anhängen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ needs.spk.outputs.version }}
+        run: |
+          set -euo pipefail
+          cd dist
+
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release ${TAG} existiert noch nicht – er wird angelegt."
+            gh release create "$TAG" \
+              --title "ComfoBox Gateway ${{ needs.spk.outputs.version }}" \
+              --notes "Synology-Paket (SPK) für die ComfoBox Series 5." \
+              --verify-tag
+          fi
+
+          gh release upload "$TAG" \
+            "${{ needs.spk.outputs.spk }}" \
+            "packages.json" \
+            --clobber
+
+          echo "--- Release ${TAG} ---"
+          gh release view "$TAG" --json tagName,name,assets --jq '{tag: .tagName, name: .name, assets: [.assets[].name]}'
+
+  nas:
+    name: Auf die NAS kopieren (optional)
+    needs: spk
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.copy_to_nas) || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    # Ohne Secrets (z. B. im öffentlichen Repo ohne Zugriff) wird der Job
+    # übersprungen - der Schritt darf den Lauf nicht rot machen.
+    steps:
+      - name: Artefakt herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: spk-${{ needs.spk.outputs.version }}-${{ needs.spk.outputs.revision }}
+          path: dist
+
+      - name: Auf die NAS kopieren
+        env:
+          NAS_HOST: ${{ secrets.NAS_SSH_HOST }}
+          NAS_PORT: ${{ secrets.NAS_SSH_PORT }}
+          NAS_USER: ${{ secrets.NAS_SSH_USER }}
+          NAS_KEY: ${{ secrets.NAS_SSH_KEY }}
+          NAS_DIR: ${{ secrets.NAS_TARGET_DIR }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NAS_HOST}" ] || [ -z "${NAS_USER}" ] || [ -z "${NAS_KEY}" ]; then
+            echo "::notice::Keine NAS-Secrets hinterlegt – das Kopieren wird übersprungen."
+            exit 0
+          fi
+
+          PORT="${NAS_PORT:-22}"
+          TARGET="${NAS_DIR:-/volume1/backup/comfobox}"
+
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          printf '%s\n' "${NAS_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -p "${PORT}" "${NAS_HOST}" >> ~/.ssh/known_hosts 2>/dev/null
+
+          echo "Ziel: ${NAS_USER}@${NAS_HOST}:${PORT}:${TARGET}"
+          ssh -i ~/.ssh/id_ed25519 -p "${PORT}" -o StrictHostKeyChecking=no \
+            "${NAS_USER}@${NAS_HOST}" "mkdir -p '${TARGET}'"
+
+          scp -i ~/.ssh/id_ed25519 -P "${PORT}" -o StrictHostKeyChecking=no \
+            dist/*.spk dist/packages.json "${NAS_USER}@${NAS_HOST}:${TARGET}/"
+
+          ssh -i ~/.ssh/id_ed25519 -p "${PORT}" -o StrictHostKeyChecking=no \
+            "${NAS_USER}@${NAS_HOST}" "ls -la '${TARGET}'"
+
+          rm -f ~/.ssh/id_ed25519

@@ -11,6 +11,17 @@ permissions:
   contents: read
   security-events: write
 
+# ─────────────────────────────────────────────────────────────────────────────
+# src_old/ ist ARCHIV (net452, C# 6) und wird nicht analysiert:
+#   * Der Legacy-Code läuft nicht mehr (letzter Stand: 24.10.) und ist nur
+#     noch Referenz für Protokollverhalten und Item-Metadaten.
+#   * Der frühere CI-Job "legacy-check" wurde abgeschaltet.
+# Der Scan läuft ausschließlich über den neuen .NET-10-Code in src/.
+# ─────────────────────────────────────────────────────────────────────────────
+paths-ignore:
+  - 'src_old/**'
+  - 'docs/Mono/**'
+
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
@@ -32,6 +43,14 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          # Das Archiv wird nicht analysiert (siehe Kommentar oben).
+          # "paths-ignore" ist KEIN Input des init-Actions - es gehört in
+          # die CodeQL-Konfiguration.
+          config: |
+            name: "ComfoBox (ohne Archiv)"
+            paths-ignore:
+              - src_old
+              - docs/Mono
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v3

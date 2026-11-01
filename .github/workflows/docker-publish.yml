@@ -95,74 +95,17 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
 
-  spk:
-    name: Synology-Paket (SPK)
-    needs: publish
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Die Version aus dem Tag: "v1.2.3" → 1.2.3
-      - name: Version ermitteln
-        id: version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "revision=0001" >> "$GITHUB_OUTPUT"
-
-      # Syntaxprüfung aller Shell-Skripte + Test des JSON-Parsers.
-      - name: Shell-Skripte prüfen
-        run: bash deploy/synology-spk/tools/check-shell.sh
-
-      - name: SPK bauen
-        run: bash deploy/synology-spk/build-spk.sh "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.revision }}"
-
-      # Die Paketquelle des DSM ("Paketcenter → Einstellungen → Paketquelle")
-      # zeigt auf diese Datei. Ohne sie findet der Nutzer kein Update.
-      - name: Paketquelle schreiben
-        run: |
-          cd deploy/synology-spk
-          VERSION="${{ steps.version.outputs.version }}"
-          REVISION="${{ steps.version.outputs.revision }}"
-          SPK="ComfoBoxGateway_noarch-dsm7_${VERSION}-${REVISION}.spk"
-          CHECKSUM=$(md5sum "dist/$SPK" | cut -d' ' -f1)
-          cat > dist/packages.json <<EOF
-          {
-            "name": "ComfoBox Gateway",
-            "description": "MQTT-Gateway für die Zehnder ComfoBox Series 5 mit Web-Oberfläche",
-            "maintainer": "RF77",
-            "maintainer_url": "https://github.com/${{ github.repository }}",
-            "distributor": "RF77",
-            "distributor_url": "https://github.com/${{ github.repository }}",
-            "support_url": "https://github.com/${{ github.repository }}/issues",
-            "packages": [
-              {
-                "arch": "noarch",
-                "version": "${VERSION}-${REVISION}",
-                "url": "https://github.com/${{ github.repository }}/releases/latest/download/${SPK}",
-                "checksum": "${CHECKSUM}"
-              }
-            ]
-          }
-          EOF
-          cat dist/packages.json
-
-      - name: Artefakte hochladen
-        uses: actions/upload-artifact@v4
-        with:
-          name: spk
-          path: |
-            deploy/synology-spk/dist/*.spk
-            deploy/synology-spk/dist/packages.json
-          if-no-files-found: error
+  # ─────────────────────────────────────────────────────────────────────────
+  # Das Synology-Paket (.spk) wird von .github/workflows/synology-spk.yml
+  # gebaut und als Release-Asset veröffentlicht. Es läuft dort eigenständig,
+  # damit das Paket auch OHNE Image-Publish erzeugt werden kann
+  # (workflow_dispatch) und die Release-Notizen nicht doppelt gepflegt
+  # werden müssen.
+  # ─────────────────────────────────────────────────────────────────────────
 
   release:
     name: GitHub Release
-    needs: [publish, spk]
+    needs: publish
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -170,14 +113,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      # Das Synology-Paket gehört ins Release - so kann es das DSM-Paketcenter
-      # als "Manuelle Installation" herunterladen.
-      - name: SPK herunterladen
-        uses: actions/download-artifact@v4
-        with:
-          name: spk
-          path: dist
 
       - name: Extract release notes
         id: notes
@@ -210,5 +145,3 @@ jobs:
           body_path: ${{ steps.notes.outputs.notes }}
           files: |
             CHANGELOG.md
-            dist/*.spk
-            dist/packages.json

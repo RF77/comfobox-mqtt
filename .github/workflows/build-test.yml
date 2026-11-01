@@ -96,6 +96,25 @@ jobs:
           cache: npm
           cache-dependency-path: src/ComfoBox.Web/package-lock.json
 
+      - name: Lock-Datei prüfen
+        run: |
+          # `npm ci` bricht mit einer wenig hilfreichen EUSAGE-Meldung ab,
+          # wenn die Lock-Datei nicht zur package.json passt (der Root-Eintrag
+          # enthält dann keine Abhängigkeiten). Hier steht die Ursache klar.
+          node -e "
+            const lock = require('./package-lock.json');
+            const pkg = require('./package.json');
+            const root = lock.packages[''] ?? {};
+            const missing = ['dependencies', 'devDependencies'].filter(
+              (key) => Object.keys(pkg[key] ?? {}).length > 0
+                     && Object.keys(root[key] ?? {}).length === 0);
+            if (missing.length > 0) {
+              console.error('::error::Die package-lock.json passt nicht zur package.json (' + missing.join(', ') + '). Bitte \"npm install\" ausführen und die Lock-Datei committen.');
+              process.exit(1);
+            }
+            console.log('Die Lock-Datei ist konsistent.');
+          "
+
       - name: Install
         run: npm ci --no-audit --no-fund
 
@@ -112,23 +131,16 @@ jobs:
           path: src/ComfoBox.Web/dist
           retention-days: 7
 
-  legacy-check:
-    name: Legacy-Projekte (net452) sind Archiv und werden NICHT gebaut
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Archiv prüfen (nur Doku, kein Build)
-        run: |
-          # src_old/ ist Archiv: nur Referenz, wird weder gebaut noch gepflegt.
-          # Dieser Job stellt sicher, dass dort kein neues SDK-Projekt entsteht.
-          set -e
-          if find src_old -name 'global.json' -o -name 'Directory.Build.props' | grep -q .; then
-            echo "::error::src_old/ ist Archiv – keine Build-Konfiguration dort erlaubt"
-            exit 1
-          fi
-          echo "src_old/ ist sauber (keine Build-Konfiguration)."
+  # ─────────────────────────────────────────────────────────────────────────
+  # Der frühere Job "legacy-check" (Prüfung von src_old/) ist deaktiviert:
+  # src_old/ ist Archiv und wird weder gebaut noch analysiert. Er brachte
+  # keinen Nutzen, dafür roten Status.
+  #
+  # Der Legacy-Code wird von der CI bewusst NICHT angefasst:
+  #   * kein Build            → der Job legacy-check ist entfernt
+  #   * kein Security-Scan    → codeql.yml ignoriert src_old/ (paths-ignore)
+  #   * keine Coverage        → die Solution enthält nur src/
+  # ─────────────────────────────────────────────────────────────────────────
   container:
     name: Container-Image (ein Image, Gateway + UI)
     runs-on: ubuntu-latest
