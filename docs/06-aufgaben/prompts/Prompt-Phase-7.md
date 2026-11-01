@@ -33,8 +33,8 @@ zur Verfügung. Offen sind **7.1–7.5** (der echte Parallelbetrieb).
 
 Hinweise, die ich schon verifiziert habe – bitte nicht neu recherchieren:
 - ✅ `dotnet build src/ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
-- ✅ `dotnet test src/ComfoBox.sln -c Release` → **327 Tests grün**
-  (46 BACnet + 30 Domain + 10 Contract + 241 Gateway). Das ist die Messlatte:
+- ✅ `dotnet test src/ComfoBox.sln -c Release` → **339 Tests grün**
+  (52 BACnet + 30 Domain + 10 Contract + 247 Gateway). Das ist die Messlatte:
   sie müssen **ohne** Änderung grün bleiben.
 - ✅ `pytest custom_components/comfobox/tests -v` → **35 Tests grün**
   (Config Flow 3, API-Client 10, Coordinator 8, Entity-Mapping 12, Schreibpfade 2).
@@ -143,12 +143,39 @@ Fallstricke aus Phase 8a–8d (bitte beachten – alle wurden teuer):
   Shell → sie lecken in den nächsten `dotnet test`. Tests müssen die
   Variablen **explizit setzen** und danach zurücksetzen.
 
+Fallstricke aus der Session vom 2026-11-01 (SPK-CI + BACnet-Bus-Analyse) –
+bitte beachten, alle wurden teuer:
+- ⚠️ **Im MS/TP-Hot-Path wird NICHT geloggt.** Der Token hat nur **95 ms**
+  (`TUsageTimeout`) bis zur Übernahme – ein Log-Eintrag an dieser Stelle
+  sprengt das Zeitfenster und stört den Bus. Der Zustandsautomat meldet
+  **Ereignisse** an einen `IMstpObserver`; `MstpEventRecorder` sammelt sie
+  allokationsfrei (parallele Arrays, keine Sperre), und **erst
+  `BacnetBusAnalyzer`** (außerhalb des Bus-Takts) wertet aus und loggt.
+  `BacnetPollingService` ist dafür ein **Singleton** mit `SetPaused(bool)`.
+- ⚠️ **`p-tabpanel` projiziert per `ng-template` + `*ngTemplateOutlet`.** Ein
+  per `@if`/`@else` **ersetzter** Zweig bleibt als sichtbarer „Waisen"-Zweig im
+  DOM (der Leave-Pfad greift dort nicht). **Regel:** Ladehinweise in einem
+  `p-tabpanel` **per CSS-Klasse** schalten (`[class.cb-hidden]` mit
+  `display: none !important`), nicht per Kontrollfluss.
+- ⚠️ **Ein statisches `value` auf `p-tabs` macht die Reiter starr** → die
+  Auswahl hängt an `[(value)]` mit einem Signal.
+- ⚠️ **`p-table` mit `readonly`-Array → TS4104** → die Modell-Listen sind
+  `mutable`.
+- ⚠️ **Der CI-Lauf war rot, ohne dass der Code defekt war:** die
+  `package-lock.json` hatte im Root-Eintrag **keine Abhängigkeiten** → `npm ci`
+  bricht mit `EUSAGE` ab. Der Workflow prüft die Drift jetzt **vor** `npm ci`.
+- ⚠️ **CodeQL kennt kein `paths-ignore` beim Init** – es muss in die
+  `config:`-Sektion.
+- ⚠️ **Das Synology-Paket gehört als Release-Asset ins GitHub-Release**, nicht
+  ins Repository – so greift das 500-MB-Limit des Free-Accounts nicht.
+  Workflow: `.github/workflows/synology-spk.yml`.
+
 Regeln für diese Session:
 - Nur die Phase 7 umsetzen, nichts darüber hinaus.
 - Der Spec ist verbindlich. Bei Widerspruch Spec ↔ Aufgabe: Aufgabe anpassen,
   Spec nicht – und im Protokoll vermerken.
 - Bestehende Tests nicht löschen oder abschwächen, um grün zu werden.
-- Die 327 .NET-Tests, die 12 Werkzeug-Tests und die 35 HA-Tests müssen grün
+- Die 339 .NET-Tests, die 12 Werkzeug-Tests und die 35 HA-Tests müssen grün
   bleiben.
 - **Der Topic-Vertrag ist unverhandelbar:** Topic-Adressen und Payload-Formate
   bleiben gültig. Enum-Namen nicht umbenennen.
