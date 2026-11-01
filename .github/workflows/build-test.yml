@@ -193,25 +193,36 @@ jobs:
             -e COMFOBOX_Bacnet__Port=COM_TEST \
             comfobox-gateway:ci
 
-          # Auf den Healthcheck warten (max. 60 s).
-          for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8081/api/health > /tmp/health.json 2>/dev/null; then
+          # Auf den **Docker-Health-Status** warten (max. 120 s).
+          #
+          # Wichtig: nicht nur auf den HTTP-Endpunkt warten. Der
+          # Health-Status wird erst vom periodischen Healthcheck gesetzt
+          # (Intervall 30 s, Startperiode 25 s) - wer sofort danach prüft,
+          # sieht "starting" und der Job wird rot. Der Endpunkt antwortet
+          # nach ~2 s, der Status steht erst nach ~30 s auf "healthy".
+          STATUS="unknown"
+          for i in $(seq 1 120); do
+            STATUS=$(docker inspect --format '{{.State.Health.Status}}' comfobox-ci 2>/dev/null || echo unknown)
+            if [ "$STATUS" = "healthy" ]; then
               break
+            fi
+            if [ "$STATUS" = "unhealthy" ]; then
+              echo "::error::Der Container meldet 'unhealthy'."
+              docker logs comfobox-ci
+              exit 1
             fi
             sleep 1
           done
+          echo "Health-Status: $STATUS"
+          test "$STATUS" = "healthy"
 
+          # Der Health-Endpoint muss antworten.
+          curl -fsS http://localhost:8081/api/health > /tmp/health.json
           cat /tmp/health.json
           grep -q '"state"' /tmp/health.json
 
           # Die SPA wird aus dem .NET-Host ausgeliefert.
           curl -fsS http://localhost:8081/ | grep -qi '<html'
-
-          # Der Container muss als "healthy" gelten.
-          docker inspect comfobox-gateway:ci > /dev/null 2>&1 || true
-          STATUS=$(docker inspect --format '{{.State.Health.Status}}' comfobox-ci)
-          echo "Health-Status: $STATUS"
-          test "$STATUS" = "healthy"
 
           # Sauberes Herunterfahren über SIGTERM (tini) prüfen.
           docker stop -t 20 comfobox-ci

@@ -244,6 +244,21 @@ public sealed class BacnetSerialManager
         }
         catch (UnauthorizedAccessException)
         {
+            // Unter Linux (Unix) meldet .NET eine UnauthorizedAccessException,
+            // wenn die **Gerätedatei fehlt** – nicht nur, wenn sie dem
+            // Benutzer nicht gehört. Deshalb erst prüfen, ob es sie überhaupt
+            // gibt: „serial_port_not_found" (nicht vorhanden) und
+            // „permission_denied" (vorhanden, aber kein Zugriff) sind
+            // verschiedene Fehler mit verschiedenen Lösungen.
+            //
+            // Unter Windows liefert `SerialPort.Open` für einen nicht
+            // vorhandenen Port eine ArgumentException (siehe unten) – dort
+            // ist `File.Exists` für COM-Ports ohnehin unbrauchbar.
+            if (!OperatingSystem.IsWindows() && !File.Exists(portName))
+            {
+                return "serial_port_not_found";
+            }
+
             return "permission_denied";
         }
         catch (ArgumentException)
