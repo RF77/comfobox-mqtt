@@ -47,7 +47,44 @@ jobs:
         run: dotnet build ComfoBox.sln -c Release --no-restore --nologo
 
       - name: Test
-        run: dotnet test ComfoBox.sln -c Release --no-build --nologo --collect:"XPlat Code Coverage"
+        shell: bash
+        run: |
+          # Ein nacktes "Process completed with exit code 1" sagt nichts aus.
+          # Deshalb wird die Ausgabe gesichert, bei Fehlschlag werden die
+          # fehlgeschlagenen Tests als **Annotation** ausgegeben (die stehen
+          # direkt am Lauf) und das Log als Artefakt hochgeladen.
+          set -uo pipefail
+          dotnet test ComfoBox.sln -c Release --no-build --nologo \
+            --collect:"XPlat Code Coverage" 2>&1 | tee /tmp/test.log
+          status=${PIPESTATUS[0]}
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Mindestens ein Test ist fehlgeschlagen - die Namen stehen unten."
+            {
+              echo "### Fehlgeschlagene Tests"
+              echo '```text'
+              grep -E '\[FAIL\]|^[[:space:]]+Failed ' /tmp/test.log | head -30 || true
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+
+            grep -E '\[FAIL\]|^[[:space:]]+Failed ' /tmp/test.log | head -10 | while IFS= read -r line; do
+              # Workflow-Kommandos: % und Zeilenumbrueche muessen escaped werden.
+              safe="${line//'%'/'%25'}"
+              safe="${safe//$'\r'/'%0D'}"
+              safe="${safe//$'\n'/'%0A'}"
+              echo "::error::${safe}"
+            done
+          fi
+
+          exit "$status"
+
+      - name: Testlog hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testlog
+          path: /tmp/test.log
+          retention-days: 14
 
       - name: Vulnerability scan (NuGet)
         run: |
