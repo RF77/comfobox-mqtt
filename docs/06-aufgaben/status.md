@@ -144,6 +144,15 @@
 > zur Übernahme. Die Ereignisse gehen in einen allokationsfreien Ringpuffer
 > (`MstpEventRecorder`) und werden außerhalb des Bus-Takts ausgewertet.
 
+> **8e.4 (nachträglich, 2026-11-01):** Die CI lief **nie** – GitHub lehnte
+> `build-test.yml` und `codeql.yml` schon bei der YAML-Validierung ab
+> (`hashFiles` in einer Job-Bedingung, `paths-ignore` auf Top-Level), alle
+> Läufe waren „rot" **ohne** dass ein Job gestartet wurde. Beides ist behoben,
+> zusätzlich läuft die CI jetzt auch auf `Upgrade`. Vier weitere Linux-
+> Besonderheiten (fehlender Serial-Port, Coverage-Collector, Wettlauf-Tests,
+> Docker-Health-Status) sind behoben. **Stand: `build-test` und `codeql`
+> laufen grün** (339 .NET-Tests, Angular-Build, Topic-Fixture, Container-Image).
+
 ## Phase 8a–8d – Home-Assistant-Ökosystem (14 PT)
 
 | # | Aufgabe | Status | PT |

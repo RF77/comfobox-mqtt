@@ -324,6 +324,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
     `schedule:` fälschlich unter `pull_request:` verschachtelt
   - Ein Lauf mit **0 Jobs** ist **nie** ein Code-Problem – immer zuerst die
     Annotation des Laufs lesen
+- **Die CI lief nur auf `main`** – auf dem Entwicklungsbranch `Upgrade` lief
+  gar nichts. `Upgrade` steht jetzt in der Branch-Liste, CodeQL zusätzlich
+  mit `workflow_dispatch`
+- **Der Generator war plattformabhängig:** ein verbatim-Stringliteral über
+  mehrere Zeilen enthält die *physischen* Zeilenenden der Quelldatei (CRLF
+  unter Windows, LF unter Linux). Der Fixture-Check schlug deshalb unter
+  Linux fehl (19 Abweichungen). Die Zeilenenden werden jetzt **immer** auf
+  CRLF normalisiert – die Fixture bleibt byteweise unverändert
+- **Ein nicht vorhandener Serial-Port wurde unter Linux als
+  „permission_denied" gemeldet.** .NET wirft unter Unix eine
+  `UnauthorizedAccessException`, wenn die **Gerätedatei fehlt** – nicht nur,
+  wenn sie dem Benutzer nicht gehört. Die Zuordnung prüft jetzt, ob es die
+  Datei überhaupt gibt
+- **Der Coverage-Collector brachte eine `netstandard`-Referenz in die
+  Domäne.** coverlet schreibt die instrumentierten Assemblies mit einem
+  Verweis auf die .NET-Standard-Fassade um – ein Werkzeug-Artefakt, keine
+  Abhängigkeit der Domäne
+- **Zwei Tests waren Wettläufe** und liefen auf dem CI-Läufer in den Timeout
+  (`ValueCacheTests` nach 10 s, `BacnetClientTests.IAm_Loest_Das_Ereignis_Aus`).
+  Beide warten jetzt **ereignisbasiert** statt auf eine feste Zeit
+- **Der Container-Check prüfte den Docker-Health-Status zu früh:** der
+  Endpunkt antwortet nach ~2 s, der Status steht erst nach dem periodischen
+  Healthcheck (Intervall 30 s) auf „healthy". Der Schritt wartet jetzt aktiv
+- **Der Test-Schritt meldete nur „Exit code 1".** Er nennt jetzt den
+  fehlgeschlagenen Test als Annotation, in der Job-Zusammenfassung und im
+  hochgeladenen Log
 - **Die Reiter der Diagnose-Seite ließen sich nicht umschalten.** `p-tabs`
   hatte ein statisches `value="checks"` – der Klick auf einen anderen Reiter
   änderte nichts. Die Auswahl hängt jetzt an einem Signal (`[(value)]`)

@@ -1394,6 +1394,34 @@ Archiv. **339 Tests grün**, Build 0 Warnungen / 0 Fehler.
     Immer zuerst die **Annotation** lesen. Und: die GitHub-API liefert für
     diese Läufe weder Jobs noch Check-Runs – die Information steht **nur** in
     der Oberfläche.
+- ⚠️ **Die CI lief nur auf `main`.** Auf `Upgrade` (dem Entwicklungsbranch)
+  passierte **nichts** – der Code wurde erst beim Zusammenführen geprüft.
+  Die früheren Läufe auf `Upgrade` waren eine Nebenwirkung des ungültigen
+  Workflows: bei einer unparsebaren Datei triggert GitHub permissiv.
+- ⚠️ **Der Generator war plattformabhängig.** Ein verbatim-Stringliteral über
+  mehrere Zeilen enthält die **physischen** Zeilenenden der Quelldatei (CRLF
+  unter Windows, LF unter Linux). Der Fixture-Check schlug unter Linux mit
+  **19 Abweichungen** fehl (alle `Description`). Die Zeilenenden werden jetzt
+  **immer** auf CRLF normalisiert – die Fixture bleibt byteweise
+  unverändert.
+- ⚠️ **Unter Linux meldet .NET bei einer fehlenden Gerätedatei
+  `UnauthorizedAccessException`** – nicht nur bei fehlendem Zugriff. Der
+  Test „Ein BACnet-Test liefert einen Hinweis" erwartete
+  `serial_port_not_found` und schlug deshalb unter Linux fehl.
+- ⚠️ **Der Coverage-Collector bringt eine `netstandard`-Referenz in die
+  Domäne.** coverlet schreibt die instrumentierten Assemblies mit einem
+  Verweis auf die .NET-Standard-Fassade um – ein Werkzeug-Artefakt.
+- ⚠️ **Zwei Tests waren Wettläufe** (`Task.Delay(50)` als Synchronisation) und
+  liefen auf dem belasteten CI-Läufer in den Timeout. **Regel:** in Tests
+  nie auf eine feste Zeit warten, sondern **ereignisbasiert**
+  (`TaskCompletionSource`).
+- ⚠️ **Der Docker-Health-Status steht erst nach dem Healthcheck auf
+  „healthy"** (Intervall 30 s, Startperiode 25 s) – der HTTP-Endpunkt
+  antwortet schon nach ~2 s. Wer den Status sofort prüft, sieht
+  „starting".
+- ⚠️ **GitHub startet jedes `run:`-Skript mit `bash -e`.** `set -uo pipefail`
+  **ergänzt** nur – `-e` bleibt aktiv. Für eine Diagnose nach einem
+  Fehlschlag muss **`set +e`** explizit gesetzt werden.
 - ⚠️ **Im MS/TP-Hot-Path darf nicht geloggt werden.** Der Token hat nur
   **95 ms** (`TUsageTimeout`) bis zur Übernahme – ein Log-Eintrag an dieser
   Stelle kostet Zeit und kann den Token kosten. Deshalb: der Zustandsautomat

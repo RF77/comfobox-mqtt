@@ -218,6 +218,10 @@ node tools/build-docs.mjs
 | Ein CI-Lauf mit **0 Jobs** | CI | die Workflow-Datei ist ungültig – Annotation lesen, nicht den Code |
 | `hashFiles` in einer **Job**-Bedingung | CI | nicht erlaubt → GitHub lehnt die ganze Datei ab |
 | `paths-ignore` gehört **unter `on:`** | CI | auf Top-Level lehnt GitHub die Datei ab |
+| Die CI triggerte nur auf `main` | CI | der Entwicklungsbranch stand nicht in der Branch-Liste |
+| `Task.Delay(50)` als Synchronisation | Tests | Wettlauf → **ereignisbasiert** warten (`TaskCompletionSource`) |
+| Ein verbatim-Literal über mehrere Zeilen | Tools | enthält die physischen Zeilenenden → Generator normalisieren |
+| `bash -e` ist bei GitHub immer aktiv | CI | `set -uo pipefail` hebt es **nicht** auf → `set +e` |
 | Im MS/TP-Hot-Path wird **nicht geloggt** | BACnet | der Token hat nur 95 ms – Ereignisse sammeln, erst danach auswerten |
 | Am Session-Ende kommt der **nächste Prompt** | Arbeitsweise | siehe [docs/06-aufgaben/README.md §3.4](../docs/06-aufgaben/README.md#34-der-nächste-prompt) |
 

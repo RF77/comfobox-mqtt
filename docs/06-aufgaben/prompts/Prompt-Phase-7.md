@@ -145,6 +145,47 @@ Fallstricke aus Phase 8a–8d (bitte beachten – alle wurden teuer):
 
 Fallstricke aus der Session vom 2026-11-01 (SPK-CI + BACnet-Bus-Analyse) –
 bitte beachten, alle wurden teuer:
+- ⚠️ **Ein CI-Lauf mit 0 Jobs ist NIE ein Code-Problem.** GitHub lehnt eine
+  ungültige Workflow-Datei schon bei der YAML-Validierung ab und verbucht
+  den Lauf trotzdem als „Failure" (0 Sekunden, keine Logs). Die Ursache steht
+  in der **Annotation** des Laufs (Run-Seite → „Annotations"). Seit dem
+  2026-11-01 laufen `build-test.yml` und `codeql.yml` überhaupt erst – vorher
+  lief **kein einziger** Job.
+- ⚠️ **`hashFiles` ist in einer Job-Bedingung (`if:` auf Job-Ebene) nicht
+  erlaubt** → „Unrecognized function". **`paths-ignore` ist kein
+  Top-Level-Schlüssel** eines Workflows, sondern gehört **unter `on:`**.
+  **`schedule:`** ist ein Geschwister von `push`/`pull_request`, nicht deren
+  Kind.
+- ⚠️ **Die CI triggerte nur auf `main`.** `Upgrade` (der Entwicklungsbranch)
+  steht jetzt mit in der Branch-Liste, CodeQL hat zusätzlich
+  `workflow_dispatch`.
+- ⚠️ **GitHub startet jedes `run:`-Skript mit `bash -e`.** `set -uo pipefail`
+  **ergänzt** nur – `-e` bleibt aktiv. Für eine Diagnose nach einem
+  Fehlschlag muss **`set +e`** explizit gesetzt werden, sonst bricht die
+  fehlschlagende Pipeline das Skript vorher ab.
+- ⚠️ **Der Test-Schritt nennt jetzt den fehlgeschlagenen Test** (Annotation,
+  Job-Zusammenfassung, Artefakt `testlog`) – das war vorher unmöglich.
+- ⚠️ **Der Generator war plattformabhängig:** ein verbatim-Stringliteral über
+  mehrere Zeilen enthält die **physischen** Zeilenenden der Quelldatei (CRLF
+  unter Windows, LF unter Linux) → der Fixture-Check schlug unter Linux mit
+  19 Abweichungen fehl. Die Zeilenenden werden jetzt **immer** auf CRLF
+  normalisiert; die Fixture bleibt byteweise unverändert.
+- ⚠️ **Unter Linux meldet .NET bei einer fehlenden Gerätedatei
+  `UnauthorizedAccessException`** (nicht nur bei fehlendem Zugriff) – die
+  Zuordnung der seriellen Fehlercodes prüft jetzt, ob es die Datei
+  überhaupt gibt.
+- ⚠️ **Der Coverage-Collector (`--collect:"XPlat Code Coverage"`) bringt eine
+  `netstandard`-Referenz in die Domäne** – coverlet schreibt die
+  instrumentierten Assemblies mit einem Verweis auf die .NET-Standard-Fassade
+  um. Die Domäne referenziert ohne Coverage nur `System.Runtime` und
+  `System.Collections`.
+- ⚠️ **In Tests nie auf eine feste Zeit warten** (`Task.Delay(50)` als
+  Synchronisation) – das ist ein Wettlauf und läuft auf einem belasteten
+  CI-Läufer in den Timeout. **Regel:** ereignisbasiert warten
+  (`TaskCompletionSource`).
+- ⚠️ **Der Docker-Health-Status steht erst nach dem Healthcheck auf
+  „healthy"** (Intervall 30 s, Startperiode 25 s) – der HTTP-Endpunkt
+  antwortet schon nach ~2 s. Der CI-Schritt wartet aktiv.
 - ⚠️ **Im MS/TP-Hot-Path wird NICHT geloggt.** Der Token hat nur **95 ms**
   (`TUsageTimeout`) bis zur Übernahme – ein Log-Eintrag an dieser Stelle
   sprengt das Zeitfenster und stört den Bus. Der Zustandsautomat meldet
