@@ -27,6 +27,101 @@
 
 ---
 
+## 2026-11-01 – Synology-Paket & Getting-Started-Assistent (Aufgaben 8.1–8.9)
+
+**Ergebnis:** Das Synology-Paket ist **vollständig**: Icon (256×256, reproduzierbar
+erzeugt), `build-spk.sh` bricht ohne Icon ab, die **Setup-API** ist fertig
+(Passwortregeln serverseitig, MQTT-Test unterscheidet *nicht erreichbar* /
+*Authentifizierung fehlgeschlagen* / *keine Zustellung*, Zustand liefert die
+aktuellen Werte für den wiederholbaren Assistenten), der **Assistent** läuft
+über alle sechs Schritte (Ports werden bei Hotplug aktualisiert, der Broker ist
+**optional**, der Neustart wird beobachtet) und der **SPK-Build läuft in der CI**
+(Job `spk`, Artefakt + `packages.json` im GitHub Release).
+
+**Geänderte Dateien (neu):**
+- `deploy/synology-spk/src/PACKAGE_ICON.png` – das Paket-Icon (256×256)
+- `deploy/synology-spk/tools/make-icon.mjs` – erzeugt das Icon reproduzierbar
+  (reines Node.js, `zlib` – kein Python, kein ImageMagick)
+- `deploy/synology-spk/tools/test-config-parse.sh` – Test für den JSON-Zugriff
+  auf die `config.json` (der Parser ist Shell-Code und damit fehleranfällig)
+- `src/ComfoBox.Gateway/Security/PasswordPolicy.cs` – die Passwortregeln
+  (≥ 12 Zeichen, 3 von 4 Zeichenklassen) **serverseitig**
+- `src/ComfoBox.Gateway.Tests/Api/FakeMqttBroker.cs` – ein minimaler MQTT-5-Broker
+  für die Tests (CONNECT/CONNACK, SUBSCRIBE/SUBACK, PUBLISH mit Echo)
+
+**Geänderte Dateien (bearbeitet):**
+- `src/ComfoBox.Gateway/Setup/SetupService.cs` – `GetState` liefert die aktuellen
+  Werte; `WriteConfig` prüft Baudrate, Benutzername und Passwort; neue
+  `Supervisor`-Sektion (`PassAllSerialDevices`); MQTT-Test mit Rundlauf
+- `src/ComfoBox.Gateway/Api/SetupEndpoints.cs` – `apply` wartet den Neustart ab
+- `src/ComfoBox.Gateway/Api/Models/SetupDtos.cs` – `SetupCurrentValuesDto`
+- `src/ComfoBox.Web/src/app/core/state/setup.store.ts` – Vorausfüllung, Broker
+  optional, Passwort-Wiederholung, Neustart beobachten
+- `src/ComfoBox.Web/src/app/features/setup/setup-shell.ts` – Schritt ↔ URL synchron
+- `src/ComfoBox.Web/src/app/features/setup/steps/serial.html` – Portliste zeigt
+  den zuletzt verwendeten Port; Meldung wird **nicht** entfernt (Leave-Animation)
+- `deploy/synology-spk/src/target/bin/common.sh` – `json_get` (abschnittsweise)
+- `deploy/synology-spk/src/target/bin/supervisor.sh` – liest die echte `config.json`
+- `deploy/synology-spk/src/scripts/postinst` – Setup-Modus-`config.json`
+- `deploy/synology-spk/build-spk.sh` – Icon Pflicht, Image-Datei im Paket
+- `.github/workflows/docker-publish.yml` – Job `spk`, Release-Artefakte
+- `docs/03-deployment/synology-paketcenter.md` – `config.json`-Schema korrigiert
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `dotnet test src/ComfoBox.sln -c Release` → **301 Tests grün**
+  (46 BACnet + 30 Domain + 10 Contract + 215 Gateway) – vorher 293, **+8**
+- Golden-Fixture `bacnet-frames.json` → SHA256 **unverändert**
+  (`F95AA763…CE681B`, 5.657 Bytes)
+- `docs/topics.json` → SHA256 **unverändert** (`67D7485B…C1463`)
+- `bash deploy/synology-spk/tools/check-shell.sh` → grün (10 Skripte + Parser-Test)
+- `bash deploy/synology-spk/build-spk.sh 1.0.0 0001` → `.spk` (30 KB), `checksum`
+  in der INFO stimmt mit dem MD5 des Archivs überein
+- `node tools/build-docs.mjs` → 12 Seiten, kein Abbruch
+- `pwsh -File tools/check-links.ps1` → 639 Links, 0 Probleme
+- `npm run lint` + `npm run build -- --configuration production` → grün
+- **Im Browser verifiziert** (Gateway lokal auf Port 5199): alle sechs Schritte,
+  Direktaufruf einer Schritt-URL, Schrittliste, „Zurück", Browser-Zurück,
+  Broker optional (Test-Knopf ohne Host deaktiviert, „Weiter" möglich)
+
+**Offen / nicht gemacht:**
+- **6.4** (Test auf der echten DS923+) bleibt blockiert – das Gerät steht hier
+  nicht zur Verfügung. Die SPK-Installation ist **nicht** auf echter DSM-Hardware
+  geprüft.
+- Der CI-Workflow ist **noch nicht gelaufen** (kein Tag gepusht). Der
+  SPK-Release steht damit aus.
+- **8b.2** (Options-Mapping) und **8d.1** (Token-API in der Oberfläche) sind
+  Phase 8a–8d.
+
+**Überraschungen:**
+- ⚠️ **Das `config.json`-Schema in der Spec war falsch.** Die Spec zeigte
+  Kleinbuchstaben-Abschnitte (`bacnet`, `mqtt`, `web`) – das Gateway liest aber
+  die .NET-Options (`Bacnet`, `Mqtt`, `Api`). Der Supervisor hätte nichts
+  gefunden. **Die Spec wurde korrigiert** (Kapitel §6.1).
+- ⚠️ **`postinst` hätte den Container in eine Neustartschleife geschickt.**
+  Die alte Startkonfiguration enthielt `"bacnet": { "port": "" }` und
+  `"mqtt": { "brokers": [] }` → `ValidateOnStart` schlägt fehl → der Container
+  startet nicht → **der Assistent ist nicht erreichbar**. Jetzt schreibt
+  `postinst` nur noch `Api:SetupCompleted`; der Rest kommt aus dem Image.
+- ⚠️ **MQTTnet 5 hat keine `PayloadSegment`-Property** (nur `get`) – der
+  Rundlauf nutzt `ConvertPayloadToString()`. Und `SubscribeAsync` braucht
+  `MqttClientSubscribeOptions`, **kein** `MqttApplicationMessage`.
+- ⚠️ **`takeUntilDestroyed()` ohne Argument in `ngOnInit` → NG0203.**
+  `ngOnInit` ist kein Injektionskontext – der `DestroyRef` muss übergeben
+  werden.
+- ⚠️ **Optimus UI hält eine per `@if` entfernte `p-message` im DOM stehen**
+  (`p-message-leave-active`). In einem Hintergrund-Tab feuert `animationend`
+  nie → die Meldung „Kein serieller Port gefunden" bleibt dauerhaft sichtbar,
+  obwohl Ports gefunden wurden. **Regel:** `p-message` nicht per `@if`
+  entfernen, sondern den Schweregrad umschalten.
+- ⚠️ **Der Browser-Tab im VS-Code-Browser ist nicht sichtbar** → Klicks
+  (`page.mouse.click`) erzeugen **kein** DOM-Ereignis. Für UI-Tests dort
+  `element.click()` per `page.evaluate` verwenden.
+- ⚠️ **`pnpm`/`npm`-Skript `tar` liest `C:/…` als Remote-Host** – im SPK-Build
+  deshalb immer `cd <dir> && tar …`.
+
+---
+
 ## 2026-11-01 – Container & Synology (Aufgaben 6.1–6.3, 6.5, 6.6)
 
 **Ergebnis:** Das Gateway läuft als **ein** Container-Image (Gateway **+** Angular-UI,

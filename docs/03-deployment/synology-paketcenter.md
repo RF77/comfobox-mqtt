@@ -358,52 +358,82 @@ kurzzeitig `unavailable`. Das ist akzeptabel und wird im Assistenten angekündig
 
 ### 6.1 `config.json` (persistent, chmod 0600)
 
-Liegt in `SYNOPKG_PKGVAR` und wird in den Container gemountet.
+Liegt in `SYNOPKG_PKGVAR` und wird in den Container gemountt.
+
+> **Das Schema ist das der .NET-Konfiguration** – die Abschnittsnamen sind
+> großgeschrieben und entsprechen den Options-Klassen des Gateways
+> (`Bacnet`, `Mqtt`, `Api`, `Gateway`). Das ist keine Geschmacksfrage: das
+> Gateway bindet die Datei über `Microsoft.Extensions.Configuration`, und
+> **die Schlüssel sind case-insensitiv**. Ein Abschnitt `bacnet` würde also
+> stillschweigend als `Bacnet` gelesen – und ein leerer `Port` oder eine
+> leere `Brokers`-Liste würde den Start des Gateways verhindern.
 
 ````json
 {
-  "schemaVersion": 1,
-  "setupCompleted": true,
-  "web": {
-    "port": 8081,
-    "requireAuthentication": true,
-    "users": [
+  "SchemaVersion": 1,
+  "Api": {
+    "SetupCompleted": true,
+    "AdminUsername": "admin",
+    "AdminPasswordHash": "pbkdf2-sha256$600000$<salt-b64>$<hash-b64>",
+    "RequireAuthentication": false
+  },
+  "Bacnet": {
+    "Port": "/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0",
+    "Baudrate": 38400,
+    "DeviceId": 1,
+    "ThisStation": 3
+  },
+  "Mqtt": {
+    "KeepAliveSeconds": 30,
+    "DiscoveryPrefix": "homeassistant",
+    "UseMqttRetain": true,
+    "Brokers": [
       {
-        "username": "admin",
-        "passwordHash": "pbkdf2-sha256$600000$<salt-b64>$<hash-b64>",
-        "createdAt": "2026-10-31T08:00:00Z"
+        "Host": "192.168.1.10",
+        "Port": 1883,
+        "Username": "comfobox",
+        "Password": "…",
+        "UseTls": false
       }
     ]
   },
-  "bacnet": {
-    "port": "/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0",
-    "baudrate": 38400,
-    "masterId": 1,
-    "clientId": 3
+  "Gateway": {
+    "BaseTopic": "ComfoBox",
+    "PollIntervalSeconds": 60,
+    "ExpertMode": false,
+    "MaxWritesPer24h": 200,
+    "RestartEnabled": true
   },
-  "mqtt": {
-    "baseTopic": "ComfoBox",
-    "enableDiscovery": true,
-    "discoveryPrefix": "homeassistant",
-    "embedBroker": false,
-    "brokers": [
-      {
-        "host": "192.168.1.10",
-        "port": 1883,
-        "username": "comfobox",
-        "password": "…",
-        "useTls": false
-      }
-    ]
-  },
-  "gateway": {
-    "pollIntervalSeconds": 60,
-    "expertMode": false,
-    "maxNumberOfWritesPer24h": 200,
-    "restartEnabled": true
+  "Supervisor": {
+    "PassAllSerialDevices": true,
+    "WebPort": 8081,
+    "Image": "ghcr.io/rf77/comfobox-gateway:1.0.0"
   }
 }
 ````
+
+| Abschnitt | Wer schreibt ihn | Wer liest ihn |
+|---|---|---|
+| `Api` | der Assistent (Administrator, `SetupCompleted`) | das Gateway |
+| `Bacnet` | der Assistent (Port, Baudrate) | das Gateway **und** der Supervisor |
+| `Mqtt` | der Assistent (Broker) | das Gateway |
+| `Gateway` | der Assistent (Expertenmodus, Limit) | das Gateway |
+| `Supervisor` | der Assistent (`PassAllSerialDevices`) | **nur** der Supervisor des NAS |
+
+> **Warum ein eigener Abschnitt `Supervisor`?** Er enthält die Angaben, die
+> nur der Supervisor auf dem NAS braucht – insbesondere
+> `PassAllSerialDevices`: der `devices:`-Block der Compose-Datei hängt davon
+> ab, ob *alle* seriellen Ports durchgereicht werden (Voreinstellung, weil der
+> Verbindungstest im Assistenten sonst nicht möglich ist) oder nur der
+> gewählte.
+
+> **Wichtig:** Die Datei darf **keine** leeren Werte für `Bacnet:Port` und
+> **keine** leere `Mqtt:Brokers`-Liste enthalten. Das Gateway validiert beide
+> beim Start (`ValidateOnStart`) und würde sonst in einer Neustartschleife
+> hängen bleiben – der Assistent wäre dann nicht erreichbar. Deshalb legt
+> `postinst` nur `Api:SetupCompleted` an; alles andere kommt aus dem Image
+> (`appsettings.json` + Umgebungsvariablen), bis der Assistent schreibt.
+
 
 ### 6.2 Warum als Datei statt als Env-Variablen
 
@@ -489,20 +519,22 @@ Zusätzlich zu den regulären Endpunkten (siehe
 GET /api/setup/ports
 ````
 
+Die Antwort ist ein **Array** – der Endpoint liefert die Liste direkt, ohne
+den Zeitstempel der `ports.json` (der steckt in der Datei selbst):
+
 ````json
-{
-  "generatedAt": "2026-10-31T08:12:44Z",
-  "ports": [
-    {
-      "device": "/dev/ttyUSB0",
-      "stableId": "/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0",
-      "description": "USB 1a86 7523 (Prolific CH340)",
-      "inUse": true,
-      "note": "In Konfiguration verwendet"
-    }
-  ]
-}
+[
+  {
+    "port": "/dev/ttyUSB0",
+    "description": "Prolific CH340 /dev/ttyUSB0 (1a86:7523)",
+    "stablePath": "/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0"
+  }
+]
 ````
+
+> Der `stablePath` ist der reboot-stabile Pfad aus der `ports.json` des
+> Supervisors. Er wird gespeichert – `/dev/ttyUSB0` kann sich nach einem
+> Reboot ändern.
 
 ### 7.2 Test-Endpunkte
 
@@ -540,13 +572,31 @@ Bei Fehler:
 PUT /api/setup/config
 Content-Type: application/json
 
-{ "bacnet": { "port": "/dev/serial/by-id/…", "baudrate": 38400 },
-  "mqtt":  { "brokers": [ { "host": "10.10.1.20", "port": 1883, "username": "comfobox", "password": "…" } ] },
-  "web":   { "requireAuthentication": true, "users": [ { "username": "admin", "password": "…" } ] } }
+{ "port": "/dev/serial/by-id/…",
+  "baudrate": 38400,
+  "brokerHost": "10.10.1.20", "brokerPort": 1883,
+  "brokerUsername": "comfobox", "brokerPassword": "…", "useTls": false,
+  "adminUsername": "admin", "adminPassword": "…",
+  "passAllSerialDevices": true }
 ````
 
 → **204 No Content**. Der Assistent schreibt die Datei; das Passwort wird dabei **serverseitig
 gehasht** (der Client schickt das Klartext, das Gateway ersetzt es durch den Hash).
+
+> **Der Anfrage-Body ist flach**, die Datei ist geschachtelt: das Gateway
+> übersetzt die flache Anfrage in die Abschnitte der `config.json`
+> (`Bacnet:Port`, `Mqtt:Brokers:0:Host`, `Api:AdminPasswordHash`,
+> `Supervisor:PassAllSerialDevices`).
+>
+> **Regeln:** Das Administrator-Passwort muss mindestens 12 Zeichen lang sein
+> und 3 von 4 Zeichenklassen enthalten (Groß-, Kleinbuchstaben, Ziffern,
+> Symbole). Verstößt es dagegen, antwortet der Endpunkt mit **400** – die
+> Oberfläche prüft dieselben Regeln vorher, damit der Benutzer es sofort
+> sieht.
+>
+> **Der Broker ist optional:** ohne `brokerHost` bleibt der MQTT-Abschnitt
+> unverändert, der Gateway läuft dann ohne Broker (die Werte sind nur über
+> die Web-Oberfläche und die HA-Integration erreichbar).
 
 `POST /api/setup/apply` → **202 Accepted**. Der Gateway schreibt die Datei, der Supervisor
 startet den Container neu. Die UI beobachtet `GET /api/health` und wechselt nach

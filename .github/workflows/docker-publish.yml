@@ -39,11 +39,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Der Name des Repositorys muss **kleingeschrieben** sein - Docker
+      # lehnt "ghcr.io/RF77/..." mit "repository name must be lowercase" ab.
+      - name: Namespace (lower case)
+        id: namespace
+        run: echo "value=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
       - name: Meta
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway
+          images: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway
           tags: |
             type=ref,event=tag
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
@@ -71,14 +77,79 @@ jobs:
       - name: Trivy scan
         uses: aquasecurity/trivy-action@0.28.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}
+          image-ref: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway:${{ github.ref_name }}
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           exit-code: '1'
 
+  spk:
+    name: Synology-Paket (SPK)
+    needs: publish
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Die Version aus dem Tag: "v1.2.3" → 1.2.3
+      - name: Version ermitteln
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "revision=0001" >> "$GITHUB_OUTPUT"
+
+      # Syntaxprüfung aller Shell-Skripte + Test des JSON-Parsers.
+      - name: Shell-Skripte prüfen
+        run: bash deploy/synology-spk/tools/check-shell.sh
+
+      - name: SPK bauen
+        run: bash deploy/synology-spk/build-spk.sh "${{ steps.version.outputs.version }}" "${{ steps.version.outputs.revision }}"
+
+      # Die Paketquelle des DSM ("Paketcenter → Einstellungen → Paketquelle")
+      # zeigt auf diese Datei. Ohne sie findet der Nutzer kein Update.
+      - name: Paketquelle schreiben
+        run: |
+          cd deploy/synology-spk
+          VERSION="${{ steps.version.outputs.version }}"
+          REVISION="${{ steps.version.outputs.revision }}"
+          SPK="ComfoBoxGateway_noarch-dsm7_${VERSION}-${REVISION}.spk"
+          CHECKSUM=$(md5sum "dist/$SPK" | cut -d' ' -f1)
+          cat > dist/packages.json <<EOF
+          {
+            "name": "ComfoBox Gateway",
+            "description": "MQTT-Gateway für die Zehnder ComfoBox Series 5 mit Web-Oberfläche",
+            "maintainer": "RF77",
+            "maintainer_url": "https://github.com/${{ github.repository }}",
+            "distributor": "RF77",
+            "distributor_url": "https://github.com/${{ github.repository }}",
+            "support_url": "https://github.com/${{ github.repository }}/issues",
+            "packages": [
+              {
+                "arch": "noarch",
+                "version": "${VERSION}-${REVISION}",
+                "url": "https://github.com/${{ github.repository }}/releases/latest/download/${SPK}",
+                "checksum": "${CHECKSUM}"
+              }
+            ]
+          }
+          EOF
+          cat dist/packages.json
+
+      - name: Artefakte hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: spk
+          path: |
+            deploy/synology-spk/dist/*.spk
+            deploy/synology-spk/dist/packages.json
+          if-no-files-found: error
+
   release:
     name: GitHub Release
-    needs: publish
+    needs: [publish, spk]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -87,16 +158,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Das Synology-Paket gehört ins Release - so kann es das DSM-Paketcenter
+      # als "Manuelle Installation" herunterladen.
+      - name: SPK herunterladen
+        uses: actions/download-artifact@v4
+        with:
+          name: spk
+          path: dist
+
       - name: Extract release notes
         id: notes
         run: |
           {
             echo '## Images'
             echo '```'
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}"
+            echo "${{ env.REGISTRY }}/rf77/comfobox-gateway:${{ github.ref_name }}"
             echo '```'
             echo ''
             echo 'Multi-Arch: linux/amd64, linux/arm64'
+            echo ''
+            echo '## Synology-Paket'
+            echo '```'
+            echo 'ComfoBoxGateway_noarch-dsm7_${{ github.ref_name }}-0001.spk'
+            echo '```'
+            echo ''
+            echo 'Installation: DSM → Paketcenter → Installieren → Manuelle Installation.'
           } >> "$GITHUB_OUTPUT"
 
       - name: Create release
@@ -104,4 +190,7 @@ jobs:
         with:
           generate_release_notes: true
           body_path: ${{ steps.notes.outputs.notes }}
-          files: CHANGELOG.md
+          files: |
+            CHANGELOG.md
+            dist/*.spk
+            dist/packages.json

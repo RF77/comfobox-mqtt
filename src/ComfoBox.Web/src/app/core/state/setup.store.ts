@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 
 import { toApiError } from '../api/api-client';
+import { HealthService } from '../api/health.service';
 import { SetupService } from '../api/setup.service';
 import type {
   SerialPortInfo,
@@ -18,6 +19,7 @@ import type {
 @Injectable({ providedIn: 'root' })
 export class SetupStore {
   private readonly api = inject(SetupService);
+  private readonly health = inject(HealthService);
 
   /** Der aktuelle Schritt. */
   readonly step = signal<SetupStep>('welcome');
@@ -85,6 +87,9 @@ export class SetupStore {
   /** Wurde die Konfiguration übernommen? */
   readonly applied = signal(false);
 
+  /** Startet der Gateway gerade neu? */
+  readonly restarting = signal(false);
+
   /** Der letzte Fehler (oder `null`). */
   readonly error = signal<string | null>(null);
 
@@ -94,12 +99,15 @@ export class SetupStore {
   /** Der Index des aktuellen Schritts. */
   readonly stepIndex = computed(() => this.steps.indexOf(this.step()));
 
+  /** Wird ein Broker konfiguriert? */
+  readonly hasBroker = computed(() => this.brokerHost().trim().length > 0);
+
   /** Sind alle Pflichtangaben vollständig? */
   readonly isComplete = computed(
     () =>
       this.selectedPort() !== null &&
       this.bacnetResult()?.ok === true &&
-      this.mqttResult()?.ok === true &&
+      (this.mqttResult()?.ok === true || !this.hasBroker()) &&
       this.adminUsername().trim().length >= 3 &&
       this.adminPassword().length >= 12 &&
       this.adminPassword() === this.adminPasswordRepeat(),
@@ -160,11 +168,63 @@ export class SetupStore {
       case 'bacnet':
         return this.bacnetResult()?.ok === true;
       case 'mqtt':
-        return this.mqttResult()?.ok === true;
+        // Der Broker ist **optional** - ohne Broker läuft der Gateway, die
+        // Werte sind dann nur über die Web-Oberfläche erreichbar.
+        return this.mqttResult()?.ok === true || !this.hasBroker();
       case 'security':
-        return this.adminUsername().trim().length >= 3 && this.passwordHints().length === 0;
+        return (
+          this.adminUsername().trim().length >= 3 &&
+          this.passwordHints().length === 0 &&
+          this.adminPassword() === this.adminPasswordRepeat()
+        );
       default:
         return true;
+    }
+  }
+
+  /**
+   * Lädt den Zustand der Ersteinrichtung und füllt die Felder vor.
+   *
+   * <p>Damit ist der Assistent **wiederholbar**: wer später den Port oder
+   * den Broker wechseln will, muss nicht alles neu eingeben.
+   */
+  async loadState(): Promise<void> {
+    try {
+      const state = await this.api.getState();
+      const current = state.current;
+
+      if (!current) {
+        return;
+      }
+
+      if (current.port) {
+        this.selectedPort.set(current.port);
+      }
+
+      if (current.baudrate > 0) {
+        this.baudrate.set(current.baudrate);
+      }
+
+      if (current.brokerHost) {
+        this.brokerHost.set(current.brokerHost);
+      }
+
+      if (current.brokerPort > 0) {
+        this.brokerPort.set(current.brokerPort);
+      }
+
+      if (current.brokerUsername) {
+        this.brokerUsername.set(current.brokerUsername);
+      }
+
+      if (current.adminUsername) {
+        this.adminUsername.set(current.adminUsername);
+      }
+
+      this.passAllDevices.set(current.passAllSerialDevices);
+    } catch {
+      // Vor der Ersteinrichtung kann der Zustand fehlen - das ist kein
+      // Fehler, der den Assistenten aufhalten würde.
     }
   }
 
@@ -175,7 +235,7 @@ export class SetupStore {
 
     try {
       const ports = await this.api.getPorts();
-      this.ports.set(ports);
+      this.ports.set(withConfiguredPort(ports, this.selectedPort()));
 
       // Ist noch nichts ausgewählt, wird der erste Port übernommen.
       if (this.selectedPort() === null && ports.length > 0) {
@@ -256,21 +316,57 @@ export class SetupStore {
         useTls: this.useTls(),
         adminUsername: this.adminUsername().trim() || null,
         adminPassword: this.adminPassword() || null,
+        passAllSerialDevices: this.passAllDevices(),
       });
 
       await this.api.apply();
-
-      this.applied.set(true);
 
       // Das Passwort wird nicht mehr gebraucht - es bleibt nicht im State.
       this.adminPassword.set('');
       this.adminPasswordRepeat.set('');
       this.brokerPassword.set('');
+
+      // Der Neustart wird beobachtet: erst wenn der Gateway wieder
+      // antwortet, ist die neue Konfiguration aktiv.
+      this.restarting.set(true);
+      await this.waitForRestart();
+      this.applied.set(true);
     } catch (error) {
       this.error.set(toApiError(error).message);
     } finally {
       this.applying.set(false);
     }
+  }
+
+  /**
+   * Wartet, bis der Gateway nach dem Neustart wieder antwortet.
+   *
+   * <p>Der Neustart läuft im Prozess: der Gateway beendet sich, der
+   * Supervisor (auf dem NAS) startet den Container neu. Dazwischen ist der
+   * Host nicht erreichbar - genau das wird hier beobachtet.
+   */
+  private async waitForRestart(): Promise<void> {
+    const deadline = Date.now() + 90_000;
+
+    // Der Prozess braucht einen Moment, bis er beendet ist.
+    await delay(3000);
+
+    while (Date.now() < deadline) {
+      try {
+        await this.health.getHealth();
+        this.restarting.set(false);
+        return;
+      } catch {
+        // Noch nicht wieder da - weiter warten.
+      }
+
+      await delay(2000);
+    }
+
+    this.restarting.set(false);
+    this.error.set(
+      'Der Gateway ist nach dem Neustart noch nicht erreichbar. Bitte die Seite neu laden.',
+    );
   }
 
   /** Setzt den Assistenten zurück (wiederholbar). */
@@ -279,8 +375,49 @@ export class SetupStore {
     this.bacnetResult.set(null);
     this.mqttResult.set(null);
     this.applied.set(false);
+    this.restarting.set(false);
     this.error.set(null);
   }
+}
+
+/**
+ * Wartet die angegebene Zeit (in Millisekunden).
+ *
+ * @param ms die Wartezeit
+ * @returns ein Promise, das nach der Wartezeit erfüllt wird
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Ergänzt den bereits konfigurierten Port in der Liste.
+ *
+ * <p>Der Assistent ist wiederholbar: Der zuletzt gewählte Port steht in der
+ * Konfiguration, aber das Betriebssystem kennt ihn vielleicht nicht mehr
+ * (der Adapter ist abgesteckt). Ohne diesen Eintrag wäre die Auswahl leer und
+ * der Benutzer würde den gespeicherten Port nicht wiedererkennen.
+ *
+ * @param ports die erkannten Ports
+ * @param selected der konfigurierte Port (oder `null`)
+ * @returns die Portliste mit dem konfigurierten Port
+ */
+export function withConfiguredPort(
+  ports: readonly SerialPortInfo[],
+  selected: string | null,
+): readonly SerialPortInfo[] {
+  if (!selected || ports.some((port) => port.port === selected)) {
+    return ports;
+  }
+
+  return [
+    {
+      port: selected,
+      description: 'Zuletzt verwendeter Port (aus der Konfiguration)',
+      stablePath: null,
+    },
+    ...ports,
+  ];
 }
 
 /**

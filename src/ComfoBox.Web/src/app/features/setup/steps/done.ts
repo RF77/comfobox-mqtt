@@ -31,8 +31,10 @@ export class DoneStep {
       ok: this.setup.bacnetResult()?.ok === true,
     },
     {
-      text: `MQTT: ${this.setup.mqttResult()?.ok ? 'verbunden' : 'nicht geprüft'}`,
-      ok: this.setup.mqttResult()?.ok === true,
+      text: this.setup.hasBroker()
+        ? `MQTT: ${this.setup.mqttResult()?.ok ? 'verbunden' : 'nicht geprüft'}`
+        : 'MQTT: kein Broker (übersprungen)',
+      ok: this.setup.mqttResult()?.ok === true || !this.setup.hasBroker(),
     },
     {
       text: `Administrator: ${this.setup.adminUsername() || '–'}`,

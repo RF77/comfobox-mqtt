@@ -35,14 +35,32 @@ cp src/INFO "$WORK/INFO"
 cp src/scripts/* "$WORK/scripts/"
 chmod 755 "$WORK"/scripts/*
 
-# Icon optional
-if [ -f src/PACKAGE_ICON.png ]; then
-    cp src/PACKAGE_ICON.png "$WORK/PACKAGE_ICON.PNG"
-    cp src/PACKAGE_ICON.png "$WORK/PACKAGE_ICON_256.PNG"
+# Icon: das Paketcenter braucht PACKAGE_ICON.PNG (256×256).
+# Erzeugt mit:  node tools/make-icon.mjs
+ICON=""
+for candidate in src/PACKAGE_ICON.PNG src/PACKAGE_ICON.png; do
+    if [ -f "$candidate" ]; then
+        ICON="$candidate"
+        break
+    fi
+done
+
+if [ -z "$ICON" ]; then
+    echo "FEHLER: Es gibt kein Icon (src/PACKAGE_ICON.PNG)." >&2
+    echo "       Erzeugen mit: node tools/make-icon.mjs" >&2
+    exit 1
 fi
+
+cp "$ICON" "$WORK/PACKAGE_ICON.PNG"
+cp "$ICON" "$WORK/PACKAGE_ICON_256.PNG"
 
 # --- package.tgz (Inhalt des Pakets) ---------------------------------------
 echo "==> package.tgz erstellen"
+
+# Die Image-Referenz steht im Paket: der Supervisor zieht genau dieses
+# Image. So kann das SPK nie versehentlich eine andere Version starten.
+printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
+
 ( cd "$WORK" && find target -mindepth 1 -maxdepth 1 | tar cpf - --files-from=/dev/stdin | gzip -n > package.tgz )
 
 # --- Prüfsumme in INFO eintragen -------------------------------------------
@@ -60,7 +78,7 @@ sed -i "s|^version=.*|version=\"$VERSION-$REVISION\"|" "$WORK/INFO"
 SPK="$OUT/${PACKAGE}_noarch-dsm7_${VERSION}-${REVISION}.spk"
 rm -f "$SPK"
 echo "==> SPK packen"
-( cd "$WORK" && tar cpf "$SPK" INFO scripts package.tgz )
+( cd "$WORK" && tar cpf "$SPK" INFO scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG )
 
 # --- Ergebnis ---------------------------------------------------------------
 rm -rf "$WORK"

@@ -13,7 +13,7 @@
           [class.cb-step-done]="item.completed"
           [attr.aria-current]="item.active ? 'step' : null"
         >
-          <a [routerLink]="item.route">{{ item.label }}</a>
+          <a [routerLink]="item.route" (click)="goTo(item.step)">{{ item.label }}</a>
         </li>
       }
     </ol>

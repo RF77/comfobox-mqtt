@@ -127,11 +127,12 @@ internal static class SetupEndpoints
             .Produces(StatusCodes.Status204NoContent)
             .Produces<ApiError>(StatusCodes.Status400BadRequest);
 
-        app.MapPost("/api/setup/apply", (
+        app.MapPost("/api/setup/apply", async (
                 HttpContext context,
                 SetupService setup,
                 IRestartService restart,
-                ApiAccessGuard guard) =>
+                ApiAccessGuard guard,
+                CancellationToken cancellationToken) =>
             {
                 var denied = guard.RequireSetupAccess(context);
                 if (denied is not null)
@@ -141,8 +142,9 @@ internal static class SetupEndpoints
 
                 setup.CompleteSetup();
 
-                // Der Neustart setzt die neue Konfiguration in Kraft.
-                restart.RequestRestartAsync(CancellationToken.None).ConfigureAwait(false);
+                // Der Neustart setzt die neue Konfiguration in kraft. Er läuft
+                // im Prozess - der Supervisor startet den Container neu.
+                await restart.RequestRestartAsync(cancellationToken).ConfigureAwait(false);
 
                 return Results.Accepted(value: new { status = "restarting" });
             })

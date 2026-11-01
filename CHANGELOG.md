@@ -175,8 +175,48 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Health überwachen, HA-Alarmierung für `degraded`/`offline`, Backup und
   Wiederherstellung
 
+- Phase 8 (Aufgabe 8.1): **Paket-Icon** `deploy/synology-spk/src/PACKAGE_ICON.png`
+  (256×256) – reproduzierbar erzeugt mit
+  `node deploy/synology-spk/tools/make-icon.mjs` (nur Node.js, kein Python)
+- Phase 8 (Aufgabe 8.7): `GET /api/setup/state` liefert zusätzlich die aktuell
+  gespeicherten Werte (`current`) – damit ist der Assistent **wiederholbar**,
+  ohne dass der Benutzer alles neu eingeben muss
+- Phase 8 (Aufgabe 8.7): das Passwort des Administrators wird **serverseitig**
+  geprüft (`PasswordPolicy`: mindestens 12 Zeichen, 3 von 4 Zeichenklassen);
+  ein Verstoß ergibt **400**, nicht einen stillen Durchlass
+- Phase 8 (Aufgabe 8.7): der MQTT-Test unterscheidet jetzt drei Fälle –
+  `mqtt_unreachable`, `mqtt_auth_failed` (der Broker lehnt die Anmeldung ab)
+  und `mqtt_publish_failed` (der Broker stellt keine Nachrichten zu); er prüft
+  zusätzlich mit einem Publish/Subscribe-Rundlauf
+- Phase 8 (Aufgabe 8.7): die Konfiguration enthält einen neuen Abschnitt
+  `Supervisor` mit `PassAllSerialDevices` – der Supervisor des NAS rendert
+  daraus den `devices`-Block der Compose-Datei
+- Phase 8 (Aufgabe 8.8): der Assistent lädt die gespeicherten Werte vor
+  (Port, Baudrate, Broker, Benutzername), aktualisiert die Portliste alle 5 s
+  (Hotplug), lässt den **Broker optional** und beobachtet den Neustart
+  (`GET /api/health`), bis der Gateway wieder antwortet
+- Phase 8 (Aufgabe 8.8): die Portliste zeigt den zuletzt verwendeten Port
+  an, auch wenn das Betriebssystem ihn nicht mehr kennt
+- Phase 8 (Aufgabe 8.9): CI-Job `spk` in `docker-publish.yml` – baut das
+  Synology-Paket, erzeugt die `packages.json` (Paketquelle für das
+  DSM-Paketcenter) und legt beides im GitHub Release ab
+- Phase 8: `deploy/synology-spk/tools/test-config-parse.sh` – Test für den
+  JSON-Zugriff des Supervisors auf die `config.json`
+
 ### Changed
 - CI: `dotnet` läuft jetzt in `src/` – dadurch greift `global.json` (SDK ist gepinnt)
+- Phase 8: **die `config.json` des Synology-Pakets folgt dem Schema der
+  .NET-Konfiguration** (`Bacnet`, `Mqtt`, `Api`, `Gateway`, `Supervisor`).
+  Die Spec zeigte vorher die Kleinbuchstaben-Abschnitte – damit hätte der
+  Supervisor nichts gefunden (siehe Protokoll 2026-11-01)
+- Phase 8: `postinst` schreibt nur noch `Api:SetupCompleted` in die
+  Startkonfiguration. Die alte Datei enthielt einen leeren `Port` und eine
+  leere Broker-Liste → `ValidateOnStart` schlug fehl → der Container startete
+  nicht → der Assistent war nicht erreichbar
+- Phase 8: das Image des Pakets steht in `target/image` (schreibt
+  `build-spk.sh`) – das SPK kann nie ein falsches Image ziehen
+- Phase 8: `build-spk.sh` bricht **ohne** Icon ab (das Paketcenter braucht
+  `PACKAGE_ICON.PNG`)
 - CI: der Job „Legacy-Projekte (net452) kompilieren weiterhin" wurde durch eine
   Archiv-Prüfung ersetzt – `src_old/` wird **nicht** gebaut (Projektregel §5)
 - Phase 1: der BACnet-Codec enthält kein BACnet/IP (`BVLC`) und kein PTP mehr –
@@ -197,6 +237,17 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   **laufenden** Port (nicht mehr den aus der Konfigurationsdatei)
 
 ### Fixed
+- Phase 8: der Assistent zeigte nach einem Klick auf die Schrittliste oder den
+  Browser-Zurück den **falschen Schritt** (Fortschritt und „Weiter" liefen auseinander);
+  jetzt wird der Zustand bei jeder Navigation mit der URL synchronisiert
+- Phase 8: ein **direkter Aufruf** von `/setup/serial` (z. B. als Lesezeichen)
+  startete immer bei Schritt 1 – die erste Navigation ist vor `ngOnInit`
+  abgeschlossen und kommt als Ereignis nie an
+- Phase 8: die Meldung „Kein serieller Port gefunden" blieb stehen, obwohl
+  Ports gefunden wurden – Optimus UI hält eine per `@if` entfernte `p-message`
+  per Leave-Animation im DOM (in einem Hintergrund-Tab feuert `animationend` nie)
+- Phase 8: `POST /api/setup/apply` stieß den Neustart an, ohne ihn
+  abzuwarten – der Endpunkt wartet jetzt, bis der Host beendet ist
 - Phase 6: **`src/.gitignore` verschluckte den Angular-Quellordner
   `src/ComfoBox.Web/src/app/features/diagnostics/logs/`** – die Regel `logs/`
   (ohne Pfadpräfix) traf auch jeden Ordner namens `logs` im Quellcode. Der

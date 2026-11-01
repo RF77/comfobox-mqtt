@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Security;
 using Microsoft.Extensions.DependencyInjection;
+using MQTTnet;
 
 namespace ComfoBox.Gateway.Tests.Api;
 
@@ -70,24 +71,98 @@ public sealed class SetupApiTests
 
         var response = await fixture.Client.PutAsync(
             "/api/setup/config",
-            Json("{\"port\":\"/dev/ttyUSB0\",\"baudrate\":38400,\"brokerHost\":\"broker\",\"adminUsername\":\"admin\",\"adminPassword\":\"geheim123\"}"));
+            Json("{\"port\":\"/dev/ttyUSB0\",\"baudrate\":38400,\"brokerHost\":\"broker\",\"adminUsername\":\"admin\",\"adminPassword\":\"Geheim12345!\"}"));
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
         var store = fixture.Services.GetRequiredService<ConfigStore>();
         var content = await File.ReadAllTextAsync(store.FilePath);
 
-        Assert.DoesNotContain("geheim123", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("Geheim12345!", content, StringComparison.Ordinal);
 
         var api = JsonNode.Parse(content)!["Api"]!.AsObject();
         var hash = api["AdminPasswordHash"]!.GetValue<string>();
 
         Assert.StartsWith("pbkdf2-sha256$600000$", hash, StringComparison.Ordinal);
-        Assert.True(PasswordHasher.Verify("geheim123", hash));
+        Assert.True(PasswordHasher.Verify("Geheim12345!", hash));
         Assert.False(PasswordHasher.Verify("falsch", hash));
 
         // Die übrigen Angaben stehen in der Datei.
         Assert.Equal("/dev/ttyUSB0", JsonNode.Parse(content)!["Bacnet"]!["Port"]!.GetValue<string>());
+    }
+
+    /// <summary>
+    /// Ein Passwort, das den Regeln nicht entspricht, wird abgelehnt.
+    /// </summary>
+    [Theory]
+    [InlineData("kurz1!")]
+    [InlineData("nurbuchstaben")]
+    [InlineData("1234567890123")]
+    public async Task Ein_Passwort_Verstosst_Gegen_Die_Regeln_Wird_Abgelehnt(string password)
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PutAsync(
+            "/api/setup/config",
+            Json($"{{\"port\":\"/dev/ttyUSB0\",\"adminUsername\":\"admin\",\"adminPassword\":\"{password}\"}}"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        // Es darf kein Administrator angelegt werden.
+        var store = fixture.Services.GetRequiredService<ConfigStore>();
+        Assert.False(File.Exists(store.FilePath) && File.ReadAllText(store.FilePath).Contains("AdminPasswordHash", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Die Angabe „alle seriellen Ports durchreichen" landet im Abschnitt
+    /// „Supervisor" - dort liest sie der Supervisor des Synology-Pakets.
+    /// </summary>
+    [Fact]
+    public async Task Die_Angabe_Ueber_Die_Ports_Wird_Gespeichert()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PutAsync(
+            "/api/setup/config",
+            Json("{\"port\":\"/dev/ttyUSB0\",\"passAllSerialDevices\":false}"));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var store = fixture.Services.GetRequiredService<ConfigStore>();
+        var content = await File.ReadAllTextAsync(store.FilePath);
+
+        var supervisor = JsonNode.Parse(content)!["Supervisor"]!.AsObject();
+        Assert.False(supervisor["PassAllSerialDevices"]!.GetValue<bool>());
+    }
+
+    /// <summary>
+    /// Der Zustand liefert die aktuellen Werte - damit kann der Assistent
+    /// nach der Ersteinrichtung erneut durchlaufen.
+    /// </summary>
+    [Fact]
+    public async Task Der_Zustand_Liefert_Die_Aktuellen_Werte()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        await fixture.Client.PutAsync(
+            "/api/setup/config",
+            Json("{\"port\":\"/dev/ttyUSB0\",\"baudrate\":38400,\"brokerHost\":\"broker\",\"brokerPort\":1884,\"adminUsername\":\"admin\",\"adminPassword\":\"Geheim12345!\"}"));
+
+        var response = await fixture.Client.GetAsync("/api/setup/state");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var state = await GatewayApiFixture.ReadJsonAsync(response);
+        var current = state.GetProperty("current");
+
+        Assert.Equal("/dev/ttyUSB0", current.GetProperty("port").GetString());
+        Assert.Equal(38400, current.GetProperty("baudrate").GetInt32());
+        Assert.Equal("broker", current.GetProperty("brokerHost").GetString());
+        Assert.Equal(1884, current.GetProperty("brokerPort").GetInt32());
+        Assert.Equal("admin", current.GetProperty("adminUsername").GetString());
+
+        // Niemals ein Passwort!
+        Assert.False(current.TryGetProperty("brokerPassword", out _));
+        Assert.False(current.TryGetProperty("adminPassword", out _));
     }
 
     /// <summary>
@@ -116,7 +191,7 @@ public sealed class SetupApiTests
 
         await fixture.Client.PutAsync(
             "/api/setup/config",
-            Json("{\"port\":\"/dev/ttyUSB0\",\"adminUsername\":\"admin\",\"adminPassword\":\"geheim123\"}"));
+            Json("{\"port\":\"/dev/ttyUSB0\",\"adminUsername\":\"admin\",\"adminPassword\":\"Geheim12345!\"}"));
 
         var apply = await fixture.Client.PostAsync("/api/setup/apply", null);
         Assert.Equal(HttpStatusCode.Accepted, apply.StatusCode);
@@ -182,6 +257,73 @@ public sealed class SetupApiTests
         var result = await GatewayApiFixture.ReadJsonAsync(response);
         Assert.False(result.GetProperty("ok").GetBoolean());
         Assert.False(string.IsNullOrWhiteSpace(result.GetProperty("hint").GetString()));
+    }
+
+    /// <summary>
+    /// Ein Broker, der die Anmeldung ablehnt, wird als **Authentifizierungs-
+    /// fehler** gemeldet - nicht als „nicht erreichbar“.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Mqtt_Test_Meldet_Einen_Authentifizierungsfehler()
+    {
+        await using var broker = new FakeMqttBroker(MqttClientConnectResultCode.BadUserNameOrPassword);
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PostAsync(
+            "/api/setup/mqtt/test",
+            Json($"{{\"host\":\"127.0.0.1\",\"port\":{broker.Port},\"username\":\"admin\",\"password\":\"falsch\"}}"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await GatewayApiFixture.ReadJsonAsync(response);
+        Assert.False(result.GetProperty("ok").GetBoolean());
+        Assert.Equal("mqtt_auth_failed", result.GetProperty("hint").GetString());
+
+        // Die Zugangsdaten müssen den Broker überhaupt erreicht haben.
+        Assert.Equal("admin", broker.ReceivedUserName);
+        Assert.Equal("falsch", broker.ReceivedPassword);
+    }
+
+    /// <summary>
+    /// Ein erreichbarer Broker liefert „ok" - und die Testnachricht kommt
+    /// wieder an.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Mqtt_Test_Erfolgt_Gegen_Einen_Erreichbaren_Broker()
+    {
+        await using var broker = new FakeMqttBroker();
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PostAsync(
+            "/api/setup/mqtt/test",
+            Json($"{{\"host\":\"127.0.0.1\",\"port\":{broker.Port},\"username\":\"admin\",\"password\":\"Geheim12345!\"}}"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await GatewayApiFixture.ReadJsonAsync(response);
+        Assert.True(result.GetProperty("ok").GetBoolean(), result.GetProperty("message").GetString() + " " + broker.LastError);
+        Assert.True(broker.Accepted);
+    }
+
+    /// <summary>
+    /// Ein Broker, der keine Nachrichten zustellt, wird erkannt - die
+    /// Verbindung allein reicht dem Gateway nicht.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Mqtt_Test_Meldet_Einen_Broker_Ohne_Zustellung()
+    {
+        await using var broker = new FakeMqttBroker(echoMessages: false);
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PostAsync(
+            "/api/setup/mqtt/test",
+            Json($"{{\"host\":\"127.0.0.1\",\"port\":{broker.Port}}}"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var result = await GatewayApiFixture.ReadJsonAsync(response);
+        Assert.False(result.GetProperty("ok").GetBoolean(), result.GetProperty("message").GetString());
+        Assert.Equal("mqtt_publish_failed", result.GetProperty("hint").GetString());
     }
 
     /// <summary>

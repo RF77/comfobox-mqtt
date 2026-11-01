@@ -13,9 +13,9 @@ import { MessageModule } from '@openng/optimus-ui/message';
   template: `
     <p-card header="Willkommen">
       <p>
-        Dieser Assistent bringt das ComfoBox-Gateway in Betrieb. Er führt Sie durch vier
-        Schritte: den seriellen Anschluss, die BACnet-Konfiguration, den MQTT-Broker und den
-        Web-Zugang.
+        Dieser Assistent bringt das ComfoBox-Gateway in Betrieb. Er führt Sie in sechs
+        Schritten durch die Einrichtung: den seriellen Anschluss, die BACnet-Konfiguration,
+        den MQTT-Broker, den Web-Zugang und die Zusammenfassung.
       </p>
 
       <p class="cb-lead">Sie brauchen dafür:</p>

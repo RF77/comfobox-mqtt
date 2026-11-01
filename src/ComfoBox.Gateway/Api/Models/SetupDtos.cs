@@ -19,6 +19,65 @@ public sealed record SetupStateDto
     /// Die Version des Setup-Formats.
     /// </summary>
     public required int Version { get; init; }
+
+    /// <summary>
+    /// Die aktuell gespeicherten Werte (für den wiederholbaren Assistenten).
+    /// </summary>
+    /// <remarks>
+    /// Nach der Ersteinrichtung ist der Assistent erneut unter <c>/setup</c>
+    /// erreichbar. Damit der Benutzer nicht alles neu eingeben muss, bekommt
+    /// die Oberfläche die aktuellen Werte geliefert.
+    /// </remarks>
+    public SetupCurrentValuesDto? Current { get; init; }
+}
+
+/// <summary>
+/// Die aktuell gespeicherten Werte der Einrichtung.
+/// </summary>
+/// <remarks>
+/// Es werden **niemals** Passwörter geliefert - weder das Passwort des
+/// Administrators noch das des Brokers.
+/// </remarks>
+public sealed record SetupCurrentValuesDto
+{
+    /// <summary>
+    /// Der konfigurierte serielle Port (oder <c>null</c>).
+    /// </summary>
+    public string? Port { get; init; }
+
+    /// <summary>
+    /// Die konfigurierte Baudrate.
+    /// </summary>
+    public int Baudrate { get; init; }
+
+    /// <summary>
+    /// Der Host des Brokers (oder <c>null</c>).
+    /// </summary>
+    public string? BrokerHost { get; init; }
+
+    /// <summary>
+    /// Der Port des Brokers.
+    /// </summary>
+    public int BrokerPort { get; init; }
+
+    /// <summary>
+    /// Der Benutzername am Broker (oder <c>null</c>).
+    /// </summary>
+    public string? BrokerUsername { get; init; }
+
+    /// <summary>
+    /// Der Benutzername des Administrators (oder <c>null</c>).
+    /// </summary>
+    public string? AdminUsername { get; init; }
+
+    /// <summary>
+    /// Sollen alle seriellen Ports durchgereicht werden?
+    /// </summary>
+    /// <remarks>
+    /// Das betrifft nur den Supervisor des Synology-Pakets - er rendert den
+    /// <c>devices:</c>-Block der Compose-Datei.
+    /// </remarks>
+    public bool PassAllSerialDevices { get; init; }
 }
 
 /// <summary>
@@ -169,4 +228,15 @@ public sealed class SetupConfigRequest
     /// Das Passwort des Administrators im Klartext.
     /// </summary>
     public string? AdminPassword { get; set; }
+
+    /// <summary>
+    /// Sollen alle seriellen Ports durchgereicht werden?
+    /// </summary>
+    /// <remarks>
+    /// Das ist die Voreinstellung: nur so kann der Assistent den
+    /// Verbindungstest durchführen, solange der endgültige Port noch nicht
+    /// feststeht. Der Supervisor des Synology-Pakets rendert damit den
+    /// <c>devices:</c>-Block der Compose-Datei.
+    /// </remarks>
+    public bool PassAllSerialDevices { get; set; } = true;
 }

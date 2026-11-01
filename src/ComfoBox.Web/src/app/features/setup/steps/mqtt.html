@@ -1,7 +1,8 @@
 <p-card header="MQTT-Broker">
   <p class="cb-hint cb-block">
     Der Broker ist nur nötig, wenn Sie Home Assistant über MQTT anbinden möchten. Für die
-    Web-Oberfläche allein wird keiner benötigt.
+    Web-Oberfläche allein wird keiner benötigt - dann bleibt das Feld „Host" leer und der
+    Schritt wird übersprungen.
   </p>
 
   <div class="cb-field">
@@ -50,7 +51,8 @@
       autocomplete="new-password"
     />
     <span class="cb-hint">
-      Das Passwort wird nur einmal im Klartext an das Gateway gesendet und dort gehasht.
+      Das Passwort wird im Klartext an das Gateway gesendet und dort in der geschützten
+      Konfigurationsdatei (Modus 0600) abgelegt - nicht in Umgebungsvariablen.
     </span>
   </div>
 

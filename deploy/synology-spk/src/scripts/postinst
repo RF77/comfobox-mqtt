@@ -49,15 +49,28 @@ chmod 755 "${PKG_DIR}/bin/"*.sh 2>/dev/null || true
     || true
 
 # 6) Startkonfiguration schreiben, falls noch keine existiert
+#
+# Wichtig: Die Datei folgt dem Schema der .NET-Konfiguration des Gateways
+# (Abschnittsnamen in Großbuchstaben). Das Gateway liest sie **und** die
+# appsettings.json des Images - die Datei hat Vorrang.
+#
+# Deshalb wird hier bewusst nur das geschrieben, was der Setup-Modus
+# wirklich braucht:
+#
+#   * "Api:SetupCompleted" = false → die Setup-Endpunkte sind offen.
+#   * Kein "Bacnet:Port"     → der Wert aus dem Image (/dev/ttyUSB0) gilt.
+#   * Kein "Mqtt:Brokers"    → der Wert aus dem Image (localhost:1883) gilt.
+#
+# Ein leerer Broker oder ein leerer Port würden beim Start des Gateways die
+# Validierung fehlschlagen lassen - der Container würde in einer
+# Neustartschleife hängen bleiben und der Assistent wäre nicht erreichbar.
 if [ ! -f "$CONFIG_FILE" ]; then
     cat > "$CONFIG_FILE" <<'EOF'
 {
-  "schemaVersion": 1,
-  "setupCompleted": false,
-  "web": { "port": 8081, "requireAuthentication": false, "users": [] },
-  "bacnet": { "port": "", "baudrate": 38400, "masterId": 1, "clientId": 3 },
-  "mqtt": { "baseTopic": "ComfoBox", "enableDiscovery": true, "brokers": [] },
-  "gateway": { "pollIntervalSeconds": 60, "expertMode": false, "maxNumberOfWritesPer24h": 200 }
+  "SchemaVersion": 1,
+  "Api": {
+    "SetupCompleted": false
+  }
 }
 EOF
     log "Startkonfiguration geschrieben (Setup-Modus)"

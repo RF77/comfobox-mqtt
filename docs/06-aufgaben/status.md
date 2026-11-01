@@ -89,7 +89,7 @@
 | 5.6 | Diagnoseseite | ✅ | 0.5 |
 | 5.7 | Responsive, A11y, i18n (de) | ✅ | 0.5 |
 | 5.8 | SPA-Auslieferung aus dem .NET-Host + Docker-Stage | ✅ | 0.5 |
-| 5.9 | **Getting-Started-Assistent** (6 Schritte) | 🟡 | 2.5 |
+| 5.9 | **Getting-Started-Assistent** (6 Schritte) | ✅ | 2.5 |
 | 5.10 | **Login** + Cookie-Auth | ✅ | 1.0 |
 | 5.11 | **Hilfe-Bereich** (`/help/:slug`) + Suche | ✅ | 1.5 |
 | 5.12 | **Log-Viewer** (Live-Tail, Filter, Export) | ✅ | 1.5 |
@@ -110,15 +110,15 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 8.1 | SPK-Skelett (`INFO`, `package.tgz`, `scripts/`, **Icon**) | 🟡 | 1.0 |
+| 8.1 | SPK-Skelett (`INFO`, `package.tgz`, `scripts/`, **Icon**) | ✅ | 1.0 |
 | 8.2 | Lifecycle-Skripte (Exit-Codes 0/1/2/3/4/150) | ✅ | 2.0 |
 | 8.3 | `common.sh` | ✅ | 1.0 |
 | 8.4 | `serial-scan.sh` (→ `ports.json`) | ✅ | 1.0 |
 | 8.5 | `supervisor.sh` (Compose rendern, Watch-Loop) | ✅ | 2.5 |
 | 8.6 | udev-Regel + systemd-Unit + `by-id`-Symlink | ✅ | 1.0 |
-| 8.7 | Setup-API | ⬜ | 2.0 |
-| 8.8 | Getting-Started-Assistent | ⬜ | 2.5 |
-| 8.9 | SPK-Build in CI + Release-Artefakt | ⬜ | 0.5 |
+| 8.7 | Setup-API | ✅ | 2.0 |
+| 8.8 | Getting-Started-Assistent | ✅ | 2.5 |
+| 8.9 | SPK-Build in CI + Release-Artefakt | ✅ | 0.5 |
 
 ## Phase 8a–8d – Home-Assistant-Ökosystem (14 PT)
 
@@ -135,6 +135,11 @@
 | 8b.3 | Add-on-Doku + Übersetzungen (de/en) | ✅ | 1.0 |
 | 8c.1 | Multi-Arch-Publish (`amd64` + `arm64`) + HACS-Release | ⬜ | 2.0 |
 | 8d.1 | Token-API im Gateway | ⬜ | 1.0 |
+
+> **Hinweis zu 8d.1:** Die Endpunkte `/api/security/tokens` **existieren bereits**
+> (`src/ComfoBox.Gateway/Api/TokenEndpoints.cs`, `ApiSecurityStore.CreateToken`) –
+> offen ist die **Anbindung an die Oberfläche** (Token erzeugen, Name, widerrufen)
+> und die Verifikation der HA-Integration damit.
 
 ## Phase 7 – Parallelbetrieb & Umschaltung (3 PT)
 
@@ -168,19 +173,28 @@
 | Dokumentation (D.6 + D.9) | 9 |
 | **Gesamt** | **73** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 8 PT (Phase 5, Aufgaben 5.1–5.8 + 5.10–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) von 64 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) von 64 PT.
 >
-> **Stand 2026-11-01:** 293 Tests grün (46 BACnet + 30 Domain + 10 Contract + 207 Gateway).
+> **Stand 2026-11-01:** **301 Tests grün** (46 BACnet + 30 Domain + 10 Contract + 215 Gateway).
 > Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
 > der Container läuft **healthy**, Trivy meldet 0 Funde, und Backup/Restore sind
-> real getestet. Offen bleibt Aufgabe **6.4** (Test auf der echten DS923+).
+> real getestet. Das **Synology-Paket** ist vollständig (Icon, Setup-API,
+> Assistent, CI-Build) – offen bleibt nur der Test auf der echten DS923+
+> (Aufgabe **6.4**).
 
 ## Nächste Aufgabe
 
-> **6.4 – Test auf der DS923+** (1.0 PT)
-> Ort: die echte Synology DS923+ (Container Manager, DSM 7.2+)
-> Prüfliste: [phase-6.md §6.4](phase-6.md) (Container startet, `/dev/ttyUSB0`
-> sichtbar, `IAm` wird empfangen, Schreibvorgang, NAS-Neustart, Broker, LWT)
-> **Blockiert:** ohne die echte DS923+ nicht abschließbar. Ersatzweise auf einem
-> Linux-System mit USB-Adapter testen und die NAS-Prüfung verschieben.
-> → Details: [phase-6.md](phase-6.md)
+> **Phase 8a–8d – Home-Assistant-Ökosystem** (14 PT, davon 8.5 PT offen)
+> Ort: [phase-8ad.md](phase-8ad.md)
+>
+> | # | Aufgabe | Status | PT |
+> |---|---|---|---|
+> | 8a.6 | HA-Integrationstests (API-Client, Coordinator, Entity-Mapping) | 🟡 | 1.5 |
+> | 8b.2 | Options-Mapping (`/data/options.json` → Gateway-Options) | ⬜ | 1.0 |
+> | 8c.1 | Multi-Arch-Publish + HACS-Release | ⬜ | 2.0 |
+> | 8d.1 | Token-API in der Oberfläche | ⬜ | 1.0 |
+>
+> **Wichtig:** Der Multi-Arch-Publish (8c.1) hängt an der CI – der
+> Image-Tag muss zum Release-Tag passen, sonst findet der HA-Supervisor das
+> Image nicht.
+> → Details: [phase-8ad.md](phase-8ad.md)

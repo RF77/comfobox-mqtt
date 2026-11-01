@@ -14,6 +14,7 @@ using ComfoBox.Gateway.Security;
 using MQTTnet;
 using MQTTnet.Exceptions;
 using MQTTnet.Formatter;
+using MQTTnet.Protocol;
 
 namespace ComfoBox.Gateway.Setup;
 
@@ -34,6 +35,17 @@ public sealed class SetupService
     /// Der Name der Datei mit den erkannten Ports (vom Supervisor erzeugt).
     /// </summary>
     public const string PortsFileName = SerialPortScanner.PortsFileName;
+
+    /// <summary>
+    /// Der Name des Abschnitts, in dem der Supervisor seine Angaben ablegt.
+    /// </summary>
+    /// <remarks>
+    /// Der Abschnitt wird **nur** vom Supervisor gelesen - das Gateway selbst
+    /// braucht ihn nicht. Er steht trotzdem in der <c>config.json</c>, weil
+    /// das der einzige Ort ist, der dem Host und dem Container gemeinsam zur
+    /// Verfügung steht.
+    /// </remarks>
+    public const string SupervisorSectionName = "Supervisor";
 
     private readonly ConfigStore _config;
     private readonly ApiSecurityStore _security;
@@ -88,11 +100,17 @@ public sealed class SetupService
     /// Der Zustand der Ersteinrichtung.
     /// </summary>
     /// <returns>Der Zustand.</returns>
+    /// <remarks>
+    /// Der Zustand enthält auch die aktuell gespeicherten Werte. Damit kann
+    /// der Assistent nach der Ersteinrichtung erneut durchlaufen, ohne dass
+    /// der Benutzer alles neu eingeben muss.
+    /// </remarks>
     public SetupStateDto GetState() => new()
     {
         SetupCompleted = _security.SetupCompleted,
-        Steps = ["serial", "bacnet", "mqtt", "security", "done"],
+        Steps = ["welcome", "serial", "bacnet", "mqtt", "security", "done"],
         Version = 1,
+        Current = ReadCurrentValues(),
     };
 
     /// <summary>
@@ -219,7 +237,8 @@ public sealed class SetupService
     }
 
     /// <summary>
-    /// Prüft die MQTT-Verbindung: CONNECT zu dem Broker.
+    /// Prüft die MQTT-Verbindung: CONNECT zu dem Broker und ein
+    /// Publish/Subscribe-Rundlauf auf einem Test-Topic.
     /// </summary>
     /// <param name="host">Der Broker-Host.</param>
     /// <param name="port">Der Broker-Port.</param>
@@ -228,6 +247,15 @@ public sealed class SetupService
     /// <param name="useTls">Soll TLS verwendet werden?</param>
     /// <param name="cancellationToken">Abbruchsignal.</param>
     /// <returns>Das Ergebnis.</returns>
+    /// <remarks>
+    /// Der Test unterscheidet drei Fälle:
+    /// <list type="bullet">
+    /// <item>Der Broker ist nicht erreichbar (<c>mqtt_unreachable</c>);</item>
+    /// <item>die Anmeldung ist fehlgeschlagen (<c>mqtt_auth_failed</c>);</item>
+    /// <item>der Broker nimmt die Verbindung an, leitet aber keine Nachrichten
+    /// weiter (<c>mqtt_publish_failed</c>).</item>
+    /// </list>
+    /// </remarks>
     public async Task<TestResultDto> TestMqttAsync(
         string? host,
         int port,
@@ -273,15 +301,23 @@ public sealed class SetupService
                 .ConnectAsync(builder.Build(), timeoutCts.Token)
                 .ConfigureAwait(false);
 
-            if (client.IsConnected)
+            if (!client.IsConnected)
             {
-                return Result(true, "Der Broker ist erreichbar.", null, stopwatch);
+                var rejected = DescribeConnectResult(result);
+                return Result(false, rejected.Message, rejected.Hint, stopwatch);
+            }
+
+            var roundTrip = await RoundTripAsync(client, timeoutCts.Token).ConfigureAwait(false);
+
+            if (!roundTrip.Ok)
+            {
+                return Result(false, roundTrip.Message, "mqtt_publish_failed", stopwatch);
             }
 
             return Result(
-                false,
-                result?.ReasonString ?? "Der Broker hat die Verbindung abgelehnt.",
-                "mqtt_auth_failed",
+                true,
+                "Der Broker ist erreichbar, die Anmeldung war erfolgreich und die Nachrichten werden zugestellt.",
+                null,
                 stopwatch);
         }
         catch (OperationCanceledException)
@@ -290,10 +326,15 @@ public sealed class SetupService
         }
         catch (MqttCommunicationException ex)
         {
-            return Result(false, $"Der Broker ist nicht erreichbar: {ex.Message}", "mqtt_unreachable", stopwatch);
+            _logger.LogWarning(ex, "Der MQTT-Test ist an der Verbindung gescheitert.");
+
+            var rejected = DescribeException(ex);
+            return Result(false, rejected.Message, rejected.Hint, stopwatch);
         }
         catch (Exception ex)
         {
+            _logger.LogWarning(ex, "Der MQTT-Test ist fehlgeschlagen.");
+
             return Result(false, $"Die Verbindung ist fehlgeschlagen: {ex.Message}", "mqtt_unreachable", stopwatch);
         }
     }
@@ -303,6 +344,10 @@ public sealed class SetupService
     /// </summary>
     /// <param name="request">Die Konfiguration.</param>
     /// <exception cref="ArgumentException">Wenn die Angaben unvollständig sind.</exception>
+    /// <remarks>
+    /// Das Passwort des Administrators wird **serverseitig** gehasht - im
+    /// Klartext steht es nirgends in der <c>config.json</c>.
+    /// </remarks>
     public void WriteConfig(SetupConfigRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -317,9 +362,37 @@ public sealed class SetupService
             throw new ArgumentException("Die Baudrate muss größer als 0 sein.", nameof(request));
         }
 
+        if (!BacnetOptions.IsAllowedBaudrate(request.Baudrate))
+        {
+            throw new ArgumentException(
+                $"Die Baudrate muss einer der folgenden Werte sein: {string.Join(", ", BacnetOptions.AllowedBaudrates)}.",
+                nameof(request));
+        }
+
+        // Ein Benutzername wird nur geprüft, wenn auch ein Passwort kommt -
+        // ohne Passwort bleibt der bestehende Administrator unangetastet.
         var adminHash = string.IsNullOrWhiteSpace(request.AdminUsername) || string.IsNullOrEmpty(request.AdminPassword)
             ? null
             : PasswordHasher.Hash(request.AdminPassword);
+
+        if (adminHash is not null)
+        {
+            if (request.AdminUsername!.Trim().Length < 3)
+            {
+                throw new ArgumentException(
+                    "Der Benutzername muss mindestens 3 Zeichen lang sein.",
+                    nameof(request));
+            }
+
+            var hints = PasswordPolicy.Validate(request.AdminPassword);
+
+            if (hints.Count > 0)
+            {
+                throw new ArgumentException(
+                    $"Das Passwort entspricht nicht den Regeln: {string.Join(" ", hints)}",
+                    nameof(request));
+            }
+        }
 
         // Alles in **einer** Änderung: verschachtelte Mutate-Aufrufe würden
         // sich gegenseitig überschreiben.
@@ -346,6 +419,11 @@ public sealed class SetupService
                 };
             }
 
+            // Die Angaben des Supervisors: er rendert daraus den
+            // devices-Block der Compose-Datei.
+            var supervisor = ConfigStore.EnsureSection(config, SupervisorSectionName);
+            supervisor["PassAllSerialDevices"] = request.PassAllSerialDevices;
+
             if (adminHash is not null)
             {
                 var api = ConfigStore.EnsureSection(config, ApiSecurityStore.SectionName);
@@ -367,6 +445,293 @@ public sealed class SetupService
     {
         _security.SetSetupCompleted(true);
         _logger.LogInformation("Die Ersteinrichtung ist abgeschlossen - die Setup-Endpunkte sind jetzt geschützt.");
+    }
+
+    /// <summary>
+    /// Liest die aktuell gespeicherten Werte für den wiederholbaren Assistenten.
+    /// </summary>
+    /// <returns>Die aktuellen Werte (ohne Passwörter).</returns>
+    /// <remarks>
+    /// Maßgeblich ist die <c>config.json</c> - sie ist das, was nach dem
+    /// Neustart gilt. Nur wenn dort nichts steht (frische Installation), kommen
+    /// die Werte aus der laufenden Konfiguration.
+    /// </remarks>
+    private SetupCurrentValuesDto ReadCurrentValues()
+    {
+        var config = _config.Read();
+        var bacnet = config[BacnetOptions.SectionName] as JsonObject;
+        var supervisor = config[SupervisorSectionName] as JsonObject;
+
+        var filePort = ReadString(bacnet, nameof(BacnetOptions.Port));
+        var fileBaudrate = ReadInt(bacnet, nameof(BacnetOptions.Baudrate));
+
+        var fileBroker = ReadFirstBroker(config);
+
+        var port = string.IsNullOrWhiteSpace(filePort) ? _bacnetOptions.Port : filePort;
+
+        return new SetupCurrentValuesDto
+        {
+            Port = string.IsNullOrWhiteSpace(port) ? null : port,
+            Baudrate = fileBaudrate ?? _bacnetOptions.Baudrate,
+
+            // Nur der Broker aus der Datei: der eingebaute Standard
+            // ("localhost") ist keine Benutzerwahl - der Assistent soll den
+            // Schritt auch überspringen können.
+            BrokerHost = fileBroker?.Host,
+            BrokerPort = fileBroker?.Port ?? 1883,
+            BrokerUsername = fileBroker?.Username,
+            AdminUsername = _security.AdminUsername,
+            PassAllSerialDevices = ReadPassAllSerialDevices(supervisor),
+        };
+    }
+
+    /// <summary>
+    /// Liest einen Textwert aus einem JSON-Abschnitt.
+    /// </summary>
+    /// <param name="section">Der Abschnitt (oder <c>null</c>).</param>
+    /// <param name="key">Der Schlüssel.</param>
+    /// <returns>Der Wert (oder <c>null</c>).</returns>
+    private static string? ReadString(JsonObject? section, string key)
+    {
+        var value = section?[key];
+
+        if (value is null || value.GetValueKind() != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return value.GetValue<string>();
+    }
+
+    /// <summary>
+    /// Liest einen Zahlenwert aus einem JSON-Abschnitt.
+    /// </summary>
+    /// <param name="section">Der Abschnitt (oder <c>null</c>).</param>
+    /// <param name="key">Der Schlüssel.</param>
+    /// <returns>Der Wert (oder <c>null</c>).</returns>
+    private static int? ReadInt(JsonObject? section, string key)
+    {
+        var value = section?[key];
+
+        if (value is null || value.GetValueKind() != JsonValueKind.Number)
+        {
+            return null;
+        }
+
+        return value.GetValue<int>();
+    }
+
+    /// <summary>
+    /// Liest den ersten Broker aus der Konfiguration.
+    /// </summary>
+    /// <param name="config">Die Konfiguration.</param>
+    /// <returns>Der Broker (oder <c>null</c>).</returns>
+    private static MqttBrokerOptions? ReadFirstBroker(JsonObject config)
+    {
+        var brokers = config[MqttOptions.SectionName]?["Brokers"] as JsonArray;
+
+        if (brokers is null || brokers.Count == 0)
+        {
+            return null;
+        }
+
+        if (brokers[0] is not JsonObject entry)
+        {
+            return null;
+        }
+
+        var host = ReadString(entry, nameof(MqttBrokerOptions.Host));
+
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            return null;
+        }
+
+        return new MqttBrokerOptions
+        {
+            Host = host,
+            Port = ReadInt(entry, nameof(MqttBrokerOptions.Port)) ?? 1883,
+            Username = ReadString(entry, nameof(MqttBrokerOptions.Username)),
+        };
+    }
+
+    /// <summary>
+    /// Liest die Angabe „alle seriellen Ports durchreichen".
+    /// </summary>
+    /// <param name="supervisor">Der Abschnitt „Supervisor" (oder <c>null</c>).</param>
+    /// <returns>
+    /// Der Wert - **standardmäßig wahr**, weil nur so der Verbindungstest im
+    /// Assistenten funktioniert, solange der endgültige Port nicht feststeht.
+    /// </returns>
+    private static bool ReadPassAllSerialDevices(JsonObject? supervisor)
+    {
+        var value = supervisor?["PassAllSerialDevices"];
+
+        if (value is null)
+        {
+            return true;
+        }
+
+        return value.GetValueKind() switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String => bool.TryParse(value.GetValue<string>(), out var parsed) && parsed,
+            _ => true,
+        };
+    }
+
+    /// <summary>
+    /// Führt einen Publish/Subscribe-Rundlauf auf einem Test-Topic durch.
+    /// </summary>
+    /// <param name="client">Der verbundene Client.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Das Ergebnis des Rundlaufs.</returns>
+    /// <remarks>
+    /// Der Rundlauf beweist, dass der Broker die Nachrichten tatsächlich
+    /// zustellt - ein Broker, der zwar die Anmeldung erlaubt, aber keine
+    /// Nachrichten weitergibt, ist für den Betrieb unbrauchbar.
+    /// </remarks>
+    private static async Task<(bool Ok, string Message)> RoundTripAsync(
+        IMqttClient client,
+        CancellationToken cancellationToken)
+    {
+        var topic = $"comfobox/setup/test/{Environment.ProcessId}";
+        var payload = Guid.NewGuid().ToString("N");
+        var received = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Task Handler(MqttApplicationMessageReceivedEventArgs args)
+        {
+            var text = args.ApplicationMessage.ConvertPayloadToString();
+
+            if (string.Equals(text, payload, StringComparison.Ordinal))
+            {
+                received.TrySetResult(true);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        client.ApplicationMessageReceivedAsync += Handler;
+
+        try
+        {
+            var subscribeOptions = new MqttClientSubscribeOptionsBuilder()
+                .WithTopicFilter(new MqttTopicFilterBuilder()
+                    .WithTopic(topic)
+                    .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
+                    .Build())
+                .Build();
+
+            await client.SubscribeAsync(subscribeOptions, cancellationToken).ConfigureAwait(false);
+
+            var publish = new MqttApplicationMessageBuilder()
+                .WithTopic(topic)
+                .WithPayload(payload)
+                .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtMostOnce)
+                .Build();
+
+            await client.PublishAsync(publish, cancellationToken).ConfigureAwait(false);
+
+            var winner = await Task
+                .WhenAny(received.Task, Task.Delay(TimeSpan.FromSeconds(5), cancellationToken))
+                .ConfigureAwait(false);
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return winner == received.Task
+                ? (true, "Der Broker stellt die Nachrichten zu.")
+                : (false, "Der Broker hat die Testnachricht nicht zugestellt.");
+        }
+        finally
+        {
+            client.ApplicationMessageReceivedAsync -= Handler;
+        }
+    }
+
+    /// <summary>
+    /// Beschreibt einen abgelehnten CONNECT.
+    /// </summary>
+    /// <param name="result">Das Ergebnis des CONNECT (oder <c>null</c>).</param>
+    /// <returns>Die Meldung und der maschinenlesbare Hinweis.</returns>
+    private static (string Message, string? Hint) DescribeConnectResult(MqttClientConnectResult? result)
+    {
+        var code = result?.ResultCode ?? MqttClientConnectResultCode.UnspecifiedError;
+
+        if (IsAuthFailure(code))
+        {
+            return ("Die Anmeldung am Broker ist fehlgeschlagen - Benutzername und Passwort prüfen.", "mqtt_auth_failed");
+        }
+
+        var reason = string.IsNullOrWhiteSpace(result?.ReasonString) ? string.Empty : $" ({result!.ReasonString})";
+
+        return ($"Der Broker hat die Verbindung abgelehnt: {code}{reason}", "mqtt_unreachable");
+    }
+
+    /// <summary>
+    /// Beschreibt eine Kommunikationsstörung.
+    /// </summary>
+    /// <param name="exception">Die Ausnahme.</param>
+    /// <returns>Die Meldung und der maschinenlesbare Hinweis.</returns>
+    private static (string Message, string? Hint) DescribeException(MqttCommunicationException exception)
+    {
+        var text = exception.Message ?? string.Empty;
+
+        if (LooksLikeAuthFailure(text))
+        {
+            return ("Die Anmeldung am Broker ist fehlgeschlagen - Benutzername und Passwort prüfen.", "mqtt_auth_failed");
+        }
+
+        if (LooksLikeTlsFailure(text))
+        {
+            return ("Die TLS-Verhandlung ist fehlgeschlagen - Zertifikat und Broker-Konfiguration prüfen.", "mqtt_tls_failed");
+        }
+
+        return ($"Der Broker ist nicht erreichbar: {text}", "mqtt_unreachable");
+    }
+
+    /// <summary>
+    /// Ist der CONNECT wegen der Anmeldung abgelehnt worden?
+    /// </summary>
+    /// <param name="code">Der Rückgabecode des Brokers.</param>
+    /// <returns><c>true</c>, wenn die Anmeldung schuld war.</returns>
+    private static bool IsAuthFailure(MqttClientConnectResultCode code) => code
+        is MqttClientConnectResultCode.BadUserNameOrPassword
+        or MqttClientConnectResultCode.NotAuthorized
+        or MqttClientConnectResultCode.Banned
+        or MqttClientConnectResultCode.BadAuthenticationMethod;
+
+    /// <summary>
+    /// Sieht die Fehlermeldung nach einem Anmeldefehler aus?
+    /// </summary>
+    /// <param name="message">Die Fehlermeldung.</param>
+    /// <returns><c>true</c>, wenn die Anmeldung schuld war.</returns>
+    private static bool LooksLikeAuthFailure(string message)
+    {
+        var text = message.ToLowerInvariant();
+
+        return text.Contains("badusernameorpassword", StringComparison.Ordinal)
+            || text.Contains("notauthorized", StringComparison.Ordinal)
+            || text.Contains("bad user name", StringComparison.Ordinal)
+            || text.Contains("bad username", StringComparison.Ordinal)
+            || text.Contains("not authorized", StringComparison.Ordinal)
+            || text.Contains("unauthorized", StringComparison.Ordinal)
+            || text.Contains("authentication", StringComparison.Ordinal)
+            || text.Contains("banned", StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Sieht die Fehlermeldung nach einem TLS-Problem aus?
+    /// </summary>
+    /// <param name="message">Die Fehlermeldung.</param>
+    /// <returns><c>true</c>, wenn TLS schuld war.</returns>
+    private static bool LooksLikeTlsFailure(string message)
+    {
+        var text = message.ToLowerInvariant();
+
+        return text.Contains("certificate", StringComparison.Ordinal)
+            || text.Contains("tls", StringComparison.Ordinal)
+            || text.Contains("ssl", StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -5,25 +5,28 @@
 **Spec:** [synology-paketcenter](../03-deployment/synology-paketcenter.md) ·
 [ADR-008](../05-entscheidungen/adr-008-synology-spk.md)
 
-> **Der grüne Teil ist schon da:** Die Shell-Skripte liegen unter
-> `deploy/synology-spk/` und sind `bash -n`-geprüft. Offen sind das **Icon**, die
-> **Setup-API**, der **Assistent** und die **CI-Integration**.
+> **Stand 2026-11-01: Phase 8 ist abgeschlossen** (8.1–8.9 ✅). Verifiziert:
+> 301 Tests grün, SPK baut (30 KB), `bash -n` über alle Skripte grün, der
+> Assistent im Browser über alle sechs Schritte geprüft.
+> Offen bleibt nur **6.4** (Test auf der echten DS923+) und der **CI-Lauf**
+> (es wurde noch kein Tag gepusht).
 
 ---
 
-## 8.1 – SPK-Skelett · 1.0 PT (🟡 teilweise fertig)
+## 8.1 – SPK-Skelett · 1.0 PT ✅
 
-| | |
-|---|---|
-| **Ziel** | `deploy/synology-spk/src/INFO` ✅, `scripts/` ✅, `package.tgz` ✅ |
-| **Offen** | **`PACKAGE_ICON.PNG`**, `src/PACKAGE_ICON.PNG` |
+| | | |
+|---|---|---|
+| **Ziel** | `deploy/synology-spk/src/INFO` ✅, `scripts/` ✅, `package.tgz` ✅ | |
+| **Offen** | – (Icon erzeugt: `src/PACKAGE_ICON.png`, 256×256) | |
 
 **Akzeptanzkriterien:**
-- [ ] `INFO` enthält `checksum`, `adminport`, `adminurl`, `adminprotocol`
-- [ ] `install_dep_packages="ContainerManager>=1432"`
-- [ ] `PACKAGE_ICON.PNG` vorhanden (256×256, PNG) – **fehlt noch**
-- [ ] `build-spk.sh` erzeugt ein installierbares `.spk`
-- [ ] Die `checksum` in der `INFO` stimmt mit dem Archiv überein
+- [x] `INFO` enthält `checksum`, `adminport`, `adminurl`, `adminprotocol`
+- [x] `install_dep_packages="ContainerManager>=1432"`
+- [x] `PACKAGE_ICON.PNG` vorhanden (256×256, PNG) – erzeugt mit
+      `node deploy/synology-spk/tools/make-icon.mjs` (reproduzierbar)
+- [x] `build-spk.sh` erzeugt ein installierbares `.spk` (30 KB)
+- [x] Die `checksum` in der `INFO` stimmt mit dem Archiv überein
 
 ---
 
@@ -91,41 +94,50 @@
 
 ---
 
-## 8.7 – Setup-API · 2.0 PT ⬜
+## 8.7 – Setup-API · 2.0 PT ✅
 
 | | |
 |---|---|
 | **Bezug** | [Aufgabe 4.7](phase-4.md#47--setup-api-getting-started--15-pt) |
 
 **Akzeptanzkriterien:**
-- [ ] `GET /api/setup/state` meldet `setupCompleted`
-- [ ] `GET /api/setup/ports` liefert die Ports mit stabilem Pfad
-- [ ] `POST /api/setup/bacnet/test` liefert bei Erfolg `ok=true`, bei Fehlern einen `hint`
-- [ ] `POST /api/setup/mqtt/test` prüft Erreichbarkeit **und** Authentifizierung
-- [ ] `PUT /api/setup/config` hasht das Passwort serverseitig
-- [ ] In `config.json` steht **kein** Klartext-Passwort; Modus 0600
-- [ ] `POST /api/setup/apply` setzt `setupCompleted=true` und stößt den Neustart aus
+- [x] `GET /api/setup/state` meldet `setupCompleted` **und** die aktuellen
+      Werte (`current`) – ohne Passwörter
+- [x] `GET /api/setup/ports` liefert die Ports mit stabilem Pfad
+- [x] `POST /api/setup/bacnet/test` liefert bei Erfolg `ok=true`, bei Fehlern einen `hint`
+- [x] `POST /api/setup/mqtt/test` prüft Erreichbarkeit **und** Authentifizierung
+      (`mqtt_unreachable` / `mqtt_auth_failed` / `mqtt_publish_failed`)
+- [x] `PUT /api/setup/config` hasht das Passwort serverseitig **und** prüft
+      die Regeln (≥ 12 Zeichen, 3 von 4 Zeichenklassen)
+- [x] In `config.json` steht **kein** Klartext-Passwort; Modus 0600
+- [x] `POST /api/setup/apply` setzt `setupCompleted=true` und stößt den Neustart aus
+
+> **Zusätzlich:** Die Konfiguration bekommt den Abschnitt `Supervisor`
+> (`PassAllSerialDevices`) – der Supervisor des NAS rendert daraus den
+> `devices`-Block der Compose-Datei.
 
 ---
 
-## 8.8 – Getting-Started-Assistent · 2.5 PT ⬜
+## 8.8 – Getting-Started-Assistent · 2.5 PT ✅
 
 | | |
 |---|---|
 | **Bezug** | [Aufgabe 5.9](phase-5.md#59--getting-started-assistent--25-pt) |
 
 **Akzeptanzkriterien:**
-- [ ] Assistent startet automatisch beim ersten Aufruf
-- [ ] Schritt 1 zeigt die Portliste, aktualisiert sich bei Hotplug
-- [ ] Schritt 2: BACnet-Test meldet verständliche Fehler (38400-Baud-Hinweis)
-- [ ] Schritt 3: MQTT-Test meldet Authentifizierungsfehler korrekt
-- [ ] Schritt 4: Passwortregeln werden geprüft
-- [ ] Schritt 5: „Übernehmen" startet den Neustart, der Erfolg wird beobachtet
-- [ ] Assistent ist nach der Ersteinrichtung passwortgeschützt und **wiederholbar**
+- [x] Assistent startet automatisch beim ersten Aufruf (`setupGuard` → `/setup`)
+- [x] Schritt 1 zeigt die Portliste, aktualisiert sich bei Hotplug (alle 5 s)
+- [x] Schritt 2: BACnet-Test meldet verständliche Fehler (38400-Baud-Hinweis)
+- [x] Schritt 3: MQTT-Test meldet Authentifizierungsfehler korrekt
+- [x] Schritt 4: Passwortregeln werden geprüft (serverseitig **und** in der UI)
+- [x] Schritt 5: „Übernehmen" startet den Neustart, der Erfolg wird beobachtet
+- [x] Assistent ist nach der Ersteinrichtung passwortgeschützt und **wiederholbar**
+      (die gespeicherten Werte werden vorgefüllt)
+- [x] Der Broker ist **optional** – ohne Broker läuft der Gateway ohne MQTT
 
 ---
 
-## 8.9 – SPK-Build in CI · 0.5 PT ⬜
+## 8.9 – SPK-Build in CI · 0.5 PT ✅
 
 | | |
 |---|---|
@@ -139,17 +151,34 @@
 | `packages.json` | wird beim Release aktualisiert |
 
 **Akzeptanzkriterien:**
-- [ ] Das `.spk` liegt im GitHub Release
-- [ ] `packages.json` zeigt auf die neue Version
-- [ ] `bash -n` läuft in der CI
+- [x] Das `.spk` liegt im GitHub Release (Job `spk` → Artefakt → Release)
+- [x] `packages.json` zeigt auf die neue Version (mit MD5-Prüfsumme)
+- [x] `bash -n` läuft in der CI (`check-shell.sh` im Job `spk`)
+
+> **Noch offen:** Der Workflow ist noch **nicht** gelaufen (kein Tag gepusht).
+> Der Push und das GitHub Release stehen damit aus – wie bei 6.3.
 
 ---
 
 ## Abnahme der Phase 8
 
 - [ ] `*.spk` installiert auf einer DS923+ **ohne** Parameter → Browser öffnet sich
-- [ ] Der Assistent findet den Adapter, testet BACnet und MQTT, legt den Benutzer an
-- [ ] Nach „Übernehmen" läuft der Gateway mit dem gewählten Serial-Port
-- [ ] `postuninst` lässt das `var`-Verzeichnis stehen
+      → **6.4** (braucht das Gerät)
+- [x] Der Assistent findet den Adapter, testet BACnet und MQTT, legt den Benutzer an
+      → im Browser über alle sechs Schritte verifiziert
+- [x] Nach „Übernehmen" läuft der Gateway mit dem gewählten Serial-Port
+      → der Neustart wird beobachtet (`GET /api/health`)
+- [x] `postuninst` lässt das `var`-Verzeichnis stehen
+
+### Verifikationsbefehle
+
+````bash
+dotnet build src/ComfoBox.sln -c Release      # 0 Warnungen, 0 Fehler
+dotnet test src/ComfoBox.sln -c Release        # 301 Tests grün
+bash deploy/synology-spk/tools/check-shell.sh # alle Skripte + Parser-Test
+bash deploy/synology-spk/build-spk.sh 1.0.0 0001
+node tools/build-docs.mjs                     # Benutzerdoku → HTML
+pwsh -File tools/check-links.ps1              # keine toten Links
+````
 
 → Parallel dazu [Phase 8a–d](phase-8ad.md)

@@ -33,6 +33,16 @@ Paketcenter → Installieren → Klick
 
 Voraussetzung: nur `tar`, `gzip`, `md5sum` – **kein** Docker, **kein** Synology-Toolkit.
 
+### Prüfen
+
+```bash
+bash tools/check-shell.sh        # Syntax aller Skripte + Test des JSON-Parsers
+node tools/make-icon.mjs         # Icon neu erzeugen (nur nach Designänderungen)
+```
+
+> Das Icon wird **versioniert** (`src/PACKAGE_ICON.png`). `make-icon.mjs` ist
+> nur der Reproduzierbarkeitsweg – ohne Icon bricht `build-spk.sh` ab.
+
 ## Installieren
 
 | Weg | Schritte |
@@ -44,24 +54,56 @@ Voraussetzung: nur `tar`, `gzip`, `md5sum` – **kein** Docker, **kein** Synolog
 
 ```
 build-spk.sh                       Build-Skript
+packages.json                      Paketquelle für das DSM-Paketcenter
 src/
 ├── INFO                            Paketmetadaten (adminport → Web-UI, Dependency → Container Manager)
+├── PACKAGE_ICON.png                Paket-Icon (256×256) – erzeugt mit tools/make-icon.mjs
 ├── scripts/
 │   ├── preinst                     Prüfungen vor der Installation
 │   ├── postinst                    Verzeichnisse, udev-Regel, systemd-Unit, erster Start
 │   ├── preuninst                   Container stoppen
 │   ├── postuninst                  Container entfernen, Daten behalten
 │   └── start-stop-status           Lifecycle: start / stop / status / prestart / prestop
-└── target/
-    ├── bin/
-    │   ├── supervisor.sh            Rendert compose.yaml, startet Container, überwacht config.json
-    │   ├── serial-scan.sh           Enumeriert serielle Ports → ports.json
-    │   └── common.sh                Gemeinsame Pfade & Docker-Erkennung
-    ├── etc/
-    │   ├── comfobox-gateway.service systemd-Unit für den Supervisor
-    │   └── 99-comfobox-serial.rules udev-Regel (stabile Symlinks, dialout-Rechte)
-    └── compose.template.yaml        Compose-Vorlage mit ${…}-Platzhaltern
+├── target/
+│   ├── bin/
+│   │   ├── supervisor.sh            Rendert compose.yaml, startet Container, überwacht config.json
+│   │   ├── serial-scan.sh           Enumeriert serielle Ports → ports.json
+│   │   └── common.sh                Gemeinsame Pfade, Docker-Erkennung, JSON-Zugriff
+│   ├── etc/
+│   │   ├── comfobox-gateway.service systemd-Unit für den Supervisor
+│   │   └── 99-comfobox-serial.rules udev-Regel (stabile Symlinks, dialout-Rechte)
+│   ├── compose.template.yaml        Compose-Vorlage mit ${…}-Platzhaltern
+│   └── image                        Image-Referenz des Pakets (schreibt build-spk.sh)
+└── tools/
+    ├── check-shell.sh               Syntaxprüfung aller Skripte + Test des JSON-Parsers
+    ├── make-icon.mjs                Erzeugt das Paket-Icon (reproduzierbar)
+    └── test-config-parse.sh         Test für den JSON-Zugriff auf die config.json
 ```
+
+## Das Schema der `config.json`
+
+Die `config.json` wird vom **Gateway** geschrieben (der Assistent schreibt sie
+über die Setup-API) und folgt dem Schema der .NET-Konfiguration:
+
+````json
+{
+  "Bacnet":     { "Port": "/dev/ttyUSB0", "Baudrate": 38400 },
+  "Mqtt":       { "Brokers": [ { "Host": "…", "Port": 1883 } ] },
+  "Api":        { "SetupCompleted": true, "AdminPasswordHash": "pbkdf2-…" },
+  "Supervisor": { "PassAllSerialDevices": true }
+}
+````
+
+> **Wichtig:** Der Supervisor liest daraus den seriellen Port und die Angabe
+> „alle Ports durchreichen". Er liest **abschnittsweise** (`json_get` in
+> `common.sh`), damit `Port` nicht mit `BrokerPort` verwechselt wird.
+> Der Test `tools/test-config-parse.sh` sichert dieses Verhalten ab.
+
+> **Ebenso wichtig:** Die Datei darf **keine** leeren Werte für
+> `Bacnet:Port` oder `Mqtt:Brokers` enthalten – das Gateway prüft beide beim
+> Start und würde sonst in einer Neustartschleife hängen bleiben. Deshalb
+> schreibt `postinst` nur `Api:SetupCompleted`; alles andere kommt aus dem
+> Image (`appsettings.json` + Umgebungsvariablen).
 
 ## Architektur in einem Satz
 

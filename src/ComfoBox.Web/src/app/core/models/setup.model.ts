@@ -12,6 +12,30 @@ export interface SetupStateDto {
   readonly steps: readonly string[];
   /** Die Version des Setup-Formats. */
   readonly version: number;
+  /** Die aktuell gespeicherten Werte (für den wiederholbaren Assistenten). */
+  readonly current?: SetupCurrentValues | null;
+}
+
+/**
+ * Die aktuell gespeicherten Werte der Einrichtung.
+ *
+ * <p>Es werden **niemals** Passwörter geliefert.
+ */
+export interface SetupCurrentValues {
+  /** Der konfigurierte serielle Port (oder `null`). */
+  readonly port: string | null;
+  /** Die konfigurierte Baudrate. */
+  readonly baudrate: number;
+  /** Der Host des Brokers (oder `null` - noch kein Broker gewählt). */
+  readonly brokerHost: string | null;
+  /** Der Port des Brokers. */
+  readonly brokerPort: number;
+  /** Der Benutzername am Broker (oder `null`). */
+  readonly brokerUsername: string | null;
+  /** Der Benutzername des Administrators (oder `null`). */
+  readonly adminUsername: string | null;
+  /** Werden alle seriellen Ports durchgereicht? */
+  readonly passAllSerialDevices: boolean;
 }
 
 /** Ein erkannter serieller Port. */
@@ -81,8 +105,8 @@ export interface SetupConfigRequest {
   /** Der Benutzername des Administrators. */
   readonly adminUsername: string | null;
   /** Das Passwort des Administrators im Klartext. */
-  readonly adminPassword: string | null;
-}
+  readonly adminPassword: string | null;  /** Sollen alle seriellen Ports durchgereicht werden? */
+  readonly passAllSerialDevices: boolean;}
 
 /** Die Schritte des Assistenten. */
 export type SetupStep = 'welcome' | 'serial' | 'bacnet' | 'mqtt' | 'security' | 'done';
