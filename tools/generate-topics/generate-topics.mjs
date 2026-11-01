@@ -160,7 +160,19 @@ function literalToString(raw) {
   if (text === 'null') return null;
   const verbatim = text.startsWith('@"');
   const body = verbatim ? text.slice(2, -1) : text.slice(1, -1);
-  return verbatim ? body.replace(/""/g, '"') : body.replace(/\\(.)/g, '$1');
+  // Zeilenenden vereinheitlichen.
+  //
+  // Ein verbatim-Literal über mehrere Zeilen enthält die **physischen**
+  // Zeilenenden der Quelldatei. Die sind auf Windows CRLF und unter Linux
+  // LF - der Generator wäre damit plattformabhängig. Die Fixture
+  // (`docs/topics.json`) enthält CRLF (sie wurde unter Windows erzeugt und
+  // ist eingefroren), also wird hier **immer** auf CRLF normalisiert.
+  //
+  // Unter Windows ist das eine No-Operation (das Literal enthält schon
+  // CRLF) - die Fixture und `Catalog.cs` bleiben byteweise unverändert.
+  // Unter Linux wird der Generator dadurch identisch.
+  const normalized = body.replace(/\r\n|\r|\n/g, '\r\n');
+  return verbatim ? normalized.replace(/""/g, '"') : normalized.replace(/\\(.)/g, '$1');
 }
 
 /** Wandelt ein C#-Zahlenliteral in eine Zahl. */
