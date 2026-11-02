@@ -10,8 +10,11 @@ Fehlt der Container Manager, installiert DSM ihn automatisch mit.</p>
 <h2 id="installation">Installation</h2>
 <h3 id="variante-a-aus-dem-paketzentrum-empfohlen">Variante A – aus dem Paketzentrum (empfohlen)</h3>
 <ol>
-<li>Kopieren Sie die Datei <code>ComfoBoxGateway_noarch-dsm7_&lt;version&gt;.spk</code> auf das NAS
-(z. B. per Samba-Freigabe oder <code>scp</code>)</li>
+<li>Laden Sie die Datei <code>ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk</code> aus dem
+GitHub-Release herunter:
+<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk</a>
+(Alternativ über die <a href="https://github.com/RF77/comfobox-mqtt/releases">Releases</a>)</li>
+<li>Kopieren Sie die Datei auf das NAS (z. B. per Samba-Freigabe oder <code>scp</code>)</li>
 <li><strong>Paketcenter → Installieren → Manuelle Installation</strong></li>
 <li>Datei auswählen → <strong>Installieren</strong></li>
 <li><strong>Fertig</strong> – das Browserfenster öffnet sich automatisch</li>
@@ -33,10 +36,16 @@ normalen Liste:</p>
 </tr>
 <tr>
 <td>URL</td>
-<td><code>https://&lt;Release-URL&gt;/packages.json</code></td>
+<td><a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json</a></td>
 </tr>
 </tbody></table>
 <p>Danach: <strong>Paketcenter → Community → ComfoBox Gateway → Installieren</strong></p>
+<blockquote>
+<p><strong>Die URL ist versionsgebunden.</strong> Für eine neuere Version steht die
+passende <code>packages.json</code> im jeweiligen Release. Die Datei nennt die
+<strong>exakte</strong> Download-Adresse des Pakets – sie ist deshalb auf einen festen
+Release-Tag verlinkt und nicht auf „das neueste Release&quot;.</p>
+</blockquote>
 <hr>
 <h2 id="was-bei-der-installation-passiert">Was bei der Installation passiert</h2>
 <table>

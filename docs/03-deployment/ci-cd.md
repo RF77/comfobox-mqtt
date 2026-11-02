@@ -278,6 +278,12 @@ Bei jedem PR wird das Image **einmal für amd64** gebaut und **echt** geprüft:
 > git tag -a v1.1.0 -m "Version 1.1.0"
 > git push origin v1.1.0
 > ````
+>
+> **Zusätzlich hilfreich:** Die Repository-**Topics** setzen
+> (Settings → General → Topics): `home-assistant`, `hacs`,
+> `custom-component`, `mqtt`, `climate`. Die HACS-Prüfung verlangt sie für
+> die Veröffentlichung im HACS-Default-Repository; für die Installation
+> aus einem eigenen HACS-Repository sind sie nicht nötig.
 
 ### Die Release-Kette: wer macht was
 
@@ -299,6 +305,27 @@ Bei einem Tag-Push `v<version>` laufen **drei** Workflows:
 > **Nie blind anlegen:** Beide Workflows dürfen das Release nicht
 > gleichzeitig erzeugen (Race). `gh release upload --clobber` ist
 > idempotent, `gh release create` ist es nicht.
+
+### Das Image muss **öffentlich** sein
+
+> Ohne ein öffentliches GHCR-Paket kann **weder** die Synology **noch** der
+> HA-Supervisor das Image ziehen – beide brauchen einen Anonymous-Pull.
+
+| Schritt | Erklärung |
+|---|---|
+| 1 | Einen **Personal Access Token (classic)** anlegen mit `write:packages` und `read:packages` |
+| 2 | Als Repository-Secret **`GHCR_TOKEN`** hinterlegen |
+| 3 | Das Paket `comfobox-gateway` in GHCR **löschen** (es wurde mit `GITHUB_TOKEN` erstellt – solche Pakete lassen sich **nicht** umstellen) |
+| 4 | Einen neuen Tag pushen – der Workflow publiziert das Image neu und stellt die Sichtbarkeit automatisch auf `public` |
+
+> **Warum der Token?** Ein Paket, das mit dem `GITHUB_TOKEN` des Workflows
+> publiziert wurde, kann **nicht** auf „public" umgestellt werden
+> („You can't change the visibility of packages that were published using
+> GITHUB_TOKEN"). Mit einem PAT ist das möglich – und nur dann ist das
+> Image ohne Zugangsdaten abrufbar.
+>
+> **Ohne Secret** weicht der Workflow auf den `GITHUB_TOKEN` aus und
+> meldet per `::warning::`, dass die Sichtbarkeit manuell umzustellen ist.
 
 ### Wohin die Artefakte?
 
