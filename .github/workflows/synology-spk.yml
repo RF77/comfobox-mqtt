@@ -64,7 +64,15 @@ permissions:
   contents: write   # Release-Assets anlegen/ergänzen
 
 concurrency:
-  group: synology-spk-${{ github.ref }}
+  # **Keine** Serialisierung: ein wartender Alt-Lauf (bis zu 30 min auf
+  # das Release des Image-Workflows) würde den nächsten Lauf in der Queue
+  # blockieren - und der nächste Release käme erst danach. Mit der
+  # `run_id` in der Gruppe laufen die Läufe parallel.
+  #
+  # Das ist unkritisch: `gh release upload --clobber` ist idempotent, und
+  # das Release wird nur vom Image-Workflow angelegt (der SPK-Workflow
+  # wartet darauf).
+  group: synology-spk-${{ github.ref }}-${{ github.run_id }}
   cancel-in-progress: false
 
 env:
@@ -183,9 +191,12 @@ jobs:
       - name: Release-Asset anhaengen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           TAG: v${{ needs.spk.outputs.version }}
         run: |
-          set -euo pipefail
+          set +e
+          set -uo pipefail
+          export GH_REPO="${{ github.repository }}"
           cd dist
 
           # **Reihenfolge:** Beim Tag-Push laufen `docker-publish.yml` und
@@ -199,15 +210,22 @@ jobs:
           # **Race:** Beide Workflows duerfen das Release nicht gleichzeitig
           # anlegen. Deshalb wird hier gewartet und nur hochgeladen
           # (`--clobber` ist idempotent).
+          # Erst einmal schnell pruefen, ob das Release ueberhaupt
+          # erreichbar ist. `timeout` verhindert, dass ein haengender
+          # gh-Aufruf die ganze Wartezeit blockiert.
+          if ! timeout 30 gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Das Release ${TAG} ist noch nicht da - warte darauf."
+          fi
+
           for i in $(seq 1 180); do
-            if gh release view "$TAG" > /dev/null 2>&1; then
+            if timeout 30 gh release view "$TAG" > /dev/null 2>&1; then
               break
             fi
             echo "Warte auf das Release ${TAG} ... (${i})"
             sleep 10
           done
 
-          if ! gh release view "$TAG" > /dev/null 2>&1; then
+          if ! timeout 30 gh release view "$TAG" > /dev/null 2>&1; then
             if [ "${{ github.event_name }}" = "push" ]; then
               # Beim Tag-Push muss der Image-Workflow das Release anlegen
               # (er tut das **nach** dem Image-Push). Fehlt es, ist der

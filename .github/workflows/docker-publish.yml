@@ -36,12 +36,46 @@ jobs:
       - name: Setup Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Login (GHCR)
+      #
+      # **Wichtig:** Ein Paket, das mit dem `GITHUB_TOKEN` publiziert wurde,
+      # kann **nicht** auf "public" umgestellt werden ("You can't change the
+      # visibility of packages that were published using GITHUB_TOKEN").
+      # Ohne ein öffentliches Paket kann aber weder die Synology noch der
+      # HA-Supervisor das Image ziehen.
+      #
+      # Deshalb wird - falls vorhanden - ein **Personal Access Token**
+      # (`secrets.GHCR_TOKEN`, classic, mit `write:packages` und
+      # `read:packages`) verwendet. Nur damit ist das Paket später auf
+      # "public" umstellbar. Ohne das Secret greift der `GITHUB_TOKEN`.
       - name: Login (GHCR)
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      # Das Paket auf "public" stellen - **nur** mit einem PAT möglich.
+      # Der Schritt darf den Lauf nicht rot machen: wenn das Paket mit dem
+      # GITHUB_TOKEN erstellt wurde, lehnt GitHub die Änderung ab.
+      - name: Paket veröffentlichen (Sichtbarkeit)
+        env:
+          GH_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+          PACKAGE: comfobox-gateway
+        run: |
+          set +e
+          set -uo pipefail
+          echo "::group::Sichtbarkeit des Pakets auf 'public' setzen"
+          gh api --method PATCH "/user/packages/container/${PACKAGE}" \
+            -f visibility=public
+          status=$?
+          echo "::endgroup::"
+          if [ "$status" -ne 0 ]; then
+            echo "::warning::Die Sichtbarkeit konnte nicht automatisch gesetzt werden (Exit ${status}). Bitte manuell umstellen: https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${PACKAGE}/settings -> 'Change visibility' -> 'Public'. Ohne öffentliches Paket kann der Synology- und der HA-Supervisor das Image nicht ziehen."
+          else
+            echo "Das Paket ist jetzt öffentlich."
+          fi
+          exit 0
 
       # Der Name des Repositorys muss **kleingeschrieben** sein - Docker
       # lehnt "ghcr.io/RF77/..." mit "repository name must be lowercase" ab.
