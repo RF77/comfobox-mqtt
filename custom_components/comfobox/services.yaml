@@ -1,0 +1,37 @@
+# Services der ComfoBox-Integration.
+#
+# Die Namen und Beschreibungen muessen mit `strings.json` (Abschnitt
+# "services") uebereinstimmen - sonst schlaegt die Hassfest-Pruefung des
+# Home-Assistant-Add-ons fehl.
+#
+# Die Felder entsprechen dem Schema aus `services.py`:
+#   set_value: entity_id (required), value (required)
+#   restart:   keine Felder
+#   read_all:  keine Felder
+set_value:
+  name: Wert setzen
+  description: Schreibt einen Wert auf ein ComfoBox-Item.
+  fields:
+    entity_id:
+      name: Entitaet
+      description: Die ComfoBox-Entitaet, auf die geschrieben wird.
+      required: true
+      example: number.comfobox_elesta_raumsollwert_normal
+      selector:
+        entity:
+          integration: comfobox
+    value:
+      name: Wert
+      description: Der zu schreibende Wert.
+      required: true
+      example: "21.5"
+      selector:
+        text:
+
+restart:
+  name: Gateway neu starten
+  description: Startet das ComfoBox-Gateway neu.
+
+read_all:
+  name: Alle Werte neu lesen
+  description: Liest alle Items sofort neu vom Gateway.

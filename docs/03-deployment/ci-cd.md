@@ -258,6 +258,48 @@ Bei jedem PR wird das Image **einmal für amd64** gebaut und **echt** geprüft:
 | `workflow_dispatch` | SPK on demand bauen (Version, Revision, Release, NAS-Kopie) |
 | `workflow_call` | Aufruf aus anderen Workflows |
 
+### ⚠️ Der Default-Branch heißt `master` – nicht `main`
+
+> **Das ist die Ursache für die meisten „die Action tut nichts"-Fälle.**
+
+| Regel | Warum |
+|---|---|
+| Der Default-Branch dieses Repositorys ist **`master`** (der Legacy-Stand) | `main` existiert **nicht** – ein Trigger darauf feuert nie |
+| Ein Workflow ist nur per **`workflow_dispatch`** startbar, wenn er im **Default-Branch** liegt | sonst erscheint er nicht in der Oberfläche und der „Run workflow"-Knopf fehlt |
+| Ein **`push`**-Trigger funktioniert auch außerhalb des Default-Branchs | deshalb läuft der SPK-Workflow bei einem **Tag-Push** auch ohne Branch-Wechsel |
+| Für `workflow_call` muss der aufgerufene Workflow im **Default-Branch** liegen | die Verkettung über `workflow_call` setzt denselben Branch-Wechsel voraus |
+
+> **Empfehlung:** Den Default-Branch auf `Upgrade` umstellen
+> (Repository → Settings → General → Default branch). Dann sind alle sechs
+> Workflows sichtbar und manuell startbar. **Bis dahin** wird das Release
+> über den **Tag-Push** ausgelöst:
+>
+> ````bash
+> git tag -a v1.1.0 -m "Version 1.1.0"
+> git push origin v1.1.0
+> ````
+
+### Die Release-Kette: wer macht was
+
+Bei einem Tag-Push `v<version>` laufen **drei** Workflows:
+
+| Workflow | Ergebnis |
+|---|---|
+| `docker-publish.yml` | Image nach GHCR, **danach** das Release `v<version>` |
+| `synology-spk.yml` | wartet auf dieses Release, hängt `.spk` + `packages.json` an |
+| `ha-release.yml` | Release `1.0.0` mit CHANGELOG + Add-on-Archiv (für HACS) |
+
+> **Das Release ist der Synchronisationspunkt.** `synology-spk.yml` legt das
+> Release **nicht** selbst an, sondern **wartet** darauf – weil der
+> Image-Workflow es **nach** dem Image-Push erzeugt. Damit ist garantiert:
+> **Das Image liegt in GHCR, bevor das SPK-Paket existiert.** Andernfalls
+> könnte der Nutzer das Paket installieren, während das Image fehlt – der
+> Container startete dann nicht.
+>
+> **Nie blind anlegen:** Beide Workflows dürfen das Release nicht
+> gleichzeitig erzeugen (Race). `gh release upload --clobber` ist
+> idempotent, `gh release create` ist es nicht.
+
 ### Wohin die Artefakte?
 
 | Artefakt | Ablage | Limit |
@@ -273,6 +315,11 @@ Bei jedem PR wird das Image **einmal für amd64** gebaut und **echt** geprüft:
 > in GHCR. Wer trotzdem eine Kopie **auf dem NAS** haben will, hinterlegt die
 > Secrets `NAS_SSH_HOST`, `NAS_SSH_USER`, `NAS_SSH_KEY` und `NAS_TARGET_DIR`
 > – der Workflow kopiert das Paket dann direkt auf das DSM.
+
+> **`packages.json` zeigt auf einen festen Release-Tag**, nicht auf
+> `releases/latest`. `latest` ist das zuletzt **veröffentlichte** Release –
+> nach einem Tag-Push ist das das HA-Release `1.0.0` (ohne `v`), nicht
+> `v1.0.0`. Der Download liefe dann ins Leere.
 
 ## 5. Release-Prozess
 

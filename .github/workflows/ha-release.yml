@@ -116,7 +116,10 @@ jobs:
       - name: Add-on prüfen (hassfest)
         uses: home-assistant/actions/hassfest@master
         with:
-          config-file: deploy/ha-addon/comfobox/config.yaml
+          # Der Input `config-file` existiert bei dieser Action **nicht**
+          # ("Unexpected input(s) 'config-file', valid inputs are ['']") -
+          # die Action prüft das Add-on im Repository-Standardpfad.
+          path: deploy/ha-addon/comfobox
 
   release:
     name: HACS- und Add-on-Release
