@@ -91,7 +91,7 @@ jobs:
       # Der Scan laeuft VOR dem Push-Erfolg: ein Image mit CRITICAL/HIGH darf
       # nicht in der Registry landen (exit-code '1' bricht den Job ab).
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ steps.namespace.outputs.value }}/comfobox-gateway:${{ steps.version.outputs.version }}
           severity: CRITICAL,HIGH

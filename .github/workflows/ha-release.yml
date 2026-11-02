@@ -89,11 +89,29 @@ jobs:
           echo "integration=${INTEGRATION}" >> "$GITHUB_OUTPUT"
           echo "addon=${ADDON}" >> "$GITHUB_OUTPUT"
 
+      # Die HACS-Prüfung meldet u. a. "The repository has no valid topics".
+      # Die Topics sind eine **Einstellung des Repositorys** (GitHub-Seite
+      # → Topics), nicht Teil des Codes - sie lassen sich hier nicht setzen.
+      #
+      # Für die Installation aus einem **eigenen** HACS-Repository sind die
+      # Topics nicht nötig; sie werden nur für die Veröffentlichung im
+      # HACS-Default-Repository geprüft. Deshalb blockiert die Prüfung das
+      # Release nicht (continue-on-error), der Fehler bleibt aber sichtbar.
+      #
+      # Nötige Topics (Repository-Einstellungen): `home-assistant`,
+      # `hacs`, `custom-component`, `mqtt`, `climate`.
       - name: HACS prüfen
+        id: hacs
+        continue-on-error: true
         uses: hacs/action@main
         with:
           category: integration
           ignore: brands
+
+      - name: HACS-Hinweis
+        if: steps.hacs.outcome == 'failure'
+        run: |
+          echo "::warning::Die HACS-Prüfung ist fehlgeschlagen. Typischer Grund: Das Repository hat keine Topics. Unter 'Settings → General → Topics' bitte eintragen: home-assistant, hacs, custom-component, mqtt, climate. Für die Installation aus einem eigenen HACS-Repository sind die Topics nicht erforderlich - deshalb blockiert der Fehler das Release nicht."
 
       - name: Add-on prüfen (hassfest)
         uses: home-assistant/actions/hassfest@master
