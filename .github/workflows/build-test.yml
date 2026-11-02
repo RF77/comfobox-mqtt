@@ -2,10 +2,13 @@ name: build-test
 
 on:
   push:
-    # `main` ist der Zielbranch, `Upgrade` der Entwicklungsbranch. Ohne den
-    # Entwicklungsbranch gibt es dort **keine** automatische CI – der Code
-    # wird erst beim Zusammenführen geprüft.
-    branches: [ main, Upgrade ]
+    # `master` ist der Default-Branch des Repositories (der Legacy-Stand),
+    # `Upgrade` der Entwicklungsbranch mit der .NET-10-Neuimplementierung.
+    #
+    # Wichtig: der Branch `main` existiert **nicht** - ein Trigger darauf
+    # feuert nie. Und: `workflow_dispatch` funktioniert nur, wenn die
+    # Workflow-Datei im **Default-Branch** liegt - das ist der `master`.
+    branches: [ master, Upgrade ]
   pull_request:
   workflow_dispatch:
 

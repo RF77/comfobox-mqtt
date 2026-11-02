@@ -65,7 +65,10 @@ jobs:
           tags: |
             type=ref,event=tag
             type=raw,value=${{ steps.version.outputs.version }}
-            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
+            # `latest` nur aus dem Default-Branch (`master`). Der Branch
+            # `main` existiert in diesem Repository nicht - die Bedingung
+            # war damit immer falsch.
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
             type=sha,format=long
 
       # Ein Image für Gateway UND Web-Oberfläche (→ ADR-007).

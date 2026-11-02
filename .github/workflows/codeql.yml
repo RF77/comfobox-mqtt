@@ -2,8 +2,9 @@ name: codeql
 
 on:
   push:
-    # `main` ist der Zielbranch, `Upgrade` der Entwicklungsbranch.
-    branches: [ main, Upgrade ]
+    # `master` ist der Default-Branch (Legacy-Stand), `Upgrade` der
+    # Entwicklungsbranch. Der Branch `main` existiert **nicht**.
+    branches: [ master, Upgrade ]
     paths-ignore:
       - 'src_old/**'
       - 'docs/Mono/**'

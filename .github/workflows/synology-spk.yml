@@ -127,6 +127,12 @@ jobs:
           REVISION="${{ steps.version.outputs.revision }}"
           SPK="${{ steps.build.outputs.spk }}"
           CHECKSUM="${{ steps.build.outputs.checksum }}"
+          # Die URL zeigt auf einen **festen** Release-Tag, nicht auf
+          # `releases/latest`. Grund: `latest` ist das zuletzt
+          # **veröffentlichte** Release - und das ist nach dem Tag-Push das
+          # HA-Release `1.0.0` (ohne "v"), nicht `v1.0.0`. Der Download
+          # liefe dann ins Leere. Feste Tags sind ohnehin besser: eine
+          # Version ist unveränderlich.
           cat > dist/packages.json <<EOF
           {
             "name": "ComfoBox Gateway",
@@ -140,7 +146,7 @@ jobs:
               {
                 "arch": "noarch",
                 "version": "${VERSION}-${REVISION}",
-                "url": "https://github.com/${{ github.repository }}/releases/latest/download/${SPK}",
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${VERSION}/${SPK}",
                 "checksum": "${CHECKSUM}"
               }
             ]
@@ -171,10 +177,10 @@ jobs:
           name: spk-${{ needs.spk.outputs.version }}-${{ needs.spk.outputs.revision }}
           path: dist
 
-      # `gh release upload` hängt Dateien an ein Release, **ohne** die
-      # Release-Notizen zu überschreiben. Das ist wichtig: die Notizen
+      # `gh release upload` haengt Dateien an ein Release, **ohne** die
+      # Release-Notizen zu ueberschreiben. Das ist wichtig: die Notizen
       # werden vom Image-Workflow (docker-publish.yml) geschrieben.
-      - name: Release-Asset anhängen
+      - name: Release-Asset anhaengen
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: v${{ needs.spk.outputs.version }}
@@ -182,12 +188,43 @@ jobs:
           set -euo pipefail
           cd dist
 
+          # **Reihenfolge:** Beim Tag-Push laufen `docker-publish.yml` und
+          # dieser Workflow **parallel**. Das Release wird vom Image-Workflow
+          # **nach** dem Image-Push angelegt - es ist damit der richtige
+          # Synchronisationspunkt: wenn das Release existiert, liegt das
+          # Image `ghcr.io/rf77/comfobox-gateway:<version>` bereits in der
+          # Registry. Ohne diese Warteschleife koennte das SPK-Paket vor dem
+          # Image installiert werden - der Container startete dann nicht.
+          #
+          # **Race:** Beide Workflows duerfen das Release nicht gleichzeitig
+          # anlegen. Deshalb wird hier gewartet und nur hochgeladen
+          # (`--clobber` ist idempotent).
+          for i in $(seq 1 180); do
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              break
+            fi
+            echo "Warte auf das Release ${TAG} ... (${i})"
+            sleep 10
+          done
+
           if ! gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release ${TAG} existiert noch nicht – er wird angelegt."
+            if [ "${{ github.event_name }}" = "push" ]; then
+              # Beim Tag-Push muss der Image-Workflow das Release anlegen
+              # (er tut das **nach** dem Image-Push). Fehlt es, ist der
+              # Image-Workflow gescheitert - das darf nicht stillschweigend
+              # ein Release ohne Image ergeben.
+              echo "::error::Das Release ${TAG} fehlt - der Image-Workflow (docker-publish.yml) ist gescheitert oder laeuft noch."
+              exit 1
+            fi
+
+            # Kein Image-Workflow gelaufen (z. B. manueller Lauf ohne Tag):
+            # das Release wird hier angelegt. `|| true` faengt den Fall ab,
+            # dass es zwischenzeitlich doch erschienen ist.
+            echo "Release ${TAG} existiert nicht - es wird jetzt angelegt."
             gh release create "$TAG" \
               --title "ComfoBox Gateway ${{ needs.spk.outputs.version }}" \
-              --notes "Synology-Paket (SPK) für die ComfoBox Series 5." \
-              --verify-tag
+              --notes "Synology-Paket (SPK) fuer die ComfoBox Series 5." \
+              --verify-tag || true
           fi
 
           gh release upload "$TAG" \

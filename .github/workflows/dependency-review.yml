@@ -2,7 +2,8 @@ name: dependency-review
 
 on:
   pull_request:
-    branches: [ main ]
+    # Der Branch `main` existiert **nicht** - der Trigger feuerte nie.
+    branches: [ master, Upgrade ]
 
 permissions:
   contents: read

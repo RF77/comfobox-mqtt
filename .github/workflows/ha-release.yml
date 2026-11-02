@@ -147,24 +147,25 @@ jobs:
           Multi-Arch: linux/amd64, linux/arm64 (Raspberry Pi 4/5, HA Green).
           EOF
 
-      - name: Release der Integration (HACS)
+      # Ein **eines** Release für beide Artefakte.
+      #
+      # Integration und Add-on haben dieselbe Version (`1.0.0`) und liegen im
+      # selben Repository - zwei Releases mit demselben Tag sind unmöglich
+      # (der zweite Aufruf würde das erste überschreiben und die
+      # Add-on-Notizen würden die Integrations-Notizen ersetzen).
+      #
+      # HACS findet die Integration über den Release-Tag = Version aus der
+      # manifest.json; der HA-Supervisor findet das Add-on-Archiv über den
+      # Release mit der Add-on-Version. Beides ist dieselbe Version → also
+      # **ein** Release mit **beiden** Assets.
+      - name: Release (HACS-Integration + Add-on)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.validate.outputs.integration }}
           target_commitish: ${{ github.sha }}
-          name: ComfoBox-Integration ${{ needs.validate.outputs.integration }}
+          name: ComfoBox ${{ needs.validate.outputs.integration }}
           body_path: release-notes.md
           fail_on_unmatched_files: false
           files: |
             CHANGELOG.md
-
-      - name: Release des Add-ons
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.validate.outputs.addon }}
-          target_commitish: ${{ github.sha }}
-          name: ComfoBox-Add-on ${{ needs.validate.outputs.addon }}
-          body_path: release-notes.md
-          fail_on_unmatched_files: false
-          files: |
             deploy/ha-addon/comfobox/comfobox-*.tar.gz
