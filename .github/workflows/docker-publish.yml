@@ -22,6 +22,10 @@ jobs:
   publish:
     name: Publish comfobox-gateway
     runs-on: ubuntu-latest
+    # Die Version wird an den Release-Job weitergegeben - dort ist
+    # `steps.version` **nicht** verfügbar (die Steps belong zum eigenen Job).
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,34 +121,50 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract release notes
-        id: notes
+      - name: Release-Notizen schreiben
         run: |
+          # Die Notizen gehen in eine **Datei**, nicht in `$GITHUB_OUTPUT`:
+          # mehrzeilige Werte brauchen dort das Delimiter-Schema
+          # (`key<<EOF`), und einzelne `echo`-Zeilen ohne `=` ergeben
+          # "Invalid format '## Images'" - der Release-Notizen-Schritt
+          # scheiterte daran. Mit `body_path` uebergibt softprops die Datei
+          # direkt - unkompliziert und robust.
+          #
+          # Die Version kommt aus `needs.publish.outputs.version` -
+          # `steps.version` gehoert zum Job `publish` und ist hier leer.
+          #
+          # `echo` mit einfachen Anfuehrungszeichen: die Backticks der
+          # Code-Fences und der-inline-Auszeichnung bleiben literal (in
+          # doppelten Anfuehrungszeichen waeren sie eine Command-Substitution).
+          set -euo pipefail
           {
             echo '## Images'
+            echo ''
             echo '```'
-            echo "${{ env.REGISTRY }}/rf77/comfobox-gateway:${{ steps.version.outputs.version }}"
+            echo "${{ env.REGISTRY }}/rf77/comfobox-gateway:${{ needs.publish.outputs.version }}"
             echo '```'
             echo ''
             echo 'Multi-Arch: linux/amd64, linux/arm64'
             echo ''
             echo '## Synology-Paket'
             echo '```'
-            echo 'ComfoBoxGateway_noarch-dsm7_${{ steps.version.outputs.version }}-0001.spk'
+            echo "ComfoBoxGateway_noarch-dsm7_${{ needs.publish.outputs.version }}-0001.spk"
             echo '```'
             echo ''
-            echo 'Installation: DSM → Paketcenter → Installieren → Manuelle Installation.'
+            echo 'Installation: DSM - Paketcenter - Installieren - Manuelle Installation.'
             echo ''
             echo '## Home Assistant'
             echo ''
             echo '- Integration (HACS): `custom_components/comfobox`'
             echo '- Add-on: `comfobox` (Port 8099)'
-          } >> "$GITHUB_OUTPUT"
+          } > release-notes.md
+
+          cat release-notes.md
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          body_path: ${{ steps.notes.outputs.notes }}
+          body_path: release-notes.md
           files: |
             CHANGELOG.md

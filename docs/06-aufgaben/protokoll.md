@@ -1448,6 +1448,73 @@ Archiv. **339 Tests grün**, Build 0 Warnungen / 0 Fehler.
 
 ---
 
+## 2026-11-02 – Release-Kette: das Synology-Paket war nicht auslösbar
+
+**Ergebnis:** Der User meldete „bei der GitHub Action geht noch was nicht".
+Die Ursache war eine Kette von **sechs** Problemen, die erst der **Tag-Push**
+sichtbar machte – vorher war die Action nie gelaufen:
+
+1. **Der Default-Branch heißt `master`** (Legacy-Stand von 2023) und enthält
+   **überhaupt keine Workflows**. Ein `workflow_dispatch` funktioniert nur,
+   wenn die Datei im Default-Branch liegt → der SPK-Workflow war weder
+   sichtbar noch manuell startbar. **Ein `push`-Trigger funktioniert auch
+   außerhalb** – deshalb löst der Tag-Push die Action aus.
+2. **Die Trigger zeigten auf `main`** – den Branch gibt es nicht. `main` →
+   `master` + `Upgrade` (build-test, codeql, dependency-review).
+3. **`aquasecurity/trivy-action@0.28.0` existiert nicht** (der Tag lautet
+   `v0.28.0`) → der Image-Job brach schon beim Action-Download ab, es kam
+   **kein Image und kein Release**.
+4. **`packages.json` zeigte auf `releases/latest`** – das ist das zuletzt
+   *veröffentlichte* Release und nach dem Tag-Push das HA-Release `1.0.0`
+   (ohne `v`). Der Download lief ins Leere → jetzt fester Release-Tag.
+5. **HA-Integration und Add-on publizierten beide auf Tag `1.0.0`** – der
+   zweite Aufruf überschrieb das erste Release → jetzt **ein** Release.
+6. **Drei Workflows liefen parallel und konkurrierten ums Release** → der
+   SPK-Workflow **wartet** jetzt auf das Release des Image-Workflows. Damit
+   ist auch die **Reihenfolge** garantiert: das Release entsteht *nach* dem
+   Image-Push, das Image liegt also sicher in GHCR, bevor das SPK-Paket
+   existiert.
+
+**Geänderte Dateien:**
+- `.github/workflows/{build-test,codeql,dependency-review}.yml` – Trigger auf
+  `master` + `Upgrade`
+- `.github/workflows/docker-publish.yml` – Trivy `v0.36.0`, `latest`-Tag auf
+  `master`
+- `.github/workflows/synology-spk.yml` – Warteschleife auf das Release,
+  race-sicheres Hochladen, feste Release-URL in der Paketquelle
+- `.github/workflows/ha-release.yml` – **ein** Release statt zwei,
+  `continue-on-error` für die HACS-Prüfung, gültiger hassfest-Input
+- `custom_components/comfobox/services.yaml` – **neu** (fehlte komplett)
+- `custom_components/comfobox/manifest.json` – Kategorien und
+  Schlüssel-Sortierung korrigiert
+
+**Überraschungen:**
+- ⚠️ **Der Default-Branch ist `master`, nicht `main`.** Ein Trigger auf `main`
+  feuert **nie** – das Repository hat keinen solchen Branch. Wer `main`
+  voraussetzt, baut eine Workflow, die nie läuft.
+- ⚠️ **Ein `push`-Trigger funktioniert auch außerhalb des Default-Branchs**,
+  ein `workflow_dispatch` und ein `workflow_call` **nicht**. Deshalb ist der
+  Tag-Push der einzige Weg, die Action ohne Branch-Wechsel auszulösen.
+- ⚠️ **Eine Action-Version ohne `v` kann es geben.** Der Tag der Trivy-Action
+  lautet `v0.28.0` – `0.28.0` **ohne** `v` findet GitHub nicht, und der Job
+  bricht schon beim Action-Download ab (nicht erst im Scan).
+- ⚠️ **`releases/latest` ist nicht die neueste Version**, sondern das zuletzt
+  **veröffentlichte** Release. Bei mehreren Release-Erzeugern ist das
+  unzuverlässig → immer einen **festen** Tag verwenden.
+- ⚠️ **Die HACS-Prüfung prüft die Repository-Topics** – eine
+  **Einstellung der GitHub-Seite**, nicht Teil des Codes. Für die
+  Installation aus einem eigenen HACS-Repository sind sie nicht nötig.
+- ⚠️ **`hassfest` kennt keinen Input `config-file`** („valid inputs are
+  ['']") – der Pfad gehört in `path`.
+- ⚠️ **Home-Assistant kennt die Kategorie `sensor` nicht** – die gültigen
+  Kategorien stehen in `homeassistant/components/homeassistant/strings.json`.
+- ⚠️ **Die `concurrency`-Gruppe eines Workflows blockiert den nächsten Lauf
+  desselben Refs.** Ein wartender Lauf (30 min auf das Release) hält den
+  Folge-Lauf in der Queue – das ist gewollt, macht aber den Status
+  unübersichtlich.
+
+---
+
 ## Nächste Session
 
 **Phase 7** – Parallelbetrieb & Umschaltung (7.1–7.5): zwei Gateways

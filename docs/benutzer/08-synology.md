@@ -21,11 +21,14 @@ Einrichtung.
 
 ### Variante A – aus dem Paketzentrum (empfohlen)
 
-1. Kopieren Sie die Datei `ComfoBoxGateway_noarch-dsm7_<version>.spk` auf das NAS
-   (z. B. per Samba-Freigabe oder `scp`)
-2. **Paketcenter → Installieren → Manuelle Installation**
-3. Datei auswählen → **Installieren**
-4. **Fertig** – das Browserfenster öffnet sich automatisch
+1. Laden Sie die Datei `ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk` aus dem
+   GitHub-Release herunter:
+   <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk>
+   (Alternativ über die [Releases](https://github.com/RF77/comfobox-mqtt/releases))
+2. Kopieren Sie die Datei auf das NAS (z. B. per Samba-Freigabe oder `scp`)
+3. **Paketcenter → Installieren → Manuelle Installation**
+4. Datei auswählen → **Installieren**
+5. **Fertig** – das Browserfenster öffnet sich automatisch
 
 ### Variante B – eigene Paketquelle (für mehrere Installationen)
 
@@ -37,9 +40,14 @@ normalen Liste:
 | Feld | Wert |
 |---|---|
 | Name | `ComfoBox` |
-| URL | `https://<Release-URL>/packages.json` |
+| URL | <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json> |
 
 Danach: **Paketcenter → Community → ComfoBox Gateway → Installieren**
+
+> **Die URL ist versionsgebunden.** Für eine neuere Version steht die
+> passende `packages.json` im jeweiligen Release. Die Datei nennt die
+> **exakte** Download-Adresse des Pakets – sie ist deshalb auf einen festen
+> Release-Tag verlinkt und nicht auf „das neueste Release".
 
 ---
 

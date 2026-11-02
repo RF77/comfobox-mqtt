@@ -8,6 +8,9 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [Unreleased]
 
 ### Added
+- **Release `v1.0.0`** – das Synology-Paket (.spk) und die Paketquelle
+  (`packages.json`) liegen als Release-Asset im Repository, das
+  Container-Image (linux/amd64 + linux/arm64) in GHCR
 - Phase 0: `src/global.json` (SDK-Pinning auf 10.0.400)
 - Phase 0: `src/Directory.Packages.props` (Central Package Management)
 - Phase 0: `src/Directory.Build.props` (Nullable, `TreatWarningsAsErrors`, C# 14, Lock-Dateien)
@@ -315,6 +318,33 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Geräte-ID (`{ClientId}-{DeviceId}`)
 
 ### Fixed
+- **Die GitHub Action fuer das Synology-Paket war nicht benutzbar.** Fuenf
+  Ursachen, alle gefunden ueber die Annotationen der Release-Laeufe:
+  - Der **Default-Branch heisst `master`** (Legacy-Stand ohne Workflows).
+    Ein `workflow_dispatch` ist nur moeglich, wenn der Workflow im
+    Default-Branch liegt - der SPK-Workflow war deshalb weder sichtbar noch
+    manuell startbar. Ueber den **Tag-Push** laeuft er auch ohne
+    Branch-Wechsel
+  - Die Trigger zeigten auf **`main`** - den Branch gibt es nicht.
+    `main` → `master` + `Upgrade` (build-test, codeql, dependency-review)
+  - **`aquasecurity/trivy-action@0.28.0` gibt es nicht** (der Tag lautet
+    `v0.28.0`) - der Image-Job brach schon beim Action-Download ab, es kam
+    kein Image und kein Release
+  - **`packages.json` zeigte auf `releases/latest`** - das ist das zuletzt
+    *veroeffentlichte* Release und nach dem Tag-Push das HA-Release `1.0.0`
+    (ohne `v`), nicht `v1.0.0`. Der Download liefe ins Leere. Die URL zeigt
+    jetzt auf den festen Release-Tag
+  - **HA-Integration und Add-on publizierten beide auf Tag `1.0.0`** - der
+    zweite Aufruf ueberschrieb das erste Release. Es gibt jetzt **ein**
+    Release mit beiden Assets
+- **Drei Workflows liefen beim Tag-Push parallel und konkurrierten ums
+  Release.** Der SPK-Workflow legt es nicht mehr blind an, sondern **wartet**
+  auf das Release des Image-Workflows. Das loest zugleich das
+  Reihenfolge-Problem: das Release entsteht **nach** dem Image-Push - das
+  Image liegt also sicher in GHCR, bevor das SPK-Paket existiert
+- **Die HA-Integration hatte keine `services.yaml`** (HACS: „Registers
+  services but has no services.yaml") und ein **unsortiertes Manifest** mit
+  der ungueltigen Kategorie `sensor`. Beides behoben
 - **Die CI lief seit Phase 0 nie – der Lauf war „rot", ohne dass ein Job
   gestartet wurde.** GitHub hatte `build-test.yml` und `codeql.yml` schon bei
   der **YAML-Validierung** abgelehnt (0 Jobs, 0 Sekunden):
