@@ -55,26 +55,44 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
-      # Das Paket auf "public" stellen - **nur** mit einem PAT möglich.
-      # Der Schritt darf den Lauf nicht rot machen: wenn das Paket mit dem
-      # GITHUB_TOKEN erstellt wurde, lehnt GitHub die Änderung ab.
-      - name: Paket veröffentlichen (Sichtbarkeit)
+      # Die Sichtbarkeit des Pakets **prüfen**.
+      #
+      # Für Pakete im **Nutzer-Namespace** gibt es keinen API-Endpunkt zum
+      # Ändern der Sichtbarkeit (`PATCH /user/packages/...` → 404, es
+      # existiert nur für Organisationen). Geprüft wird deshalb nur, und
+      # bei "private" wird mit dem exakten Weg gewarnt.
+      #
+      # Ein Paket, das mit dem `GITHUB_TOKEN` publiziert wurde, lässt sich
+      # **gar nicht** auf "public" umstellen ("You can't change the
+      # visibility of packages that were published using GITHUB_TOKEN").
+      # Dafür muss das Paket gelöscht und mit einem **PAT** neu publiziert
+      # werden - deshalb wird das Secret `GHCR_TOKEN` verwendet, falls
+      # vorhanden.
+      - name: Sichtbarkeit des Pakets prüfen
         env:
           GH_TOKEN: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
           PACKAGE: comfobox-gateway
         run: |
           set +e
           set -uo pipefail
-          echo "::group::Sichtbarkeit des Pakets auf 'public' setzen"
-          gh api --method PATCH "/user/packages/container/${PACKAGE}" \
-            -f visibility=public
-          status=$?
+          echo "::group::Sichtbarkeit des Pakets"
+          visibility=$(gh api "/user/packages/container/${PACKAGE}" \
+            --jq '.visibility' 2>/dev/null)
           echo "::endgroup::"
-          if [ "$status" -ne 0 ]; then
-            echo "::warning::Die Sichtbarkeit konnte nicht automatisch gesetzt werden (Exit ${status}). Bitte manuell umstellen: https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${PACKAGE}/settings -> 'Change visibility' -> 'Public'. Ohne öffentliches Paket kann der Synology- und der HA-Supervisor das Image nicht ziehen."
-          else
-            echo "Das Paket ist jetzt öffentlich."
-          fi
+
+          case "$visibility" in
+            public)
+              echo "Das Paket ist öffentlich - der Synology- und der HA-Supervisor können das Image ziehen."
+              ;;
+            private)
+              echo "::warning::Das Paket '${PACKAGE}' ist PRIVAT. Ohne öffentliches Paket kann der Synology- und der HA-Supervisor das Image nicht ziehen (HTTP 401)."
+              echo "::warning::Sichtbarkeit umstellen: https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${PACKAGE}/settings -> 'Change visibility' -> 'Public'"
+              echo "::warning::Lässt sich das nicht umstellen, wurde das Paket mit dem GITHUB_TOKEN publiziert. Dann: Paket löschen, Secret 'GHCR_TOKEN' (PAT classic mit write:packages + read:packages) hinterlegen und den Tag neu pushen."
+              ;;
+            *)
+              echo "::warning::Die Sichtbarkeit konnte nicht gelesen werden (Token fehlt oder unzureichend). Bitte manuell prüfen: https://github.com/users/${GITHUB_REPOSITORY_OWNER}/packages/container/${PACKAGE}/settings"
+              ;;
+          esac
           exit 0
 
       # Der Name des Repositorys muss **kleingeschrieben** sein - Docker
