@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Synology testen – ComfoBox Gateway</title>
+  <meta name="description" content="Schritt für Schritt das Paket auf der DS923+ installieren und den ersten Test machen">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Synology testen</h1>
+        <p class="description">Schritt für Schritt das Paket auf der DS923+ installieren und den ersten Test machen</p>
+        <div class="tags"><span class="tag">synology</span><span class="tag">nas</span><span class="tag">test</span></div>
+      </header>
+
+      <article class="prose">
+<h1>Auf der Synology testen</h1>
+<p>Diese Seite führt Sie Schritt für Schritt durch den ersten Test auf der
+DS923+ – vom Download bis zur Anzeige, ob die Heizung antwortet.</p>
+<blockquote>
+<p><strong>Sie brauchen:</strong> die DS923+ mit DSM 7.2 oder neuer, den <strong>Container
+Manager</strong> (DSM installiert ihn bei Bedarf selbst) und – für den Test mit
+der echten Heizung – den USB-Adapter.</p>
+</blockquote>
+<hr>
+<h2>Schritt 0 – Das Image muss öffentlich sein</h2>
+<blockquote>
+<p><strong>Das ist der wichtigste Schritt, und er liegt auf GitHub, nicht auf der
+NAS.</strong> Das Paket ist nur ein Wrapper: es startet das Container-Image
+<code>ghcr.io/rf77/comfobox-gateway:1.0.0</code> aus der GitHub-Registry. Ist das
+Image <strong>privat</strong>, kann die NAS es nicht ziehen – der Container startet
+dann nicht und es passiert gar nichts.</p>
+</blockquote>
+<p><strong>So prüfen Sie das</strong> (ohne Anmeldung, also so, wie es die NAS sieht):</p>
+<pre><code>https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Antwort</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>401 Unauthorized</strong></td>
+<td>das Image ist privat → Schritt 0a ist nötig</td>
+</tr>
+<tr>
+<td><strong>200 OK</strong></td>
+<td>alles bereit → weiter mit Schritt 1</td>
+</tr>
+</tbody></table>
+<h3>Schritt 0a – Image öffentlich machen</h3>
+<ol>
+<li><p><strong>Token anlegen</strong> – GitHub → <em>Settings</em> → <em>Developer settings</em> →
+<em>Personal access tokens</em> → <em>Tokens (classic)</em> → <em>Generate new token</em>.
+Erlaubte Scopes: <strong><code>write:packages</code></strong> und <strong><code>read:packages</code></strong>.</p>
+</li>
+<li><p><strong>Token als Secret hinterlegen</strong> – im Repository → <em>Settings</em> →
+<em>Secrets and variables</em> → <em>Actions</em> → <em>New repository secret</em>:
+Name <code>GHCR_TOKEN</code>, Wert = der Token.</p>
+</li>
+<li><p><strong>Altes Paket löschen</strong> – <a href="https://github.com/users/RF77/packages/container/comfobox-gateway/settings">https://github.com/users/RF77/packages/container/comfobox-gateway/settings</a>
+→ <em>Delete package</em>. Das ist nötig, weil ein Image, das mit dem
+automatischen GitHub-Token veröffentlicht wurde, <strong>nicht</strong> auf „public&quot;
+umgestellt werden kann.</p>
+</li>
+<li><p><strong>Tag neu pushen</strong> – damit das Image mit Ihrem Token neu veröffentlicht
+wird. Im Repository:</p>
+<pre><code class="language-bash">git push --delete origin v1.0.0
+git push origin v1.0.0
+</code></pre>
+</li>
+<li><p><strong>Sichtbarkeit umstellen</strong> – dieselbe Seite wie in Schritt 3 →
+<em>Change visibility</em> → <em>Public</em>.</p>
+</li>
+</ol>
+<blockquote>
+<p><strong>Ab Schritt 4 läuft der Image-Workflow</strong> und meldet am Ende selbst, ob
+das Paket öffentlich ist. Sie können die Warnung in den Workflow-Protokollen
+nachlesen.</p>
+</blockquote>
+<hr>
+<h2>Schritt 1 – Paket herunterladen</h2>
+<p><a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk">ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk</a>
+herunterladen und auf die NAS kopieren (Samba-Freigabe oder <code>scp</code>).</p>
+<blockquote>
+<p><strong>Alternativ</strong> über eine eigene Paketquelle – dann erscheint das Paket
+direkt in der normalen Liste des Paketzentrums:
+<em>Paketcenter → Einstellungen → Paketquelle → Hinzufügen</em>, URL
+<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json</a></p>
+</blockquote>
+<hr>
+<h2>Schritt 2 – Installieren</h2>
+<p><strong>Paketcenter → Installieren → Manuelle Installation</strong> → Datei wählen →
+<em>Installieren</em>.</p>
+<p>Das Paket prüft vorher selbst (DSM-Version, Container Manager, freier Port
+8081) und startet danach den Container. Der Browser öffnet sich
+automatisch auf <code>http://&lt;NAS-IP&gt;:8081/</code>.</p>
+<p><strong>Ohne Hardware testen?</strong> Das geht: Der Assistent startet auch ohne
+USB-Adapter. Sie können Web-Oberfläche, MQTT-Anbindung und Kennwort
+einrichten. Die BACnet-Werte bleiben dann leer – das ist erwartet.</p>
+<hr>
+<h2>Schritt 3 – Der erste Blick</h2>
+<table>
+<thead>
+<tr>
+<th>Was prüfen</th>
+<th>Wo</th>
+<th>Erwartet</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Läuft der Container?</td>
+<td>Container Manager → <code>comfobox-gateway</code></td>
+<td>Status <em>läuft</em>, keine Neustarts</td>
+</tr>
+<tr>
+<td>Antwortet der Gateway?</td>
+<td><code>http://&lt;NAS-IP&gt;:8081/api/health</code></td>
+<td><code>&quot;state&quot;:&quot;online&quot;</code></td>
+</tr>
+<tr>
+<td>Zeigt die Oberfläche?</td>
+<td>Browser auf Port 8081</td>
+<td>Dashboard ohne Fehlerbanner</td>
+</tr>
+<tr>
+<td>Läuft der Überwachungsdienst?</td>
+<td><code>synopkg status ComfoBoxGateway</code></td>
+<td>aktiv</td>
+</tr>
+</tbody></table>
+<p>Der Container braucht <strong>etwa 30 Sekunden</strong> bis zum ersten „healthy&quot; – der
+Healthcheck läuft erst in diesem Abstand.</p>
+<hr>
+<h2>Schritt 4 – Den seriellen Port prüfen</h2>
+<p>Stecken Sie den USB-Adapter an und rufen Sie die Ports ab:</p>
+<pre><code>http://&lt;NAS-IP&gt;:8081/api/config/serial-ports
+</code></pre>
+<p>Sie sollten Ihren Adapter sehen, zum Beispiel:</p>
+<pre><code class="language-json">{ &quot;ports&quot;: [ { &quot;device&quot;: &quot;/dev/ttyUSB0&quot;,
+               &quot;stableId&quot;: &quot;/dev/serial/by-id/usb-Prolific_USB-Serial-if00-port0&quot;,
+               &quot;description&quot;: &quot;Prolific CH340 (1a86:7523)&quot; } ] }
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Sehen Sie …</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Ihren Adapter</td>
+<td>gut – weiter mit Schritt 5</td>
+</tr>
+<tr>
+<td><strong>nichts</strong></td>
+<td>der Adapter wird nicht erkannt (Treiber, USB-Port, Kontakt)</td>
+</tr>
+<tr>
+<td>einen <strong>anderen</strong> Port</td>
+<td>der Adapter belegt einen anderen Anschluss – diesen wählen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Frage:</strong> Ist die ComfoBox auf <strong>38400 Baud</strong> umgestellt? Werksdefault ist
+76800. Bei 76800 antwortet die Heizung nicht – der Gateway meldet dann
+ständig Zeitüberschreitungen. Das lässt sich am Display der Heizung
+einstellen (dazu braucht es einen Neustart der Heizung).</p>
+</blockquote>
+<hr>
+<h2>Schritt 5 – Der Assistent</h2>
+<p>Der Assistent läuft in fünf Schritten:</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was passiert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td><strong>Seriellen Port wählen</strong> – den aus Schritt 4</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>BACnet prüfen</strong> – Baudrate 38400, Geräte-ID 1, Verbindungstest</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>MQTT</strong> – Broker eintragen (optional, aber der eigentliche Zweck)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Web-Zugang</strong> – Benutzername und Passwort (mind. 12 Zeichen)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Fertig</strong> – die Konfiguration wird gespeichert, der Gateway startet neu</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Der Assistent ist wiederholbar</strong> – <em>Konfiguration → Erneut einrichten</em>.
+Praktisch, wenn Sie den Adapter umgesteckt haben.</p>
+</blockquote>
+<p><strong>Wichtiger Nebeneffekt:</strong> Sobald der Assistent einen Port gespeichert hat,
+startet der Supervisor den Container mit genau diesem Gerät neu. Das
+Container-Protokoll zeigt dann die serielle Zuweisung.</p>
+<hr>
+<h2>Schritt 6 – Prüfen, ob die Heizung antwortet</h2>
+<p>In der Web-Oberfläche → <strong>Diagnose</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Reiter</th>
+<th>Was Sie sehen sollten</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Prüfungen</strong></td>
+<td>BACnet: <em>verbunden</em>, MQTT: <em>verbunden</em></td>
+</tr>
+<tr>
+<td><strong>BACnet-Bus</strong></td>
+<td>Zähler steigen, der Token läuft im Umlauf</td>
+</tr>
+<tr>
+<td><strong>Protokoll</strong></td>
+<td>keine Fehler, regelmäßig gelesene Werte</td>
+</tr>
+</tbody></table>
+<p>Und im <strong>Dashboard</strong> die ersten Werte der Heizung (Temperatur, Sollwerte,
+Warmwasser).</p>
+<blockquote>
+<p><strong>Der Reiter „BACnet-Bus&quot; ist nur lesend</strong> – er stellt keine Anfrage an die
+Heizung und ändert nichts. Er zählt mit, ob auf dem Bus überhaupt ein Token
+herumgeht.</p>
+</blockquote>
+<hr>
+<h2>Wenn etwas nicht klappt</h2>
+<h3>Das Paket installiert, aber der Container startet nicht</h3>
+<p>Fast immer die Ursache: <strong>das Image ist privat</strong>. Prüfen Sie Schritt 0
+noch einmal. Das Protokoll des Pakets zeigt das deutlich:</p>
+<pre><code class="language-bash">sudo tail -50 /tmp/ComfoBoxGateway.log
+</code></pre>
+<h3>Der Container startet, aber die Heizung antwortet nicht</h3>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Prüfung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Falscher Port</td>
+<td>Diagnose → BACnet-Bus: kommen überhaupt Frames an?</td>
+</tr>
+<tr>
+<td>Falsche Baudrate</td>
+<td>38400? (Werksdefault 76800)</td>
+</tr>
+<tr>
+<td>Falsche Geräte-ID</td>
+<td>1 (Standard)</td>
+</tr>
+<tr>
+<td>Adapter nicht erkannt</td>
+<td>Schritt 4 wiederholen</td>
+</tr>
+</tbody></table>
+<h3>Logs ansehen</h3>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Datei</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Paket-Log</td>
+<td><code>/tmp/ComfoBoxGateway.log</code></td>
+</tr>
+<tr>
+<td>Container-Log</td>
+<td><code>/var/packages/ComfoBoxGateway/var/logs/</code></td>
+</tr>
+<tr>
+<td>Live</td>
+<td>Container Manager → <code>comfobox-gateway</code> → <em>Protokoll</em></td>
+</tr>
+<tr>
+<td>Ohne SSH</td>
+<td>Web-Oberfläche → <strong>Diagnose</strong> → <em>Protokoll</em></td>
+</tr>
+</tbody></table>
+<h3>Alles zurücksetzen</h3>
+<pre><code class="language-bash">sudo synopkg stop ComfoBoxGateway
+sudo synopkg uninstall ComfoBoxGateway
+</code></pre>
+<blockquote>
+<p><strong>Die Konfiguration und der Schreibzähler bleiben erhalten</strong> – ein
+Deinstallieren setzt den 24-h-Schreibzähler <strong>nicht</strong> zurück. Das ist
+Absicht: er schützt die Elektronik der Heizung.</p>
+</blockquote>
+<hr>
+<h2>Nächste Schritte</h2>
+<table>
+<thead>
+<tr>
+<th>Ziel</th>
+<th>Anleitung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MQTT-Broker einrichten</td>
+<td><a href="mqtt.html">MQTT</a></td>
+</tr>
+<tr>
+<td>Werte in Home Assistant</td>
+<td><a href="home-assistant.html">Home Assistant</a></td>
+</tr>
+<tr>
+<td>Betrieb und Überwachung</td>
+<td><a href="monitoring.html">Monitoring</a></td>
+</tr>
+<tr>
+<td>Allgemeine Fehlersuche</td>
+<td><a href="fehlersuche.html">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="synology.html">&larr; Synology</a>
+          <a class="nav-next" href="monitoring.html">Monitoring und Alarmierung &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.0</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

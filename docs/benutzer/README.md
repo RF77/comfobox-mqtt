@@ -22,6 +22,7 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 | [Bedienung](06-bedienung.md) | Web-Oberfläche, Werte schreiben, Schreibschutz, **Protokoll ansehen** |
 | [HA-Add-on](07-ha-addon.md) | Installation als Add-on in Home Assistant |
 | [Synology](08-synology.md) | Installation als Paket auf der DS923+ |
+| [Synology testen](08b-synology-test.md) | **Schritt für Schritt: Paket installieren, Image freigeben, ersten Test machen** |
 | [Monitoring](08-monitoring.md) | Health überwachen, Alarmierung, **Backup und Wiederherstellung** |
 | [Fehlersuche](09-fehlersuche.md) | Symptom, Ursache und Lösung |
 | [API](10-api.md) | Schnittstelle für eigene Automatisierungen |

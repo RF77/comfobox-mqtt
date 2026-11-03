@@ -15,6 +15,11 @@ Einrichtung.
 > **Voraussetzung:** DSM 7.2.1 oder neuer mit **Container Manager**.
 > Fehlt der Container Manager, installiert DSM ihn automatisch mit.
 
+> **Sie probieren das Paket gerade zum ersten Mal aus?** Dann nehmen Sie die
+> [Schritt-für-Schritt-Anleitung](08b-synology-test.md) – sie beschreibt auch
+> den Schritt, der **auf GitHub** erledigt werden muss, bevor der Container
+> starten kann (das Image muss öffentlich sein).
+
 ---
 
 ## Installation
