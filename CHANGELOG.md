@@ -7,14 +7,21 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
-- **Das Synology-Paket installierte sich auf DSM 7.2 nicht** („kann nicht
-  installiert werden, da es mit Root-Rechten ausgeführt wird"). Die Datei
-  `conf/privilege` lag im Repository, wurde von `build-spk.sh` aber **nie in
-  das SPK gepackt** (im `tar`-Aufruf fehlte `conf`) – und war nicht einmal im
-  Git-Repository. Jetzt: sie ist versioniert, wird mit Modus 0644 gepackt,
-  und der Build bricht mit klarer Meldung ab, wenn sie fehlt.
-  Die Paketstruktur ist gegen ein funktionierendes Referenzpaket geprüft
-  (SynoCommunity/spksrc).
+- **Das Synology-Paket installierte sich auf DSM 7.4 nicht.** Zwei Fehler
+  hintereinander:
+  1. Die Datei `conf/privilege` lag im Repository, wurde von `build-spk.sh`
+     aber **nie in das SPK gepackt** (im `tar`-Aufruf fehlte `conf`) – und war
+     nicht einmal im Git-Repository. Ohne sie gilt das Paket als Root-Paket.
+  2. Die Datei war **inhaltlich falsch**: DSM 7.4 lehnt sie mit **Fehler 319**
+     („invalid package privilege content“) ab. Auslösser sind das Feld
+     `groupname` und die Actions `prestart`/`prestop` – beides steht in
+     **keinem** funktionierenden Referenzpaket (SynoCommunity/spksrc).
+     Nachgewiesen mit dem neuen Variantentest auf einem echten DSM 7.4.1
+- **`build-spk.sh` erzwingt jetzt LF-Zeilenenden** für `conf/privilege`. Mit
+  `core.autocrlf=false` wandert das Windows-CRLF unverändert in den Blob und
+  von dort ins SPK.
+- **`tools/check-spk.sh` prüft die privilege-Datei jetzt inhaltlich**: kein
+  CR-Zeichen, kein `groupname`, keine Actions `prestart`/`prestop`.
 - **Das Paket-Icon war 256×256 statt 64×64.** DSM 7.0 verlangt für
   `PACKAGE_ICON.PNG` genau 64×64 (Breaking Change, vorher 72×72). Die große
   Variante liegt jetzt als `PACKAGE_ICON_256.PNG` daneben.
@@ -39,7 +46,9 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - **`deploy/synology-spk/tools/dsm-diagnose.sh`** – läuft auf der NAS (per
   SSH) und liefert DSM-Version, Paketinhalt, `privilege`-Datei und den
   **echten Fehlercode** von `synopkg install` (JSON). Das DSM nennt im Dialog
-  nur die Ursache, nicht den Grund.
+  nur die Ursache, nicht den Grund. Mit `--test` probiert das Skript die
+  möglichen Varianten der `privilege`-Datei **durch** und installiert die
+  erste, die funktioniert.
 
 ### Changed
 - Die **SPK-Revision** steht jetzt in `deploy/synology-spk/REVISION`, die

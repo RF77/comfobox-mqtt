@@ -193,8 +193,16 @@ das Skript nur (keine Änderung an der NAS).</p>
 <p><strong>Ausgabe:</strong> DSM-Version, der Inhalt des Pakets, die <code>privilege</code>-Datei und
 schließlich die JSON-Antwort von <code>synopkg install</code> – dort steht der
 <strong>Fehlercode</strong>, zum Beispiel:</p>
-<pre><code class="language-json">{&quot;error&quot;:{&quot;code&quot;:261,&quot;description&quot;:&quot;...&quot;},&quot;stage&quot;:&quot;install_failed&quot;}
+<pre><code class="language-json">{&quot;error&quot;:{&quot;code&quot;:319,&quot;description&quot;:&quot;invalid package privilege content&quot;},&quot;stage&quot;:&quot;install_failed&quot;}
 </code></pre>
+<blockquote>
+<p><strong>Fehlercode 319</strong> heißt: Das DSM liest die Datei <code>conf/privilege</code>, lehnt
+aber ihren <strong>Inhalt</strong> ab. Mit <code>--test</code> probiert das Skript die möglichen
+Varianten <strong>durch</strong> und installiert die erste, die funktioniert:</p>
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --test
+</code></pre>
+<p>Ein Fehler in dieser Phase ändert <strong>nichts</strong> an der NAS.</p>
+</blockquote>
 <blockquote>
 <p>Das Skript liegt auch <strong>im Release</strong> (neben dem <code>.spk</code>) und im Repository
 unter <code>deploy/synology-spk/tools/dsm-diagnose.sh</code>.</p>

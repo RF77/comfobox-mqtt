@@ -26,18 +26,62 @@ fehlende Rechtedeklaration.
 
 ```json
 {
-  "defaults": { "run-as": "package" },
-  "username":  "sc-ComfoBoxGateway",
-  "groupname": "sc-ComfoBoxGateway",
-  "ctrl-script": [ { "action": "postinst", "run-as": "root" } ]
+	"defaults":{
+		"run-as": "package"
+	},
+	"username": "sc-ComfoBoxGateway",
+	"ctrl-script": [{
+		"action": "postinst",
+		"run-as": "root"
+	}]
 }
 ```
 
 | Feld | Bedeutung |
 |---|---|
 | `defaults.run-as` | **Pflicht.** `package` = der Paket-Benutzer `sc-ComfoBoxGateway`. `root` ist in DSM 7 **verboten** (`run-as system` wurde entfernt). |
-| `username` / `groupname` | Der Paket-Benutzer und -Benutzerkreis. Ohne diese Angaben nimmt DSM den Paketnamen. |
+| `username` | Der Paket-Benutzer. Ohne diese Angabe nimmt DSM den Paketnamen. |
 | `ctrl-script` | Pro Lifecycle-Skript die Identität. |
+
+## Zwei Fallen, die das DSM mit **Fehler 319** quittiert
+
+> *„invalid package privilege content“*
+
+Das DSM prüft die Datei gegen eine Whitelist. Zwei Dinge führen zu dieser
+Meldung – beide sind in **keinem** funktionierenden Referenzpaket zu finden
+(geprüft an `SynoCommunity/spksrc`, dem Buildsystem der Community-Pakete).
+Der Nachweis kam vom Variantentest des Diagnose-Skripts auf einem echten
+DSM 7.4.1.
+
+### 1. `groupname` – **das ist der Auslöser**
+
+Keines der Referenzpakete führt ein `groupname`. Die DSM prüft es gegen eine
+Whitelist und lehnt die Datei ab, wenn es gesetzt ist.
+
+> **Also:** `groupname` **weglassen**. DSM nimmt dann seinen eigenen Default.
+
+### 2. Die Actions `prestart` / `prestop`
+
+Kein Referenzpaket führt sie. Die erlaubten Actions sind `preinst`,
+`postinst`, `preuninst`, `postuninst`, `preupgrade`, `postupgrade`, `start`,
+`stop`, `status`.
+
+`prestart` / `prestop` stehen zwar in der alten DSM-Doku (2016) noch drin,
+werden von DSM 7.4 aber nicht mehr akzeptiert. Sie werden deshalb **nicht**
+über `ctrl-script` gesteuert – `precheckstartstop="yes"` in der `INFO` sorgt
+dafür, dass sie trotzdem laufen, nur eben als `sc-ComfoBoxGateway`. Das
+`prestart` prüft nur, ob der Container Manager läuft (liest nur) – das
+gelingt dem Paket-Benutzer.
+
+### 3. Windows-Zeilenenden (CRLF) – zusätzlich riskant
+
+Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
+`jq` unter Linux und haben deshalb immer LF.
+
+> **Windows-Falle:** mit `core.autocrlf=false` schreibt Git die CRLF
+> **unverändert** in den Blob – auch der Linux-CI-Build packt sie dann so
+> ins SPK. Deshalb konvertiert `build-spk.sh` die Datei **immer** auf LF
+> (`tr -d '\r'`), und `tools/check-spk.sh` prüft das.
 
 ## Warum die Lifecycle-Skripte `root` brauchen
 
@@ -68,3 +112,15 @@ Docker-Socket im Container).
 Der Paket-Benutzer `sc-ComfoBoxGateway` erscheint in DSM unter
 *Control Panel → Shared Folder → Edit → Permission → System internal user*.
 Es ist **kein** Anmeldungskonto.
+
+## Wenn es trotzdem nicht klappt
+
+`tools/dsm-diagnose.sh` (läuft auf der NAS) probiert die möglichen Varianten
+der `privilege`-Datei **durch** und meldet, welche funktioniert:
+
+````bash
+sudo sh dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --test
+````
+
+Der Test läuft in `prepare_install` – ein Fehler dort ändert nichts an der
+NAS. Die erste funktionierende Variante installiert das Paket.

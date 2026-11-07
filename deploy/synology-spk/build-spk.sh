@@ -65,10 +65,21 @@ if [ ! -f "$PRIVILEGE" ]; then
 fi
 mkdir -p "$WORK/conf"
 cp "$PRIVILEGE" "$WORK/conf/privilege"
+
+# **Zeilenenden auf LF erzwingen.** Das DSM-Paketcenter lehnt eine
+# `privilege`-Datei mit CR-Zeichen ab ("invalid package privilege content",
+# Fehlercode 319) - der Parser verträgt das Windows-Zeilenende nicht.
+# Die Datei kann CRLF im Repository haben (core.autocrlf=false auf Windows
+# laesst sie unveraendert im Blob), deshalb wird hier **immer** konvertiert.
+# Die Referenzpakete von SynoCommunity entstehen mit `jq` auf Linux und
+# haben deshalb immer LF.
+if command -v tr >/dev/null 2>&1; then
+    tr -d '\r' < "$WORK/conf/privilege" > "$WORK/conf/privilege.tmp"
+    mv "$WORK/conf/privilege.tmp" "$WORK/conf/privilege"
+fi
+
 # Rechte wie bei den funktionierenden Referenzpaketen (spksrc):
-# Verzeichnis 0755, Datei 0644. Unter Windows hat Git Bash sonst 755 oder
-# 600 - DSM ist bei der privilege-Datei zwar tolerant, aber man sollte sich
-# nicht darauf verlassen.
+# Verzeichnis 0755, Datei 0644.
 chmod 755 "$WORK/conf"
 chmod 644 "$WORK/conf/privilege"
 

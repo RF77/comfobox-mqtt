@@ -86,6 +86,13 @@ Synology für jedes Paket eine ausdrückliche Rechteangabe – ohne diese Datei
 gilt das Paket als Root-Paket und das Paketzentrum verweigert die
 Installation.</p>
 <blockquote>
+<p><strong>Variante:</strong> Fehlt die Datei <strong>nicht</strong>, aber das Paket wird trotzdem
+abgelehnt, meldet das DSM über die Kommandozeile den Fehlercode <strong>319</strong>
+(„invalid package privilege content“). Dann passt der <strong>Inhalt</strong> der
+Datei nicht – etwa Windows-Zeilenenden. Das Skript <code>dsm-diagnose.sh</code>
+probiert die möglichen Varianten mit <code>--test</code> durch.</p>
+</blockquote>
+<blockquote>
 <p><strong>Meistens ist es die falsche Datei:</strong> Auf der NAS liegen oft mehrere
 <code>.spk</code> nebeneinander, und im Dateiauswahler wird die <strong>alte</strong> angeklickt.
 Prüfen Sie das so:</p>

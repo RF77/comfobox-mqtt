@@ -129,6 +129,85 @@ else
     echo ""
 fi
 
+# --- 8. Variantentest: welche privilege-Datei akzeptiert das DSM? ----------
+#
+# Der Fehler 319 ("invalid package privilege content") sagt nur, dass der
+# Inhalt nicht passt - nicht welcher Teil. Dieser Abschnitt probiert die
+# moeglichen Varianten **durch**, indem er das Paket entpackt, die
+# privilege-Datei ersetzt, neu packt und `synopkg install` aufruft.
+#
+# Der Test laeuft in "prepare_install" - ein Fehler dort aendert **nichts**
+# an der NAS. Eine erfolgreiche Variante installiert das Paket (das ist
+# gewuellt).
+if [ "$DO_INSTALL" = "--test" ]; then
+    echo "--- 8. Variantentest der privilege-Datei ---"
+    echo "Jede Variante wird installiert; das DSM meldet den Fehlercode."
+    echo "Der erste Treffer installiert das Paket - danach ist Schluss."
+    echo ""
+
+    WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/vtest.$$
+    mkdir -p "$WORK/pkg"
+    SPK_DIR=$(CDPATH= cd -- "$(dirname -- "$SPK")" && pwd) || exit 1
+    SPK_NAME=$(basename -- "$SPK")
+
+    # Die Varianten: nur der Inhalt von conf/privilege unterscheidet sich.
+    # 1 = wie ausgeliefert, 2 = ohne CR, 3 = ohne CR und ohne groupname,
+    # 4 = ohne CR, ohne groupname und ohne prestart/prestop
+    strip_priv() {
+        # $1 = Zieldatei, $2 = 1|2|3|4
+        case "$2" in
+            1) tr -d '\r' < "$1" > "$1.new" ;;
+            2) tr -d '\r' < "$1" | grep -v '"groupname"' > "$1.new" ;;
+            3) tr -d '\r' < "$1" | grep -v '"groupname"' | grep -v '"prestart"' | grep -v '"prestop"' > "$1.new" ;;
+            4) printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t},\n\t"username": "sc-ComfoBoxGateway"\n}\n' > "$1.new" ;;
+        esac
+        mv "$1.new" "$1"
+    }
+
+    for v in 1 2 3 4; do
+        rm -rf "$WORK/pkg"
+        mkdir -p "$WORK/pkg"
+        ( cd "$WORK/pkg" && tar xpf "$SPK_DIR/$SPK_NAME" ) 2>/dev/null
+
+        if [ ! -f "$WORK/pkg/conf/privilege" ]; then
+            echo "  Variante $v: kann nicht entpackt werden - abgebrochen."
+            break
+        fi
+
+        strip_priv "$WORK/pkg/conf/privilege" "$v"
+
+        NEU="$WORK/test-$v.spk"
+        ( cd "$WORK/pkg" && tar cpf "$NEU" INFO conf scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG ) 2>/dev/null
+
+        OUT=$(synopkg install "$NEU" 2>&1)
+        CODE=$(echo "$OUT" | sed -n 's/.*"code":\([0-9]*\).*/\1/p' | head -n 1)
+        DESC=$(echo "$OUT" | sed -n 's/.*"description":"\([^"]*\)".*/\1/p' | head -n 1)
+
+        case "$CODE" in
+            ""|0)
+                echo "  Variante $v: ERFOLG - das Paket wurde installiert!"
+                echo "  -> Diese Variante der privilege-Datei funktioniert."
+                echo ""
+                synopkg status ComfoBoxGateway 2>&1 || true
+                rm -rf "$WORK"
+                exit 0
+                ;;
+            319)
+                echo "  Variante $v: 319 invalid package privilege content"
+                ;;
+            *)
+                echo "  Variante $v: Fehlercode ${CODE:-?} ${DESC}"
+                ;;
+        esac
+    done
+
+    echo ""
+    echo "  Keine Variante hat funktioniert. Dann ist es nicht die"
+    echo "  privilege-Datei - bitte die Ausgabe von Schritt 7 auswerten."
+    rm -rf "$WORK"
+    echo ""
+fi
+
 echo "=============================================================="
 echo " Fertig."
 echo "=============================================================="

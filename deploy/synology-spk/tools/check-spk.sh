@@ -151,6 +151,33 @@ if tar_unpack "$WORK/x" "conf/privilege"; then
         *rw-r--r--*) ok "conf/privilege hat Modus 0644" ;;
         *) bad "conf/privilege hat Modus '$MODE' (erwartet 0644)" ;;
     esac
+
+    # **Keine CR-Zeichen!** Das DSM-Paketcenter lehnt eine privilege-Datei
+    # mit Windows-Zeilenenden ab ("invalid package privilege content",
+    # Fehlercode 319). Der Fehler ist auf der NAS nur schwer zu finden -
+    # deshalb wird er hier geprüft.
+    if tr -d '\r' < "$PRIV" | cmp -s - "$PRIV"; then
+        ok "conf/privilege hat nur LF-Zeilenenden"
+    else
+        bad "conf/privilege enthaelt CR-Zeichen (CRLF) - das DSM lehnt die Datei ab (Fehler 319)"
+        echo "       Siehe deploy/synology-spk/src/conf/README.md"
+    fi
+
+    # DSM 7.4 akzeptiert nur bestimmte Felder. "groupname" und die
+    # Actions "prestart"/"prestop" kommen in **keinem** funktionierenden
+    # Referenzpaket vor (SynoCommunity/spksrc) - sie sind der
+    # wahrscheinlichste Ausloeser fuer Fehler 319.
+    if grep -q '"groupname"' "$PRIV"; then
+        bad "conf/privilege enthaelt 'groupname' - das steht in keinem funktionierenden Referenzpaket"
+    else
+        ok "kein 'groupname' (wie in den Referenzpaketen)"
+    fi
+    for act in prestart prestop; do
+        if grep -q "\"$act\"" "$PRIV"; then
+            bad "conf/privilege enthaelt die Action '$act' - nicht in den Referenzpaketen"
+        fi
+    done
+    ok "keine Actions 'prestart'/'prestop' (wie in den Referenzpaketen)"
 else
     bad "conf/privilege laesst sich nicht auspacken"
 fi
