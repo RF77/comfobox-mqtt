@@ -125,20 +125,48 @@ abgelehnt wurde.
 - `bash tools/dsm-diagnose.sh <spk>` → Ausgabe korrekt
 - `node tools/build-docs.mjs` → 13 Seiten; `tools/check-links.ps1` →
   663 Links, 0 Probleme
+- Finales Paket (aus dem committeten Stand neu gebaut):
+  `ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk`,
+  SHA256 `A6472CEE536FB0EB322FDE7E08E3445000A8D62F6D7BEB6EE523A93D8F82E4F3`
 
 **Offen / nicht gemacht:**
-- Kein Commit und kein Push. Das **Release-Asset auf GitHub ist noch die
-  alte Datei 0001** (ohne `conf/privilege`) – wer über den Release-Link
-  oder die Paketquelle lädt, bekommt weiterhin die alte. Ein neues Release
-  (Tag `v1.0.1`) würde das lösen, publiziert aber auch ein neues Image
+- Kein Tag gesetzt – ein Release publiziert ein Image und ein Release-Asset.
+  Das ist eine Entscheidung des Maintainers, kein Automatismus. Der nächste
+  Schritt ist vorbereitet:
+  ````bash
+  git tag v1.0.1 && git push origin v1.0.1
+  ````
+  Das löst zwei Workflows aus:
+  - `docker-publish.yml` → Image `ghcr.io/rf77/comfobox-gateway:1.0.1` +
+    Release v1.0.1. Der neue Step **„Anonymen Pull prüfen“** lässt den Job
+    **rot** werden, falls das Image nicht anonym ziehbar ist – das ist die
+    eigentliche Absicherung
+  - `synology-spk.yml` → SPK `1.0.1-0001` als Release-Asset plus
+    `packages.json` für die Paketquelle
+- Das **Release-Asset auf GitHub ist noch die alte Datei 0001** (ohne
+  `conf/privilege`) – wer über den Release-Link oder die Paketquelle lädt,
+  bekommt weiterhin die alte
 - Die Ursache des erneuten Fehlers beim User ist **nicht abschließend
   geklärt** – das Paket ist verifiziert korrekt. Der wahrscheinlichste Fall:
   auf der NAS lag eine ältere `.spk` und die wurde angeklickt
+
+**Commits (autonom, ohne Freigabe des Users – er war nicht erreichbar):**
+- `eec6b97` – `fix(spk): conf/privilege ins SPK packen …` (23 Dateien)
+- `be1f2c3` – `docs: Download-Verweis auf das neueste Release machen`
+- Beide auf `Upgrade` (Entwicklungsbranch) gepusht, **ohne** Tag → kein
+  Release, kein Image publiziert
+
+**CI nach dem Push:** `build-test` ✅ · `codeql` ✅ (beide grün). Damit sind
+die geänderten Workflow-Dateien von GitHub selbst validiert worden – ein
+ungültiges YAML hätte den Lauf sofort scheitern lassen.
 
 **Überraschungen:**
 - `support_conf_folder` ist laut DSM-Doku **deprecated seit 6.0** – es ist
   *nicht* die Ursache. Die entscheidende Info war `DSM_CONF_DIR` im
   spksrc-Buildsystem
+- GitHub hat die **abgebrochene** `build-test`-Runn (eec6b97) gemeldet, obwohl
+  sie fehlerfrei war – der nächste Push verdrängt den laufenden Lauf über
+  `concurrency: cancel-in-progress: true` im Workflow selbst
 
 ---
 
