@@ -13,10 +13,27 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
      aber **nie in das SPK gepackt** (im `tar`-Aufruf fehlte `conf`) – und war
      nicht einmal im Git-Repository. Ohne sie gilt das Paket als Root-Paket.
   2. Die Datei war **inhaltlich falsch**: DSM 7.4 lehnt sie mit **Fehler 319**
-     („invalid package privilege content“) ab. Auslösser sind das Feld
-     `groupname` und die Actions `prestart`/`prestop` – beides steht in
-     **keinem** funktionierenden Referenzpaket (SynoCommunity/spksrc).
-     Nachgewiesen mit dem neuen Variantentest auf einem echten DSM 7.4.1
+     („invalid package privilege content“) ab. Ursache ist der Block
+     `ctrl-script` mit `"run-as": "root"`: DSM 7 lässt Drittanbieter-Pakete
+     **nicht** mit Root-Rechten laufen. Nachgewiesen mit dem Variantentest auf
+     einem echten DSM 7.4.1 – mit `ctrl-script` immer Fehler 319, ohne
+     `ctrl-script` wird die Datei akzeptiert.
+- **Das Paket braucht keine Root-Rechte mehr.** Statt der Lifecycle-Skripte
+  im Root-Kontext arbeitet jetzt der DSM-Worker **„docker-project“**
+  (`conf/resource`). Er legt das Compose-Projekt an und startet bzw. stoppt
+  es beim Start/Stopp des Pakets – als Root. `conf/privilege` enthält
+  nur noch `defaults`, `username` und `groupname` (Muster des amtlichen
+  DSM-Beispiels und des auf derselben NAS laufenden Plex-Pakets).
+- **Der Container wird nicht mehr neu erstellt, wenn der Serial-Port
+  wechselt.** Die Compose-Datei bindet `/dev` ein; der Gateway wählt den
+  Port zur Laufzeit aus der Konfiguration aus.
+- **Die Installation brach mit „failed to run preinst script“ ab.** Ursache
+  war `set -u` zusammen mit der in dieser Phase nicht gesetzten Variablen
+  `SYNOPKG_PKGDEST` („unbound variable“). Die Skripte laden ihre
+  Hilfsdateien jetzt über den relativen Pfad und arbeiten ohne `set -u`.
+- **Ein fehlender Container Manager brach die Installation ab.** Er wird
+  jetzt nur noch gemeldet – das Paketzentrum installiert die Abhängigkeit
+  bei Bedarf selbst.
 - **`build-spk.sh` erzwingt jetzt LF-Zeilenenden** für `conf/privilege`. Mit
   `core.autocrlf=false` wandert das Windows-CRLF unverändert in den Blob und
   von dort ins SPK.

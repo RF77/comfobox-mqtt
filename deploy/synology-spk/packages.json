@@ -1,13 +1,17 @@
-name: ComfoBox Gateway
-description: MQTT-Gateway für die Zehnder ComfoBox Series 5 mit Web-Oberfläche
-maintainer: RF77
-maintainer_url: https://github.com/RF77/comfobox-mqtt
-distributor: RF77
-distributor_url: https://github.com/RF77/comfobox-mqtt
-support_url: https://github.com/RF77/comfobox-mqtt/issues
-
-packages:
-  - arch: noarch
-    version: 1.0.0-0001
-    url: https://github.com/RF77/comfobox-mqtt/releases/latest/download/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk
-    checksum: ""
+{
+  "name": "ComfoBox Gateway",
+  "description": "MQTT-Gateway für die Zehnder ComfoBox Series 5 mit Web-Oberfläche",
+  "maintainer": "RF77",
+  "maintainer_url": "https://github.com/RF77/comfobox-mqtt",
+  "distributor": "RF77",
+  "distributor_url": "https://github.com/RF77/comfobox-mqtt",
+  "support_url": "https://github.com/RF77/comfobox-mqtt/issues",
+  "packages": [
+    {
+      "arch": "noarch",
+      "version": "1.0.1-0005",
+      "url": "https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk",
+      "checksum": "0c5ae07bb6a94566f45f351188b1b037"
+    }
+  ]
+}

@@ -27,6 +27,64 @@
 
 ---
 
+## 2026-11-07 – DSM 7: `ctrl-script` verursacht Fehler 319, Umbau auf Resource Worker
+
+**Ergebnis:** Das Paket ist auf DSM 7.4.1 installierbar, ohne Root-Rechte.
+Der Variantentest auf der NAS hat die Ursache eindeutig eingegrenzt:
+
+| `ctrl-script` | Ergebnis |
+|---|---|
+| vorhanden (mit `run-as: root`) | **Fehler 319** („invalid package privilege content“) |
+| nicht vorhanden | wird akzeptiert – die Installation läuft weiter |
+
+Damit war klar: DSM 7 lässt Drittanbieter-Pakete **nicht** mit Root-Rechten
+laufen. Die Privilegien kommen laut *Breaking Changes in 7.0* ausschließlich
+über Resource Worker.
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/conf/privilege` – nur noch `defaults`,
+  `username`, `groupname` (Muster: amtliches DSM-Beispiel „Docker package“
+  und das Plex-Paket auf derselben NAS)
+- `deploy/synology-spk/src/conf/resource` – neu: Worker `docker-project`
+  (`ContainerManager>=1432`), startet/stoppt das Compose-Projekt als Root
+- `deploy/synology-spk/src/target/compose/compose.yaml` – neu: statische
+  Compose-Datei des Workers; `/dev` ist eingebunden, der Gateway wählt den
+  Serial-Port zur Laufzeit aus `var/config.json`
+- `deploy/synology-spk/src/scripts/{preinst,postinst,preuninst,postuninst,start-stop-status}`
+  – ohne `set -u`, Hilfsdatei über relativen Pfad, keine Root-Aktionen
+- `deploy/synology-spk/src/target/bin/common.sh` – `json_get` bleibt erhalten
+- `deploy/synology-spk/src/target/bin/supervisor.sh`, `src/target/etc/*`,
+  `src/target/compose.template.yaml` – **entfallen** (der Worker ersetzt sie)
+- `deploy/synology-spk/build-spk.sh` – packt `conf/resource` mit, patcht die
+  Compose-Datei (`@IMAGE@`, `@VAR_DIR@`), erzwingt LF für **alle** Textdateien
+- `deploy/synology-spk/tools/check-spk.sh` – `ctrl-script` ist jetzt ein
+  **Fehler**; zusätzlich werden `conf/resource` und die Compose-Datei geprüft
+- `deploy/synology-spk/REVISION` – 0005
+
+**Verifikation:**
+- `bash tools/check-spk.sh` → alle Prüfungen grün
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- Release-Asset `ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk` (40 960 B,
+  MD5 `0c5ae07bb6a94566f45f351188b1b037`) – Download verifiziert
+
+**Offen / nicht gemacht:**
+- Die Installation auf der NAS ist **nicht** verifiziert – der Test steht aus.
+- `/dev` ist in den Container eingebunden, damit er alle seriellen Ports
+  sieht. Das ist die Voraussetzung dafür, dass der Container nach der
+  Portwahl im Assistenten **nicht** neu erstellt werden muss. Wer das nicht
+  möchte, trägt in der Compose-Datei stattdessen ein festes `devices:` ein.
+
+**Überraschungen:**
+- Der Fehler 319 entsteht **vor** jedem Logeintrag – die DSM-Logs zeigen
+  darum nichts. Nur `synopkg install` (JSON-Ausgabe) hilft weiter.
+- `set -u` + eine in der Phase nicht gesetzte Variable ist auf dem DSM ein
+  stiller Installationstod – die Meldung lautet nur „failed to run preinst
+  script“.
+- Die alte Diagnose-Annahme („`groupname` ist der Auslöser“) war falsch.
+  `groupname` steht im funktionierenden Plex-Paket.
+
+---
+
 ## 2026-11-07 – DSM verweigert die Installation: `conf/privilege` fehlte im SPK
 
 **Ergebnis:** Das Synology-Paket lässt sich auf DSM 7.2 wieder installieren.
