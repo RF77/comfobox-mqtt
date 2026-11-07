@@ -85,15 +85,25 @@ ab **1.0.0-0002** ist die Datei enthalten.
 
 > **Eigene Handarbeit ist nicht nötig** – das Paket wird mit der Datei
 > ausgeliefert. Sollte die Meldung weiterhin kommen, holen Sie den echten
-> Fehlercode:
+> Fehlercode. Das Skript liegt **im Release** direkt neben dem `.spk`
+> (`dsm-diagnose.sh`). So kommen Sie auf der NAS daran:
 >
 > ````bash
-> sudo sh dsm-diagnose.sh /volume1/pfad/zur/datei.spk --install
+> # 1. SSH aktivieren: Control Panel → Terminal & SNMP → SSH-Dienst aktivieren
+> # 2. Verbinden
+> ssh admin@<IP-der-NAS>
+>
+> # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
+> scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
+> scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@<IP-der-NAS>:/tmp/
+>
+> # 4. Diagnose ausführen
+> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
 > ````
 >
-> Das Skript liegt im Repository unter
-> `deploy/synology-spk/tools/dsm-diagnose.sh`. Es liefert die JSON-Ausgabe
-> von `synopkg install` – dort steht der Fehlercode.
+> Die Ausgabe von `synopkg install` enthält den **Fehlercode**. Die
+> vollständige Anleitung steht in
+> [Synology testen](08b-synology-test.md).
 
 ---
 

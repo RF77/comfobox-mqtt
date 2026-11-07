@@ -128,6 +128,11 @@ jobs:
           echo "spk=${SPK}" >> "$GITHUB_OUTPUT"
           echo "checksum=$(md5sum "dist/${SPK}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
+          # Das Diagnose-Skript kommt mit ins Release - es liegt dann direkt
+          # neben dem SPK und muss nicht aus dem Repository geholt werden.
+          cp tools/dsm-diagnose.sh dist/dsm-diagnose.sh
+          chmod 755 dist/dsm-diagnose.sh
+
           ls -la dist/
 
       # Das DSM-Paketcenter verweigert die Installation **schon beim
@@ -187,6 +192,7 @@ jobs:
           path: |
             deploy/synology-spk/dist/*.spk
             deploy/synology-spk/dist/packages.json
+            deploy/synology-spk/dist/dsm-diagnose.sh
           if-no-files-found: error
           retention-days: 30
 
@@ -265,6 +271,7 @@ jobs:
           gh release upload "$TAG" \
             "${{ needs.spk.outputs.spk }}" \
             "packages.json" \
+            "dsm-diagnose.sh" \
             --clobber
 
           echo "--- Release ${TAG} ---"

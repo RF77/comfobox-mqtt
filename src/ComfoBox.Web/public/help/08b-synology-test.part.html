@@ -126,13 +126,41 @@ sich der Teil hinter <code>download/</code>.</p>
 </blockquote>
 <h3 id="wenn-das-paketzentrum-das-paket-ablehnt">Wenn das Paketzentrum das Paket ablehnt</h3>
 <p>Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
-Skript auf der NAS kommt der <strong>echte Fehlercode</strong> heraus (per SSH):</p>
-<pre><code class="language-bash">sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk
+Skript auf der NAS kommt der <strong>echte Fehlercode</strong> heraus.</p>
+<h4 id="1-ssh-auf-der-nas-aktivieren">1. SSH auf der NAS aktivieren</h4>
+<p><em>Control Panel → Terminal &amp; SNMP →</em> <strong>SSH-Dienst aktivieren</strong> (Port 22).</p>
+<h4 id="2-per-ssh-verbinden">2. Per SSH verbinden</h4>
+<p>Auf einem Rechner mit SSH (unter Windows: PowerShell oder „Windows
+Terminal“):</p>
+<pre><code class="language-bash">ssh admin@&lt;IP-der-NAS&gt;
 </code></pre>
-<p>Das Skript zeigt die DSM-Version, den Inhalt des Pakets, die <code>privilege</code>-Datei
-und – mit <code>--install</code> – die JSON-Ausgabe von <code>synopkg install</code> mit dem
-Fehlercode. Das Skript liegt im Repository unter
-<code>deploy/synology-spk/tools/dsm-diagnose.sh</code>.</p>
+<p>Sie melden sich mit dem DSM-Administrator an (Passwort wie im DSM).</p>
+<h4 id="3-skript-und-paket-auf-die-nas-holen">3. Skript und Paket auf die NAS holen</h4>
+<p>Beide Dateien kommen in <code>/tmp</code> der NAS. Sie können entweder die Dateien vom
+Rechner kopieren …</p>
+<pre><code class="language-bash">scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+</code></pre>
+<p>… oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
+dann schon auf der NAS, z. B. im Gemeinsamen Ordner):</p>
+<pre><code class="language-bash">cd /tmp
+wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synology-spk/tools/dsm-diagnose.sh
+</code></pre>
+<h4 id="4-diagnose-ausführen">4. Diagnose ausführen</h4>
+<p>In der SSH-Sitzung:</p>
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
+</code></pre>
+<p><code>sudo</code> fragt nach dem Passwort des DSM-Administrators. Ohne <code>--install</code> liest
+das Skript nur (keine Änderung an der NAS).</p>
+<p><strong>Ausgabe:</strong> DSM-Version, der Inhalt des Pakets, die <code>privilege</code>-Datei und
+schließlich die JSON-Antwort von <code>synopkg install</code> – dort steht der
+<strong>Fehlercode</strong>, zum Beispiel:</p>
+<pre><code class="language-json">{&quot;error&quot;:{&quot;code&quot;:261,&quot;description&quot;:&quot;...&quot;},&quot;stage&quot;:&quot;install_failed&quot;}
+</code></pre>
+<blockquote>
+<p>Das Skript liegt auch <strong>im Release</strong> (neben dem <code>.spk</code>) und im Repository
+unter <code>deploy/synology-spk/tools/dsm-diagnose.sh</code>.</p>
+</blockquote>
 <hr>
 <h2 id="schritt-2-installieren">Schritt 2 – Installieren</h2>
 <p><strong>Paketcenter → Installieren → Manuelle Installation</strong> → Datei wählen →

@@ -129,16 +129,62 @@ Fehlt `conf/privilege`, ist die Datei zu alt.
 ### Wenn das Paketzentrum das Paket ablehnt
 
 Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
-Skript auf der NAS kommt der **echte Fehlercode** heraus (per SSH):
+Skript auf der NAS kommt der **echte Fehlercode** heraus.
+
+#### 1. SSH auf der NAS aktivieren
+
+*Control Panel → Terminal & SNMP →* **SSH-Dienst aktivieren** (Port 22).
+
+#### 2. Per SSH verbinden
+
+Auf einem Rechner mit SSH (unter Windows: PowerShell oder „Windows
+Terminal“):
 
 ````bash
-sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk
+ssh admin@<IP-der-NAS>
 ````
 
-Das Skript zeigt die DSM-Version, den Inhalt des Pakets, die `privilege`-Datei
-und – mit `--install` – die JSON-Ausgabe von `synopkg install` mit dem
-Fehlercode. Das Skript liegt im Repository unter
-`deploy/synology-spk/tools/dsm-diagnose.sh`.
+Sie melden sich mit dem DSM-Administrator an (Passwort wie im DSM).
+
+#### 3. Skript und Paket auf die NAS holen
+
+Beide Dateien kommen in `/tmp` der NAS. Sie können entweder die Dateien vom
+Rechner kopieren …
+
+````bash
+scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@<IP-der-NAS>:/tmp/
+````
+
+… oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
+dann schon auf der NAS, z. B. im Gemeinsamen Ordner):
+
+````bash
+cd /tmp
+wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synology-spk/tools/dsm-diagnose.sh
+````
+
+#### 4. Diagnose ausführen
+
+In der SSH-Sitzung:
+
+````bash
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
+````
+
+`sudo` fragt nach dem Passwort des DSM-Administrators. Ohne `--install` liest
+das Skript nur (keine Änderung an der NAS).
+
+**Ausgabe:** DSM-Version, der Inhalt des Pakets, die `privilege`-Datei und
+schließlich die JSON-Antwort von `synopkg install` – dort steht der
+**Fehlercode**, zum Beispiel:
+
+````json
+{"error":{"code":261,"description":"..."},"stage":"install_failed"}
+````
+
+> Das Skript liegt auch **im Release** (neben dem `.spk`) und im Repository
+> unter `deploy/synology-spk/tools/dsm-diagnose.sh`.
 
 ---
 

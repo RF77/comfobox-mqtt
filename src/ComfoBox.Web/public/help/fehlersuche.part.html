@@ -99,12 +99,22 @@ ab <strong>1.0.0-0002</strong> ist die Datei enthalten.</p>
 <blockquote>
 <p><strong>Eigene Handarbeit ist nicht nötig</strong> – das Paket wird mit der Datei
 ausgeliefert. Sollte die Meldung weiterhin kommen, holen Sie den echten
-Fehlercode:</p>
-<pre><code class="language-bash">sudo sh dsm-diagnose.sh /volume1/pfad/zur/datei.spk --install
+Fehlercode. Das Skript liegt <strong>im Release</strong> direkt neben dem <code>.spk</code>
+(<code>dsm-diagnose.sh</code>). So kommen Sie auf der NAS daran:</p>
+<pre><code class="language-bash"># 1. SSH aktivieren: Control Panel → Terminal &amp; SNMP → SSH-Dienst aktivieren
+# 2. Verbinden
+ssh admin@&lt;IP-der-NAS&gt;
+
+# 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
+scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+
+# 4. Diagnose ausführen
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
 </code></pre>
-<p>Das Skript liegt im Repository unter
-<code>deploy/synology-spk/tools/dsm-diagnose.sh</code>. Es liefert die JSON-Ausgabe
-von <code>synopkg install</code> – dort steht der Fehlercode.</p>
+<p>Die Ausgabe von <code>synopkg install</code> enthält den <strong>Fehlercode</strong>. Die
+vollständige Anleitung steht in
+<a href="/help/08b-synology-test">Synology testen</a>.</p>
 </blockquote>
 <hr>
 <h2 id="keine-seriellen-ports-in-der-liste">Keine seriellen Ports in der Liste</h2>
