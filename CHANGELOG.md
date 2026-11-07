@@ -42,9 +42,10 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   nur die Ursache, nicht den Grund.
 
 ### Changed
-- Die **SPK-Revision** steht jetzt in `deploy/synology-spk/REVISION` – der
-  lokale Build und die CI bauen damit garantiert dasselbe Paket. Eine hart
-  kodierte Revision im Workflow driftete sofort auseinander.
+- Die **SPK-Revision** steht jetzt in `deploy/synology-spk/REVISION`, die
+  SPK-Version in `deploy/synology-spk/src/VERSION` – der lokale Build und die
+  CI bauen damit garantiert dasselbe Paket. Eine hart kodierte Revision im
+  Workflow driftete sofort auseinander.
 - Die **Version** des Gateways steht in `src/Directory.Build.props` und
   stimmt jetzt mit dem Release-Tag überein (`ComfoBox/Version` trägt
   `Ver 1.0.1`).

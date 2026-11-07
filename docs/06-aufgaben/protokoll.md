@@ -132,13 +132,26 @@ Repository – alle drei standen noch auf `1.0.0`:
 - Lock-Datei-Konsistenz (derselbe Node-Aufruf wie in der CI) → OK
 - `bash tools/check-spk.sh` → OK, Image-Tag passt zur Version
 - CI nach dem Push: `ha-release` ✅ · `synology-spk` ✅ · `build-test` ✅ ·
-  `codeql` ✅ · `docker-publish` (Image) läuft
+  `codeql` ✅ · `docker-publish` ✅
+
+**Endstand Release v1.0.1:**
+- Release-Assets: `ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk` (40 KB),
+  `packages.json`, `CHANGELOG.md` – **das veraltete `0001` wurde gelöscht**
+- `packages.json` zeigt auf `1.0.1-0003`
+- Image `ghcr.io/rf77/comfobox-gateway:1.0.1` in GHCR (multi-arch),
+  **anonymer Pull → HTTP 200** (der neue CI-Step „Anonymen Pull prüfen“
+  ist grün)
+- Das **heruntergeladene** Release-Asset wurde noch einmal mit
+  `check-spk.sh` geprüft → OK
 
 **Überraschungen:**
 - Der **erste** Tag-Push (2b46a5f) hatte das Image `1.0.1` bereits publiziert
   (der Image-Workflow kennt keine Versionsprüfung) – nur die HA-Kette brach
   ab. Deshalb lag im Release ein SPK mit der **alten** Revision `0001` neben
   dem neuen `0003`
+- `jq` fehlt auf der lokalen Maschine (läuft auf dem GitHub-Runner) – für die
+  Simulation des Versions-Checks wurde der Wert stattdessen mit dem
+  JSON-Parser gelesen
 
 **Belegte Referenz** (`mk/spksrc.spk.mk`):
 - `DSM_CONF_DIR = $(WORK_DIR)/conf` → `conf/` liegt im **SPK-Wurzelverzeichnis**
