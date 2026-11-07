@@ -198,17 +198,25 @@ fi
 # Der Test läuft in "prepare_install" - ein Fehler dort ändert **nichts**
 # an der NAS. Eine erfolgreiche Variante installiert das Paket.
 #
-# Die Reihenfolge folgt der Wahrscheinlichkeit (Erkenntnis aus DSM 7.4):
-#   1. ohne ctrl-script      - DSM 7 verweigert für Drittanbieter
-#                              möglicherweise "run-as: root"
-#   2. nur defaults          - minimal
-#   3. ohne ctrl-script + groupname
-#   4. wie ausgeliefert      - Kontrolle
+# Die Varianten folgen der Ground Truth aus dem echten, funktionierenden
+# Plex-DSM7-Paket auf dieser NAS:
+#
+#   conf/privilege:  { "defaults": {"run-as": "package"},
+#                      "username": "PlexMediaServer",
+#                      "groupname": "PlexMediaServer" }
+#   conf/resource:   { "video-driver": {}, "port-config": "..." }
+#   → **kein ctrl-script**
+#
+# Unser Paket hat dagegen ein ctrl-script (mit run-as: root) und **keine**
+# conf/resource. Beides sind die Kandidaten für den Fehler 319.
+#
+# Reihenfolge: erst die kleinste Änderung, die installierbar macht – eine
+# funktionierende Variante **installiert** das Paket und beendet den Test.
 if [ "$MODE" = "--test" ]; then
-    echo "--- 9. Variantentest der privilege-Datei ---"
+    echo "--- 9. Variantentest (privilege-Datei x conf/resource) ---"
     echo "Jede Variante wird installiert; das DSM meldet den Fehlercode."
     echo "Der erste Treffer installiert das Paket - danach ist Schluss."
-    echo "Ein Fehler in dieser Phase ändert nichts an der NAS."
+    echo "Ein Fehler in dieser Phase aendert nichts an der NAS."
     echo ""
 
     WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/vtest.$$
@@ -220,25 +228,68 @@ if [ "$MODE" = "--test" ]; then
     ( cd "$WORK/orig" && tar xpf "$SPK_DIR/$SPK_NAME" conf/privilege ) 2>/dev/null
     ORIG_PRIV="$WORK/orig/conf/privilege"
 
+    # $1 = Zieldatei, $2 = Variante
     write_priv() {
-        # $1 = Zieldatei, $2 = Variante
         case "$2" in
-            1)  # ohne ctrl-script, mit username
-                printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t},\n\t"username": "sc-ComfoBoxGateway"\n}\n' > "$1"
+            1|8)
+                # wie ausgeliefert (ctrl-script mit root)
+                cp "$ORIG_PRIV" "$1"
                 ;;
-            2)  # minimal: nur defaults
+            2|6)
+                # minimal: nur defaults
                 printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t}\n}\n' > "$1"
                 ;;
-            3)  # ohne ctrl-script, mit username und groupname
+            3|5)
+                # ohne ctrl-script, mit username
+                printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t},\n\t"username": "sc-ComfoBoxGateway"\n}\n' > "$1"
+                ;;
+            4)
+                # ohne ctrl-script, mit username und groupname (Plex-Stil)
                 printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t},\n\t"username": "sc-ComfoBoxGateway",\n\t"groupname": "sc-ComfoBoxGateway"\n}\n' > "$1"
                 ;;
-            4)  # wie ausgeliefert (Kontrolle)
-                cp "$ORIG_PRIV" "$1"
+            7)
+                # ohne ctrl-script, username klein geschrieben
+                printf '{\n\t"defaults":{\n\t\t"run-as": "package"\n\t},\n\t"username": "sc-comfoboxgateway"\n}\n' > "$1"
                 ;;
         esac
     }
 
-    for v in 1 2 3 4; do
+    # $1 = Nummer der Variante
+    variant_label() {
+        case "$1" in
+            1) echo "wie ausgeliefert (ctrl-script) + conf/resource" ;;
+            2) echo "nur defaults + conf/resource" ;;
+            3) echo "ohne ctrl-script (username) + conf/resource" ;;
+            4) echo "ohne ctrl-script (username+groupname) + conf/resource" ;;
+            5) echo "ohne ctrl-script (username), OHNE resource" ;;
+            6) echo "nur defaults, OHNE resource" ;;
+            7) echo "ohne ctrl-script (username klein) + conf/resource" ;;
+            8) echo "wie ausgeliefert, OHNE resource (Kontrolle)" ;;
+        esac
+    }
+
+    # $1 = Nummer, $2 = ja|nein (conf/resource dazufügen)
+    variant_resource() {
+        if [ "$2" = "ja" ]; then
+            printf '{\n}\n' > "$WORK/pkg/conf/resource"
+        else
+            rm -f "$WORK/pkg/conf/resource"
+        fi
+    }
+
+    # Die Varianten: Nummer | privilege-Form | conf/resource
+    # 1 = ausgeliefert + resource      (kleinste Änderung)
+    # 2 = nur defaults + resource
+    # 3 = ohne ctrl-script + resource
+    # 4 = ohne ctrl-script, mit groupname + resource
+    # 5 = ohne ctrl-script, ohne resource
+    # 6 = nur defaults, ohne resource
+    # 7 = ohne ctrl-script, username klein + resource
+    # 8 = ausgeliefert, ohne resource  (Kontrolle - muss 319 geben)
+    for spec in "1:ja" "2:ja" "3:ja" "4:ja" "5:nein" "6:nein" "7:ja" "8:nein"; do
+        v=${spec%%:*}
+        res=${spec##*:}
+
         rm -rf "$WORK/pkg"
         mkdir -p "$WORK/pkg"
         ( cd "$WORK/pkg" && tar xpf "$SPK_DIR/$SPK_NAME" ) 2>/dev/null
@@ -249,6 +300,7 @@ if [ "$MODE" = "--test" ]; then
         fi
 
         write_priv "$WORK/pkg/conf/privilege" "$v"
+        variant_resource "$v" "$res"
 
         NEU="$WORK/test-$v.spk"
         ( cd "$WORK/pkg" && tar cpf "$NEU" INFO conf scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG ) 2>/dev/null
@@ -260,22 +312,34 @@ if [ "$MODE" = "--test" ]; then
         case "$CODE" in
             ""|0)
                 echo "  Variante $v: ERFOLG - das Paket wurde installiert!"
-                echo "  -> Diese Form der privilege-Datei funktioniert:"
+                echo "  -> Form: $(variant_label "$v")"
                 echo ""
+                echo "  conf/privilege:"
                 cat "$WORK/pkg/conf/privilege"
                 echo ""
+                if [ -f "$WORK/pkg/conf/resource" ]; then
+                    echo "  conf/resource:"
+                    cat "$WORK/pkg/conf/resource"
+                    echo ""
+                fi
                 synopkg status ComfoBoxGateway 2>&1 || true
                 echo ""
                 echo "  Danach bitte prüfen, ob die Installation vollständig war:"
                 echo "    sudo tail -30 /var/log/packages/ComfoBoxGateway.log"
+                echo ""
+                echo "  WICHTIG: Diese Installation beweist nur, welche Form das DSM"
+                echo "  akzeptiert. Die Lifecycle-Skripte laufen dabei ohne root -"
+                echo "  schlägt die Installation danach fehl, bitte deinstallieren:"
+                echo "    sudo synopkg uninstall ComfoBoxGateway"
+                echo "  und die Meldung hier im Protokoll festhalten."
                 rm -rf "$WORK"
                 exit 0
                 ;;
             319)
-                echo "  Variante $v: 319 invalid package privilege content"
+                echo "  Variante $v: 319  ($(variant_label "$v"))"
                 ;;
             *)
-                echo "  Variante $v: Fehlercode ${CODE:-?} ${DESC}"
+                echo "  Variante $v: Fehlercode ${CODE:-?} ${DESC}  ($(variant_label "$v"))"
                 ;;
         esac
     done
