@@ -34,7 +34,7 @@ Erstellen Sie eine Datei `compose.yaml`:
 ````yaml
 services:
   gateway:
-    image: ghcr.io/rf77/comfobox-gateway:1.0.0
+    image: ghcr.io/rf77/comfobox-gateway:1.0.1
     container_name: comfobox-gateway
     restart: unless-stopped
     ports:

@@ -1,5 +1,11 @@
 # Changelog – ComfoBox Gateway Add-on
 
+## 1.0.1
+
+- Image `ghcr.io/rf77/comfobox-gateway:1.0.1` (multi-arch: `amd64`, `aarch64`)
+- Das Synology-Paket dieser Version enthält die Rechte-Datei `conf/privilege`
+  und lässt sich damit auf DSM 7 installieren
+
 ## 1.0.0
 
 - Erstveröffentlichung

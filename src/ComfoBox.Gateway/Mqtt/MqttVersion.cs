@@ -7,8 +7,8 @@ namespace ComfoBox.Gateway.Mqtt;
 /// </summary>
 /// <remarks>
 /// Die Versionsangabe ist Teil des MQTT-Vertrags:
-/// <c>ComfoBox/Version</c> trägt <c>Ver 1.0.0</c> (Altbestand),
-/// <c>ComfoBox/Status/Version</c> trägt <c>1.0.0</c> (neu).
+/// <c>ComfoBox/Version</c> trägt <c>Ver 1.0.1</c> (Altbestand),
+/// <c>ComfoBox/Status/Version</c> trägt <c>1.0.1</c> (neu).
 /// </remarks>
 public static class MqttVersion
 {

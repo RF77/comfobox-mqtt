@@ -23,7 +23,7 @@ name: comfobox
 services:
   gateway:
     # Aus der Registry (kein build:) – auf dem NAS wird das Image gepullt.
-    image: ${COMFOBOX_IMAGE:-ghcr.io/rf77/comfobox-gateway:1.0.0}
+    image: ${COMFOBOX_IMAGE:-ghcr.io/rf77/comfobox-gateway:1.0.1}
     container_name: comfobox-gateway
     restart: unless-stopped
 

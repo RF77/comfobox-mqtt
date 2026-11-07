@@ -21,7 +21,7 @@ DS923+ – vom Download bis zur Anzeige, ob die Heizung antwortet.
 
 > **Das ist der wichtigste Schritt, und er liegt auf GitHub, nicht auf der
 > NAS.** Das Paket ist nur ein Wrapper: es startet das Container-Image
-> `ghcr.io/rf77/comfobox-gateway:1.0.0` aus der GitHub-Registry. Ist das
+> `ghcr.io/rf77/comfobox-gateway:1.0.1` aus der GitHub-Registry. Ist das
 > Image **privat**, kann die NAS es nicht ziehen – der Container startet
 > dann nicht und es passiert gar nichts.
 
@@ -45,7 +45,7 @@ DS923+ – vom Download bis zur Anzeige, ob die Heizung antwortet.
 sieht) – auf einem Rechner mit Docker:
 
 ```bash
-docker pull ghcr.io/rf77/comfobox-gateway:1.0.0
+docker pull ghcr.io/rf77/comfobox-gateway:1.0.1
 ```
 
 | Antwort | Bedeutung |
@@ -111,7 +111,7 @@ herunterladen und auf die NAS kopieren (Samba-Freigabe oder `scp`).
 **Prüfen, ob die Datei die richtige ist** – auf einem Rechner mit Bash:
 
 ````bash
-tar tf ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk | grep conf
+tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
 ````
@@ -121,7 +121,7 @@ Fehlt `conf/privilege`, ist die Datei zu alt.
 > **Alternativ** über eine eigene Paketquelle – dann erscheint das Paket
 > direkt in der normalen Liste des Paketzentrums:
 > *Paketcenter → Einstellungen → Paketquelle → Hinzufügen*, URL
-> <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json>
+> <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json>
 >
 > Die Adresse enthält die Release-Version – bei einem neuen Release ändert
 > sich der Teil hinter `download/`.
@@ -132,7 +132,7 @@ Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
 Skript auf der NAS kommt der **echte Fehlercode** heraus (per SSH):
 
 ````bash
-sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk
+sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk
 ````
 
 Das Skript zeigt die DSM-Version, den Inhalt des Pakets, die `privilege`-Datei

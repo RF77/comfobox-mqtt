@@ -32,7 +32,7 @@ function parseArgs() {
   const opts = {
     src: 'docs/benutzer',
     out: 'src/ComfoBox.Web/public/help',
-    version: '1.0.0',
+    version: '1.0.1',
     marked: null,
   };
   for (let i = 0; i < args.length; i += 1) {

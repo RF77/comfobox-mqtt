@@ -45,7 +45,7 @@ normalen Liste:
 | Feld | Wert |
 |---|---|
 | Name | `ComfoBox` |
-| URL | <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json> |
+| URL | <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json> |
 
 Danach: **Paketcenter → Community → ComfoBox Gateway → Installieren**
 

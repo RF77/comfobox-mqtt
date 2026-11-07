@@ -10,6 +10,10 @@
 # Aufruf:
 #   ./build-spk.sh [VERSION] [REVISION]
 #
+# Ohne Argumente kommen VERSION und REVISION aus den Dateien
+# `src/VERSION` bzw. `REVISION` - so baut der lokale Aufruf und der
+# CI-Workflow garantiert dasselbe Paket.
+#
 # Ergebnis:
 #   dist/ComfoBoxGateway_noarch-dsm7_<VERSION>-<REVISION>.spk
 # ---------------------------------------------------------------------------
@@ -18,8 +22,17 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR"
 
-VERSION=${1:-1.0.0}
-REVISION=${2:-0001}
+read_or() {
+    # $1 = Datei, $2 = Vorgabe
+    if [ -f "$1" ]; then
+        tr -d ' \t\r\n' < "$1"
+    else
+        echo "$2"
+    fi
+}
+
+VERSION=${1:-$(read_or src/VERSION 1.0.0)}
+REVISION=${2:-$(read_or REVISION 0001)}
 PACKAGE=ComfoBoxGateway
 OUT="$SCRIPT_DIR/dist"
 WORK="$OUT/work"

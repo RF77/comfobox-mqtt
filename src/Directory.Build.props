@@ -30,4 +30,15 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
 
+  <!--
+    Die Version des Gateways.
+    Sie ist Teil des MQTT-Vertrags: `ComfoBox/Version` traegt "Ver <Version>"
+    (Altbestand), `ComfoBox/Status/Version` traegt "<Version>".
+    Sie muss mit dem Release-Tag uebereinstimmen - sonst meldet das Gateway
+    eine andere Version als das Image, aus dem es laeuft.
+  -->
+  <PropertyGroup>
+    <Version>1.0.1</Version>
+  </PropertyGroup>
+
 </Project>

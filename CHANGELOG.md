@@ -4,7 +4,50 @@ Alle wesentlichen Änderungen an diesem Projekt.
 
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
+## [1.0.1] – 2026-11-07
 
+### Fixed
+- **Das Synology-Paket installierte sich auf DSM 7.2 nicht** („kann nicht
+  installiert werden, da es mit Root-Rechten ausgeführt wird"). Die Datei
+  `conf/privilege` lag im Repository, wurde von `build-spk.sh` aber **nie in
+  das SPK gepackt** (im `tar`-Aufruf fehlte `conf`) – und war nicht einmal im
+  Git-Repository. Jetzt: sie ist versioniert, wird mit Modus 0644 gepackt,
+  und der Build bricht mit klarer Meldung ab, wenn sie fehlt.
+  Die Paketstruktur ist gegen ein funktionierendes Referenzpaket geprüft
+  (SynoCommunity/spksrc).
+- **Das Paket-Icon war 256×256 statt 64×64.** DSM 7.0 verlangt für
+  `PACKAGE_ICON.PNG` genau 64×64 (Breaking Change, vorher 72×72). Die große
+  Variante liegt jetzt als `PACKAGE_ICON_256.PNG` daneben.
+- **Die Sichtbarkeits-Prüfung des Container-Images war falsch.** Der
+  Manifest-Abruf `https://ghcr.io/v2/…/manifests/<tag>` liefert **immer**
+  `401` – auch bei öffentlichen Images, weil die Registry zwingend einen
+  Bearer-Token verlangt und ein Browser den nicht selbst anfordern kann. Die
+  Anleitung deutete das `401` aber als „privat" und schickte den Nutzer auf
+  eine sinnlose Fährte. Neu: Prüfung über die GitHub-Paket-Seite, über
+  `docker pull` oder über einen anonymen Pull-Token.
+
+### Added
+- **CI: der Image-Workflow prüft jetzt den Anonymous-Pull.** Nach dem Push
+  fragt er das Manifest mit einem **anonymen** Token ab – genau das, was die
+  Synology und der HA-Supervisor tun. Bisher meldete er nur die
+  API-Sichtbarkeit, die nichts über den Anonymous-Pull aussagt. Der Job wird
+  jetzt rot, wenn das Image nicht anonym ziehbar ist.
+- **`deploy/synology-spk/tools/check-spk.sh`** – prüft das fertige Paket
+  gegen die Anforderungen des DSM-Paketcenters (`conf/privilege` vorhanden
+  **und** an der richtigen Stelle, `run-as: package`, Icon-Größen,
+  INFO-Pflichtfelder, `os_min_ver ≥ 7.0-40000`, Image-Tag). Läuft in der CI.
+- **`deploy/synology-spk/tools/dsm-diagnose.sh`** – läuft auf der NAS (per
+  SSH) und liefert DSM-Version, Paketinhalt, `privilege`-Datei und den
+  **echten Fehlercode** von `synopkg install` (JSON). Das DSM nennt im Dialog
+  nur die Ursache, nicht den Grund.
+
+### Changed
+- Die **SPK-Revision** steht jetzt in `deploy/synology-spk/REVISION` – der
+  lokale Build und die CI bauen damit garantiert dasselbe Paket. Eine hart
+  kodierte Revision im Workflow driftete sofort auseinander.
+- Die **Version** des Gateways steht in `src/Directory.Build.props` und
+  stimmt jetzt mit dem Release-Tag überein (`ComfoBox/Version` trägt
+  `Ver 1.0.1`).
 ## [Unreleased]
 
 ### Added

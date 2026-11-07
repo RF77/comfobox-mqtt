@@ -93,6 +93,11 @@ jobs:
         uses: actions/checkout@v4
 
       # Die Version aus dem Tag ("v1.2.3" → 1.2.3) oder aus dem Dispatch.
+      #
+      # Die **Revision** kommt aus `deploy/synology-spk/REVISION` - damit
+      # bauen der lokale Aufruf und die CI garantiert dasselbe Paket. Eine
+      # hart kodierte Revision hier driftet sonst sofort auseinander (und
+      # das DSM weist ein Update mit zu niedriger Revision ab).
       - name: Version ermitteln
         id: version
         run: |
@@ -102,7 +107,7 @@ jobs:
             REVISION="${{ inputs.revision }}"
           else
             VERSION="${GITHUB_REF_NAME#v}"
-            REVISION="0001"
+            REVISION=$(tr -d ' \t\r\n' < deploy/synology-spk/REVISION)
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "revision=${REVISION}" >> "$GITHUB_OUTPUT"

@@ -11,7 +11,7 @@ der echten Heizung – den USB-Adapter.</p>
 <blockquote>
 <p><strong>Das ist der wichtigste Schritt, und er liegt auf GitHub, nicht auf der
 NAS.</strong> Das Paket ist nur ein Wrapper: es startet das Container-Image
-<code>ghcr.io/rf77/comfobox-gateway:1.0.0</code> aus der GitHub-Registry. Ist das
+<code>ghcr.io/rf77/comfobox-gateway:1.0.1</code> aus der GitHub-Registry. Ist das
 Image <strong>privat</strong>, kann die NAS es nicht ziehen – der Container startet
 dann nicht und es passiert gar nichts.</p>
 </blockquote>
@@ -43,7 +43,7 @@ Adresse sagt also <strong>nichts</strong> über die Sichtbarkeit aus.</p>
 </blockquote>
 <p><strong>Wenn Sie es genau wissen wollen</strong> (ohne Anmeldung, also so, wie es die NAS
 sieht) – auf einem Rechner mit Docker:</p>
-<pre><code class="language-bash">docker pull ghcr.io/rf77/comfobox-gateway:1.0.0
+<pre><code class="language-bash">docker pull ghcr.io/rf77/comfobox-gateway:1.0.1
 </code></pre>
 <table>
 <thead>
@@ -111,7 +111,7 @@ Datei <code>conf/privilege</code> wird vom DSM abgelehnt (Schritt 2). Löschen S
 deshalb zuerst alle älteren <code>.spk</code> auf der NAS.</p>
 </blockquote>
 <p><strong>Prüfen, ob die Datei die richtige ist</strong> – auf einem Rechner mit Bash:</p>
-<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk | grep conf
+<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
 </code></pre>
@@ -120,14 +120,14 @@ deshalb zuerst alle älteren <code>.spk</code> auf der NAS.</p>
 <p><strong>Alternativ</strong> über eine eigene Paketquelle – dann erscheint das Paket
 direkt in der normalen Liste des Paketzentrums:
 <em>Paketcenter → Einstellungen → Paketquelle → Hinzufügen</em>, URL
-<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json</a></p>
+<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json</a></p>
 <p>Die Adresse enthält die Release-Version – bei einem neuen Release ändert
 sich der Teil hinter <code>download/</code>.</p>
 </blockquote>
 <h3 id="wenn-das-paketzentrum-das-paket-ablehnt">Wenn das Paketzentrum das Paket ablehnt</h3>
 <p>Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
 Skript auf der NAS kommt der <strong>echte Fehlercode</strong> heraus (per SSH):</p>
-<pre><code class="language-bash">sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk
+<pre><code class="language-bash">sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk
 </code></pre>
 <p>Das Skript zeigt die DSM-Version, den Inhalt des Pakets, die <code>privilege</code>-Datei
 und – mit <code>--install</code> – die JSON-Ausgabe von <code>synopkg install</code> mit dem

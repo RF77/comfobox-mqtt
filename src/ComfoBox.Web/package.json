@@ -1,6 +1,6 @@
 {
   "name": "comfobox-web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Web-Oberfläche des ComfoBox-MQTT-Gateways (Angular 22 + Optimus UI).",
   "scripts": {
     "ng": "ng",

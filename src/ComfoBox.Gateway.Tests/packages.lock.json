@@ -398,8 +398,8 @@
       "comfobox.gateway": {
         "type": "Project",
         "dependencies": {
-          "ComfoBox.Bacnet": "[1.0.0, )",
-          "ComfoBox.Domain": "[1.0.0, )",
+          "ComfoBox.Bacnet": "[1.0.1, )",
+          "ComfoBox.Domain": "[1.0.1, )",
           "MQTTnet": "[5.2.0.1603, )",
           "Serilog.AspNetCore": "[9.0.0, )",
           "Serilog.Extensions.Hosting": "[9.0.0, )",

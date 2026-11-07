@@ -170,7 +170,7 @@ sudo fuser -v /dev/ttyUSB0
 |---|---|---|
 | Gateway nicht erreichbar | `http://<IP>:8081/api/health` | Netzwerk, Firewall, Port |
 | Falscher Port in der Integration | Add-on: `8099`, Docker/SPK: `8081` | korrigieren |
-| Container startet nicht (Pull-Fehler) | Das Image `ghcr.io/rf77/comfobox-gateway` ist **privat** – ohne öffentliches Paket kann der Supervisor es nicht ziehen | Image auf „public" stellen (Package → Settings → Change visibility). Prüfen mit `docker pull ghcr.io/rf77/comfobox-gateway:1.0.0` – **Achtung:** ein `401` beim Aufruf von `ghcr.io/v2/…` im Browser ist immer normal und sagt nichts über die Sichtbarkeit aus |
+| Container startet nicht (Pull-Fehler) | Das Image `ghcr.io/rf77/comfobox-gateway` ist **privat** – ohne öffentliches Paket kann der Supervisor es nicht ziehen | Image auf „public" stellen (Package → Settings → Change visibility). Prüfen mit `docker pull ghcr.io/rf77/comfobox-gateway:1.0.1` – **Achtung:** ein `401` beim Aufruf von `ghcr.io/v2/…` im Browser ist immer normal und sagt nichts über die Sichtbarkeit aus |
 | Falscher Token | – | neuen Token erzeugen und eintragen |
 | Broker-Discovery, aber kein Broker | Broker-Eintrag im Gateway | Broker eintragen oder Integration nutzen |
 

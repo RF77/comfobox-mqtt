@@ -26,7 +26,7 @@ COMPOSE_CONTAINER="comfobox-gateway"
 
 # Standardwerte
 DEFAULT_WEB_PORT="8081"
-DEFAULT_IMAGE="ghcr.io/rf77/comfobox-gateway:1.0.0"
+DEFAULT_IMAGE="ghcr.io/rf77/comfobox-gateway:1.0.1"
 
 # Das Image steht in der Datei "image" neben den Skripten - build-spk.sh
 # schreibt sie beim Bauen des Pakets. So kann das Paket nie ein falsches

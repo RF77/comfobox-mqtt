@@ -281,7 +281,7 @@ Die Compose-Vorlage enthält Platzhalter, die der Supervisor per `sed` ersetzt:
 ````yaml
 services:
   gateway:
-    image: ghcr.io/RF77/comfobox-gateway:1.0.0
+    image: ghcr.io/RF77/comfobox-gateway:1.0.1
     container_name: comfobox-gateway
     restart: unless-stopped
     ports:
@@ -436,7 +436,7 @@ Liegt in `SYNOPKG_PKGVAR` und wird in den Container gemountt.
   "Supervisor": {
     "PassAllSerialDevices": true,
     "WebPort": 8081,
-    "Image": "ghcr.io/rf77/comfobox-gateway:1.0.0"
+    "Image": "ghcr.io/rf77/comfobox-gateway:1.0.1"
   }
 }
 ````
