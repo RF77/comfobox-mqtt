@@ -92,10 +92,53 @@ Zwei Fehler behoben:
 
 ## 2026-11-07 (2) – SPK 0003: Paket verifiziert, Diagnose-Werkzeug für die NAS
 
-**Ergebnis:** Die Paketstruktur ist jetzt **gegen ein funktionierendes
-Referenzpaket** geprüft (SynoCommunity/spksrc). Der User meldete, dass auch
-das SPK mit `conf/privilege` (Revision 0002) mit derselben Meldung
-abgelehnt wurde.
+### 2026-11-07 (3) – Release 1.0.1: der Versions-Check der CI war rot
+
+**Symptom:** Der User hat `git tag v1.0.1 && git push origin v1.0.1`
+ausgeführt; der Build wurde rot:
+
+> `Der Tag (1.0.1) passt nicht zur Version der Integration (1.0.0).`
+
+**Ursache:** `ha-release.yml` vergleicht den Tag mit **drei** Stellen im
+Repository – alle drei standen noch auf `1.0.0`:
+`custom_components/comfobox/manifest.json` (version),
+`deploy/ha-addon/comfobox/config.yaml` (version **und** Image-Tag).
+
+> **Merksatz:** Ein Release-Tag zieht **alle** Workflows. Die Versions-Prüfung
+> in `ha-release.yml` ist das Tor – ohne angehobene Versionen läuft **kein**
+> Release, auch wenn das Image bereits publiziert ist.
+
+**Gelöst:**
+- Alle Versionsstellen auf `1.0.1` angehoben: manifest.json, config.yaml
+  (Version + Image-Tag), `src/Directory.Build.props` (Gateway-Version → damit
+  `ComfoBox/Version` = `Ver 1.0.1`), `src/ComfoBox.Web/package.json`,
+  Compose-Defaults, SPK-Default, Doku
+- Die **Lock-Dateien** wurden mit `dotnet restore --force-evaluate`
+  nachgezogen (die Testprojekte referenzieren die Bibliotheken mit
+  `[1.0.0, )` → jetzt `[1.0.1, )`)
+- **Eine Quelle für SPK-Version und -Revision:** `deploy/synology-spk/src/VERSION`
+  und `deploy/synology-spk/REVISION`. `build-spk.sh` liest beide, wenn sie
+  nicht als Argument übergeben werden; der SPK-Workflow liest die Revision
+  aus derselben Datei. Vorher stand die Revision hart kodiert im Workflow
+  („0001“) und driftete sofort auseinander
+- Das **veraltete Release-Asset** `1.0.1-0001.spk` gelöscht – zwei SPKs
+  derselben Version im Release sind genau die Verwechslungsfalle, an der
+  die Installation auf der NAS scheiterte
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `dotnet test` → **339 Tests grün**, 0 Fehler
+- Versions-Check der CI mit denselben Befehlen nachgestellt → alle drei OK
+- Lock-Datei-Konsistenz (derselbe Node-Aufruf wie in der CI) → OK
+- `bash tools/check-spk.sh` → OK, Image-Tag passt zur Version
+- CI nach dem Push: `ha-release` ✅ · `synology-spk` ✅ · `build-test` ✅ ·
+  `codeql` ✅ · `docker-publish` (Image) läuft
+
+**Überraschungen:**
+- Der **erste** Tag-Push (2b46a5f) hatte das Image `1.0.1` bereits publiziert
+  (der Image-Workflow kennt keine Versionsprüfung) – nur die HA-Kette brach
+  ab. Deshalb lag im Release ein SPK mit der **alten** Revision `0001` neben
+  dem neuen `0003`
 
 **Belegte Referenz** (`mk/spksrc.spk.mk`):
 - `DSM_CONF_DIR = $(WORK_DIR)/conf` → `conf/` liegt im **SPK-Wurzelverzeichnis**
