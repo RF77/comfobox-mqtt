@@ -99,7 +99,7 @@ curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $TOKEN" \
 
 ## Schritt 1 – Paket herunterladen
 
-Das Paket aus dem [Release v1.0.0](https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.0)
+Das Paket aus dem neuesten [Release](https://github.com/RF77/comfobox-mqtt/releases)
 herunterladen und auf die NAS kopieren (Samba-Freigabe oder `scp`).
 
 > **Wichtig:** Auf der NAS darf **nur eine** `.spk` liegen. Das Paketzentrum
@@ -122,6 +122,9 @@ Fehlt `conf/privilege`, ist die Datei zu alt.
 > direkt in der normalen Liste des Paketzentrums:
 > *Paketcenter → Einstellungen → Paketquelle → Hinzufügen*, URL
 > <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json>
+>
+> Die Adresse enthält die Release-Version – bei einem neuen Release ändert
+> sich der Teil hinter `download/`.
 
 ### Wenn das Paketzentrum das Paket ablehnt
 
