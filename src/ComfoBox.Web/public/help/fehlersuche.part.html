@@ -89,8 +89,9 @@ Installation.</p>
 <p><strong>Variante:</strong> Fehlt die Datei <strong>nicht</strong>, aber das Paket wird trotzdem
 abgelehnt, meldet das DSM über die Kommandozeile den Fehlercode <strong>319</strong>
 („invalid package privilege content“). Dann passt der <strong>Inhalt</strong> der
-Datei nicht – etwa Windows-Zeilenenden. Das Skript <code>dsm-diagnose.sh</code>
-probiert die möglichen Varianten mit <code>--test</code> durch.</p>
+Datei nicht. Das Skript <code>dsm-diagnose.sh</code> zeigt die <strong>Log-Auszüge</strong> des DSM
+(dort steht der genaue Grund) und probiert mit <code>--test</code> mehrere Formen
+der Datei durch.</p>
 </blockquote>
 <blockquote>
 <p><strong>Meistens ist es die falsche Datei:</strong> Auf der NAS liegen oft mehrere

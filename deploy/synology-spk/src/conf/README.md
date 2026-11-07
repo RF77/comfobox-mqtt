@@ -83,6 +83,35 @@ Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
 > ins SPK. Deshalb konvertiert `build-spk.sh` die Datei **immer** auf LF
 > (`tr -d '\r'`), und `tools/check-spk.sh` prüft das.
 
+## Die Form, die DSM 7 erzeugt
+
+Für **DSM ≥ 7** erzeugt `SynoCommunity/spksrc` die Datei so:
+
+```json
+{
+  "defaults": {
+    "run-as": "package"
+  },
+  "username": "sc-<paket>"
+}
+```
+
+**Ohne** `ctrl-script`. Der Grund steht in den *Breaking Changes in 7.0*:
+
+> „All packages should provide `conf/privilege` with `package` in `run-as`
+> explicitly. **Any privileged operation should be accomplished via resource
+> worker.**“
+
+Privilegierte Operationen gehören also in den **Resource-Worker**
+(`conf/resource`) – nicht in ein root-Skript:
+
+| Aufgabe | DSM-7-Weg |
+|---|---|
+| systemd-Unit | Datei nach `conf/systemd/pkg-<name>` – das Framework kopiert sie selbst nach `/usr/local/lib/systemd/system` |
+| Container | `conf/resource` mit dem **Docker-Worker** (`"docker"`) – er legt Compose-Datei, Volume, Image und Container an und startet/stoppt sie |
+| Port | `conf/resource` mit `"port-config"` |
+| udev-Regel | **Problemfall** – dafür gibt es keinen Worker. Alternative: den stabilen by-id-Pfad des Adapters verwenden |
+
 ## Warum die Lifecycle-Skripte `root` brauchen
 
 `defaults.run-as: package` gilt für die **Daten** des Pakets. Die

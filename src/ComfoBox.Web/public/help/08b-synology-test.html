@@ -186,20 +186,22 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 </code></pre>
 <h4>4. Diagnose ausführen</h4>
 <p>In der SSH-Sitzung:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --install
 </code></pre>
 <p><code>sudo</code> fragt nach dem Passwort des DSM-Administrators. Ohne <code>--install</code> liest
 das Skript nur (keine Änderung an der NAS).</p>
-<p><strong>Ausgabe:</strong> DSM-Version, der Inhalt des Pakets, die <code>privilege</code>-Datei und
-schließlich die JSON-Antwort von <code>synopkg install</code> – dort steht der
-<strong>Fehlercode</strong>, zum Beispiel:</p>
+<p><strong>Ausgabe:</strong> DSM-Version, der Inhalt des Pakets, die <code>privilege</code>-Datei, die
+<strong>Log-Auszüge</strong> des DSM und schließlich die JSON-Antwort von
+<code>synopkg install</code> – dort steht der <strong>Fehlercode</strong>, zum Beispiel:</p>
 <pre><code class="language-json">{&quot;error&quot;:{&quot;code&quot;:319,&quot;description&quot;:&quot;invalid package privilege content&quot;},&quot;stage&quot;:&quot;install_failed&quot;}
 </code></pre>
 <blockquote>
 <p><strong>Fehlercode 319</strong> heißt: Das DSM liest die Datei <code>conf/privilege</code>, lehnt
-aber ihren <strong>Inhalt</strong> ab. Mit <code>--test</code> probiert das Skript die möglichen
-Varianten <strong>durch</strong> und installiert die erste, die funktioniert:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --test
+aber ihren <strong>Inhalt</strong> ab. Die <strong>Log-Auszüge</strong> im Skript verraten den
+genauen Grund – dort schreibt das DSM hin, was ihm nicht passt.</p>
+<p>Mit <code>--test</code> probiert das Skript zusätzlich mehrere Formen der
+<code>privilege</code>-Datei <strong>durch</strong> und installiert die erste, die funktioniert:</p>
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --test
 </code></pre>
 <p>Ein Fehler in dieser Phase ändert <strong>nichts</strong> an der NAS.</p>
 </blockquote>

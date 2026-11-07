@@ -73,8 +73,9 @@ Installation.
 > **Variante:** Fehlt die Datei **nicht**, aber das Paket wird trotzdem
 > abgelehnt, meldet das DSM über die Kommandozeile den Fehlercode **319**
 > („invalid package privilege content“). Dann passt der **Inhalt** der
-> Datei nicht – etwa Windows-Zeilenenden. Das Skript `dsm-diagnose.sh`
-> probiert die möglichen Varianten mit `--test` durch.
+> Datei nicht. Das Skript `dsm-diagnose.sh` zeigt die **Log-Auszüge** des DSM
+> (dort steht der genaue Grund) und probiert mit `--test` mehrere Formen
+> der Datei durch.
 
 > **Meistens ist es die falsche Datei:** Auf der NAS liegen oft mehrere
 > `.spk` nebeneinander, und im Dateiauswahler wird die **alte** angeklickt.

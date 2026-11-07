@@ -169,26 +169,29 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 In der SSH-Sitzung:
 
 ````bash
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --install
 ````
 
 `sudo` fragt nach dem Passwort des DSM-Administrators. Ohne `--install` liest
 das Skript nur (keine Änderung an der NAS).
 
-**Ausgabe:** DSM-Version, der Inhalt des Pakets, die `privilege`-Datei und
-schließlich die JSON-Antwort von `synopkg install` – dort steht der
-**Fehlercode**, zum Beispiel:
+**Ausgabe:** DSM-Version, der Inhalt des Pakets, die `privilege`-Datei, die
+**Log-Auszüge** des DSM und schließlich die JSON-Antwort von
+`synopkg install` – dort steht der **Fehlercode**, zum Beispiel:
 
 ````json
 {"error":{"code":319,"description":"invalid package privilege content"},"stage":"install_failed"}
 ````
 
 > **Fehlercode 319** heißt: Das DSM liest die Datei `conf/privilege`, lehnt
-> aber ihren **Inhalt** ab. Mit `--test` probiert das Skript die möglichen
-> Varianten **durch** und installiert die erste, die funktioniert:
+> aber ihren **Inhalt** ab. Die **Log-Auszüge** im Skript verraten den
+> genauen Grund – dort schreibt das DSM hin, was ihm nicht passt.
+>
+> Mit `--test` probiert das Skript zusätzlich mehrere Formen der
+> `privilege`-Datei **durch** und installiert die erste, die funktioniert:
 >
 > ````bash
-> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --test
+> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --test
 > ````
 >
 > Ein Fehler in dieser Phase ändert **nichts** an der NAS.
