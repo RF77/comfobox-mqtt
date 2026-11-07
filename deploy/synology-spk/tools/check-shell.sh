@@ -17,6 +17,7 @@ src/scripts/start-stop-status
 tools/test-config-parse.sh
 tools/check-spk.sh
 tools/check-tgz-layout.sh
+tools/check-compose.sh
 tools/dsm-diagnose.sh
 "
 

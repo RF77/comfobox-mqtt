@@ -27,6 +27,88 @@
 
 ---
 
+## 2026-11-07 (6) – „fail compose up": der Container startete nicht
+
+**Ergebnis:** Der Worker findet die Compose-Datei jetzt und legt das Projekt
+an – der Start des Containers scheitert aber noch. Revision 0008 enthält
+drei Korrekturen und vor allem ein Werkzeug, das die Ursache sichtbar
+macht: den Modus `--worker` im Diagnose-Skript.
+
+**Die entscheidende Meldung** (aus `synopkg install` auf der NAS):
+
+````
+{"code":276,"description":"failed to acquire postinst worker",
+ "worker_msg":[{"message":"fail compose up '9b068757-9ce2-40db-8049-4b8414a64877'"}]}
+````
+
+und aus `/var/log/messages`:
+
+````
+synopkg[29202]: docker_project_worker/docker_project_generator_worker/
+  docker_project_generater_worker.cpp:254 rollback created projects: `comfobox`
+````
+
+**Interpretation:**
+1. Der Worker **findet** die Compose-Datei (der Fix aus Revision 0007
+   greift) und **legt** das Projekt an.
+2. `compose up` **scheitert** → der Worker rollt zurück.
+3. Das DSM gibt die Docker-Fehlermeldung **nicht** weiter – nur „fail
+   compose up“ mit einer UUID.
+
+**Wichtig:** `docker compose config` war auf der NAS **erfolgreich** – die
+Compose-Datei ist also syntaktisch gültig. Es ist ein **Laufzeit**-Fehler
+beim Start des Containers.
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/target/compose/compose.yaml`
+  - `version: "3.8"` – bei Compose v1 (< 1.27) ist das Feld **Pflicht**,
+    ohne das Feld lehnt der Parser die Datei ab. Bei Compose v2 ist es
+    überholt, aber harmlos.
+  - **Ein** Mount statt zwei: `- "@VAR_DIR@:/var/lib/comfobox"`. Vorher lagen
+    die Host-Pfade `var` und `var/logs` **ineinander**. Der Log-Pfad liegt
+    jetzt im Datenverzeichnis (`COMFOBOX_Logging__Directory=/var/lib/comfobox/logs`).
+- `deploy/synology-spk/src/scripts/preinst` – legt das Datenverzeichnis an
+  (0777). Grund: der **Worker läuft vor dem `postinst`**. Legt Docker das
+  Verzeichnis selbst an, gehört es `root:root` – der Container läuft aber
+  als uid 1001 und könnte dann weder die `config.json` schreiben noch den
+  **24-h-Schreibzähler** sichern.
+- `deploy/synology-spk/tools/dsm-diagnose.sh` – **neuer Modus `--worker`**:
+  entpackt das Paket wie das DSM, zieht das Image, prüft die belegten
+  Ports und führt `docker compose up` aus – mit der **vollen**
+  Docker-Fehlermeldung. Installiert **nichts**, räumt am Ende auf.
+- `deploy/synology-spk/tools/check-compose.sh` – **neu**: prüft die
+  gepatchte Compose-Datei im gebauten SPK (`docker compose config`)
+- `deploy/synology-spk/tools/check-spk.sh` – prüft jetzt `version:` und
+  genau **einen** Daten-Mount
+- `deploy/synology-spk/packages.json`, `REVISION` (0008)
+- `docs/benutzer/09-fehlersuche.md` – Symptom 4 („fail compose up“) mit der
+  Zuordnung der Docker-Fehlermeldungen
+
+**Verifikation:**
+- `bash build-spk.sh 1.0.1 0008` → SPK gebaut
+- `bash tools/check-spk.sh` → **OK** (inkl. 2 neuer Prüfungen)
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- SPK: 51 200 B, MD5 `4f99cf9f134cd5750aecd831c54c2cee`
+
+**Offen / nicht gemacht:**
+- Die Ursache des `compose up`-Fehlers ist **nicht** abschließend
+  bekannt – das DSM unterdrückt die Meldung. Der Modus `--worker` liefert
+  sie beim nächsten Test auf der NAS.
+- Die Installation auf der NAS ist weiterhin **nicht** verifiziert.
+
+**Überraschungen:**
+- `docker compose config` **grün** heißt nicht, dass `compose up` klappt.
+  Die Syntaxprüfung sieht weder Image-Pull noch Port-Bindung noch
+  Container-Start.
+- Der DSM-Worker läuft **vor** dem `postinst`. Alles, was der Container
+  beim Start braucht, muss also **vorher** da sein – das war beim
+  Datenverzeichnis nicht der Fall.
+- Der Worker **legt das Projekt an** und rollt es bei Fehler zurück
+  („rollback created projects“). Deshalb ist nach dem Fehlversuch kein
+  Projekt in der Oberfläche zu sehen – das ist kein weiterer Fehler.
+
+---
+
 ## 2026-11-07 (5) – `package.tgz` war eine Ebene zu tief: der Worker „docker-project" scheiterte
 
 **Ergebnis:** Die Ursache der gescheiterten Installation ist gefunden und

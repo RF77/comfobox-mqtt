@@ -207,10 +207,10 @@ ssh admin@&lt;IP-der-NAS&gt;
 
 # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
 scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk admin@&lt;IP-der-NAS&gt;:/tmp/
 
 # 4. Diagnose ausführen
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --install
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --install
 </code></pre>
 <p>Das Skript zeigt unter anderem:</p>
 <ul>
@@ -221,6 +221,66 @@ sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --i
 </ul>
 <p>Die vollständige Anleitung steht in
 <a href="08b-synology-test.html">Synology testen</a>.</p>
+<h3>Symptom 4: „failed to acquire postinst worker“ / „fail compose up“</h3>
+<p><strong>Ursache:</strong> Der Container konnte nicht gestartet werden. Das DSM meldet nur
+<em>„fail compose up“</em> – die eigentliche Docker-Fehlermeldung bleibt
+verborgen.</p>
+<p><strong>Das DSM-Log verrät, wie weit es kam:</strong></p>
+<pre><code class="language-bash">grep -E &quot;Acquire|failed&quot; /var/log/synopkg.log | tail -10
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Zeile</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Acquire docker-project … (fail)</code></td>
+<td>Der Worker hat das Projekt <strong>nicht</strong> angelegt – die Compose-Datei wurde nicht gefunden.</td>
+</tr>
+<tr>
+<td><code>Acquire docker-project … (done)</code></td>
+<td>Der Worker war in Ordnung – der Fehler liegt im Container-Start.</td>
+</tr>
+</tbody></table>
+<p><strong>Lösung:</strong> Der Modus <code>--worker</code> macht exakt das, was der DSM-Worker macht,
+und zeigt die <strong>volle</strong> Docker-Fehlermeldung:</p>
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --worker
+</code></pre>
+<p>Das Skript entpackt das Paket wie das DSM, zieht das Image, prüft die
+belegten Ports und führt <code>docker compose up</code> aus – mit der vollständigen
+Ausgabe. Das Paket wird dabei <strong>nicht</strong> installiert; am Ende wird das Projekt
+wieder entfernt.</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Kennzeichen in der Ausgabe</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Image nicht ziehbar</td>
+<td><code>unauthorized</code> / <code>manifest unknown</code></td>
+<td>Image-Status prüfen (Schritt 0 in der Testanleitung)</td>
+</tr>
+<tr>
+<td>Port belegt</td>
+<td><code>port is already allocated</code></td>
+<td>Anderen Port verwenden oder den Beleger stoppen</td>
+</tr>
+<tr>
+<td>Verzeichnis fehlt</td>
+<td><code>no such file or directory</code></td>
+<td>Paket deinstallieren und neu installieren</td>
+</tr>
+<tr>
+<td>Image passt nicht zur Architektur</td>
+<td><code>no matching manifest</code></td>
+<td>Image für <code>linux/amd64</code> neu bauen</td>
+</tr>
+</tbody></table>
 <hr>
 <h2>Keine seriellen Ports in der Liste</h2>
 <p><strong>Symptom:</strong> Die Port-Auswahl (Konfiguration → BACnet oder Übersicht) ist leer.</p>

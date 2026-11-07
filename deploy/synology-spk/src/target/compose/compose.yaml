@@ -17,6 +17,11 @@
 # Soll statt "/dev" ein einzelner fester Port verwendet werden, wird die
 # Zeile "devices:" mit "- /dev/ttyUSB0:/dev/ttyUSB0" eingetragen und der
 # Eintrag "/dev:/dev" entfernt.
+# Das Feld "version" ist bei Docker Compose v2 ueberholt (dort erscheint eine
+# Warnung), bei Compose v1 < 1.27 ist es aber PFLICHT - ohne das Feld lehnt
+# der Parser die Dateien ab. Die Angabe ist damit in beiden Welten sicher.
+version: "3.8"
+
 services:
   gateway:
     image: @IMAGE@
@@ -43,10 +48,15 @@ services:
       - COMFOBOX_BACNET__Baudrate=38400
       - ASPNETCORE_URLS=http://+:8080
       - DOTNET_gcServer=1
+      # Das Log-Verzeichnis liegt bewusst IM Datenverzeichnis. Damit
+      # braucht es nur EINEN Mount (siehe unten) - zwei Mounts, deren
+      # Host-Pfade ineinander liegen, sind eine Fehlerquelle.
+      - COMFOBOX_Logging__Directory=/var/lib/comfobox/logs
 
     volumes:
+      # Ein einziger Mount fuer alles Persistente: config.json, der
+      # 24-h-Schreibzaehler (EEPROM-Schutz), die Portliste und die Logs.
       - "@VAR_DIR@:/var/lib/comfobox"
-      - "@VAR_DIR@/logs:/var/log/comfobox"
       # Alle seriellen Ports (CH340/FTDI). Der Gateway waehlt aus, welcher
       # Port benutzt wird - der Container muss deshalb nicht neu erstellt
       # werden, wenn der Adapter spaeter gesteckt wird.

@@ -7,6 +7,25 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
+- **Der Container liess sich nicht starten** („failed to acquire postinst
+  worker“ / „fail compose up“). Drei Korrekturen an der Compose-Datei und
+  am `preinst`:
+  - Das Feld `version` fehlte – bei Docker Compose v1 (unter 1.27) ist es
+    **Pflicht**, ohne das Feld lehnt der Parser die Datei ab.
+  - Die persistenten Daten lagen über **zwei** Mounts, deren Host-Pfade
+    ineinander lagen (`var` und `var/logs`). Jetzt gibt es **einen** Mount;
+    das Log-Verzeichnis liegt im Datenverzeichnis
+    (`COMFOBOX_Logging__Directory=/var/lib/comfobox/logs`).
+  - Das Datenverzeichnis wird jetzt im **`preinst`** angelegt, nicht erst im
+    `postinst`. Grund: der DSM-Worker läuft **vor** dem `postinst`. Legt
+    Docker ein fehlendes Verzeichnis an, gehört es `root:root` – der
+    Container läuft aber als uid 1001 und könnte dann weder die
+    `config.json` schreiben noch den **24-h-Schreibzähler** sichern.
+- **Das Diagnose-Skript kann den DSM-Worker jetzt nachstellen.** Der neue
+  Modus `--worker` macht exakt das, was der Worker tut (`docker compose up`)
+  und zeigt die **volle** Docker-Fehlermeldung. Das DSM meldet dazu nur
+  „fail compose up“ – ohne die Ursache. Der Modus installiert das Paket
+  **nicht** und räumt das Projekt danach wieder auf.
 - **Der DSM-Worker „docker-project“ ist gescheitert** – die eigentliche
   Ursache der gescheiterten Installation:
   ````

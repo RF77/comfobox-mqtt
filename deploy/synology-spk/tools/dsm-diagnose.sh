@@ -10,16 +10,21 @@
 #   `synopkg install` liefert dagegen ein **JSON mit Fehlercode und Text**.
 #
 # Aufruf (auf der NAS, per SSH):
-#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--install|--test|--log]
+#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--install|--worker|--test|--log]
 #
 #   --install  Installiert das Paket und zeigt die JSON-Antwort (Fehlercode)
+#   --worker   **Emuliert den DSM-Worker "docker-project"** und zeigt die
+#              volle Fehlermeldung von `docker compose up`. Das ist der
+#              Schritt, an dem die Installation scheitert ("fail compose up").
+#              Das Paket wird dabei NICHT installiert - nur die Compose-Datei
+#              wird ausprobiert und danach wieder aufgeräumt.
 #   --test     Probiert mehrere Varianten der privilege-Datei durch und
 #              installiert die erste, die das DSM akzeptiert. Ein Fehler in
 #              prepare_install ändert nichts an der NAS.
 #   --log      Zeigt nur die Log-Auszüge des DSM (nichts wird installiert)
 #
 # Voraussetzung: nur BusyBox-Standardwerkzeuge (sh, tar, md5sum, sha256sum).
-# Ohne --install/--test wird **nichts** verändert.
+# Ohne --install/--test/--worker wird **nichts** verändert.
 # ---------------------------------------------------------------------------
 set -u
 
@@ -27,7 +32,7 @@ SPK="${1:-}"
 MODE="${2:-}"
 
 if [ -z "$SPK" ]; then
-    echo "Aufruf: sh dsm-diagnose.sh <pfad/zum/paket.spk> [--install|--test|--log]" >&2
+    echo "Aufruf: sh dsm-diagnose.sh <pfad/zum/paket.spk> [--install|--worker|--test|--log]" >&2
     exit 1
 fi
 
@@ -234,6 +239,103 @@ validate_compose() {
 }
 
 # ---------------------------------------------------------------------------
+# Worker-Emulation
+#
+# Der DSM-Worker "docker-project" macht genau drei Dinge:
+#   1. das Projekt anlegen (Verzeichnis + Netzwerk)
+#   2. `docker compose up`   <-- HIER scheitert die Installation
+#   3. bei Fehler: zurueckrollen ("rollback created projects")
+#
+# Das DSM meldet nur "fail compose up '<uuid>'" - die eigentliche
+# Fehlermeldung von Docker wird **nicht** weitergegeben. Dieser Abschnitt
+# macht exakt Schritt 2 nach und zeigt die volle Ausgabe.
+#
+# Das Paket wird dabei NICHT installiert. Am Ende wird das Projekt wieder
+# entfernt (`compose down`), damit keine Reste bleiben.
+# ---------------------------------------------------------------------------
+worker_test() {
+    echo "--- Worker-Emulation: docker compose up ---"
+    echo ""
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "FEHLER: docker ist nicht im PATH."
+        echo "       Auf dem DSM liegt der Docker-Binary unter"
+        echo "       /var/packages/ContainerManager/target/usr/bin/docker"
+        return 1
+    fi
+
+    # Das Paket entpacken - genau wie das DSM es tut:
+    #   SPK entpacken -> package.tgz -> Zielverzeichnis
+    WORK3=$(mktemp -d 2>/dev/null) || WORK3=/tmp/diag-worker.$$
+    mkdir -p "$WORK3/target"
+    if ! tar xf "$SPK" -C "$WORK3" package.tgz 2>/dev/null; then
+        echo "FEHLER: package.tgz nicht lesbar"
+        rm -rf "$WORK3"
+        return 1
+    fi
+    if ! tar xzf "$WORK3/package.tgz" -C "$WORK3/target" 2>/dev/null; then
+        echo "FEHLER: package.tgz nicht entpackbar"
+        rm -rf "$WORK3"
+        return 1
+    fi
+
+    CF_DIR="$WORK3/target/compose"
+    if [ ! -f "$CF_DIR/compose.yaml" ]; then
+        echo "FEHLER: compose/compose.yaml fehlt in package.tgz"
+        rm -rf "$WORK3"
+        return 1
+    fi
+
+    # 1) Die Umgebung, in der der Worker laeuft
+    echo ">> Docker-Versionen:"
+    docker version --format '   Server: {{.Server.Version}}' 2>&1 | head -n 3 | sed 's/^/   /'
+    docker compose version 2>&1 | head -n 3 | sed 's/^/   /'
+    echo ""
+
+    # 2) Das Image - isoliert pulling (zeigt Netzwerk-/Auth-Fehler)
+    if [ -f "$WORK3/target/image" ]; then
+        IMAGE_NAME=$(head -n 1 "$WORK3/target/image" 2>/dev/null)
+    else
+        IMAGE_NAME=""
+    fi
+    if [ -n "$IMAGE_NAME" ]; then
+        echo ">> Image-Pull (isoliert): $IMAGE_NAME"
+        docker pull "$IMAGE_NAME" 2>&1 | tail -n 15 | sed 's/^/   /'
+        echo ""
+    fi
+
+    # 3) Die Ports pruefen - ein belegter Port laesst "compose up" scheitern
+    if command -v netstat >/dev/null 2>&1; then
+        echo ">> Belegte Ports (8081/8080):"
+        netstat -an 2>/dev/null | grep -E ':(8081|8080) ' | sed 's/^/   /' || echo "   (keine)"
+        echo ""
+    fi
+
+    # 4) DER entscheidende Schritt: compose up
+    echo ">> docker compose up (der Schritt, an dem die Installation scheitert):"
+    ( cd "$CF_DIR" && docker compose -p comfobox up -d 2>&1 ) | tail -n 40 | sed 's/^/   /'
+    RC=${PIPESTATUS:-$?}
+    echo ""
+    echo "   (Exit-Code: $RC)"
+    echo ""
+
+    # 5) Was ist daraus geworden?
+    echo ">> Container:"
+    docker ps -a --filter "name=comfobox" 2>&1 | head -n 10 | sed 's/^/   /'
+    echo ""
+    echo ">> Container-Logs:"
+    ( cd "$CF_DIR" && docker compose -p comfobox logs --tail 30 2>&1 ) | tail -n 30 | sed 's/^/   /'
+    echo ""
+
+    # 6) Aufraeumen - es sollen keine Reste auf der NAS bleiben
+    echo ">> Aufraeumen:"
+    ( cd "$CF_DIR" && docker compose -p comfobox down --remove-orphans 2>&1 ) | tail -n 5 | sed 's/^/   /'
+    echo ""
+
+    rm -rf "$WORK3"
+}
+
+# ---------------------------------------------------------------------------
 # 7. Log-Auszüge (immer - hier steht der genaue Grund)
 # ---------------------------------------------------------------------------
 show_logs
@@ -251,6 +353,14 @@ if [ "$MODE" = "--install" ]; then
     remove_broken_install
     synopkg install "$SPK" 2>&1
     echo ""
+    show_logs
+elif [ "$MODE" = "--worker" ]; then
+    echo "--- 8. Worker-Emulation (docker compose up) ---"
+    echo "Das Paket wird dabei NICHT installiert."
+    echo ""
+    validate_compose
+    worker_test
+    echo "--- 9. Log-Auszüge des DSM ---"
     show_logs
 elif [ "$MODE" = "--log" ]; then
     echo "--- 8. Installationsversuch (ausgelasst) ---"

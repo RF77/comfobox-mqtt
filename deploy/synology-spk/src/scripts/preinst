@@ -16,6 +16,23 @@
 
 echo "ComfoBox Gateway: Voraussetzungen werden geprüft …"
 
+# ---------------------------------------------------------------------------
+# Das Datenverzeichnis anlegen - HIER, nicht erst im postinst.
+#
+# Grund: Der DSM-Worker "docker-project" laeuft **vor** dem postinst. Er
+# startet den Container, und Docker legt ein fehlendes Host-Verzeichnis
+# **als root:root** an. Der Container laeuft aber als uid 1001 (comfobox)
+# und koennte dann weder die config.json schreiben noch den
+# 24-h-Schreibzaehler (EEPROM-Schutz) sichern.
+#
+# Das Verzeichnis gehoert dem Paket-Benutzer - das Anlegen ist deshalb
+# erlaubt und gehoert sogar zum Paket.
+# ---------------------------------------------------------------------------
+VAR_DIR="/var/packages/ComfoBoxGateway/var"
+if mkdir -p "$VAR_DIR" 2>/dev/null; then
+    chmod 0777 "$VAR_DIR" 2>/dev/null || true
+fi
+
 # 1) DSM-Version – nur eine Warnung. Die Mindestversion steht in der INFO,
 #    deshalb bietet DSM das Paket auf älteren Systemen ohnehin nicht an.
 DSM_MAJOR=$(echo "${SYNOPKG_DSM_VERSION_MAJOR:-7}" | cut -d. -f1)

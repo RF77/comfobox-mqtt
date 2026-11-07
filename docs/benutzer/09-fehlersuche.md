@@ -147,10 +147,10 @@ ssh admin@<IP-der-NAS>
 
 # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
 scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk admin@<IP-der-NAS>:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk admin@<IP-der-NAS>:/tmp/
 
 # 4. Diagnose ausführen
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --install
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --install
 ````
 
 Das Skript zeigt unter anderem:
@@ -162,6 +162,42 @@ Das Skript zeigt unter anderem:
 
 Die vollständige Anleitung steht in
 [Synology testen](08b-synology-test.md).
+
+### Symptom 4: „failed to acquire postinst worker“ / „fail compose up“
+
+**Ursache:** Der Container konnte nicht gestartet werden. Das DSM meldet nur
+*„fail compose up“* – die eigentliche Docker-Fehlermeldung bleibt
+verborgen.
+
+**Das DSM-Log verrät, wie weit es kam:**
+
+````bash
+grep -E "Acquire|failed" /var/log/synopkg.log | tail -10
+````
+
+| Zeile | Bedeutung |
+|---|---|
+| `Acquire docker-project … (fail)` | Der Worker hat das Projekt **nicht** angelegt – die Compose-Datei wurde nicht gefunden. |
+| `Acquire docker-project … (done)` | Der Worker war in Ordnung – der Fehler liegt im Container-Start. |
+
+**Lösung:** Der Modus `--worker` macht exakt das, was der DSM-Worker macht,
+und zeigt die **volle** Docker-Fehlermeldung:
+
+````bash
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --worker
+````
+
+Das Skript entpackt das Paket wie das DSM, zieht das Image, prüft die
+belegten Ports und führt `docker compose up` aus – mit der vollständigen
+Ausgabe. Das Paket wird dabei **nicht** installiert; am Ende wird das Projekt
+wieder entfernt.
+
+| Ursache | Kennzeichen in der Ausgabe | Lösung |
+|---|---|---|
+| Image nicht ziehbar | `unauthorized` / `manifest unknown` | Image-Status prüfen (Schritt 0 in der Testanleitung) |
+| Port belegt | `port is already allocated` | Anderen Port verwenden oder den Beleger stoppen |
+| Verzeichnis fehlt | `no such file or directory` | Paket deinstallieren und neu installieren |
+| Image passt nicht zur Architektur | `no matching manifest` | Image für `linux/amd64` neu bauen |
 
 ---
 

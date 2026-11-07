@@ -293,6 +293,29 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         else
             bad "compose.yaml ohne Image-Referenz"
         fi
+        # Das Feld "version" ist bei Compose v1 Pflicht. Ohne es lehnt
+        # der Parser die Dateien ab (Compose v1 < 1.27).
+        if grep -q '^version:' "$CF"; then
+            ok "compose.yaml hat das Feld 'version'"
+        else
+            bad "compose.yaml ohne 'version' - Compose v1 lehnt die Datei ab"
+        fi
+        # Nur EIN Mount fuer die persistenten Daten. Zwei Mounts, deren
+        # Host-Pfade ineinander liegen, sind eine Fehlerquelle.
+        DATA_MOUNTS=$(grep -cE '^[[:space:]]*-[[:space:]]*"[^"]*:/var/lib/comfobox"' "$CF")
+        if [ "$DATA_MOUNTS" = "1" ]; then
+            ok "compose.yaml mountet genau ein Datenverzeichnis"
+        else
+            bad "compose.yaml mountet $DATA_MOUNTS Datenverzeichnisse (erwartet: 1)"
+            echo "       Der Log-Pfad liegt im Datenverzeichnis:"
+            echo "       COMFOBOX_Logging__Directory=/var/lib/comfobox/logs"
+        fi
+        # Der Log-Pfad muss zum Mount passen.
+        if grep -q 'COMFOBOX_Logging__Directory=/var/lib/comfobox/logs' "$CF"; then
+            ok "Der Log-Pfad liegt im Datenverzeichnis (passt zum Mount)"
+        else
+            bad "compose.yaml ohne COMFOBOX_Logging__Directory im Datenverzeichnis"
+        fi
     fi
 else
     bad "compose/compose.yaml fehlt im package.tgz"
