@@ -118,7 +118,20 @@ echo "==> package.tgz erstellen"
 # Image. So kann das SPK nie versehentlich eine andere Version starten.
 printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
 
-( cd "$WORK" && find target -mindepth 1 -maxdepth 1 | tar cpf - --files-from=/dev/stdin | gzip -n > package.tgz )
+# **Reproduzierbar bauen.** Ohne diese Optionen wandern der Zeitstempel und
+# die Reihenfolge der Einträge in das Archiv - derselbe Quellstand ergibt
+# dann jedes Mal eine andere MD5. Das ist mehr als Kosmetik: die `checksum`
+# in der INFO und die MD5 in der `packages.json` (Paketquelle des DSM) waeren
+# dann nicht mehr nachrechenbar.
+#
+# `SOURCE_DATE_EPOCH` ist der Zeitstempel des letzten Commits - damit sind
+# auch der lokale Build und der CI-Build bitgleich. (Gleiches Prinzip wie
+# in SynoCommunity/spksrc, `TAR_REPRODUCIBLE`.)
+SOURCE_DATE_EPOCH=$(git log -1 --format=%ct 2>/dev/null || echo 0)
+[ "$SOURCE_DATE_EPOCH" -gt 0 ] 2>/dev/null || SOURCE_DATE_EPOCH=0
+TAR_REPRODUCIBLE="--sort=name --mtime=@${SOURCE_DATE_EPOCH} --owner=root --group=root --numeric-owner"
+
+( cd "$WORK" && find target -mindepth 1 -maxdepth 1 | tar cpf - $TAR_REPRODUCIBLE --files-from=/dev/stdin | gzip -n > package.tgz )
 
 # --- Prüfsumme in INFO eintragen -------------------------------------------
 CHECKSUM=$(md5sum "$WORK/package.tgz" | cut -d' ' -f1)
@@ -137,7 +150,7 @@ rm -f "$SPK"
 echo "==> SPK packen"
 # `conf` **muss** mit in die Liste - ohne conf/privilege installiert DSM 7
 # das Paket nicht (es gilt dann als Root-Paket).
-( cd "$WORK" && tar cpf "$SPK" INFO conf scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG )
+( cd "$WORK" && tar cpf "$SPK" $TAR_REPRODUCIBLE INFO conf scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG )
 
 # --- Fertiges Paket pruefen -------------------------------------------------
 # Die inhaltliche Pruefung (conf/privilege vorhanden, Icon-Groessen, Pflicht-
