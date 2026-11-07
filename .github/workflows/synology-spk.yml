@@ -32,9 +32,9 @@ on:
         required: true
         type: string
       revision:
-        description: 'Revision (fortlaufend, z. B. 0001)'
+        description: 'Revision (fortlaufend, z. B. 0003)'
         required: false
-        default: '0001'
+        default: '0003'
         type: string
       publish:
         description: 'Als Release-Asset veröffentlichen'
@@ -124,6 +124,18 @@ jobs:
           echo "checksum=$(md5sum "dist/${SPK}" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
           ls -la dist/
+
+      # Das DSM-Paketcenter verweigert die Installation **schon beim
+      # Hochladen**, wenn dem Paket die `conf/privilege` fehlt - es gilt
+      # dann als Root-Paket ("kann nicht installiert werden, da es mit
+      # Root-Rechten ausgefuehrt wird"). Das faellt auf dem Build-Rechner
+      # nicht auf, sondern erst auf dem NAS. Deshalb wird das fertige
+      # Paket hier geprueft: ohne `conf/privilege` wird der Job rot.
+      - name: SPK gegen das DSM-Paketcenter pruefen
+        run: |
+          set -euo pipefail
+          cd deploy/synology-spk
+          bash tools/check-spk.sh "dist/ComfoBoxGateway_noarch-dsm7_${{ steps.version.outputs.version }}-${{ steps.version.outputs.revision }}.spk"
 
       # Die Paketquelle des DSM ("Paketcenter → Einstellungen → Paketquelle")
       # zeigt auf diese Datei. Ohne sie findet der Nutzer kein Update.

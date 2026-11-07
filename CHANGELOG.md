@@ -318,6 +318,40 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Geräte-ID (`{ClientId}-{DeviceId}`)
 
 ### Fixed
+- **Das Synology-Paket liess sich nicht installieren.** Das DSM verweigerte den
+  Upload mit *„kann nicht installiert werden, da es mit Root-Rechten
+  ausgefuehrt wird"*. Ursache: Die Datei `conf/privilege` lag im Repository,
+  wurde von `build-spk.sh` aber **nie in das SPK gepackt** (im `tar`-Aufruf
+  fehlte `conf`). Ohne diese Datei gilt das Paket ab DSM 7.0 als Root-Paket.
+  - `build-spk.sh` kopiert `conf/privilege` jetzt ins Paket und **bricht ab**,
+    wenn die Datei fehlt
+  - `conf/privilege` entspricht jetzt exakt der DSM-Spezifikation
+    (`defaults.run-as: package`, `ctrl-script` fuer die Lifecycle-Skripte)
+  - **Neu:** `tools/check-spk.sh` prueft das fertige Paket gegen die
+    Anforderungen des DSM-Paketcenters (`conf/privilege` vorhanden **und**
+    an der richtigen Stelle, Icon-Groessen, INFO-Pflichtfelder,
+    `os_min_ver >= 7.0-40000`, Image-Tag) – der Check laeuft auch in der CI
+  - Die INFO enthaelt jetzt `support_conf_folder="yes"` (das DSM weiss damit,
+    dass es das `conf/`-Verzeichnis lesen soll) und `conf/privilege` bekommt
+    den Modus 0644 – beides wie bei funktionierenden Referenzpaketen
+- **Neu:** `tools/dsm-diagnose.sh` – laeuft auf der NAS (per SSH) und zeigt
+  DSM-Version, Paketinhalt, `privilege`-Datei und den **echten Fehlercode**
+  von `synopkg install`. Das DSM nennt im Dialog nur die Ursache, nicht den
+  Grund – dieses Skript liefert die Fehlermeldung mit Code
+- **Das Paket-Icon war 256×256 statt 64×64.** DSM 7.0 verlangt fuer
+  `PACKAGE_ICON.PNG` genau 64×64 (Breaking Change, vorher 72×72). Die grosse
+  Variante liegt jetzt als `PACKAGE_ICON_256.PNG` daneben
+- **Die Sichtbarkeits-Prüfung des Container-Images war falsch und hat in eine
+  endlose Fehlersuche geführt.** Der Manifest-Abruf
+  `https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0` liefert **immer**
+  `401` – auch bei öffentlichen Images, weil die Registry zwingend einen
+  Bearer-Token verlangt und ein Browser den nicht selbst anfordern kann. Die
+  Anleitung deutete das `401` aber als „privat". Neu: Prüfung über die
+  GitHub-Paket-Seite, über `docker pull` oder über einen anonymen Pull-Token
+- **CI: der Image-Workflow prüft jetzt den Anonymous-Pull.** Nach dem Push
+  fragt er das Manifest mit einem **anonymen** Token ab – genau das, was die
+  Synology und der HA-Supervisor tun. Bisher meldete er nur die
+  API-Sichtbarkeit, die nichts über den Anonymous-Pull aussagt
 - **Die GitHub Action fuer das Synology-Paket war nicht benutzbar.** Fuenf
   Ursachen, alle gefunden ueber die Annotationen der Release-Laeufe:
   - Der **Default-Branch heisst `master`** (Legacy-Stand ohne Workflows).

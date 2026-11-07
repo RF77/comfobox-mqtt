@@ -35,6 +35,30 @@ cp src/INFO "$WORK/INFO"
 cp src/scripts/* "$WORK/scripts/"
 chmod 755 "$WORK"/scripts/*
 
+# --- conf/privilege (Pflicht ab DSM 7.0) ------------------------------------
+# **Ohne** diese Datei gilt das Paket als Root-Paket und das DSM-Paketcenter
+# verweigert die Installation schon beim Hochladen:
+#   "kann nicht installiert werden, da es mit Root-Rechten ausgefuehrt wird"
+# Sie muss im SPK **im Wurzelverzeichnis** liegen (nicht im package.tgz).
+#
+# Nur die `privilege`-Datei wird kopiert - die README.md daneben ist
+# Dokumentation und gehoert nicht ins Paket.
+PRIVILEGE="src/conf/privilege"
+if [ ! -f "$PRIVILEGE" ]; then
+    echo "FEHLER: $PRIVILEGE fehlt." >&2
+    echo "       Ohne conf/privilege installiert DSM 7 das Paket nicht -" >&2
+    echo "       es gilt dann als Root-Paket (siehe src/conf/README.md)." >&2
+    exit 1
+fi
+mkdir -p "$WORK/conf"
+cp "$PRIVILEGE" "$WORK/conf/privilege"
+# Rechte wie bei den funktionierenden Referenzpaketen (spksrc):
+# Verzeichnis 0755, Datei 0644. Unter Windows hat Git Bash sonst 755 oder
+# 600 - DSM ist bei der privilege-Datei zwar tolerant, aber man sollte sich
+# nicht darauf verlassen.
+chmod 755 "$WORK/conf"
+chmod 644 "$WORK/conf/privilege"
+
 # Icon: das Paketcenter braucht PACKAGE_ICON.PNG (256×256).
 # Erzeugt mit:  node tools/make-icon.mjs
 ICON=""
@@ -51,7 +75,16 @@ if [ -z "$ICON" ]; then
     exit 1
 fi
 
-cp "$ICON" "$WORK/PACKAGE_ICON.PNG"
+# **DSM 7.0 verlangt PACKAGE_ICON.PNG mit 64x64** (Breaking Change: vorher
+# 72x72). Die grosse Variante kommt als PACKAGE_ICON_256.PNG daneben.
+ICON_64="src/PACKAGE_ICON_64.png"
+if [ ! -f "$ICON_64" ]; then
+    echo "FEHLER: Es gibt kein 64x64-Icon ($ICON_64)." >&2
+    echo "       Erzeugen mit: node tools/make-icon.mjs --size 64 $ICON_64" >&2
+    exit 1
+fi
+
+cp "$ICON_64" "$WORK/PACKAGE_ICON.PNG"
 cp "$ICON" "$WORK/PACKAGE_ICON_256.PNG"
 
 # --- package.tgz (Inhalt des Pakets) ---------------------------------------
@@ -78,7 +111,13 @@ sed -i "s|^version=.*|version=\"$VERSION-$REVISION\"|" "$WORK/INFO"
 SPK="$OUT/${PACKAGE}_noarch-dsm7_${VERSION}-${REVISION}.spk"
 rm -f "$SPK"
 echo "==> SPK packen"
-( cd "$WORK" && tar cpf "$SPK" INFO scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG )
+# `conf` **muss** mit in die Liste - ohne conf/privilege installiert DSM 7
+# das Paket nicht (es gilt dann als Root-Paket).
+( cd "$WORK" && tar cpf "$SPK" INFO conf scripts package.tgz PACKAGE_ICON.PNG PACKAGE_ICON_256.PNG )
+
+# --- Fertiges Paket pruefen -------------------------------------------------
+# Die inhaltliche Pruefung (conf/privilege vorhanden, Icon-Groessen, Pflicht-
+# felder der INFO) macht tools/check-spk.sh - sie laeuft auch in der CI.
 
 # --- Ergebnis ---------------------------------------------------------------
 rm -rf "$WORK"

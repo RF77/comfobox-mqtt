@@ -102,8 +102,10 @@ Ein unvollständiger Zustand blockiert **nicht** den Betrieb – der Gateway sta
 ````
 comfobox-gateway_1.0.0.spk            ← tar-Archiv
 ├── INFO                                ← Paketmetadaten
-├── PACKAGE_ICON.PNG
-├── PACKAGE_ICON_256.PNG
+├── conf/
+│   └── privilege                       ← Rechte des Pakets (Pflicht ab DSM 7.0)
+├── PACKAGE_ICON.PNG                   ← 64×64 (Pflicht ab DSM 7.0)
+├── PACKAGE_ICON_256.PNG               ← 256×256 (große Ansicht)
 ├── scripts/
 │   ├── preinst                         ← Prüfungen (Container Manager da? Architektur?)
 │   ├── postinst                        ← Verzeichnisse, udev-Regel, Supervisor installieren
@@ -121,7 +123,34 @@ comfobox-gateway_1.0.0.spk            ← tar-Archiv
         └── compose.template.yaml        ← Compose-Vorlage
 ````
 
+> ⚠️ **`conf/privilege` ist Pflicht ab DSM 7.0.** Fehlt die Datei, gilt das
+> Paket als **Root-Paket** und das Paketzentrum verweigert die Installation
+> **schon beim Hochladen**:
+>
+> *„… kann nicht installiert werden, da es mit Root-Rechten ausgeführt
+> wird. Pakete mit Root-Rechten können Befehle als Root-Benutzer ausführen
+> und die Sicherheit Ihres Systems gefährden."*
+>
+> Die Datei muss im **SPK-Wurzelverzeichnis** liegen (nicht im `package.tgz`).
+> Details und Begründung: [`deploy/synology-spk/src/conf/README.md`](../../deploy/synology-spk/src/conf/README.md).
+
 Das konkrete Skelett liegt in [`deploy/synology-spk/`](../../deploy/synology-spk/).
+
+### 4.1a Prüfung des fertigen Pakets
+
+Der Build prüft das Ergebnis gegen die Anforderungen des DSM-Paketcenters:
+
+````bash
+cd deploy/synology-spk
+bash build-spk.sh
+bash tools/check-spk.sh
+````
+
+Geprüft werden: `conf/privilege` vorhanden **und** an der richtigen Stelle,
+`defaults.run-as = package`, Icon-Größen (64×64 / 256×256), die Pflichtfelder
+der `INFO`, `os_min_ver ≥ 7.0-40000` und das Image-Tag. Der Prüfer läuft auch
+in der CI – ohne die `conf/privilege` wird der Build rot, **bevor** das Paket
+das NAS erreicht.
 
 ### 4.2 INFO – relevante Felder
 

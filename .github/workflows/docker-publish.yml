@@ -154,6 +154,51 @@ jobs:
           ignore-unfixed: true
           exit-code: '1'
 
+      # Der **entscheidende** Test: laesst sich das Image **ohne jede
+      # Anmeldung** ziehen? Genau das tun die Synology und der
+      # HA-Supervisor - nur so bekommen sie das Image ueberhaupt.
+      #
+      # Die API-Sichtbarkeit ("public") allein beweist es nicht, und
+      # umgekehrt ist ein Manifest-Abruf **ohne** Token **immer** 401 - auch
+      # bei oeffentlichen Images, weil die Registry zwingend einen
+      # Bearer-Token verlangt. Geprueft wird deshalb der Abruf mit einem
+      # **anonymen** Pull-Token.
+      #
+      # GHCR braucht nach dem Push manchmal einen Moment, bis das Manifest
+      # ueber den Pull-Endpoint erreichbar ist - deshalb mehrfach versuchen.
+      - name: Anonymen Pull pruefen
+        env:
+          PACKAGE: rf77/comfobox-gateway
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set +e
+          set -uo pipefail
+          echo "::group::Anonymer Pull (ohne Anmeldung)"
+          code=""
+          for i in 1 2 3 4 5 6; do
+            token=$(curl -s "https://ghcr.io/token?scope=repository:${PACKAGE}:pull&service=ghcr.io" \
+              | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+            code=$(curl -s -o /dev/null -w "%{http_code}" \
+              -H "Authorization: Bearer ${token}" \
+              -H "Accept: application/vnd.oci.image.index.v1+json" \
+              "https://ghcr.io/v2/${PACKAGE}/manifests/${VERSION}")
+            echo "Versuch ${i}: HTTP ${code}"
+            if [ "$code" = "200" ]; then
+              break
+            fi
+            sleep 5
+          done
+          echo "::endgroup::"
+
+          if [ "$code" = "200" ]; then
+            echo "Das Image ist anonym ziehbar - NAS und HA-Supervisor koennen es ohne Anmeldung holen."
+          else
+            echo "::error::Das Image ist NICHT anonym ziehbar (HTTP ${code}). NAS und HA-Supervisor koennen es dann nicht ziehen."
+            echo "::error::Ursache: Das Paket ist privat - oder es wurde mit dem automatischen GITHUB_TOKEN publiziert (dann laesst sich 'Change visibility' nicht anwenden)."
+            echo "::error::Loesung: Paket loeschen, Secret 'GHCR_TOKEN' (PAT classic mit write:packages + read:packages) hinterlegen und den Tag neu pushen."
+            exit 1
+          fi
+
   # ─────────────────────────────────────────────────────────────────────────
   # Das Synology-Paket (.spk) wird von .github/workflows/synology-spk.yml
   # gebaut und als Release-Asset veröffentlicht. Es läuft dort eigenständig,

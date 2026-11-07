@@ -14,6 +14,8 @@ src/scripts/preuninst
 src/scripts/postuninst
 src/scripts/start-stop-status
 tools/test-config-parse.sh
+tools/check-spk.sh
+tools/dsm-diagnose.sh
 "
 
 fail=0

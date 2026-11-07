@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 // ---------------------------------------------------------------------------
-// make-icon.mjs – erzeugt das Paket-Icon des Synology-Pakets (256×256 PNG).
+// make-icon.mjs – erzeugt das Paket-Icon des Synology-Pakets (PNG).
 //
 // Warum ein Skript statt einer fertigen Datei?
 //   Das Icon ist ein **Artefakt**, kein Quelltext. Trotzdem soll es
 //   reproduzierbar sein: wer das Design ändern will, ruft dieses Skript auf
 //   und bekommt byte-gleiche Ergebnisse.
 //
-// Aufruf:  node deploy/synology-spk/tools/make-icon.mjs [ziel.png]
+// Aufruf:
+//   node deploy/synology-spk/tools/make-icon.mjs [ziel.png]
+//   node deploy/synology-spk/tools/make-icon.mjs --size 64 [ziel.png]
+//
+// **Warum zwei Größen?** DSM 7.0 verlangt `PACKAGE_ICON.PNG` mit **64×64**
+// (Breaking Change, vorher 72×72). Die große Variante (256×256) legt das
+// Paketzentrum zusätzlich als `PACKAGE_ICON_256.PNG` ab.
 //
 // Voraussetzung: nur Node.js (zlib ist im Standardmodul enthalten) – keine
 // nativen Abhängigkeiten, kein Python, kein ImageMagick.
@@ -18,6 +24,28 @@ import { writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// --- Argumente ---------------------------------------------------------------
+const args = process.argv.slice(2);
+let size = 256;
+let targetArg = null;
+
+for (let i = 0; i < args.length; i += 1) {
+  if (args[i] === '--size') {
+    size = Number.parseInt(args[i + 1], 10);
+    i += 1;
+  } else {
+    targetArg = args[i];
+  }
+}
+
+if (!Number.isInteger(size) || size < 16 || size > 1024) {
+  console.error(`FEHLER: Ungueltige Groesse: ${size} (erlaubt: 16..1024)`);
+  process.exit(1);
+}
+
+// Das Design wird immer in dieser Auflösung gezeichnet - die Geometrie
+// (Ringe, Radien) ist darauf abgestimmt. Kleinere Groessen entstehen durch
+// Skalieren des fertigen Rasters (Box-Filter, siehe scalePixels()).
 const SIZE = 256;
 const SUPERSAMPLE = 4; // 4×4 Kanten für saubere Antialiasing-Kanten
 
@@ -174,6 +202,65 @@ for (let py = 0; py < SIZE; py++) {
   }
 }
 
+// Das fertige 256er-Raster auf die Zielgroesse bringen (Box-Filter).
+const scaled = scalePixels(pixels, SIZE, size);
+
+// --- Skalieren ---------------------------------------------------------------
+
+/**
+ * Skaliert ein RGBA-Raster mit einem Box-Filter (Durchschnitt über das
+ * Quellrechteck). Das ist der richtige Filter für Verkleinerungen: er
+ * bekommt keine hellen Ringe an den Kanten – anders als Nearest Neighbor.
+ *
+ * @param {Buffer} src RGBA-Raster in srcSize × srcSize
+ * @param {number} srcSize Kantenlänge der Quelle
+ * @param {number} dstSize Kantenlänge des Ziels
+ * @returns {Buffer} RGBA-Raster in dstSize × dstSize
+ */
+function scalePixels(src, srcSize, dstSize) {
+  if (srcSize === dstSize) {
+    return src;
+  }
+
+  const out = Buffer.alloc(dstSize * dstSize * 4);
+  const ratio = srcSize / dstSize;
+
+  for (let y = 0; y < dstSize; y += 1) {
+    const y0 = Math.floor(y * ratio);
+    const y1 = Math.max(y0 + 1, Math.floor((y + 1) * ratio));
+
+    for (let x = 0; x < dstSize; x += 1) {
+      const x0 = Math.floor(x * ratio);
+      const x1 = Math.max(x0 + 1, Math.floor((x + 1) * ratio));
+
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let n = 0;
+
+      for (let sy = y0; sy < y1; sy += 1) {
+        for (let sx = x0; sx < x1; sx += 1) {
+          const offset = (sy * srcSize + sx) * 4;
+          r += src[offset];
+          g += src[offset + 1];
+          b += src[offset + 2];
+          a += src[offset + 3];
+          n += 1;
+        }
+      }
+
+      const offset = (y * dstSize + x) * 4;
+      out[offset] = Math.round(r / n);
+      out[offset + 1] = Math.round(g / n);
+      out[offset + 2] = Math.round(b / n);
+      out[offset + 3] = Math.round(a / n);
+    }
+  }
+
+  return out;
+}
+
 // --- PNG kodieren -----------------------------------------------------------
 
 /**
@@ -215,8 +302,8 @@ function chunk(type, data) {
 }
 
 const ihdr = Buffer.alloc(13);
-ihdr.writeUInt32BE(SIZE, 0);
-ihdr.writeUInt32BE(SIZE, 4);
+ihdr.writeUInt32BE(size, 0);
+ihdr.writeUInt32BE(size, 4);
 ihdr[8] = 8; // Bittiefe
 ihdr[9] = 6; // Farbtyp RGBA
 ihdr[10] = 0; // Kompression
@@ -224,12 +311,12 @@ ihdr[11] = 0; // Filter
 ihdr[12] = 0; // Interlace
 
 // Die Bildzeilen: jede Zeile beginnt mit dem Filter-Byte 0 (None).
-const raw = Buffer.alloc(SIZE * (SIZE * 4 + 1));
+const raw = Buffer.alloc(size * (size * 4 + 1));
 
-for (let y = 0; y < SIZE; y++) {
-  const rowStart = y * (SIZE * 4 + 1);
+for (let y = 0; y < size; y++) {
+  const rowStart = y * (size * 4 + 1);
   raw[rowStart] = 0;
-  pixels.copy(raw, rowStart + 1, y * SIZE * 4, (y + 1) * SIZE * 4);
+  scaled.copy(raw, rowStart + 1, y * size * 4, (y + 1) * size * 4);
 }
 
 const png = Buffer.concat([
@@ -240,8 +327,8 @@ const png = Buffer.concat([
 ]);
 
 const here = dirname(fileURLToPath(import.meta.url));
-const target = resolve(process.argv[2] ?? `${here}/../src/PACKAGE_ICON.png`);
+const target = resolve(targetArg ?? `${here}/../src/PACKAGE_ICON.png`);
 
 writeFileSync(target, png);
 
-console.log(`Icon geschrieben: ${target} (${SIZE}×${SIZE}, ${png.length} Bytes)`);
+console.log(`Icon geschrieben: ${target} (${size}×${size}, ${png.length} Bytes)`);

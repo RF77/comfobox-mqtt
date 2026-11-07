@@ -46,5 +46,11 @@ install_type="system"
 install_reboot="no"
 extractsize="1024"
 
+# Das Paket liefert ein conf/-Verzeichnis mit der privilege-Datei (Pflicht ab
+# DSM 7.0). Das Feld ist seit DSM 6.0 offiziell deprecated - Synology
+# schreibt es aber weiterhin, sobald ein Paket ein conf/-Verzeichnis mitbringt
+# (siehe SynoCommunity/spksrc, mk/spksrc.spk.mk). Unschädlich und belt & braces.
+support_conf_folder="yes"
+
 # Wird beim Build durch build-spk.sh gesetzt
 checksum=""

@@ -27,6 +27,121 @@
 
 ---
 
+## 2026-11-07 – DSM verweigert die Installation: `conf/privilege` fehlte im SPK
+
+**Ergebnis:** Das Synology-Paket lässt sich auf DSM 7.2 wieder installieren.
+Zwei Fehler behoben:
+
+1. **Die Installation wurde verweigert** („kann nicht installiert werden, da es
+   mit Root-Rechten ausgeführt wird"). Die Datei `conf/privilege` lag im
+   Repository, wurde von `build-spk.sh` aber **nie in das SPK gepackt** – im
+   `tar`-Aufruf fehlte `conf`. Sie war nicht einmal im Git-Repository.
+2. **Das Icon war 256×256 statt 64×64** – DSM 7.0 verlangt für
+   `PACKAGE_ICON.PNG` genau 64×64 (Breaking Change, vorher 72×72).
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/conf/privilege` – **neu, jetzt auch im Git**
+  (exakt nach DSM-Spezifikation: `defaults.run-as: package`,
+  `username`/`groupname`, `ctrl-script` für die Lifecycle-Skripte)
+- `deploy/synology-spk/src/conf/README.md` – Begründung und DSM-Zitate
+- `deploy/synology-spk/build-spk.sh` – kopiert `conf/privilege` ins Paket,
+  packt `conf` mit, bricht mit klarer Meldung ab, wenn die Datei fehlt;
+  Icon-Handling auf 64×64 + 256×256
+- `deploy/synology-spk/tools/check-spk.sh` – **neu**: prüft das fertige Paket
+  gegen die Anforderungen des DSM-Paketcenters
+- `deploy/synology-spk/tools/make-icon.mjs` – `--size` für die Zielgröße
+  (Box-Filter-Skalierung)
+- `deploy/synology-spk/src/PACKAGE_ICON_64.png` – **neu**
+- `deploy/synology-spk/tools/check-shell.sh` – prüft jetzt auch `check-spk.sh`
+- `.github/workflows/synology-spk.yml` – neuer Step „SPK gegen das
+  DSM-Paketcenter prüfen“; Standard-Revision auf `0002`
+- `docs/benutzer/09-fehlersuche.md` – neuer Abschnitt „Das Paket lässt sich
+  nicht installieren“
+- `docs/benutzer/08b-synology-test.md` – Hinweis in Schritt 2
+- `docs/03-deployment/synology-paketcenter.md` – `conf/` in der Struktur,
+  neuer Abschnitt 4.1a
+- `CHANGELOG.md`, `deploy/synology-spk/README.md`
+
+**Verifikation:**
+- `bash build-spk.sh 1.0.0 0002` → SPK gebaut
+- `bash tools/check-spk.sh` → **OK – das Paket erfüllt die Anforderungen**
+- **Negativtest**: `conf/privilege` testweise aus dem SPK gelöscht → der
+  Prüfer meldet `FAIL` und endet mit Exit-Code 1
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch in Ordnung
+- `node tools/build-docs.mjs` → 13 Seiten; `tools/check-links.ps1` →
+  663 Links, 0 Probleme
+
+**Offen / nicht gemacht:**
+- Kein Commit und kein Push – der User entscheidet, wann das rausgeht
+- Das SPK `1.0.0-0002` liegt **lokal** in `deploy/synology-spk/dist/`; ein
+  Release-Asset entsteht erst mit dem nächsten Tag-Push
+
+**Überraschungen:**
+- **GNU tar 1.35 unter Windows liest `C:\…` als Remote-Host und hängt sich
+  auf.** Im Prüfskript muss der Pfad über `cd` + Basisname verarbeitet
+  werden – ein Windows-Pfad als tar-Argument blockiert den ganzen Lauf
+- **Eine Pipe in `tar` liest vom Terminal und blockiert.** `tar xzO` am
+  Pipe-Ende wartet auf stdin und bekommt nichts, wenn die Pipe leer ist.
+  Deshalb wird das `package.tgz` jetzt über eine **Datei** entpackt
+  (`tar_get_to`) statt über eine Pipe
+- `python3` existiert unter Windows, ist aber der **Microsoft-Store-Stub**
+  (er existiert, kann aber kein JSON parsen). Ein Interpreter-Test muss
+  **ausführen**, nicht nur `command -v` prüfen
+- Die Fehlermeldung im Screenshot kommt vom DSM **schon beim Hochladen** –
+  sie sagt nichts über das Image aus (das war öffentlich)
+
+## 2026-11-07 (2) – SPK 0003: Paket verifiziert, Diagnose-Werkzeug für die NAS
+
+**Ergebnis:** Die Paketstruktur ist jetzt **gegen ein funktionierendes
+Referenzpaket** geprüft (SynoCommunity/spksrc). Der User meldete, dass auch
+das SPK mit `conf/privilege` (Revision 0002) mit derselben Meldung
+abgelehnt wurde.
+
+**Belegte Referenz** (`mk/spksrc.spk.mk`):
+- `DSM_CONF_DIR = $(WORK_DIR)/conf` → `conf/` liegt im **SPK-Wurzelverzeichnis**
+- `SPK_CONTENT = package.tgz INFO scripts` + `conf` + Icons
+  → **identisch** zu unserem Paket
+- Die `privilege`-Datei eines echten Pakets (`spk/dnscrypt-proxy/src/conf/privilege`)
+  entspricht unserer bis auf den `_comment`-Schlüssel
+- `conf/privilege` mit Modus **0644**, Icons 64×64 + 256×256,
+  `os_min_ver="7.2-63134"` (identisch zum Referenzwert für DSM 7.2)
+
+**Weitere Härtung:**
+- `support_conf_folder="yes"` in der INFO (spksrc schreibt es, wenn ein
+  `conf/`-Ordner mitkommt; laut Doku seit DSM 6.0 deprecated, aber harmlos)
+- `conf/privilege` bekommt Modus 0644, `conf/` 0755
+- **Neu:** `tools/dsm-diagnose.sh` – läuft **auf der NAS** per SSH und zeigt
+  DSM-Version, Paketinhalt, `privilege`-Datei und mit `--install` den
+  **echten Fehlercode** von `synopkg install` (JSON). Das DSM nennt im
+  Dialog nur die Ursache, nicht den Grund
+- `check-spk.sh` prüft jetzt auch `support_conf_folder` und den Dateimodus
+- Die alten Revisionen 0001 und 0002 wurden aus `dist/` **entfernt** – auf
+  der NAS sollen nur **eine** `.spk` liegen, sonst wird im Dateiauswahler
+  leicht die falsche angeklickt
+
+**Verifikation:**
+- `bash tools/check-spk.sh` → alle Prüfungen OK (Exit 0)
+- `bash tools/check-shell.sh` → 12 Skripte OK, Exit 0
+- `bash tools/dsm-diagnose.sh <spk>` → Ausgabe korrekt
+- `node tools/build-docs.mjs` → 13 Seiten; `tools/check-links.ps1` →
+  663 Links, 0 Probleme
+
+**Offen / nicht gemacht:**
+- Kein Commit und kein Push. Das **Release-Asset auf GitHub ist noch die
+  alte Datei 0001** (ohne `conf/privilege`) – wer über den Release-Link
+  oder die Paketquelle lädt, bekommt weiterhin die alte. Ein neues Release
+  (Tag `v1.0.1`) würde das lösen, publiziert aber auch ein neues Image
+- Die Ursache des erneuten Fehlers beim User ist **nicht abschließend
+  geklärt** – das Paket ist verifiziert korrekt. Der wahrscheinlichste Fall:
+  auf der NAS lag eine ältere `.spk` und die wurde angeklickt
+
+**Überraschungen:**
+- `support_conf_folder` ist laut DSM-Doku **deprecated seit 6.0** – es ist
+  *nicht* die Ursache. Die entscheidende Info war `DSM_CONF_DIR` im
+  spksrc-Buildsystem
+
+---
+
 ## 2026-11-01 – Legacy-CI aus, SPK-Workflow, Bus-Analyse (Aufgaben 8e.1–8e.3)
 
 **Ergebnis:**

@@ -120,6 +120,36 @@ Die `config.json` wird vom **Gateway** geschrieben (der Assistent schreibt sie
 | `/etc/udev/rules.d/99-comfobox-serial.rules` | udev-Regel |
 | `/etc/systemd/system/comfobox-gateway.service` | systemd-Unit |
 
+## Rechte des Pakets (`conf/privilege`)
+
+Ab DSM 7.0 verlangt Synology für jedes Paket eine ausdrückliche
+Rechteangabe. Fehlt `conf/privilege`, gilt das Paket als **Root-Paket** und
+das Paketzentrum verweigert die Installation schon beim Hochladen.
+
+Die Datei liegt in [`src/conf/`](src/conf/) und wird von `build-spk.sh` ins
+SPK gepackt. Details: [`src/conf/README.md`](src/conf/README.md).
+
+## Prüfen
+
+````bash
+# Bauen
+bash build-spk.sh
+
+# Gegen die Anforderungen des DSM-Paketcenters prüfen
+bash tools/check-spk.sh
+````
+
+## Diagnose auf der NAS
+
+Wenn das Paketzentrum das Paket ablehnt, nennt der Dialog nur die Ursache
+(„mit Root-Rechten ausgeführt"), nicht den Grund. Das Skript
+`tools/dsm-diagnose.sh` läuft **auf der NAS** (per SSH) und liefert den
+echten Fehlercode:
+
+````bash
+sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk --install
+````
+
 ## Sicherheit
 
 - Container läuft **unprivileged** (`USER comfobox`), kein `privileged`

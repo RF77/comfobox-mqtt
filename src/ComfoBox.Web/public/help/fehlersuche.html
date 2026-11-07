@@ -112,6 +112,39 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.</p>
 <p><strong>Es darf nur einen geben.</strong> Gateway <strong>oder</strong> Direktintegration.</p>
 </blockquote>
 <hr>
+<h2>Das Paket lässt sich nicht installieren</h2>
+<p><strong>Symptom:</strong> Beim Hochladen der <code>.spk</code> ins Paketzentrum erscheint:</p>
+<blockquote>
+<p><em>„ComfoBox Gateway kann nicht installiert werden, da es mit Root-Rechten
+ausgeführt wird. Pakete mit Root-Rechten können Befehle als Root-Benutzer
+ausführen und die Sicherheit Ihres Systems gefährden.&quot;</em></p>
+</blockquote>
+<p><strong>Ursache:</strong> Dem Paket fehlt die Datei <code>conf/privilege</code>. Ab DSM 7.0 verlangt
+Synology für jedes Paket eine ausdrückliche Rechteangabe – ohne diese Datei
+gilt das Paket als Root-Paket und das Paketzentrum verweigert die
+Installation.</p>
+<blockquote>
+<p><strong>Meistens ist es die falsche Datei:</strong> Auf der NAS liegen oft mehrere
+<code>.spk</code> nebeneinander, und im Dateiauswahler wird die <strong>alte</strong> angeklickt.
+Prüfen Sie das so:</p>
+<pre><code class="language-bash">tar tf /volume1/pfad/zur/datei.spk | grep conf
+# erwartet: conf/ und conf/privilege
+</code></pre>
+</blockquote>
+<p><strong>Lösung:</strong> Sie brauchen eine neuere Version des Pakets. Prüfen Sie die
+verwendete Version auf der <a href="https://github.com/RF77/comfobox-mqtt/releases">Download-Seite</a>;
+ab <strong>1.0.0-0002</strong> ist die Datei enthalten.</p>
+<blockquote>
+<p><strong>Eigene Handarbeit ist nicht nötig</strong> – das Paket wird mit der Datei
+ausgeliefert. Sollte die Meldung weiterhin kommen, holen Sie den echten
+Fehlercode:</p>
+<pre><code class="language-bash">sudo sh dsm-diagnose.sh /volume1/pfad/zur/datei.spk --install
+</code></pre>
+<p>Das Skript liegt im Repository unter
+<code>deploy/synology-spk/tools/dsm-diagnose.sh</code>. Es liefert die JSON-Ausgabe
+von <code>synopkg install</code> – dort steht der Fehlercode.</p>
+</blockquote>
+<hr>
 <h2>Keine seriellen Ports in der Liste</h2>
 <p><strong>Symptom:</strong> Die Port-Auswahl (Konfiguration → BACnet oder Übersicht) ist leer.</p>
 <table>
@@ -234,7 +267,7 @@ Bus sind genauso problematisch wie zwei Direktintegrationen.</p>
 <tr>
 <td>Container startet nicht (Pull-Fehler)</td>
 <td>Das Image <code>ghcr.io/rf77/comfobox-gateway</code> ist <strong>privat</strong> – ohne öffentliches Paket kann der Supervisor es nicht ziehen</td>
-<td>Image auf „public&quot; stellen (Package → Settings → Change visibility)</td>
+<td>Image auf „public&quot; stellen (Package → Settings → Change visibility). Prüfen mit <code>docker pull ghcr.io/rf77/comfobox-gateway:1.0.0</code> – <strong>Achtung:</strong> ein <code>401</code> beim Aufruf von <code>ghcr.io/v2/…</code> im Browser ist immer normal und sagt nichts über die Sichtbarkeit aus</td>
 </tr>
 <tr>
 <td>Falscher Token</td>

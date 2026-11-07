@@ -25,16 +25,45 @@ DS923+ – vom Download bis zur Anzeige, ob die Heizung antwortet.
 > Image **privat**, kann die NAS es nicht ziehen – der Container startet
 > dann nicht und es passiert gar nichts.
 
-**So prüfen Sie das** (ohne Anmeldung, also so, wie es die NAS sieht):
+**So prüfen Sie das** – auf der Paket-Seite von GitHub:
 
-```
-https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0
+<https://github.com/users/RF77/packages/container/comfobox-gateway>
+
+| Antwort | Bedeutung |
+|---|---|
+| **Public** | alles bereit → weiter mit Schritt 1 |
+| **Private** | das Image ist privat → Schritt 0a ist nötig |
+
+> **Nicht** die Adresse
+> `https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0` im Browser
+> aufrufen: Sie antwortet **immer** mit `401 Unauthorized` – auch wenn das
+> Image öffentlich ist. Die Registry verlangt für jede Anfrage einen Token,
+> und den kann der Browser nicht selbst anfordern. Ein `401` an dieser
+> Adresse sagt also **nichts** über die Sichtbarkeit aus.
+
+**Wenn Sie es genau wissen wollen** (ohne Anmeldung, also so, wie es die NAS
+sieht) – auf einem Rechner mit Docker:
+
+```bash
+docker pull ghcr.io/rf77/comfobox-gateway:1.0.0
 ```
 
 | Antwort | Bedeutung |
 |---|---|
-| **401 Unauthorized** | das Image ist privat → Schritt 0a ist nötig |
-| **200 OK** | alles bereit → weiter mit Schritt 1 |
+| `Status: Downloaded newer image` | das Image ist öffentlich → weiter mit Schritt 1 |
+| `unauthorized: authentication required` | das Image ist privat → Schritt 0a ist nötig |
+
+Ohne Docker geht es mit zwei Befehlen – der erste holt einen anonymen Token,
+der zweite fragt das Manifest damit ab:
+
+```bash
+TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:rf77/comfobox-gateway:pull&service=ghcr.io" | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+curl -s -o /dev/null -w "%{http_code}\n" -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  "https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0"
+```
+
+`200` = öffentlich, `401` = privat.
 
 ### Schritt 0a – Image öffentlich machen
 
@@ -62,21 +91,51 @@ https://ghcr.io/v2/rf77/comfobox-gateway/manifests/1.0.0
 5. **Sichtbarkeit umstellen** – dieselbe Seite wie in Schritt 3 →
    *Change visibility* → *Public*.
 
-> **Ab Schritt 4 läuft der Image-Workflow** und meldet am Ende selbst, ob
-> das Paket öffentlich ist. Sie können die Warnung in den Workflow-Protokollen
-> nachlesen.
+> **Ab Schritt 4 läuft der Image-Workflow.** Er prüft am Ende, ob sich das
+> Image **anonym** ziehen lässt – genau das, was die NAS tut. Der Job wird
+> rot, wenn das nicht klappt; das Ergebnis steht im Workflow-Protokoll.
 
 ---
 
 ## Schritt 1 – Paket herunterladen
 
-[ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk](https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk)
+Das Paket aus dem [Release v1.0.0](https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.0)
 herunterladen und auf die NAS kopieren (Samba-Freigabe oder `scp`).
+
+> **Wichtig:** Auf der NAS darf **nur eine** `.spk` liegen. Das Paketzentrum
+> installiert die Datei, die Sie im Dateiauswahler anklicken – und auf der NAS
+> liegen oft mehrere Versionen nebeneinander. Eine **ältere** Datei ohne die
+> Datei `conf/privilege` wird vom DSM abgelehnt (Schritt 2). Löschen Sie
+> deshalb zuerst alle älteren `.spk` auf der NAS.
+
+**Prüfen, ob die Datei die richtige ist** – auf einem Rechner mit Bash:
+
+````bash
+tar tf ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk | grep conf
+# erwartet:  conf/
+#            conf/privilege
+````
+
+Fehlt `conf/privilege`, ist die Datei zu alt.
 
 > **Alternativ** über eine eigene Paketquelle – dann erscheint das Paket
 > direkt in der normalen Liste des Paketzentrums:
 > *Paketcenter → Einstellungen → Paketquelle → Hinzufügen*, URL
 > <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/packages.json>
+
+### Wenn das Paketzentrum das Paket ablehnt
+
+Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
+Skript auf der NAS kommt der **echte Fehlercode** heraus (per SSH):
+
+````bash
+sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk
+````
+
+Das Skript zeigt die DSM-Version, den Inhalt des Pakets, die `privilege`-Datei
+und – mit `--install` – die JSON-Ausgabe von `synopkg install` mit dem
+Fehlercode. Das Skript liegt im Repository unter
+`deploy/synology-spk/tools/dsm-diagnose.sh`.
 
 ---
 
@@ -88,6 +147,12 @@ herunterladen und auf die NAS kopieren (Samba-Freigabe oder `scp`).
 Das Paket prüft vorher selbst (DSM-Version, Container Manager, freier Port
 8081) und startet danach den Container. Der Browser öffnet sich
 automatisch auf `http://<NAS-IP>:8081/`.
+
+> **Meldung: „kann nicht installiert werden, da es mit Root-Rechten
+> ausgeführt wird"?** Dann ist die `.spk` zu alt – ab DSM 7.0 muss sie die
+> Datei `conf/privilege` enthalten. Laden Sie eine neuere Version herunter
+> (Schritt 1) und löschen Sie die alte Datei von der NAS. Details in der
+> [Fehlersuche](09-fehlersuche.md).
 
 **Ohne Hardware testen?** Das geht: Der Assistent startet auch ohne
 USB-Adapter. Sie können Web-Oberfläche, MQTT-Anbindung und Kennwort

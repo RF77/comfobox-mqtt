@@ -316,7 +316,8 @@ Bei einem Tag-Push `v<version>` laufen **drei** Workflows:
 | 1 | Einen **Personal Access Token (classic)** anlegen mit `write:packages` und `read:packages` |
 | 2 | Als Repository-Secret **`GHCR_TOKEN`** hinterlegen |
 | 3 | Das Paket `comfobox-gateway` in GHCR **löschen** (es wurde mit `GITHUB_TOKEN` erstellt – solche Pakete lassen sich **nicht** umstellen) |
-| 4 | Einen neuen Tag pushen – der Workflow publiziert das Image neu und stellt die Sichtbarkeit automatisch auf `public` |
+| 4 | Einen neuen Tag pushen – der Workflow publiziert das Image neu, diesmal mit dem PAT |
+| 5 | Sichtbarkeit **manuell** umstellen (Package → Settings → *Change visibility* → *Public*) – das kann der Workflow **nicht**, für den Nutzer-Namespace gibt es keinen API-Endpunkt |
 
 > **Warum der Token?** Ein Paket, das mit dem `GITHUB_TOKEN` des Workflows
 > publiziert wurde, kann **nicht** auf „public" umgestellt werden
@@ -326,6 +327,16 @@ Bei einem Tag-Push `v<version>` laufen **drei** Workflows:
 >
 > **Ohne Secret** weicht der Workflow auf den `GITHUB_TOKEN` aus und
 > meldet per `::warning::`, dass die Sichtbarkeit manuell umzustellen ist.
+
+> **Der Workflow prüft den Anonymous-Pull.** Nach dem Push fragt er das
+> Manifest mit einem **anonymen** Token ab – genau das, was die NAS und der
+> HA-Supervisor tun. Der Job wird rot, wenn das nicht klappt; im
+> Workflow-Protokoll steht dann, woran es liegt.
+>
+> **Wichtig:** Der Manifest-Abruf **ohne** Token liefert **immer** `401` –
+> auch bei öffentlichen Images. Die Registry verlangt zwingend einen
+> Bearer-Token, den der Browser nicht selbst anfordern kann. Ein `401` sagt
+> also **nichts** über die Sichtbarkeit aus.
 
 ### Wohin die Artefakte?
 

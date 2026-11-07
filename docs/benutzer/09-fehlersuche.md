@@ -57,6 +57,46 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.
 
 ---
 
+## Das Paket lässt sich nicht installieren
+
+**Symptom:** Beim Hochladen der `.spk` ins Paketzentrum erscheint:
+
+> *„ComfoBox Gateway kann nicht installiert werden, da es mit Root-Rechten
+> ausgeführt wird. Pakete mit Root-Rechten können Befehle als Root-Benutzer
+> ausführen und die Sicherheit Ihres Systems gefährden."*
+
+**Ursache:** Dem Paket fehlt die Datei `conf/privilege`. Ab DSM 7.0 verlangt
+Synology für jedes Paket eine ausdrückliche Rechteangabe – ohne diese Datei
+gilt das Paket als Root-Paket und das Paketzentrum verweigert die
+Installation.
+
+> **Meistens ist es die falsche Datei:** Auf der NAS liegen oft mehrere
+> `.spk` nebeneinander, und im Dateiauswahler wird die **alte** angeklickt.
+> Prüfen Sie das so:
+>
+> ````bash
+> tar tf /volume1/pfad/zur/datei.spk | grep conf
+> # erwartet: conf/ und conf/privilege
+> ````
+
+**Lösung:** Sie brauchen eine neuere Version des Pakets. Prüfen Sie die
+verwendete Version auf der [Download-Seite](https://github.com/RF77/comfobox-mqtt/releases);
+ab **1.0.0-0002** ist die Datei enthalten.
+
+> **Eigene Handarbeit ist nicht nötig** – das Paket wird mit der Datei
+> ausgeliefert. Sollte die Meldung weiterhin kommen, holen Sie den echten
+> Fehlercode:
+>
+> ````bash
+> sudo sh dsm-diagnose.sh /volume1/pfad/zur/datei.spk --install
+> ````
+>
+> Das Skript liegt im Repository unter
+> `deploy/synology-spk/tools/dsm-diagnose.sh`. Es liefert die JSON-Ausgabe
+> von `synopkg install` – dort steht der Fehlercode.
+
+---
+
 ## Keine seriellen Ports in der Liste
 
 **Symptom:** Die Port-Auswahl (Konfiguration → BACnet oder Übersicht) ist leer.
@@ -130,7 +170,7 @@ sudo fuser -v /dev/ttyUSB0
 |---|---|---|
 | Gateway nicht erreichbar | `http://<IP>:8081/api/health` | Netzwerk, Firewall, Port |
 | Falscher Port in der Integration | Add-on: `8099`, Docker/SPK: `8081` | korrigieren |
-| Container startet nicht (Pull-Fehler) | Das Image `ghcr.io/rf77/comfobox-gateway` ist **privat** – ohne öffentliches Paket kann der Supervisor es nicht ziehen | Image auf „public" stellen (Package → Settings → Change visibility) |
+| Container startet nicht (Pull-Fehler) | Das Image `ghcr.io/rf77/comfobox-gateway` ist **privat** – ohne öffentliches Paket kann der Supervisor es nicht ziehen | Image auf „public" stellen (Package → Settings → Change visibility). Prüfen mit `docker pull ghcr.io/rf77/comfobox-gateway:1.0.0` – **Achtung:** ein `401` beim Aufruf von `ghcr.io/v2/…` im Browser ist immer normal und sagt nichts über die Sichtbarkeit aus |
 | Falscher Token | – | neuen Token erzeugen und eintragen |
 | Broker-Discovery, aber kein Broker | Broker-Eintrag im Gateway | Broker eintragen oder Integration nutzen |
 
