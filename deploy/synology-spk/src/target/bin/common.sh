@@ -12,15 +12,43 @@
 # conf/resource.
 # ---------------------------------------------------------------------------
 
-# Basisverzeichnisse (vom Paketzentrum gesetzt)
-: "${SYNOPKG_PKGDEST:=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
-: "${SYNOPKG_PKGVAR:=${SYNOPKG_PKGDEST}/var}"
-
 PKG_NAME="ComfoBoxGateway"
-PKG_DIR="${SYNOPKG_PKGDEST}"
-VAR_DIR="${SYNOPKG_PKGVAR}"
+
+# ---------------------------------------------------------------------------
+# Pfade
+#
+# WICHTIG:
+#   * SYNOPKG_PKGDEST zeigt auf das Zielverzeichnis (target) des Pakets.
+#     In manchen DSM-Versionen ist die Variable nicht gesetzt - deshalb
+#     wird sie zusätzlich aus der Position von common.sh abgeleitet
+#     (common.sh liegt immer in <target>/bin/).
+#   * SYNOPKG_PKGVAR gibt es in DSM 7 NICHT. Das Datenverzeichnis liegt
+#     immer unter /var/packages/<paket>/var (FHS von DSM). Der frühere
+#     Aufruf "<target>/var" zeigte in ein Verzeichnis auf der
+#     Systempartition: die config.json wäre nach einem Neustart weg und
+#     der Container hätte sein Datenverzeichnis nicht gefunden.
+# ---------------------------------------------------------------------------
+PKG_DIR=""
+for _cand in \
+    "${SYNOPKG_PKGDEST:-}" \
+    "/var/packages/${PKG_NAME}/target" \
+    "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+do
+    if [ -n "$_cand" ] && [ -d "$_cand/bin" ]; then
+        PKG_DIR="$_cand"
+        break
+    fi
+done
+if [ -z "$PKG_DIR" ]; then
+    PKG_DIR="${SYNOPKG_PKGDEST:-/var/packages/${PKG_NAME}/target}"
+fi
+
+VAR_DIR="/var/packages/${PKG_NAME}/var"
 LOG_DIR="${VAR_DIR}/logs"
 LOG_FILE="${SYNOPKG_TEMP_LOGFILE:-/tmp/${PKG_NAME}.log}"
+# Dauerhaftes Log des Pakets (ueberlebt einen Neustart, im Gegensatz zu
+# SYNOPKG_TEMP_LOGFILE, das nur waehrend der Installation existiert).
+PKG_LOG_FILE="${LOG_DIR}/package.log"
 
 # Persistente Dateien
 CONFIG_FILE="${VAR_DIR}/config.json"

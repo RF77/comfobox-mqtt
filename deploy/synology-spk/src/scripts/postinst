@@ -2,6 +2,13 @@
 # ---------------------------------------------------------------------------
 # postinst – Umgebung nach der Installation vorbereiten.
 #
+# WICHTIG (DSM 7):
+#   * Ein Rückgabewert != 0 macht den Paketstatus "kaputt" – das Paket
+#     liefe zwar, gäbe aber Fehler. Dieses Skript beendet deshalb IMMER
+#     mit 0.
+#   * Anders als in preinst ist das Zielverzeichnis hier gefüllt:
+#     common.sh, die Compose-Datei und die Skripte liegen unter target/.
+#
 # Reihenfolge laut DSM:
 #   prereplace → preinst → postinst → postreplace → start-stop-status start
 #
@@ -17,18 +24,62 @@
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
-if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
+# ---------------------------------------------------------------------------
+# common.sh laden – robust gegen alle Ausführungsorte.
+#
+# DSM führt die Lifecycle-Skripte je nach Phase aus verschiedenen
+# Verzeichnissen aus:
+#   * waehrend der Installation: <spk-temp>/scripts/postinst
+#     → common.sh liegt in <spk-temp>/target/bin/common.sh
+#   * nach der Installation:      <installiert>/scripts/postinst
+#     → common.sh liegt in <installiert>/bin/common.sh
+#
+# Deshalb werden alle gaengigen Kandidaten geprueft. Vorher wurde nur
+# EIN Pfad versucht - je nach Phase war common.sh nicht auffindbar und
+# das Skript brach mit exit 1 ab ("failed to run postinst script").
+# ---------------------------------------------------------------------------
+COMMON_SH=""
+for _cand in \
+    "${SYNOPKG_PKGDEST:-}/bin/common.sh" \
+    "$SELF_DIR/../bin/common.sh" \
+    "$SELF_DIR/../target/bin/common.sh"
+do
+    [ -n "$_cand" ] || continue
+    if [ -f "$_cand" ]; then
+        COMMON_SH="$_cand"
+        break
+    fi
+done
+
+if [ -n "$COMMON_SH" ]; then
     # shellcheck source=../target/bin/common.sh
-    . "$SELF_DIR/../target/bin/common.sh"
+    . "$COMMON_SH"
 else
-    echo "ComfoBox Gateway: common.sh nicht gefunden."
-    exit 1
+    # common.sh fehlt (unvollständiges Paket) – mit Minimalwerten weiter.
+    # Der Abbruch wäre schlimmer als ein unvollständiges Setup.
+    PKG_NAME="ComfoBoxGateway"
+    PKG_DIR="${SYNOPKG_PKGDEST:-/var/packages/${PKG_NAME}/target}"
+    VAR_DIR="/var/packages/${PKG_NAME}/var"
+    LOG_DIR="${VAR_DIR}/logs"
+    CONFIG_FILE="${VAR_DIR}/config.json"
+    PORTS_FILE="${VAR_DIR}/ports.json"
+    LOG_FILE="${SYNOPKG_TEMP_LOGFILE:-/tmp/${PKG_NAME}.log}"
+    log()
+    {
+        printf '%s %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >> "$LOG_FILE" 2>/dev/null || true
+    }
+    prepare_permissions()
+    {
+        mkdir -p "$VAR_DIR" "$LOG_DIR" "${VAR_DIR}/data" 2>/dev/null || true
+        chmod 0777 "$VAR_DIR" 2>/dev/null || true
+        chmod 0777 "$LOG_DIR" 2>/dev/null || true
+    }
 fi
 
 echo "ComfoBox Gateway: Umgebung wird vorbereitet …"
 
 # 1) Verzeichnisse anlegen
-prepare_permissions
+prepare_permissions 2>/dev/null || true
 
 # 2) Skripte ausführbar machen
 chmod 755 "${PKG_DIR}/bin/"*.sh 2>/dev/null || true

@@ -14,12 +14,21 @@
 # ---------------------------------------------------------------------------
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
-    # shellcheck source=../target/bin/common.sh
-    . "$SELF_DIR/../target/bin/common.sh"
-fi
 
-if [ -n "$VAR_DIR" ] && [ -d "$VAR_DIR" ]; then
+# common.sh robust laden (siehe postinst fuer die Erklaerung).
+for _cand in \
+    "${SYNOPKG_PKGDEST:-}/bin/common.sh" \
+    "$SELF_DIR/../bin/common.sh" \
+    "$SELF_DIR/../target/bin/common.sh"
+do
+    if [ -n "$_cand" ] && [ -f "$_cand" ]; then
+        # shellcheck source=../target/bin/common.sh
+        . "$_cand"
+        break
+    fi
+done
+
+if [ -n "${VAR_DIR:-}" ] && [ -d "${VAR_DIR}" ]; then
     log "Datenverzeichnis bleibt erhalten: $VAR_DIR"
     echo "Die Konfiguration bleibt unter $VAR_DIR erhalten."
     echo "Zum vollständigen Entfernen bitte dieses Verzeichnis manuell löschen."

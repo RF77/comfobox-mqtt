@@ -244,6 +244,128 @@ else
     bad "target/compose/compose.yaml fehlt im package.tgz"
 fi
 
+# --- 3d. Lifecycle-Skripte --------------------------------------------------
+#
+# **Regression (Revision 0005 -> 0006):**
+#   Zum Zeitpunkt von "preinst" ist das Zielverzeichnis des Pakets noch
+#   NICHT gefuellt - das package.tgz wird erst danach entpackt. Ein Skript,
+#   das in preinst eine Datei aus target/ laed (z. B. common.sh), bricht
+#   mit exit 1 ab. Das DSM meldet dann nur:
+#     "Paket kann nicht installiert werden. Versuchen Sie es spaeter erneut"
+#
+#   Zweiter Regression: common.sh wurde ueber einen **festen** Pfad
+#   geladen ($SELF_DIR/../target/bin/common.sh). DSM fuehrt die Skripte je
+#   nach Phase aus verschiedenen Verzeichnissen aus - der Pfad stimmte
+#   nur in einer davon.
+#
+# Beides wird hier geprueft, damit es nicht zurueckkommt.
+echo ""
+echo "Lifecycle-Skripte"
+
+# Prueft, ob ein Skript eine Datei aus target/ (also aus dem package.tgz)
+# voraussetzt. In preinst ist das verboten - in den uebrigen erlaubt.
+script_needs_target()
+{
+    # $1 = Skriptdatei (bereits von Kommentaren befreit), $2 = verbotener Text
+    grep -q "$2" "$1" 2>/dev/null
+}
+
+# Kommentarzeilen entfernen. Sonst schlagen die Checks auf die
+# Dokumentation des alten Fehlers an: die Skripte erklaeren im Kommentar,
+# warum sie frueher "target/bin/common.sh" geladen haben. Geprueft werden
+# muss aber der **ausfuehrbare Code**, nicht der Kommentar.
+# Nur Zeilen, die mit # beginnen, gelten als Kommentar.
+strip_comments()
+{
+    # $1 = Eingabedatei, $2 = Ausgabedatei
+    grep -v '^[[:space:]]*#' "$1" > "$2" 2>/dev/null || : > "$2"
+}
+
+for s in preinst postinst preuninst postuninst start-stop-status; do
+    if tar_unpack "$WORK/x" "scripts/$s"; then
+        S="$WORK/x/scripts/$s"
+        strip_comments "$S" "$S.code"
+
+        # LF-Zeilenenden: BusyBox-ash interpretiert ein CR am Zeilenende
+        # als Teil des Befehlsnamens ("command not found").
+        if tr -d '\r' < "$S" | cmp -s - "$S"; then
+            ok "scripts/$s hat nur LF-Zeilenenden"
+        else
+            bad "scripts/$s enthaelt CR-Zeichen (CRLF)"
+        fi
+
+        # "set -u" ist auf DSM 7 gefaehrlich: in der Phase "preinst" ist
+        # SYNOPKG_PKGDEST nicht garantiert gesetzt, ein "unbound variable"
+        # beendet das Skript (Fehler 1: "failed to run preinst script").
+        if grep -q '^set -u' "$S.code"; then
+            bad "scripts/$s setzt 'set -u' - nicht gesetzte DSM-Variablen brechen das Skript ab"
+        else
+            ok "scripts/$s setzt kein 'set -u'"
+        fi
+
+        # Jedes Skript muss mit exit 0 enden (oder unbedingt mit 0
+        # zurueckkommen) - sonst bricht die Installation ab.
+        if grep -q 'exit 0' "$S.code"; then
+            ok "scripts/$s endet mit exit 0"
+        else
+            bad "scripts/$s endet NICHT mit exit 0 - die Installation wuerde abbrechen"
+        fi
+    else
+        bad "scripts/$s fehlt im Paket"
+    fi
+done
+
+# **Die eigentliche Regression:** preinst darf KEINE Datei aus dem
+# package.tgz voraussetzen - das Verzeichnis ist dort noch nicht gefuellt.
+if tar_unpack "$WORK/x" "scripts/preinst"; then
+    PRE="$WORK/x/scripts/preinst"
+    strip_comments "$PRE" "$PRE.code"
+    if script_needs_target "$PRE.code" 'target/bin'; then
+        bad "scripts/preinst laed eine Datei aus target/ - dort ist zu diesem Zeitpunkt nichts entpackt"
+        echo "       (Revision 0006 hat das behoben: preinst ist eigenstaendig)"
+    else
+        ok "scripts/preinst ist eigenstaendig (kein Zugriff auf target/)"
+    fi
+    if script_needs_target "$PRE.code" 'common.sh'; then
+        bad "scripts/preinst laed common.sh - die Datei existiert dort noch nicht"
+    else
+        ok "scripts/preinst laed kein common.sh"
+    fi
+fi
+
+# common.sh darf nicht auf SYNOPKG_PKGVAR setzen - die Variable gibt es
+# in DSM 7 nicht. Das Datenverzeichnis liegt immer unter
+# /var/packages/<paket>/var.
+if tar_get_to "package.tgz" "$WORK/pkg2.tgz" \
+   && tar xzOf "$WORK/pkg2.tgz" target/bin/common.sh > "$WORK/common.sh" 2>/dev/null; then
+    strip_comments "$WORK/common.sh" "$WORK/common.code"
+    if grep -q 'SYNOPKG_PKGVAR' "$WORK/common.code"; then
+        bad "common.sh benutzt SYNOPKG_PKGVAR - diese Variable gibt es in DSM 7 nicht"
+    else
+        ok "common.sh benutzt kein SYNOPKG_PKGVAR"
+    fi
+    if grep -q '/var/packages/' "$WORK/common.code"; then
+        ok "common.sh nutzt /var/packages/<paket>/var als Datenverzeichnis"
+    else
+        bad "common.sh nutzt kein /var/packages/<paket>/var"
+    fi
+    # Die common.sh muss an mehreren Orten gesucht werden, weil DSM die
+    # Skripte je nach Phase aus verschiedenen Verzeichnissen ausfuehrt.
+    for s in postinst start-stop-status; do
+        if tar_unpack "$WORK/x" "scripts/$s"; then
+            strip_comments "$WORK/x/scripts/$s" "$WORK/x/scripts/$s.code"
+            if grep -q 'SYNOPKG_PKGDEST:-}/bin/common.sh' "$WORK/x/scripts/$s.code" \
+               && grep -q '\.\./bin/common.sh' "$WORK/x/scripts/$s.code"; then
+                ok "scripts/$s sucht common.sh an mehreren Orten"
+            else
+                bad "scripts/$s sucht common.sh nur an EINEM Ort - je nach Phase fehlt sie"
+            fi
+        fi
+    done
+else
+    bad "target/bin/common.sh fehlt im package.tgz"
+fi
+
 # --- 4. Icons ----------------------------------------------------------------
 echo ""
 echo "Icons"

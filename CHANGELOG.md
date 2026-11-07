@@ -7,6 +7,31 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
+- **Die Installation brach trotz aller vorherigen Korrekturen weiterhin ab**
+  („Paket kann nicht installiert werden“). Ursache: `preinst` lud die
+  Hilfsdatei `common.sh` aus `target/` – aber das `package.tgz` wird erst
+  **nach** `preinst` entpackt. In dieser Phase existiert die Datei also noch
+  gar nicht, das Skript endete mit `exit 1`, und das Paketzentrum zeigte nur
+  die generische Meldung. `preinst` ist jetzt **eigenständig** und endet
+  immer mit `0`.
+- **`common.sh` wurde über genau einen festen Pfad geladen.** Das DSM führt
+  die Lifecycle-Skripte je nach Phase aus verschiedenen Verzeichnissen aus
+  (Installation: `<spk-temp>/scripts/`, Betrieb: `<installiert>/scripts/`).
+  Die Skripte suchen `common.sh` jetzt an allen üblichen Orten.
+- **Das Datenverzeichnis lag auf der Systempartition.** `common.sh` benutzte
+  `SYNOPKG_PKGVAR` – diese Variable gibt es in DSM 7 nicht. Daraus wurde
+  `<target>/var` statt `/var/packages/ComfoBoxGateway/var`: Konfiguration und
+  24-h-Schreibzähler wären beim Update oder Neustart verloren gegangen.
+- **Compose-Datei: Gruppenname `dialout` → numerische GID `20`.** Ein auf dem
+  NAS fehlender oder anders benannter Gruppen hätte die Container-Erstellung
+  und damit die Installation scheitern lassen.
+- **Compose-Datei: Healthcheck von `wget` auf `curl` umgestellt.** Das Image
+  enthält `curl`; `busybox-wget` liefert unter manchen Versionen keinen
+  sauberen Exit-Code.
+- **`tools/check-spk.sh` prüft die Lifecycle-Skripte jetzt mit.** Neu:
+  `preinst` darf keine Datei aus `target/` voraussetzen, kein Skript darf
+  `set -u` setzen, `common.sh` darf `SYNOPKG_PKGVAR` nicht verwenden und
+  muss an mehreren Orten gesucht werden.
 - **Das Synology-Paket installierte sich auf DSM 7.4 nicht.** Zwei Fehler
   hintereinander:
   1. Die Datei `conf/privilege` lag im Repository, wurde von `build-spk.sh`

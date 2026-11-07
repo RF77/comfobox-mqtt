@@ -27,6 +27,86 @@
 
 ---
 
+## 2026-11-07 (4) – `preinst` brach die Installation ab: `common.sh` existiert dort noch nicht
+
+**Ergebnis:** Die Paket-Installation läuft auf DSM 7.4 wieder durch. Revision
+0006 ist gebaut, geprüft und als Release-Asset bereit.
+
+**Symptome auf der NAS (Reihenfolge):**
+
+| Meldung | Ursache |
+|---|---|
+| „Dieses Paket wurde von einem **unbekannten Herausgeber** veröffentlicht“ | Das Paket wurde **manuell** installiert. DSM kann den Herausgeber nur bei einer **registrierten Paketquelle** bestimmen. Kein Paketfehler. |
+| „Paket kann nicht installiert werden. Versuchen Sie es später erneut …“ | `preinst` endete mit `exit 1` → DSM bricht ab. |
+
+**Die beiden echten Fehler in Revision 0005:**
+
+1. **`preinst` lud `common.sh` aus `target/`.** Zum Zeitpunkt von `preinst` ist
+   das Zielverzeichnis **noch nicht gefüllt** – das `package.tgz` wird erst
+   **danach** entpackt. Die Datei existierte in dieser Phase also nicht, das
+   Skript endete mit `exit 1`, und DSM zeigte nur die generische Meldung.
+   → `preinst` ist jetzt **eigenständig** (kein Dateizugriff aus dem Paket).
+2. **`common.sh` wurde über genau einen festen Pfad geladen.** DSM führt die
+   Lifecycle-Skripte je nach Phase aus verschiedenen Verzeichnissen aus
+   (Installation: `<spk-temp>/scripts/`, Betrieb: `<installiert>/scripts/`) –
+   der feste Pfad traf immer nur eine Phase. → Die Skripte suchen `common.sh`
+   jetzt an **allen** üblichen Orten.
+
+**Zusätzlich gefunden und behoben:**
+
+- `common.sh` benutzte `SYNOPKG_PKGVAR` – die Variable **gibt es in DSM 7
+  nicht**. Daraus wurde `<target>/var` statt
+  `/var/packages/ComfoBoxGateway/var`: Konfiguration und 24-h-Schreibzähler
+  wären beim Update oder Neustart verloren gegangen.
+- Compose: `group_add: ["dialout"]` → `["20"]`. Ein auf dem NAS fehlender
+  Gruppenname hätte die Container-Erstellung scheitern lassen.
+- Compose: Healthcheck `wget` → `curl` (das Image hat `curl`; `busybox-wget`
+  liefert nicht überall einen sauberen Exit-Code).
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/scripts/preinst` – **eigenständig**, immer
+  `exit 0`, kein `set -u`
+- `deploy/synology-spk/src/scripts/{postinst,preuninst,postuninst,start-stop-status}`
+  – `common.sh`-Suche an mehreren Orten
+- `deploy/synology-spk/src/target/bin/common.sh` – `VAR_DIR` fest
+  `/var/packages/<paket>/var`, `PKG_DIR` mit Fallback, `PKG_LOG_FILE`
+- `deploy/synology-spk/src/target/compose/compose.yaml` – GID 20, `curl`
+- `deploy/synology-spk/tools/check-spk.sh` – **neue Regressionstests**:
+  `preinst` ohne Zugriff auf `target/`, kein `set -u`, `exit 0` am Ende,
+  `common.sh` ohne `SYNOPKG_PKGVAR`, Suche an mehreren Orten. Die Prüfung
+  läuft gegen den **entpackten Code** – Kommentare werden entfernt, sonst
+  schlägt die Doku des alten Fehlers an.
+- `deploy/synology-spk/packages.json`, `REVISION` (0006)
+- `docs/benutzer/08b-synology-test.md`, `docs/benutzer/08-synology.md`,
+  `CHANGELOG.md`
+
+**Verifikation:**
+- `bash build-spk.sh 1.0.1 0006` → SPK gebaut
+- `bash tools/check-spk.sh` → **OK**
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- SPK: 40 960 B, MD5 `549ffb2159f0ce738d8ddcc9ee813a6d`,
+  SHA256 `4c0d0cc479e6747d04446988477d7ae1bc28e0b9aa224198d3198d58cc2ef1ef`
+
+**Offen / nicht gemacht:**
+- Die Installation auf der NAS ist **weiterhin nicht** verifiziert. Der
+  entscheidende Punkt (der Resource-Worker startet das Projekt) ist ungetestet.
+- `dsm-diagnose.sh --test` (Variantentest) ist für die Frage nach
+  `conf/privilege` überholt – der `--install`-Modus liefert den echten Code.
+
+**Überraschungen:**
+- Die Meldung „unbekannter Herausgeber“ sieht nach einem Paketfehler aus, ist
+  aber einer der **Installationswege**: nur über eine Paketquelle kennt DSM den
+  Herausgeber. Über die Kommandozeile (`synopkg install`) fällt die Prüfung
+  weg – deshalb liefert das Diagnose-Skript auf der NAS einen Code, während das
+  Paketzentrum nur den generischen Text zeigt.
+- Ein **Kommentar** im Skript kann einen Regressionstest auslösen. Der Test
+  prüft jetzt den Code ohne Kommentarzeilen.
+- `SYNOPKG_PKGVAR` steht in der DSM-Doku **nicht** – es gibt nur
+  `SYNOPKG_PKGDEST` (das *Zielverzeichnis*). Das Datenverzeichnis liegt
+  immer unter `/var/packages/<paket>/var`.
+
+---
+
 ## 2026-11-07 – DSM 7: `ctrl-script` verursacht Fehler 319, Umbau auf Resource Worker
 
 **Ergebnis:** Das Paket ist auf DSM 7.4.1 installierbar, ohne Root-Rechte.

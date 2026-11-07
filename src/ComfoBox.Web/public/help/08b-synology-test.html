@@ -138,9 +138,33 @@ Image <strong>anonym</strong> ziehen lässt – genau das, was die NAS tut. Der 
 rot, wenn das nicht klappt; das Ergebnis steht im Workflow-Protokoll.</p>
 </blockquote>
 <hr>
-<h2>Schritt 1 – Paket herunterladen</h2>
+<h2>Schritt 1 – Paket installieren</h2>
+<blockquote>
+<p><strong>Empfohlen: über eine Paketquelle.</strong> Dann müssen Sie <strong>keine Datei auf die
+NAS kopieren</strong> – das Paketzentrum lädt das Paket selbst und kennt den
+Herausgeber. Die manuelle Installation einer lokalen Datei ist der Weg, an
+dem DSM 7.4 mit <em>„Dieses Paket wurde von einem unbekannten Herausgeber
+veröffentlicht“</em> abbricht (siehe unten).</p>
+</blockquote>
+<h3>Variante A – Paketquelle (empfohlen)</h3>
+<ol>
+<li><strong>Paketcenter → Einstellungen</strong> (Zahnrad oben rechts) → Registerkarte
+<strong>Paketquellen</strong> → <strong>Hinzufügen</strong>.</li>
+<li>Name: <code>ComfoBox</code></li>
+<li>Speicherort (URL):
+<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json</a></li>
+<li><strong>OK</strong> → das Paket erscheint in der Liste <strong>Community</strong>.</li>
+<li><strong>ComfoBox Gateway</strong> anklicken → <strong>Installieren</strong>.</li>
+</ol>
+<blockquote>
+<p>Die Adresse enthält die Release-Version – bei einem neuen Release ändert
+sich der Teil hinter <code>download/</code>. Das Paketzentrum braucht eventuell einen
+Moment, bis es die Quelle neu einliest.</p>
+</blockquote>
+<h3>Variante B – Datei von Hand</h3>
 <p>Das Paket aus dem neuesten <a href="https://github.com/RF77/comfobox-mqtt/releases">Release</a>
-herunterladen und auf die NAS kopieren (Samba-Freigabe oder <code>scp</code>).</p>
+herunterladen und auf die NAS kopieren (Samba-Freigabe oder <code>scp</code>), dann
+<strong>Paketcenter → Installieren → Manuelle Installation → Datei wählen</strong>.</p>
 <blockquote>
 <p><strong>Wichtig:</strong> Auf der NAS darf <strong>nur eine</strong> <code>.spk</code> liegen. Das Paketzentrum
 installiert die Datei, die Sie im Dateiauswahler anklicken – und auf der NAS
@@ -149,24 +173,43 @@ Datei <code>conf/privilege</code> wird vom DSM abgelehnt (Schritt 2). Löschen S
 deshalb zuerst alle älteren <code>.spk</code> auf der NAS.</p>
 </blockquote>
 <p><strong>Prüfen, ob die Datei die richtige ist</strong> – auf einem Rechner mit Bash:</p>
-<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk | grep conf
+<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
 #            conf/resource
 </code></pre>
 <p>Fehlt <code>conf/privilege</code>, ist die Datei zu alt. Fehlt <code>conf/resource</code>, startet
 der Container nicht.</p>
-<blockquote>
-<p><strong>Alternativ</strong> über eine eigene Paketquelle – dann erscheint das Paket
-direkt in der normalen Liste des Paketzentrums:
-<em>Paketcenter → Einstellungen → Paketquelle → Hinzufügen</em>, URL
-<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json</a></p>
-<p>Die Adresse enthält die Release-Version – bei einem neuen Release ändert
-sich der Teil hinter <code>download/</code>.</p>
-</blockquote>
 <h3>Wenn das Paketzentrum das Paket ablehnt</h3>
-<p>Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Mit einem kleinen
-Skript auf der NAS kommt der <strong>echte Fehlercode</strong> heraus.</p>
+<p>Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Zwei Meldungen
+bedeuten zwei <strong>verschiedene</strong> Dinge:</p>
+<table>
+<thead>
+<tr>
+<th>Meldung</th>
+<th>Bedeutung</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>„Dieses Paket wurde von einem <strong>unbekannten Herausgeber</strong> veröffentlicht“</td>
+<td>Das DSM kennt den Herausgeber nicht – weil das Paket <strong>nicht</strong> über eine Paketquelle kam</td>
+<td><strong>Variante A</strong> verwenden: <em>Paketcenter → Einstellungen → Paketquellen → Hinzufügen</em>. Danach das Paket aus der Liste <strong>Community</strong> installieren.</td>
+</tr>
+<tr>
+<td>„Paket kann nicht installiert werden. Versuchen Sie es später erneut …“</td>
+<td>Ein Skript des Pakets oder der DSM-Worker ist gescheitert</td>
+<td>Diagnose über SSH (unten) – nur so bekommt man den echten Fehlercode.</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Sie müssen dafür nichts am Paket ändern.</strong> Die Meldung zum unbekannten
+Herausgeber betrifft <strong>nicht</strong> die Datei, sondern die Art der Installation:
+Das DSM kann nur bei einer <strong>registrierten Paketquelle</strong> sagen, wer das
+Paket herausgegeben hat. Deshalb ist Variante A (Paketquelle) der Weg, den
+DSM 7.4 vorgesehen hat – und Sie müssen dafür <strong>keine Datei auf die NAS
+kopieren</strong>.</p>
+</blockquote>
 <h4>1. SSH auf der NAS aktivieren</h4>
 <p><em>Control Panel → Terminal &amp; SNMP →</em> <strong>SSH-Dienst aktivieren</strong> (Port 22).</p>
 <h4>2. Per SSH verbinden</h4>
@@ -179,7 +222,7 @@ Terminal“):</p>
 <p>Beide Dateien kommen in <code>/tmp</code> der NAS. Sie können entweder die Dateien vom
 Rechner kopieren …</p>
 <pre><code class="language-bash">scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk admin@&lt;IP-der-NAS&gt;:/tmp/
 </code></pre>
 <p>… oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
 dann schon auf der NAS, z. B. im Gemeinsamen Ordner):</p>
@@ -188,7 +231,7 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 </code></pre>
 <h4>4. Diagnose ausführen</h4>
 <p>In der SSH-Sitzung:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk --install
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --install
 </code></pre>
 <p><code>sudo</code> fragt nach dem Passwort des DSM-Administrators. Ohne <code>--install</code> liest
 das Skript nur (keine Änderung an der NAS).</p>
@@ -205,7 +248,7 @@ Root-Rechten laufen. Die <strong>Log-Auszüge</strong> im Skript verraten den ge
 Grund – dort schreibt das DSM hin, was ihm nicht passt.</p>
 <p>Mit <code>--test</code> probiert das Skript zusätzlich mehrere Formen der
 <code>privilege</code>-Datei <strong>durch</strong> und installiert die erste, die funktioniert:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk --test
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --test
 </code></pre>
 <p>Ein Fehler in dieser Phase ändert <strong>nichts</strong> an der NAS.</p>
 </blockquote>
@@ -218,6 +261,10 @@ liefert der Variantentest (<code>--test</code>).</p>
 </blockquote>
 <hr>
 <h2>Schritt 2 – Installieren</h2>
+<blockquote>
+<p><strong>Falls Sie Variante A gewählt haben, ist das Paket jetzt schon
+installiert</strong> – Sie können direkt zu Schritt 3 weiter.</p>
+</blockquote>
 <p><strong>Paketcenter → Installieren → Manuelle Installation</strong> → Datei wählen →
 <em>Installieren</em>.</p>
 <p>Das Paket prüft vorher selbst (DSM-Version) und richtet die Umgebung ein. Den

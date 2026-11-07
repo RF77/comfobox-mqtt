@@ -15,10 +15,19 @@
 # ---------------------------------------------------------------------------
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
-    # shellcheck source=../target/bin/common.sh
-    . "$SELF_DIR/../target/bin/common.sh"
-fi
+
+# common.sh robust laden (siehe postinst fuer die Erklaerung).
+for _cand in \
+    "${SYNOPKG_PKGDEST:-}/bin/common.sh" \
+    "$SELF_DIR/../bin/common.sh" \
+    "$SELF_DIR/../target/bin/common.sh"
+do
+    if [ -n "$_cand" ] && [ -f "$_cand" ]; then
+        # shellcheck source=../target/bin/common.sh
+        . "$_cand"
+        break
+    fi
+done
 
 case "${1:-}" in
     start)
@@ -45,7 +54,9 @@ case "${1:-}" in
         ;;
 
     log)
-        if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+        if [ -n "${PKG_LOG_FILE:-}" ] && [ -f "$PKG_LOG_FILE" ]; then
+            cat "$PKG_LOG_FILE"
+        elif [ -n "${LOG_FILE:-}" ] && [ -f "$LOG_FILE" ]; then
             cat "$LOG_FILE"
         fi
         exit 0

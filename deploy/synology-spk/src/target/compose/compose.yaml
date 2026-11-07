@@ -28,8 +28,14 @@ services:
 
     # Die Gruppe "dialout" wird auf dem Host aufgeloest - so bekommt der
     # Container (uid 1001) Zugriff auf /dev/ttyUSB* ohne Root.
+    #
+    # **Numerische GID statt Gruppename:** Auf DSM hat "dialout" ueblicher-
+    # weise die GID 20. Ein *Name* wuerde aber die Container-Erstellung
+    # abbrechen, wenn die Gruppe auf dem NAS anders heisst oder fehlt
+    # ("unable to find group dialout") - damit waere auch die Installation
+    # des Pakets gescheitert. Die numerische GID ist robust.
     group_add:
-      - "dialout"
+      - "20"
 
     environment:
       # Der Port und die Baudrate kommen aus var/config.json und haben dort
@@ -47,7 +53,9 @@ services:
       - "/dev:/dev"
 
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      # curl ist im Image vorhanden (siehe Dockerfile). busybox-wget
+      # liefert unter manchen BusyBox-Versionen keinen sauberen Exit-Code.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 5s
       start_period: 25s

@@ -52,21 +52,10 @@ starten kann (das Image muss öffentlich sein).</p>
 </blockquote>
 <hr>
 <h2>Installation</h2>
-<h3>Variante A – aus dem Paketzentrum (empfohlen)</h3>
-<ol>
-<li>Laden Sie die Datei <code>ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk</code> aus dem
-GitHub-Release herunter:
-<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.0/ComfoBoxGateway_noarch-dsm7_1.0.0-0001.spk</a>
-(Alternativ über die <a href="https://github.com/RF77/comfobox-mqtt/releases">Releases</a>)</li>
-<li>Kopieren Sie die Datei auf das NAS (z. B. per Samba-Freigabe oder <code>scp</code>)</li>
-<li><strong>Paketcenter → Installieren → Manuelle Installation</strong></li>
-<li>Datei auswählen → <strong>Installieren</strong></li>
-<li><strong>Fertig</strong> – das Browserfenster öffnet sich automatisch</li>
-</ol>
-<h3>Variante B – eigene Paketquelle (für mehrere Installationen)</h3>
-<p>Sie können die Paketquelle im DSM eintragen, dann erscheint das Paket in der
-normalen Liste:</p>
-<p><strong>Paketcenter → Einstellungen → Paketquelle → Hinzufügen</strong></p>
+<h3>Variante A – Paketquelle (empfohlen)</h3>
+<p>Sie tragen die Paketquelle im DSM ein, dann erscheint das Paket in der
+normalen Liste – und Sie müssen <strong>keine Datei auf die NAS kopieren</strong>:</p>
+<p><strong>Paketcenter → Einstellungen → Paketquellen → Hinzufügen</strong></p>
 <table>
 <thead>
 <tr>
@@ -79,7 +68,7 @@ normalen Liste:</p>
 <td><code>ComfoBox</code></td>
 </tr>
 <tr>
-<td>URL</td>
+<td>Speicherort (URL)</td>
 <td><a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json</a></td>
 </tr>
 </tbody></table>
@@ -89,6 +78,26 @@ normalen Liste:</p>
 passende <code>packages.json</code> im jeweiligen Release. Die Datei nennt die
 <strong>exakte</strong> Download-Adresse des Pakets – sie ist deshalb auf einen festen
 Release-Tag verlinkt und nicht auf „das neueste Release&quot;.</p>
+<p><strong>Warum dieser Weg?</strong> Nur bei einer registrierten Paketquelle kennt das DSM
+den Herausgeber. Die manuelle Installation einer lokalen Datei bricht auf
+DSM 7.4 sonst mit <em>„Dieses Paket wurde von einem unbekannten Herausgeber
+veröffentlicht&quot;</em> ab.</p>
+</blockquote>
+<h3>Variante B – Datei von Hand</h3>
+<ol>
+<li>Laden Sie die Datei <code>ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk</code> aus dem
+GitHub-Release herunter:
+<a href="https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk">https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk</a>
+(Alternativ über die <a href="https://github.com/RF77/comfobox-mqtt/releases">Releases</a>)</li>
+<li>Kopieren Sie die Datei auf das NAS (z. B. per Samba-Freigabe oder <code>scp</code>)</li>
+<li><strong>Paketcenter → Installieren → Manuelle Installation</strong></li>
+<li>Datei auswählen → <strong>Installieren</strong></li>
+<li><strong>Fertig</strong> – das Browserfenster öffnet sich automatisch</li>
+</ol>
+<blockquote>
+<p><strong>Auf der NAS darf nur eine <code>.spk</code> liegen.</strong> Das Paketzentrum installiert die
+Datei, die Sie im Dateiauswahler anklicken – liegen dort mehrere Versionen
+nebeneinander, gewinnt die falsche. Alte <code>.spk</code> vorher löschen.</p>
 </blockquote>
 <hr>
 <h2>Was bei der Installation passiert</h2>
