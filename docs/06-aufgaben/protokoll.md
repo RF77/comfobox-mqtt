@@ -90,7 +90,72 @@ Zwei Fehler behoben:
 - Die Fehlermeldung im Screenshot kommt vom DSM **schon beim Hochladen** –
   sie sagt nichts über das Image aus (das war öffentlich)
 
-## 2026-11-07 (2) – SPK 0003: Paket verifiziert, Diagnose-Werkzeug für die NAS
+## 2026-11-07 (3) – Fehler 319: die privilege-Datei war inhaltlich falsch
+
+**Symptom:** Das Paket wurde weiterhin abgelehnt – jetzt aber mit dem
+**Fehlercode** aus dem Diagnose-Skript:
+
+> `{"error":{"code":319,"description":"invalid package privilege content"}}`
+
+**Diagnose:** DSM 7.4.1 (build 90080) liest die Datei `conf/privilege`, lehnt
+aber ihren **Inhalt** ab. Das DSM prüft gegen eine Whitelist.
+
+**Ursache (zwei Faktoren, jeder einzeln fatal):** Vergleich mit den
+funktionierenden Referenzpaketen (`SynoCommunity/spksrc` – dem Buildsystem der
+Community-Pakete, alle auf DSM 7):
+
+| Feld | Referenz | Unser Paket (vorher) |
+|---|---|---|
+| `defaults.run-as` | `package` | `package` ✓ |
+| `username` | `sc-<pkg>` | `sc-ComfoBoxGateway` ✓ |
+| `groupname` | **nicht vorhanden** | `sc-ComfoBoxGateway` ✗ |
+| `ctrl-script` Actions | preinst, postinst, preuninst, postuninst, preupgrade, postupgrade, start, stop, status | zusätzlich **prestart**, **prestop** ✗ |
+| `run-as: root` bei ctrl-script | ja | ja ✓ |
+
+**Nachweis:** Der neue Variantentest (`dsm-diagnose.sh --test`) auf dem echten
+DSM 7.4.1:
+
+| Variante | Inhalt | Ergebnis |
+|---|---|---|
+| 1 | LF, mit `groupname` | 319 |
+| 2 | LF, ohne `groupname`, mit `prestart` | 319 |
+| 3 | LF, ohne `groupname`, ohne `prestart`/`prestop` | **installiert** |
+
+**Zusätzlich gefunden:** Die Datei hatte **CRLF-Zeilenenden**. Mit
+`core.autocrlf=false` (Windows-Standard in diesem Repo) wandert das CRLF
+unverändert in den Git-Blob – und vom Linux-CI-Build weiter ins SPK. Das
+DSM verträgt kein `\r`. `build-spk.sh` konvertiert die Datei jetzt **immer**
+auf LF (`tr -d '\r'`).
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/conf/privilege` – ohne `groupname`, ohne
+  `prestart`/`prestop`
+- `deploy/synology-spk/build-spk.sh` – erzwingt LF
+- `deploy/synology-spk/tools/check-spk.sh` – prüft jetzt **inhaltlich**: kein
+  CR-Zeichen, kein `groupname`, keine Actions `prestart`/`prestop`
+- `deploy/synology-spk/tools/dsm-diagnose.sh` – neuer Modus `--test`
+- `deploy/synology-spk/REVISION` – 0004 (DSM braucht für ein Update eine
+  höhere Revision)
+- `deploy/synology-spk/src/conf/README.md` – die beiden Fallen dokumentiert
+- `CHANGELOG.md`, `docs/benutzer/08b-synology-test.md`,
+  `docs/benutzer/09-fehlersuche.md`
+
+**Verifikation:**
+- `bash tools/check-spk.sh` → alle Prüfungen OK (inkl. der neuen)
+- `bash tools/check-shell.sh` → 12 Skripte OK
+- Das **heruntergeladene** Release-Asset `1.0.1-0004.spk` geprüft → OK
+- `packages.json` zeigt auf `1.0.1-0004` mit passender MD5
+- Release v1.0.1: `0003` (fehlerhaft) gelöscht, `0004` hochgeladen
+
+**Überraschungen:**
+- Der erste Fehler („Root-Rechte“) und der zweite (319) haben **nichts**
+  miteinander zu tun – die `privilege`-Datei muss nicht nur **vorhanden**,
+  sondern auch **inhaltlich korrekt** sein
+- `prestart`/`prestop` stehen in der **alten** DSM-Doku (2016) noch drin,
+  werden von DSM 7.4 aber abgelehnt
+- `gh` ist auf dieser Maschine nicht installiert → REST-API per
+  `git credential fill` + Bearer-Token. Der Token darf **nie** ausgegeben
+  werden
 
 ### 2026-11-07 (3) – Release 1.0.1: der Versions-Check der CI war rot
 
