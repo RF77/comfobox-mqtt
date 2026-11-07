@@ -384,7 +384,7 @@ sudo tail -50 /tmp/ComfoBoxGateway.log
 | Weg | Datei |
 |---|---|
 | Paket-Log | `/tmp/ComfoBoxGateway.log` |
-| Container-Log | `/var/packages/ComfoBoxGateway/var/logs/` |
+| Container-Log | `docker logs comfobox-gateway` |
 | Live | Container Manager → `comfobox-gateway` → *Protokoll* |
 | Ohne SSH | Web-Oberfläche → **Diagnose** → *Protokoll* |
 

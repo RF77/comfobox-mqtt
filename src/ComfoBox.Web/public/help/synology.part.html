@@ -152,7 +152,11 @@ Adapter umgesteckt haben.</p>
 </tr>
 <tr>
 <td><code>/var/packages/ComfoBoxGateway/var/</code></td>
-<td><strong>Konfiguration, Schreibzähler, Protokolle</strong></td>
+<td><strong>Protokolle und Status</strong> (auf der NAS lesbar)</td>
+</tr>
+<tr>
+<td>Docker-Volume <code>comfobox-data</code></td>
+<td><strong>Konfiguration, Schreibzähler, ports.json</strong> (im Container)</td>
 </tr>
 <tr>
 <td><code>/etc/udev/rules.d/99-comfobox-serial.rules</code></td>
@@ -267,7 +271,7 @@ kaputt ist.</p>
 </tr>
 <tr>
 <td>SSH</td>
-<td><code>/var/packages/ComfoBoxGateway/var/logs/</code></td>
+<td><code>docker exec comfobox-gateway cat /var/lib/comfobox/logs/gateway-$(date +%Y%m%d).jsonl</code></td>
 </tr>
 <tr>
 <td>Web-Oberfläche</td>

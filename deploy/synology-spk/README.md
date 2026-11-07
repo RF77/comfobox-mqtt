@@ -116,7 +116,8 @@ Die `config.json` wird vom **Gateway** geschrieben (der Assistent schreibt sie
 | Pfad | Inhalt |
 |---|---|
 | `/var/packages/ComfoBoxGateway/target/` | Programm (wird bei Update ersetzt) |
-| `/var/packages/ComfoBoxGateway/var/` | `config.json`, `ports.json`, `compose.yaml`, `logs/`, `writes.json` — **persistent** |
+| `/var/packages/ComfoBoxGateway/var/` | Protokolle und Status — auf der NAS lesbar |
+| Docker-Volume `comfobox-data` | `config.json`, `ports.json`, `writes.json` (24-h-Schreibzähler) — **persistent** |
 | `/etc/udev/rules.d/99-comfobox-serial.rules` | udev-Regel |
 | `/etc/systemd/system/comfobox-gateway.service` | systemd-Unit |
 

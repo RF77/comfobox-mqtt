@@ -85,6 +85,18 @@ prepare_permissions 2>/dev/null || true
 chmod 755 "${PKG_DIR}/bin/"*.sh 2>/dev/null || true
 
 # 3) Erste Ports-Ermittlung (Anzeige im Getting-Started-Assistenten)
+#
+# WICHTIG: Die Portliste liegt jetzt im **Docker-Volume** "comfobox-data"
+# und nicht mehr unter /var/packages/.../var. Das Volume kann der
+# Paket-Benutzer von der NAS aus nicht beschreiben - nur der Container
+# (uid 1001) darf das. Der Gateway ermittelt die Ports deshalb **selbst**
+# (SerialPortScanner) und schreibt ports.json in sein Datenverzeichnis.
+# Das Verzeichnis /dev ist in den Container eingebunden, er sieht also alle
+# seriellen Ports des NAS.
+#
+# Der Aufruf hier bleibt trotzdem sinnvoll: er prueft, ob die USB-Geraete
+# ueberhaupt sichtbar sind, und schreibt das Ergebnis in das
+# Paket-Verzeichnis - dort kann es der Benutzer lesen.
 if [ -x "${PKG_DIR}/bin/serial-scan.sh" ]; then
     if "${PKG_DIR}/bin/serial-scan.sh" "${PORTS_FILE}.tmp" >/dev/null 2>&1; then
         mv -f "${PORTS_FILE}.tmp" "$PORTS_FILE"
@@ -94,37 +106,20 @@ if [ -x "${PKG_DIR}/bin/serial-scan.sh" ]; then
     chmod 0666 "$PORTS_FILE" 2>/dev/null || true
 fi
 
-# 4) Startkonfiguration schreiben, falls noch keine existiert
+# 4) Startkonfiguration
 #
-# Die Datei folgt dem Schema der .NET-Konfiguration des Gateways
-# (Abschnittsnamen in Großbuchstaben). Das Gateway liest sie UND die
-# appsettings.json des Images – die Datei hat Vorrang.
+# Die config.json liegt jetzt im Docker-Volume "comfobox-data". Der
+# Paket-Benutzer kann das Volume nicht beschreiben - nur der Container
+# (uid 1001) darf das.
 #
-# Deshalb wird hier bewusst nur das geschrieben, was der Setup-Modus
-# wirklich braucht:
+# Sie wird deshalb **nicht** mehr von hier geschrieben. Der Gateway
+# braucht sie auch nicht: ohne Datei liest er "Api:SetupCompleted" als
+# false (die Setup-Endpunkte sind offen) und legt die Datei an, sobald
+# der Assistent abgeschlossen ist. Das ist der Setup-Modus.
 #
-#   * "Api:SetupCompleted" = false → die Setup-Endpunkte sind offen.
-#   * Kein "Bacnet:Port"     → der Wert aus dem Image (/dev/ttyUSB0) gilt.
-#   * Kein "Mqtt:Brokers"    → der Wert aus dem Image (localhost:1883) gilt.
-#
-# Ein leerer Broker oder ein leerer Port würden beim Start des Gateways die
-# Validierung fehlschlagen lassen - der Container würde in einer
-# Neustartschleife hängen bleiben und der Assistent wäre nicht erreichbar.
-if [ ! -f "$CONFIG_FILE" ]; then
-    cat > "$CONFIG_FILE" <<'EOF'
-{
-  "SchemaVersion": 1,
-  "Api": {
-    "SetupCompleted": false
-  }
-}
-EOF
-    log "Startkonfiguration geschrieben (Setup-Modus)"
-fi
-# Der Container läuft mit uid 1001 und muss die Datei lesen und schreiben
-# können → 0666 (der übergeordnete Pfad /var/packages ist nur für
-# System-Benutzer lesbar).
-chmod 0666 "$CONFIG_FILE" 2>/dev/null || true
+# **Wichtig:** Niemals eine leere Broker-Liste oder einen leeren Port in
+# die Datei schreiben - dann schluegt die Startvalidierung fehl und der
+# Container beendet sich in einer Neustartschleife.
 
 log "postinst abgeschlossen"
 echo "ComfoBox Gateway ist vorbereitet. Die Web-Oberfläche öffnet sich automatisch."

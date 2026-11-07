@@ -12,7 +12,7 @@
 #     Ports des NAS (/dev ist eingebunden) und der Gateway waehlt den Port
 #     zur Laufzeit aus der config.json aus. Dadurch muss der Container nach
 #     der Auswahl im Assistenten nicht neu erstellt werden.
-#   * Baudrate und Port stehen in var/config.json (Vorrang vor Env).
+#   * Baudrate und Port stehen in der config.json (Vorrang vor Env).
 #
 # Soll statt "/dev" ein einzelner fester Port verwendet werden, wird die
 # Zeile "devices:" mit "- /dev/ttyUSB0:/dev/ttyUSB0" eingetragen und der
@@ -43,7 +43,10 @@ services:
       - "20"
 
     environment:
-      # Der Port und die Baudrate kommen aus var/config.json und haben dort
+      # Das Datenverzeichnis und der 24-h-Schreibzaehler (EEPROM-Schutz)
+      # liegen im Volume "comfobox-data" - siehe unten.
+      - COMFOBOX_Gateway__DataDirectory=/var/lib/comfobox
+      # Der Port und die Baudrate kommen aus der config.json und haben dort
       # Vorrang. Der Wert hier ist nur der Startwert.
       - COMFOBOX_BACNET__Baudrate=38400
       - ASPNETCORE_URLS=http://+:8080
@@ -54,9 +57,27 @@ services:
       - COMFOBOX_Logging__Directory=/var/lib/comfobox/logs
 
     volumes:
-      # Ein einziger Mount fuer alles Persistente: config.json, der
-      # 24-h-Schreibzaehler (EEPROM-Schutz), die Portliste und die Logs.
-      - "@VAR_DIR@:/var/lib/comfobox"
+      # ---------------------------------------------------------------------
+      # Das persistente Volume - **kein** Bind-Mount auf einen Pfad unter
+      # /var/packages!
+      #
+      # Warum: Das DSM loescht bei jeder Installation /var/packages/<paket>
+      # und legt es neu an. Legt Docker einen **fehlenden** Bind-Mount-
+      # Quellpfad an, gehoert er danach **root:root** (Modus 0755). Der
+      # Container laeuft aber als uid 1001 (comfobox) und kann dann weder
+      # die config.json schreiben noch den 24-h-Schreibzaehler sichern -
+      # Serilog bricht den Start ab, der Container stirbt sofort wieder und
+      # der DSM-Worker meldet nur "fail compose up".
+      #
+      # Ein **benanntes Volume** loest das: Docker uebernimmt Inhalt UND
+      # Rechte aus dem Image (/var/lib/comfobox gehoert uid 1001) - der
+      # Container kann dort immer schreiben.
+      #
+      # Der Name ist fest ("comfobox-data"), damit das Backup-Skript
+      # (deploy/backup/backup.sh) das Volume ohne Kenntnis des
+      # Projektnamens findet - genau wie beim manuellen Betrieb.
+      # ---------------------------------------------------------------------
+      - comfobox-data:/var/lib/comfobox
       # Alle seriellen Ports (CH340/FTDI). Der Gateway waehlt aus, welcher
       # Port benutzt wird - der Container muss deshalb nicht neu erstellt
       # werden, wenn der Adapter spaeter gesteckt wird.
@@ -79,3 +100,9 @@ services:
 
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  comfobox-data:
+    # Fester Name - unabhaengig vom Projektnamen. Das Backup-Skript sucht
+    # genau diesen Namen.
+    name: comfobox-data

@@ -157,7 +157,12 @@ printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
 # entstehen. Die Platzhalter werden hier ersetzt:
 #
 #   @IMAGE@   → das Image mit dem exakten Versions-Tag
-#   @VAR_DIR@ → das persistente Verzeichnis des Pakets
+#
+# **Kein** Platzhalter fuer das Datenverzeichnis: die Compose-Datei
+# benutzt das benannte Docker-Volume "comfobox-data". Ein Bind-Mount auf
+# /var/packages/<paket>/var waere fatal - das DSM legt das Verzeichnis
+# als root:root an, und der Container (uid 1001) kann dort nicht
+# schreiben (Details in src/target/compose/compose.yaml).
 COMPOSE_YAML="$WORK/target/compose/compose.yaml"
 if [ ! -f "$COMPOSE_YAML" ]; then
     echo "FEHLER: $COMPOSE_YAML fehlt." >&2
@@ -165,7 +170,6 @@ if [ ! -f "$COMPOSE_YAML" ]; then
     exit 1
 fi
 sed -i -e "s|@IMAGE@|ghcr.io/rf77/comfobox-gateway:${VERSION}|g" \
-    -e "s|@VAR_DIR@|/var/packages/${PACKAGE}/var|g" \
     "$COMPOSE_YAML"
 
 # Auch die Compose-Datei braucht LF (CRLF bricht den YAML-Parser von

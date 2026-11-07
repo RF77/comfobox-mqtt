@@ -27,6 +27,133 @@
 
 ---
 
+## 2026-11-07 (7) – Der Container stuerzte sofort ab: das Bind-Mount gehoerte root:root
+
+**Ergebnis:** Die Ursache des „fail compose up“ ist gefunden. Revision 0009
+verwendet das benannte Docker-Volume statt eines Bind-Mounts.
+
+**Der entscheidende Befund:** Die Worker-Emulation auf der NAS
+
+````
+>> docker compose up (der Schritt, an dem die Installation scheitert):
+   Network comfobox_default  Created
+   Container comfobox-gateway  Created
+   Container comfobox-gateway  Started
+   (Exit-Code: 0)
+>> Container:
+   ... Up Less than a second (health: starting)   0.0.0.0:8081->8080/tcp
+>> Container-Logs:
+   (leer)
+````
+
+**Die Compose-Datei ist also in Ordnung** – `compose up` laeuft durch. Zwei
+Beobachtungen waren aber entscheidend:
+
+1. **`compose up -d` liefert Exit-Code 0, auch wenn der Container sofort
+   abstuerzt.** Die Emulation hat das nicht erkannt – der DSM-Worker
+   wartet dagegen, bis der Container laeuft. → Die Emulation benutzt jetzt
+   `--wait --wait-timeout 60`.
+2. **Die Container-Logs waren leer.** Ein startendes .NET-Programm
+   schreibt mindestens eine Zeile. Leer heisst: der Prozess ist **vor** dem
+   ersten Logeintrag gestorben.
+
+**Ursache:** Das DSM loescht bei jeder Installation `/var/packages/<paket>`
+(das steht so im Log: `Begin /bin/rm -rf /var/packages/ComfoBoxGateway`)
+und legt es neu an. Legt Docker einen **fehlenden** Bind-Mount-Quellpfad
+an, gehoert er danach **root:root** mit Modus 0755. Der Container laeuft
+aber als uid 1001 (`comfobox`):
+
+| Pfad im Container | Besitzer | Folge |
+|---|---|---|
+| `/var/lib/comfobox` (Mount) | root:root 0755 | kein Schreiben moeglich |
+| `/var/lib/comfobox/logs` | – | Serilog kann das Verzeichnis nicht anlegen |
+
+**Serilog legt das Log-Verzeichnis beim Start selbst an** – kann er das
+nicht, bricht der Start **mit einer Ausnahme** ab, noch **bevor** der erste
+Logeintrag geschrieben wird. Daher die leeren Logs. Der Container stirbt,
+`restart: unless-stopped` startet ihn erneut, und der DSM-Worker meldet
+„fail compose up“.
+
+**Warum die Emulation erfolgreich war:** Zu diesem Zeitpunkt war das
+Verzeichnis bereits von `postinst` mit `chmod 0777` versehen – der
+Container durfte also schreiben.
+
+**Fix:**
+
+1. **Compose: benanntes Volume statt Bind-Mount.**
+
+   ````yaml
+   volumes:
+     - comfobox-data:/var/lib/comfobox
+   volumes:
+     comfobox-data:
+       name: comfobox-data
+   ````
+
+   Docker uebernimmt Inhalt **und Rechte** aus dem Image
+   (`/var/lib/comfobox` gehoert dort uid 1001) – der Container kann dort
+   immer schreiben, unabhaengig davon, wer das Verzeichnis anlegt. Der
+   feste Name passt zum Backup-Skript (`deploy/backup/backup.sh`), das
+   genau `comfobox-data` sucht, und zum manuellen Betrieb.
+
+2. **Gateway: das Log-Verzeichnis wird geprueft.** `ResolveWritableDirectory`
+   in `Program.cs` legt das Verzeichnis an und testet die Schreibbarkeit.
+   Schlaegt das fehl, wird auf ein beschreibbares Verzeichnis
+   ausgewichen und die Abweichung gemeldet. Der Gateway startet damit
+   **immer** – ein fehlendes Log-Verzeichnis ist kein Grund fuer einen
+   Ausfall.
+
+3. **`postinst` schreibt keine `config.json` mehr.** Das Volume kann der
+   Paket-Benutzer nicht beschreiben. Der Gateway braucht die Datei auch
+   nicht: ohne Datei liest er `Api:SetupCompleted` als `false` (die
+   Setup-Endpunkte sind offen) und legt sie beim Abschluss des Assistenten
+   selbst an.
+
+**Geänderte Dateien:**
+- `src/ComfoBox.Gateway/Program.cs` – `ResolveWritableDirectory` +
+  `TryCreateDirectory`, Log-Verzeichnis mit Fallback
+- `deploy/synology-spk/src/target/compose/compose.yaml` – benanntes Volume,
+  kein Bind-Mount auf `/var/packages`
+- `deploy/synology-spk/src/scripts/postinst` – schreibt keine `config.json`
+  mehr; der Port-Scan bleibt als Diagnose auf dem Host
+- `deploy/synology-spk/build-spk.sh` – kein `@VAR_DIR@` mehr
+- `deploy/synology-spk/tools/check-spk.sh` – prüft: kein Bind-Mount auf
+  `/var/packages`, genau ein Daten-Mount, fester Volumenname
+- `deploy/synology-spk/tools/dsm-diagnose.sh` – die Emulation wartet jetzt
+  (`--wait`), zeigt Restart-Zähler, Exit-Code, Health-Status, die
+  Log-Dateien im Volume und deren Rechte
+- `docs/benutzer/08-synology.md`, `08b-synology-test.md`,
+  `deploy/synology-spk/README.md` – neue Datenorte
+
+**Verifikation:**
+- `dotnet build src/ComfoBox.Gateway/ComfoBox.Gateway.csproj -c Release` →
+  grün, 0 Warnungen
+- `bash build-spk.sh 1.0.1 0009` → SPK gebaut
+- `bash tools/check-spk.sh` → **OK**
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- SPK: 51 200 B, MD5 `e8493128248671cbbc37bba2fa0b167a`
+
+**Offen / nicht gemacht:**
+- Die Installation auf der NAS ist **weiterhin nicht** verifiziert.
+- Das Image `ghcr.io/rf77/comfobox-gateway:1.0.1` enthaelt **noch nicht**
+  den Code-Fix aus `Program.cs`. Der Volume-Fix wirkt auch ohne ihn
+  (der Container kann im Volume schreiben), aber der Code-Fix ist erst ab
+  dem naechsten Image-Build aktiv.
+
+**Überraschungen:**
+- `docker compose up -d` **erfolgreich** heisst nicht, dass der Container
+  laeuft. Es gibt erst `docker compose up --wait` (Compose v2) oder ein
+  `docker inspect` auf den Health-Status, um das zu sehen.
+- Ein Programm, das beim Start scheitert, hinterlaesst **keine** Logs –
+  die Ursache liegt dann immer **vor** dem ersten Logeintrag (hier: der
+  Serilog-Sink).
+- Der DSM-Worker meldet bei einem Container-Startfehler nur „fail compose
+  up“ – ohne Docker-Fehlermeldung. Die Worker-Emulation im
+  Diagnose-Skript ist deshalb kein Luxus, sondern das einzige Werkzeug,
+  das die Ursache sichtbar macht.
+
+---
+
 ## 2026-11-07 (6) – „fail compose up": der Container startete nicht
 
 **Ergebnis:** Der Worker findet die Compose-Datei jetzt und legt das Projekt

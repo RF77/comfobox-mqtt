@@ -107,7 +107,8 @@ Details: [Erste Schritte](01-erste-schritte.md)
 | Pfad | Inhalt |
 |---|---|
 | `/var/packages/ComfoBoxGateway/target/` | Programm – wird beim Update ersetzt |
-| `/var/packages/ComfoBoxGateway/var/` | **Konfiguration, Schreibzähler, Protokolle** |
+| `/var/packages/ComfoBoxGateway/var/` | **Protokolle und Status** (auf der NAS lesbar) |
+| Docker-Volume `comfobox-data` | **Konfiguration, Schreibzähler, ports.json** (im Container) |
 | `/etc/udev/rules.d/99-comfobox-serial.rules` | USB-Regel |
 | `/etc/systemd/system/comfobox-gateway.service` | Dienst für die Überwachung |
 
@@ -173,7 +174,7 @@ Das dauert etwa 10 Sekunden.
 | Weg | Datei |
 |---|---|
 | Container-Manager → `comfobox-gateway` → Protokoll | live |
-| SSH | `/var/packages/ComfoBoxGateway/var/logs/` |
+| SSH | `docker exec comfobox-gateway cat /var/lib/comfobox/logs/gateway-$(date +%Y%m%d).jsonl` |
 | Web-Oberfläche | **Diagnose** |
 
 > **Bei Supportfragen** ist das Protokoll aus der Web-Oberfläche (Diagnose) der

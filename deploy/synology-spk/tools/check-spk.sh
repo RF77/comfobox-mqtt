@@ -302,7 +302,9 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         fi
         # Nur EIN Mount fuer die persistenten Daten. Zwei Mounts, deren
         # Host-Pfade ineinander liegen, sind eine Fehlerquelle.
-        DATA_MOUNTS=$(grep -cE '^[[:space:]]*-[[:space:]]*"[^"]*:/var/lib/comfobox"' "$CF")
+        # Die Quelle darf ein benanntes Volume ("comfobox-data") oder ein
+        # Pfad sein - mit oder ohne Anfuehrungszeichen.
+        DATA_MOUNTS=$(grep -cE '^[[:space:]]*-[[:space:]]*"?[^":[:space:]]+:/var/lib/comfobox"?([[:space:]]|$)' "$CF")
         if [ "$DATA_MOUNTS" = "1" ]; then
             ok "compose.yaml mountet genau ein Datenverzeichnis"
         else
@@ -315,6 +317,24 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
             ok "Der Log-Pfad liegt im Datenverzeichnis (passt zum Mount)"
         else
             bad "compose.yaml ohne COMFOBOX_Logging__Directory im Datenverzeichnis"
+        fi
+        # **KEIN Bind-Mount auf /var/packages!** Das DSM legt das Verzeichnis
+        # als root:root an - der Container (uid 1001) kann dort nicht
+        # schreiben, Serilog bricht den Start ab und der DSM-Worker meldet
+        # nur "fail compose up". Stattdessen: ein benanntes Volume.
+        if grep -qE '^[[:space:]]*-[[:space:]]*"?/var/packages' "$CF"; then
+            bad "compose.yaml bindet /var/packages/... ein - das Verzeichnis gehoert root:root"
+            echo "       Der Container (uid 1001) kann dort nicht schreiben - der Start bricht ab."
+            echo "       Richtig: das benannte Volume 'comfobox-data'."
+        else
+            ok "kein Bind-Mount auf /var/packages (nimmt das benannte Volume)"
+        fi
+        # Das benannte Volume muss fest benannt sein - das Backup-Skript
+        # sucht genau diesen Namen.
+        if grep -q 'name: comfobox-data' "$CF"; then
+            ok "das Volume 'comfobox-data' hat einen festen Namen (Backup-Skript)"
+        else
+            bad "das Volume hat keinen festen Namen - das Backup-Skript findet es nicht"
         fi
     fi
 else

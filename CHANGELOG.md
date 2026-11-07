@@ -7,6 +7,24 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
+- **Der Container stuerzte sofort wieder ab** („fail compose up“). Ursache:
+  Das DSM loescht bei jeder Installation `/var/packages/<paket>` und legt es
+  neu an. Legt Docker einen **fehlenden** Bind-Mount-Quellpfad an, gehoert er
+  danach **root:root** (Modus 0755). Der Container laeuft aber als uid 1001
+  und kann dort weder die `config.json` schreiben noch den
+  **24-h-Schreibzaehler** sichern – Serilog bricht den Start mit einer
+  Ausnahme ab, **bevor** der erste Logeintrag geschrieben wird. Der
+  Container startete, stuerzte sofort wieder ab, und der DSM-Worker meldete
+  nur „fail compose up“.
+  → Die Compose-Datei verwendet jetzt das **benannte Docker-Volume
+  `comfobox-data`** (fester Name, wie beim manuellen Betrieb und im
+  Backup-Skript). Docker uebernimmt daraus Inhalt und Rechte des Images –
+  der Container kann dort immer schreiben.
+- **Der Gateway startet nicht mehr am Log-Verzeichnis.** Serilog legt das
+  Verzeichnis beim Start selbst an – kann er das nicht, bricht der Start
+  mit einer Ausnahme ab, ohne eine einzige Zeile zu protokollieren. Der
+  Gateway prueft das Verzeichnis jetzt, weicht bei Bedarf auf ein
+  beschreibbares aus und meldet die Abweichung im Log.
 - **Der Container liess sich nicht starten** („failed to acquire postinst
   worker“ / „fail compose up“). Drei Korrekturen an der Compose-Datei und
   am `preinst`:

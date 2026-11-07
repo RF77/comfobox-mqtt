@@ -37,6 +37,27 @@ GatewayConfiguration.AddGatewaySources(
 var loggingOptions = builder.Configuration.GetSection(LoggingOptions.SectionName).Get<LoggingOptions>()
     ?? new LoggingOptions();
 
+// ---------------------------------------------------------------------------
+// Das Log-Verzeichnis muss beschreibbar sein.
+//
+// Serilog legt das Verzeichnis beim Start selbst an - kann er das nicht,
+// bricht der Start **mit einer Ausnahme** ab, noch **bevor** der erste
+// Logeintrag geschrieben wird. Auf dem NAS war genau das der Fall: der
+// Docker-Worker legte den Mount-Punkt als root:root an, der Container
+// laeuft aber als uid 1001 und konnte weder das Verzeichnis anlegen noch
+// die Datei schreiben. Der Container startete, stuerzte sofort wieder ab
+// und der DSM-Worker meldete "fail compose up" - ohne die Ursache.
+//
+// Deshalb wird das Verzeichnis hier geprueft und bei Bedarf auf ein
+// beschreibbares Verzeichnis umgestellt. Der Gateway startet damit
+// **immer** - ein nicht beschreibbares Log-Verzeichnis ist ein Aerger,
+// aber kein Ausfall.
+// ---------------------------------------------------------------------------
+var logDirectory = ResolveWritableDirectory(
+    loggingOptions.Directory,
+    builder.Environment.ContentRootPath,
+    configurationWarnings.Add);
+
 var logBuffer = new InMemoryLogSink(
     loggingOptions.RingBuffer.Capacity,
     ParseLevel(loggingOptions.RingBuffer.MinimumLevel));
@@ -50,7 +71,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
     .WriteTo.Console(new RenderedCompactJsonFormatter())
     .WriteTo.File(
         new RenderedCompactJsonFormatter(),
-        path: Path.Combine(loggingOptions.Directory, "gateway-.jsonl"),
+        path: Path.Combine(logDirectory, "gateway-.jsonl"),
         rollingInterval: RollingInterval.Day,
         retainedFileCountLimit: loggingOptions.RetainedFileCount,
         shared: true)
@@ -122,4 +143,70 @@ static LogEventLevel ParseLevel(string? level)
     => Enum.TryParse<LogEventLevel>(level, ignoreCase: true, out var parsed)
         ? parsed
         : LogEventLevel.Information;
+
+// Ermittelt ein beschreibbares Verzeichnis für die Protokolldateien.
+//
+// Reihenfolge:
+//   1. das konfigurierte Verzeichnis (üblich: /var/lib/comfobox/logs)
+//   2. das Arbeitsverzeichnis des Prozesses (Fallback im Container)
+//   3. das temporäre Verzeichnis des Systems (letzter Ausweg)
+//
+// Schlägt der erste Versuch fehl, wird **nicht** abgebrochen: der Gateway
+// muss laufen - ein fehlendes Log-Verzeichnis ist kein Grund für einen
+// Ausfall. Die Warnung wird über den Logger gemeldet, sobald er steht.
+static string ResolveWritableDirectory(
+    string? directory,
+    string contentRootPath,
+    Action<string> onWarning)
+{
+    if (!string.IsNullOrWhiteSpace(directory))
+    {
+        if (TryCreateDirectory(directory))
+        {
+            return directory;
+        }
+
+        onWarning(
+            $"Das Log-Verzeichnis '{directory}' ist nicht anlegbar oder nicht beschreibbar. " +
+            "Es wird auf ein anderes Verzeichnis ausgewichen - die Protokolle landen " +
+            "dort statt im konfigurierten Pfad.");
+    }
+
+    var fallback = Path.Combine(contentRootPath, "logs");
+    if (TryCreateDirectory(fallback))
+    {
+        return fallback;
+    }
+
+    var temp = Path.Combine(Path.GetTempPath(), "comfobox-logs");
+    if (TryCreateDirectory(temp))
+    {
+        return temp;
+    }
+
+    // Letzter Ausweg: das temporäre Verzeichnis des Systems (existiert immer).
+    return Path.GetTempPath();
+}
+
+// Legt ein Verzeichnis an und prüft, ob es beschreibbar ist.
+static bool TryCreateDirectory(string path)
+{
+    try
+    {
+        Directory.CreateDirectory(path);
+
+        // Schreibbar? Ein Test mit einer echten Datei ist der einzige
+        // zuverlässige Weg - die Rechte des Verzeichnisses allein sagen
+        // nicht, ob der Prozess schreiben darf.
+        var probe = Path.Combine(path, $".write-probe-{Environment.ProcessId}");
+        File.WriteAllText(probe, "probe");
+        File.Delete(probe);
+        return true;
+    }
+    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException
+                                  or NotSupportedException or ArgumentException)
+    {
+        return false;
+    }
+}
 

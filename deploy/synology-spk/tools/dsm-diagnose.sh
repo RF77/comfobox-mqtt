@@ -312,9 +312,18 @@ worker_test() {
     fi
 
     # 4) DER entscheidende Schritt: compose up
+    #
+    # WICHTIG: `docker compose up -d` liefert **Exit-Code 0**, auch wenn der
+    # Container sofort wieder abstuerzt! Der DSM-Worker wartet dagegen, bis
+    # der Container laeuft (bzw. "healthy" ist) - genau dieser Unterschied
+    # hat den echten Fehler bisher versteckt.
+    #
+    # Deshalb wird hier `--wait` benutzt (Compose v2) und danach der
+    # Zustand des Containers gezeigt.
     echo ">> docker compose up (der Schritt, an dem die Installation scheitert):"
-    ( cd "$CF_DIR" && docker compose -p comfobox up -d 2>&1 ) | tail -n 40 | sed 's/^/   /'
-    RC=${PIPESTATUS:-$?}
+    ( cd "$CF_DIR" && docker compose -p comfobox up -d --wait --wait-timeout 60 2>&1 ) \
+        | tail -n 40 | sed 's/^/   /'
+    RC=$?
     echo ""
     echo "   (Exit-Code: $RC)"
     echo ""
@@ -323,11 +332,35 @@ worker_test() {
     echo ">> Container:"
     docker ps -a --filter "name=comfobox" 2>&1 | head -n 10 | sed 's/^/   /'
     echo ""
-    echo ">> Container-Logs:"
-    ( cd "$CF_DIR" && docker compose -p comfobox logs --tail 30 2>&1 ) | tail -n 30 | sed 's/^/   /'
+
+    echo ">> Zustand (Restart-Zaehler, Exit-Code, Health):"
+    docker inspect comfobox-gateway \
+        --format '   RestartCount: {{.RestartCount}}
+   State:          {{.State.Status}}
+   ExitCode:       {{.State.ExitCode}}
+   Error:          {{.State.Error}}
+   Health:         {{if .State.Health}}{{.State.Health.Status}}{{else}}(kein Healthcheck aktiv){{end}}' 2>&1 \
+        | head -n 10 | sed 's/^/   /'
     echo ""
 
-    # 6) Aufraeumen - es sollen keine Reste auf der NAS bleiben
+    echo ">> Container-Logs (stdout/stderr):"
+    ( cd "$CF_DIR" && docker compose -p comfobox logs --tail 40 2>&1 ) | tail -n 40 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Log-Dateien im Volume (falls der Container bis zum Log kam):"
+    docker run --rm -v comfobox-data:/data alpine \
+        sh -c 'ls -la /data 2>/dev/null; echo "---"; ls -la /data/logs 2>/dev/null; echo "---"; tail -n 20 /data/logs/*.jsonl 2>/dev/null' 2>&1 \
+        | head -n 40 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Rechte des Datenverzeichnisses im Volume:"
+    docker run --rm -v comfobox-data:/data alpine \
+        sh -c 'ls -ldn /data /data/logs 2>/dev/null' 2>&1 | head -n 5 | sed 's/^/   /'
+    echo ""
+
+    # 6) Aufraeumen - es sollen keine Reste auf der NAS bleiben.
+    #    Das Volume bleibt dabei erhalten (kein -v) - es enthaelt den
+    #    24-h-Schreibzaehler.
     echo ">> Aufraeumen:"
     ( cd "$CF_DIR" && docker compose -p comfobox down --remove-orphans 2>&1 ) | tail -n 5 | sed 's/^/   /'
     echo ""
