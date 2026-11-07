@@ -27,6 +27,100 @@
 
 ---
 
+## 2026-11-08 – Version 1.0.2: der Worker-Emulations-Test war der Durchbruch
+
+**Ergebnis:** Die Worker-Emulation auf der NAS hat die Ursache gefunden und
+bestätigt, dass das Paket jetzt lauffähig ist. Revision 0010 mit Image 1.0.2
+ist gebaut und veröffentlicht.
+
+**Der entscheidende Output** (Modus `--worker` auf der DS923+):
+
+````
+>> docker compose up (der Schritt, an dem die Installation scheitert):
+   Volume "comfobox-data"  Created
+   Container comfobox-gateway  Started
+   Container comfobox-gateway  Waiting
+   Container comfobox-gateway  Healthy
+   (Exit-Code: 0)
+
+>> Zustand (Restart-Zaehler, Exit-Code, Health):
+   RestartCount: 0
+   State:          running
+   ExitCode:       0
+   Health:         healthy
+
+>> Rechte des Datenverzeichnisses im Volume:
+   drwxr-xr-x    1 1001     1001             8 /data
+   drwxr-xr-x    1 1001     1001            44 /data/logs
+````
+
+**Damit ist bestätigt:** Mit dem benannten Volume funktioniert alles –
+Container startet, wird **healthy**, keine Neustarts, Rechte korrekt
+(uid 1001). Das benannte Volume war genau die fehlende Lösung.
+
+**Zwei Meldungen im Container-Log sind normal** und **keine** Fehler:
+
+| Meldung | Bedeutung |
+|---|---|
+| `MQTT-Verbindung zu "localhost:1883" fehlgeschlagen` | Es ist noch kein Broker eingetragen (Standardwert). Der Assistent fragt ihn ab. |
+| `Access to the port '/dev/ttyUSB0' is denied … No such file or directory` | Der USB-Adapter ist nicht angesteckt oder heisst anders. |
+
+Beides steht in der Benutzerdoku.
+
+**Weitere Arbeiten in dieser Session:**
+
+- **Schreibzähler-Schutz.** Der Worker gibt das Volume beim Timing
+  `WHEN_PREUNINST` frei – also **vor** `postuninst`. Der 24-h-Schreibzähler
+  (EEPROM-Schutz) wäre damit verloren. `preuninst` sichert ihn jetzt nach
+  `var/`, `postinst` spielt ihn zurück. Beides „best effort“ – die
+  Deinstallation darf nie daran scheitern.
+- **Image-Build beschleunigt.** Der Multi-Arch-Build läuft unter QEMU;
+  darin ist der Angular-Build um ein Vielfaches langsamer. `workflow_dispatch`
+  hat jetzt das Input `platforms` (Default `linux/amd64`). Ein Tag-Push
+  baut weiterhin multi-arch (das HA-Add-on auf dem Pi braucht arm64).
+- **Release v1.0.2** angelegt; die `packages.json` in **beiden** Releases
+  (v1.0.1 und v1.0.2) zeigt auf 0010 – die bestehende Paketquelle des
+  Nutzers funktioniert damit unverändert.
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/scripts/preuninst` – sichert den Schreibzähler
+- `deploy/synology-spk/src/scripts/postinst` – spielt ihn zurück
+- `deploy/synology-spk/src/VERSION` → 1.0.2, `REVISION` → 0010
+- `deploy/synology-spk/packages.json` → 1.0.2-0010
+- `.github/workflows/docker-publish.yml` – Input `platforms`
+- `deploy/synology-spk/tools/{cancel-build,check-runs,check-image,check-jobs,fetch-job-log,create-release}.ps1` – **neu**
+- `docs/benutzer/08-synology.md`, `08b-synology-test.md`, `CHANGELOG.md`
+
+**Verifikation:**
+- `bash build-spk.sh 1.0.2 0010` → SPK gebaut
+- `bash tools/check-spk.sh` → **OK**
+- `bash tools/check-shell.sh` → alle Skripte korrekt
+- Image 1.0.2: Manifest geprüft (`linux/amd64`), anonymer Pull → **HTTP 200**
+- Release v1.0.1 **und** v1.0.2: Download + MD5 verifiziert
+  (`62115eeaba9654f58b252211c4937683`)
+
+**Offen / nicht gemacht:**
+- Die Installation über das Paketzentrum ist **noch nicht** verifiziert – nur
+  die Worker-Emulation. Der nächste Test auf der NAS entscheidet.
+- Der arm64-Build ist **nicht** neu gelaufen (der alte Lauf wurde
+  abgebrochen). `1.0.1` im Registry ist weiterhin multi-arch; für das
+  HA-Add-on auf dem Pi ist das weiterhin gültig.
+
+**Überraschungen:**
+- `docker compose up -d` **erfolgreich** heisst nicht, dass der Container
+  laeuft – der Exit-Code ist 0, auch wenn der Container sofort stirbt. Erst
+  `docker inspect` auf `State`/`Health` zeigt die Wahrheit.
+- Die GitHub-API liefert **UTC**. Ohne Zeitzonenangabe interpretiert
+  PowerShell das als lokale Zeit – die Laufzeit war dadurch um eine Stunde
+  daneben (im Winter eine, im Sommer zwei). Das Skript `check-runs.ps1`
+  rechnet jetzt in UTC.
+- Ein Docker-Named-Volume **übernimmt die Rechte aus dem Image**. Das ist
+  der Grund, warum es funktioniert: `/var/lib/comfobox` gehört im Image
+  uid 1001 – und der Container darf dort schreiben, egal wer den Mount
+  angelegt hat.
+
+---
+
 ## 2026-11-07 (7) – Der Container stuerzte sofort ab: das Bind-Mount gehoerte root:root
 
 **Ergebnis:** Die Ursache des „fail compose up“ ist gefunden. Revision 0009
