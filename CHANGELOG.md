@@ -4,6 +4,22 @@ Alle wesentlichen Änderungen an diesem Projekt.
 
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
+## [1.0.2] – 2026-11-08
+
+### Fixed
+- **Der 24-h-Schreibzähler (EEPROM-Schutz) geht beim Deinstallieren nicht
+  mehr verloren.** Der DSM-Worker gibt das Projekt und damit das Volume
+  `comfobox-data` frei, bevor `postuninst` läuft. Das `preuninst` sichert
+  den Zähler deshalb jetzt nach `var/`, und das `postinst` spielt ihn beim
+  nächsten Installieren wieder ins Volume zurück. Beide Schritte sind
+  „best effort“ – ein Fehler darf die Installation **nie** verhindern.
+- **Der Image-Build braucht für die Synology nicht mehr ewig.** Der
+  Multi-Arch-Build (`linux/amd64,linux/arm64`) läuft unter QEMU – darin ist
+  der Angular-Build um ein Vielfaches langsamer. `workflow_dispatch` hat jetzt
+  das Input `platforms`; für die DS923+ genügt `linux/amd64` (rund
+  10 Minuten statt über 30). Bei einem Tag-Push wird weiterhin multi-arch
+  gebaut – das HA-Add-on auf dem Raspberry Pi braucht `arm64`.
+
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
