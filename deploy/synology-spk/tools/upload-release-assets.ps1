@@ -10,6 +10,7 @@ param(
     [Parameter(Mandatory = $true)][string]$Tag,
     [Parameter(Mandatory = $true)][string]$Spk,
     [Parameter(Mandatory = $true)][string]$PackagesJson,
+    [string]$Diagnose = '',
     [string]$Delete = ''
 )
 
@@ -60,6 +61,9 @@ function Upload-Asset {
 
 Upload-Asset -Path $PackagesJson -Name 'packages.json'
 Upload-Asset -Path $Spk -Name (Split-Path -Leaf $Spk)
+if ($Diagnose) {
+    Upload-Asset -Path $Diagnose -Name 'dsm-diagnose.sh'
+}
 
 # --- Kontrolle --------------------------------------------------------------
 $rel2 = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/tags/$Tag" -Headers $auth
