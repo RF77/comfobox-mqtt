@@ -149,11 +149,13 @@ Datei <code>conf/privilege</code> wird vom DSM abgelehnt (Schritt 2). Löschen S
 deshalb zuerst alle älteren <code>.spk</code> auf der NAS.</p>
 </blockquote>
 <p><strong>Prüfen, ob die Datei die richtige ist</strong> – auf einem Rechner mit Bash:</p>
-<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk | grep conf
+<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
+#            conf/resource
 </code></pre>
-<p>Fehlt <code>conf/privilege</code>, ist die Datei zu alt.</p>
+<p>Fehlt <code>conf/privilege</code>, ist die Datei zu alt. Fehlt <code>conf/resource</code>, startet
+der Container nicht.</p>
 <blockquote>
 <p><strong>Alternativ</strong> über eine eigene Paketquelle – dann erscheint das Paket
 direkt in der normalen Liste des Paketzentrums:
@@ -177,7 +179,7 @@ Terminal“):</p>
 <p>Beide Dateien kommen in <code>/tmp</code> der NAS. Sie können entweder die Dateien vom
 Rechner kopieren …</p>
 <pre><code class="language-bash">scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk admin@&lt;IP-der-NAS&gt;:/tmp/
 </code></pre>
 <p>… oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
 dann schon auf der NAS, z. B. im Gemeinsamen Ordner):</p>
@@ -186,7 +188,7 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 </code></pre>
 <h4>4. Diagnose ausführen</h4>
 <p>In der SSH-Sitzung:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --install
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk --install
 </code></pre>
 <p><code>sudo</code> fragt nach dem Passwort des DSM-Administrators. Ohne <code>--install</code> liest
 das Skript nur (keine Änderung an der NAS).</p>
@@ -197,11 +199,13 @@ das Skript nur (keine Änderung an der NAS).</p>
 </code></pre>
 <blockquote>
 <p><strong>Fehlercode 319</strong> heißt: Das DSM liest die Datei <code>conf/privilege</code>, lehnt
-aber ihren <strong>Inhalt</strong> ab. Die <strong>Log-Auszüge</strong> im Skript verraten den
-genauen Grund – dort schreibt das DSM hin, was ihm nicht passt.</p>
+aber ihren <strong>Inhalt</strong> ab. Ursache ist in aller Regel der Block <code>ctrl-script</code>
+mit <code>&quot;run-as&quot;: &quot;root&quot;</code>: DSM 7 lässt Pakete von Drittanbietern <strong>nicht</strong> mit
+Root-Rechten laufen. Die <strong>Log-Auszüge</strong> im Skript verraten den genauen
+Grund – dort schreibt das DSM hin, was ihm nicht passt.</p>
 <p>Mit <code>--test</code> probiert das Skript zusätzlich mehrere Formen der
 <code>privilege</code>-Datei <strong>durch</strong> und installiert die erste, die funktioniert:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0004.spk --test
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0005.spk --test
 </code></pre>
 <p>Ein Fehler in dieser Phase ändert <strong>nichts</strong> an der NAS.</p>
 </blockquote>
@@ -216,9 +220,18 @@ liefert der Variantentest (<code>--test</code>).</p>
 <h2>Schritt 2 – Installieren</h2>
 <p><strong>Paketcenter → Installieren → Manuelle Installation</strong> → Datei wählen →
 <em>Installieren</em>.</p>
-<p>Das Paket prüft vorher selbst (DSM-Version, Container Manager, freier Port
-8081) und startet danach den Container. Der Browser öffnet sich
+<p>Das Paket prüft vorher selbst (DSM-Version) und richtet die Umgebung ein. Den
+Container startet danach das DSM selbst – der Browser öffnet sich
 automatisch auf <code>http://&lt;NAS-IP&gt;:8081/</code>.</p>
+<blockquote>
+<p><strong>Wie der Container startet:</strong> Das Paket startet ihn <strong>nicht</strong> selbst. Es
+übergibt das dem DSM (dem „Worker“ in <code>conf/resource</code>). Das DSM startet und
+stoppt den Container beim Start bzw. Stopp des Pakets. Der Grund: Seit
+DSM 7 dürfen Pakete von Drittanbietern <strong>nicht</strong> mit Root-Rechten laufen –
+ein solches Paket lehnt das Paketzentrum mit <strong>Fehler 319</strong> ab.</p>
+<p>Deshalb ist im Container-Manager <strong>ein Projekt mit dem Namen <code>comfobox</code></strong>
+zu sehen – kein einzelner Container. Das ist das erwartete Bild.</p>
+</blockquote>
 <blockquote>
 <p><strong>Meldung: „kann nicht installiert werden, da es mit Root-Rechten
 ausgeführt wird&quot;?</strong> Dann ist die <code>.spk</code> zu alt – ab DSM 7.0 muss sie die
