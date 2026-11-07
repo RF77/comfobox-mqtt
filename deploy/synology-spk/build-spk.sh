@@ -188,7 +188,43 @@ SOURCE_DATE_EPOCH=$(git log -1 --format=%ct 2>/dev/null || echo 0)
 [ "$SOURCE_DATE_EPOCH" -gt 0 ] 2>/dev/null || SOURCE_DATE_EPOCH=0
 TAR_REPRODUCIBLE="--sort=name --mtime=@${SOURCE_DATE_EPOCH} --owner=root --group=root --numeric-owner"
 
-( cd "$WORK" && find target -mindepth 1 -maxdepth 1 | tar cpf - $TAR_REPRODUCIBLE --files-from=/dev/stdin | gzip -n > package.tgz )
+# ---------------------------------------------------------------------------
+# package.tgz – ACHTUNG: die Struktur ist entscheidend!
+#
+# Das DSM **entpackt package.tgz direkt in das Zielverzeichnis** des Pakets.
+# Im DSM-Log steht das so:
+#
+#   mv -f /volume3/@tmp/synopkg/install.XXXX/package \
+#        /usr/local/packages/@appstore/ComfoBoxGateway
+#
+# "package" ist der entpackte Inhalt von package.tgz – er wird zum
+# Zielverzeichnis selbst. Der Inhalt von package.tgz muss deshalb die
+# Dateien **direkt auf der obersten Ebene** enthalten:
+#
+#   bin/common.sh
+#   bin/serial-scan.sh
+#   compose/compose.yaml
+#   image
+#
+# Mit einer zusätzlichen Ebene "target/" (Revision 0006) landen die Dateien
+# eine Stufe zu tief:
+#
+#   <ziel>/target/bin/common.sh
+#   <ziel>/target/compose/compose.yaml
+#
+# Der DSM-Worker "docker-project" sucht die Compose-Datei aber unter
+# <ziel>/compose (conf/resource: "path": "compose", relativ zum Ziel) – und
+# findet sie nicht. Der Worker meldet daraufhin "(fail)" und die
+# Installation bricht ab:
+#
+#   Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)
+#
+# (Genau das war der Fehler in Revision 0006.)
+# ---------------------------------------------------------------------------
+( cd "$WORK/target" \
+  && find . -mindepth 1 -maxdepth 1 | sed 's|^\./||' \
+  | tar cpf - $TAR_REPRODUCIBLE --files-from=/dev/stdin \
+  | gzip -n > "$WORK/package.tgz" )
 
 # --- Prüfsumme in INFO eintragen -------------------------------------------
 CHECKSUM=$(md5sum "$WORK/package.tgz" | cut -d' ' -f1)

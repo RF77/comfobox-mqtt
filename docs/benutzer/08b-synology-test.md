@@ -134,7 +134,7 @@ herunterladen und auf die NAS kopieren (Samba-Freigabe oder `scp`), dann
 **Prüfen, ob die Datei die richtige ist** – auf einem Rechner mit Bash:
 
 ````bash
-tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk | grep conf
+tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
 #            conf/resource
@@ -142,6 +142,13 @@ tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk | grep conf
 
 Fehlt `conf/privilege`, ist die Datei zu alt. Fehlt `conf/resource`, startet
 der Container nicht.
+
+> **Wichtig vor dem ersten Installationsversuch:** Ist auf der NAS bereits
+> ein **fehlgeschlagenes** Paket installiert, steht es im Status „broken“.
+> DSM 7.4 versucht dann ein Update statt einer Neuinstallation und
+> scheitert an *„package does not have preupgrade / postupgrade script“*.
+> **Vorher deinstallieren:** *Paketcenter → ComfoBox Gateway →
+> Deinstallieren* (bei Status „Installiert“ geht das direkt).
 
 ### Wenn das Paketzentrum das Paket ablehnt
 
@@ -182,7 +189,7 @@ Rechner kopieren …
 
 ````bash
 scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk admin@<IP-der-NAS>:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk admin@<IP-der-NAS>:/tmp/
 ````
 
 … oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
@@ -198,7 +205,7 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 In der SSH-Sitzung:
 
 ````bash
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --install
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --install
 ````
 
 `sudo` fragt nach dem Passwort des DSM-Administrators. Ohne `--install` liest
@@ -222,7 +229,7 @@ das Skript nur (keine Änderung an der NAS).
 > `privilege`-Datei **durch** und installiert die erste, die funktioniert:
 >
 > ````bash
-> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --test
+> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --test
 > ````
 >
 > Ein Fehler in dieser Phase ändert **nichts** an der NAS.

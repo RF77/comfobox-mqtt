@@ -1,0 +1,51 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# preupgrade – Bedingungen vor dem Update prüfen.
+#
+# WICHTIG: Ein Rückgabewert != 0 bricht das Update ab. Dieses Skript
+# beendet deshalb IMMER mit 0.
+#
+# Das Skript existiert überhaupt nur aus einem Grund: **Fehler 261**
+# ("package does not have preupgrade / postupgrade script"). Das DSM
+# braucht beim Update beide Skripte - fehlen sie, bricht das Update ab,
+# auch wenn das Paket selbst in Ordnung ist.
+#
+# Das ist besonders wichtig, wenn eine Installation zuvor fehlgeschlagen
+# ist: DSM 7.4 hinterlässt das Paket dann im Status "broken" (150) und
+# versucht bei der nächsten Installation ein **Update** statt einer
+# Neuinstallation - und genau daran scheitert es ohne diese Skripte.
+#
+# Wie beim preinst gilt: Zum Zeitpunkt dieses Skripts ist common.sh
+# vorhanden (das Paket ist bereits entpackt), es wird aber über mehrere
+# Pfade gesucht, weil DSM die Skripte je nach Phase aus verschiedenen
+# Verzeichnissen ausfuehrt.
+# ---------------------------------------------------------------------------
+
+SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+for _cand in \
+    "${SYNOPKG_PKGDEST:-}/bin/common.sh" \
+    "$SELF_DIR/../bin/common.sh" \
+    "$SELF_DIR/../target/bin/common.sh"
+do
+    if [ -n "$_cand" ] && [ -f "$_cand" ]; then
+        # shellcheck source=../target/bin/common.sh
+        . "$_cand"
+        break
+    fi
+done
+
+echo "ComfoBox Gateway: Update wird vorbereitet …"
+
+# Die Mindestversion steht in der INFO - das DSM bietet das Update auf
+# älteren Systemen ohnehin nicht an. Nur eine Warnung.
+DSM_MAJOR=$(echo "${SYNOPKG_DSM_VERSION_MAJOR:-7}" | cut -d. -f1)
+case "$DSM_MAJOR" in
+    ''|*[!0-9]*) DSM_MAJOR=7 ;;
+esac
+if [ "$DSM_MAJOR" -lt 7 ]; then
+    echo "ComfoBox Gateway benötigt DSM 7.2 oder neuer."
+fi
+
+echo "Voraussetzungen erfüllt."
+exit 0

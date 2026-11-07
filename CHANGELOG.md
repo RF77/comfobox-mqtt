@@ -7,6 +7,27 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.1] – 2026-11-07
 
 ### Fixed
+- **Der DSM-Worker „docker-project“ ist gescheitert** – die eigentliche
+  Ursache der gescheiterten Installation:
+  ````
+  Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)
+  ````
+  Das `package.tgz` enthielt die Dateien eine Ebene zu tief
+  (`target/compose/compose.yaml`). Das DSM entpackt `package.tgz` aber
+  **direkt in das Zielverzeichnis** – im DSM-Log:
+  ````
+  mv -f …/install.XXXX/package /usr/local/packages/@appstore/ComfoBoxGateway
+  ````
+  Die Compose-Datei landete damit in `<ziel>/target/compose/…`, während der
+  Worker sie unter `<ziel>/compose` sucht (`conf/resource`: `"path": "compose"`,
+  relativ zum Ziel). Ergebnis: **Worker `(fail)`, Installation abgebrochen.**
+  → `package.tgz` enthält die Dateien jetzt direkt auf der obersten Ebene
+  (`bin/`, `compose/`, `image`).
+- **Fehler 261 („package does not have preupgrade / postupgrade script“).**
+  DSM 7.4 lässt ein fehlgeschlagenes Paket im Status **„broken“** (150)
+  zurück und versucht beim nächsten Mal ein Update statt einer Neuinstallation
+  – das scheitert ohne die beiden Skripte. → `preupgrade` und `postupgrade`
+  sind jetzt im Paket.
 - **Die Installation brach trotz aller vorherigen Korrekturen weiterhin ab**
   („Paket kann nicht installiert werden“). Ursache: `preinst` lud die
   Hilfsdatei `common.sh` aus `target/` – aber das `package.tgz` wird erst

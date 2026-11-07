@@ -11,9 +11,12 @@ src/scripts/preinst
 src/scripts/postinst
 src/scripts/preuninst
 src/scripts/postuninst
+src/scripts/preupgrade
+src/scripts/postupgrade
 src/scripts/start-stop-status
 tools/test-config-parse.sh
 tools/check-spk.sh
+tools/check-tgz-layout.sh
 tools/dsm-diagnose.sh
 "
 

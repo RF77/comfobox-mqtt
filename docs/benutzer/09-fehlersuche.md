@@ -59,7 +59,10 @@ mit dem Gateway um den Bus. Das Gateway verliert dann das Rennen.
 
 ## Das Paket lässt sich nicht installieren
 
-**Symptom:** Beim Hochladen der `.spk` ins Paketzentrum erscheint:
+Es gibt dafür **drei verschiedene Ursachen** – die Meldung im Paketzentrum
+ist immer dieselbe.
+
+### Symptom 1: „…da es mit Root-Rechten ausgeführt wird“
 
 > *„ComfoBox Gateway kann nicht installiert werden, da es mit Root-Rechten
 > ausgeführt wird. Pakete mit Root-Rechten können Befehle als Root-Benutzer
@@ -70,12 +73,58 @@ Synology für jedes Paket eine ausdrückliche Rechteangabe – ohne diese Datei
 gilt das Paket als Root-Paket und das Paketzentrum verweigert die
 Installation.
 
-> **Variante:** Fehlt die Datei **nicht**, aber das Paket wird trotzdem
-> abgelehnt, meldet das DSM über die Kommandozeile den Fehlercode **319**
-> („invalid package privilege content“). Dann passt der **Inhalt** der
-> Datei nicht. Das Skript `dsm-diagnose.sh` zeigt die **Log-Auszüge** des DSM
-> (dort steht der genaue Grund) und probiert mit `--test` mehrere Formen
-> der Datei durch.
+**Lösung:** Sie brauchen eine neuere Version des Pakets. Ab **1.0.0-0002** ist
+die Datei enthalten.
+
+### Symptom 2: „…von einem unbekannten Herausgeber veröffentlicht“
+
+**Ursache:** Sie haben das Paket **manuell** installiert (Datei auf die NAS
+kopiert). Das DSM kann den Herausgeber nur bei einer **registrierten
+Paketquelle** bestimmen.
+
+**Lösung:** Über die Paketquelle installieren –
+*Paketcenter → Einstellungen → Paketquellen → Hinzufügen*:
+
+| Feld | Wert |
+|---|---|
+| Name | `ComfoBox` |
+| Speicherort (URL) | <https://github.com/RF77/comfobox-mqtt/releases/download/v1.0.1/packages.json> |
+
+Danach erscheint das Paket unter **Community** und wird von dort installiert.
+**Sie müssen dafür keine Datei auf die NAS kopieren.**
+
+### Symptom 3: „Paket kann nicht installiert werden. Versuchen Sie es später erneut…“
+
+**Ursache:** Ein Skript des Pakets oder der DSM-Worker ist gescheitert. Die
+Meldung ist **generisch** – sie nennt den Grund nicht. Im Log des DSM steht
+dagegen genau, welcher Schritt geklappt hat:
+
+````bash
+grep -E "Acquire|failed" /var/log/synopkg.log | tail -10
+````
+
+| Zeile | Bedeutung |
+|---|---|
+| `Acquire docker-project … (fail)` | Der Worker hat das Compose-Projekt nicht angelegt. Meist stimmt die Struktur von `package.tgz` nicht. |
+| `Acquire docker-project … (done)` | Der Worker war in Ordnung – der Fehler liegt in einem Skript. |
+| `End postinst ret=[0]` | Die Skripte liefen durch. |
+
+**Lösung:** Holen Sie den echten Fehlercode mit dem Diagnose-Skript (unten).
+
+### Wichtig: „broken“ nach einem Fehlversuch
+
+Schlägt eine Installation fehl, hinterlässt DSM 7.4 das Paket im Status
+**„broken“ (150)**. Beim nächsten Versuch versucht DSM dann ein **Update**
+statt einer Neuinstallation – und scheitert an *„package does not have
+preupgrade / postupgrade script“* (Fehler **261**), obwohl das Paket
+in Ordnung ist.
+
+**Vor dem nächsten Installationsversuch das Paket entfernen:**
+
+> **Paketcenter → ComfoBox Gateway → Deinstallieren**
+>
+> (geht nur, wenn der Status „Installiert“ ist – sonst über SSH:
+> `sudo synopkg uninstall ComfoBoxGateway`)
 
 > **Meistens ist es die falsche Datei:** Auf der NAS liegen oft mehrere
 > `.spk` nebeneinander, und im Dateiauswahler wird die **alte** angeklickt.
@@ -86,31 +135,33 @@ Installation.
 > # erwartet: conf/ und conf/privilege
 > ````
 
-**Lösung:** Sie brauchen eine neuere Version des Pakets. Prüfen Sie die
-verwendete Version auf der [Download-Seite](https://github.com/RF77/comfobox-mqtt/releases);
-ab **1.0.0-0002** ist die Datei enthalten.
+### Den echten Fehlercode holen
 
-> **Eigene Handarbeit ist nicht nötig** – das Paket wird mit der Datei
-> ausgeliefert. Sollte die Meldung weiterhin kommen, holen Sie den echten
-> Fehlercode. Das Skript liegt **im Release** direkt neben dem `.spk`
-> (`dsm-diagnose.sh`). So kommen Sie auf der NAS daran:
->
-> ````bash
-> # 1. SSH aktivieren: Control Panel → Terminal & SNMP → SSH-Dienst aktivieren
-> # 2. Verbinden
-> ssh admin@<IP-der-NAS>
->
-> # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
-> scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
-> scp ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk admin@<IP-der-NAS>:/tmp/
->
-> # 4. Diagnose ausführen
-> sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --install
-> ````
->
-> Die Ausgabe von `synopkg install` enthält den **Fehlercode**. Die
-> vollständige Anleitung steht in
-> [Synology testen](08b-synology-test.md).
+Das Paket wird mit allem Nötigen ausgeliefert. Das Diagnose-Skript liegt
+**im Release** direkt neben dem `.spk` (`dsm-diagnose.sh`):
+
+````bash
+# 1. SSH aktivieren: Control Panel → Terminal & SNMP → SSH-Dienst aktivieren
+# 2. Verbinden
+ssh admin@<IP-der-NAS>
+
+# 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
+scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk admin@<IP-der-NAS>:/tmp/
+
+# 4. Diagnose ausführen
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --install
+````
+
+Das Skript zeigt unter anderem:
+
+- die **Struktur von `package.tgz`** (muss auf der obersten Ebene liegen)
+- die **Compose-Datei** und prüft sie mit `docker compose config`
+- den **Fehlercode** aus der JSON-Ausgabe von `synopkg install`
+- entfernt ein Paket im Status „broken“ **vor** dem Versuch
+
+Die vollständige Anleitung steht in
+[Synology testen](08b-synology-test.md).
 
 ---
 

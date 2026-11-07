@@ -27,6 +27,111 @@
 
 ---
 
+## 2026-11-07 (5) – `package.tgz` war eine Ebene zu tief: der Worker „docker-project" scheiterte
+
+**Ergebnis:** Die Ursache der gescheiterten Installation ist gefunden und
+behoben. Revision 0007 ist gebaut und geprüft.
+
+**Der entscheidende Logeintrag** (aus `synopkg.log` auf der NAS):
+
+````
+23:39:43 Acquire systemd-unit for ComfoBoxGateway when 0x0001 (ready)
+23:39:43 Acquire systemd-unit for ComfoBoxGateway when 0x0001 (done)
+23:39:43 Acquire docker-project for ComfoBoxGateway when 0x0001 (ready)
+23:39:43 Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)   ← hier
+23:39:43 Begin postinst
+23:39:44 End postinst ret=[0]
+23:39:44 install ComfoBoxGateway 1.0.1-0006 failed
+````
+
+`postinst` lief durch – der Fehler lag **danach**, im Resource-Worker.
+
+**Ursache:** Das `package.tgz` enthielt die Dateien **eine Ebene zu tief**:
+
+````
+target/bin/common.sh
+target/bin/serial-scan.sh
+target/compose/compose.yaml
+target/image
+````
+
+Das DSM entpackt `package.tgz` aber **direkt in das Zielverzeichnis**:
+
+````
+mv -f /volume3/@tmp/synopkg/install.DUwyw3/package \
+     /usr/local/packages/@appstore/ComfoBoxGateway
+````
+
+`package` ist der entpackte Inhalt und wird zum Zielverzeichnis **selbst**.
+Damit landete die Compose-Datei in `<ziel>/target/compose/compose.yaml` –
+der Worker sucht sie aber unter `<ziel>/compose` (`conf/resource`:
+`"path": "compose"`, relativ zum Ziel) und findet sie nicht → `(fail)`.
+
+**Fix:** `build-spk.sh` packt jetzt den **Inhalt** von `target/` statt des
+Verzeichnisses selbst:
+
+````bash
+( cd "$WORK/target" \
+  && find . -mindepth 1 -maxdepth 1 | sed 's|^\./||' \
+  | tar cpf - $TAR_REPRODUCIBLE --files-from=/dev/stdin \
+  | gzip -n > "$WORK/package.tgz" )
+````
+
+**Zweiter Fund – Fehler 261:** `synopkg install` meldete
+`{"code":261,"description":"package does not have preupgrade / postupgrade script"}`.
+Das war ein **Folgefehler**: Die fehlgeschlagene Installation hatte das Paket
+im Status *„broken“* (150) hinterlassen. DSM versuchte deshalb ein
+**Update** statt einer Neuinstallation – und dafür braucht es `preupgrade`
+und `postupgrade`. Beide Skripte sind jetzt im Paket.
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/build-spk.sh` – `package.tgz` ohne `target/`-Ebene
+- `deploy/synology-spk/src/scripts/preupgrade` – **neu**
+- `deploy/synology-spk/src/scripts/postupgrade` – **neu**
+- `deploy/synology-spk/tools/check-tgz-layout.sh` – **neu**: prüft die
+  Struktur von `package.tgz` im gebauten SPK
+- `deploy/synology-spk/tools/check-spk.sh` – Pfade auf die neue Struktur
+  umgestellt; **neue Regressionstests**: keine `target/`-Ebene,
+  `compose/compose.yaml` auf der obersten Ebene, `bin/common.sh` dort,
+  `preupgrade`/`postupgrade` vorhanden
+- `deploy/synology-spk/tools/check-shell.sh` – neue Skripte und
+  `check-tgz-layout.sh` in die Syntaxprüfung
+- `deploy/synology-spk/tools/dsm-diagnose.sh` – zeigt jetzt die Struktur von
+  `package.tgz`, prüft die Compose-Datei mit `docker compose config` und
+  entfernt ein Paket im Status „broken“ vor dem Installationsversuch
+- `deploy/synology-spk/packages.json`, `REVISION` (0007)
+- `docs/benutzer/09-fehlersuche.md` – die drei verschiedenen
+  Installationsfehler getrennt beschrieben, „broken“-Status erklärt
+- `docs/benutzer/08b-synology-test.md`, `CHANGELOG.md`
+
+**Verifikation:**
+- `bash build-spk.sh 1.0.1 0007` → SPK gebaut
+- `bash tools/check-tgz-layout.sh` → `package.tgz` ohne `target/`-Ebene ✅
+- `bash tools/check-spk.sh` → **OK**
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- SPK: 51 200 B, MD5 `360d76387e0b0b5188336e0110aab666`
+- Image-Manifest geprüft: `linux/amd64` **und** `linux/arm64` vorhanden ✅
+
+**Offen / nicht gemacht:**
+- Die Installation auf der NAS ist **weiterhin nicht** verifiziert. Der
+  Worker-Fehler ist behoben – der erfolgreiche Start des Compose-Projekts
+  ist aber ungetestet.
+- Der Benutzer muss das **fehlgeschlagene Paket auf der NAS zuerst
+  deinstallieren** (Status „broken“), sonst versucht DSM ein Update.
+
+**Überraschungen:**
+- Der Fehler 261 im JSON war **nicht** der Fehler – er war die Folge eines
+  zuvor fehlgeschlagenen Installationsversuchs. Ohne den Log-Auszug wäre man
+  wieder am falschen Ort gelandet.
+- Das DSM-Log nennt die Resource-Worker mit **„Acquire <name> … (fail)“** –
+  das ist die schnellste Diagnose überhaupt. Ab jetzt in `dsm-diagnose.sh`
+  prominent ausgegeben.
+- `package.tgz` ist kein gewöhnliches Archiv im Paket: es wird **in das
+  Zielverzeichnis entpackt**. Eine zusätzliche Ebene `target/` ist deshalb
+  immer ein Fehler – auch wenn sie „logisch“ aussieht.
+
+---
+
 ## 2026-11-07 (4) – `preinst` brach die Installation ab: `common.sh` existiert dort noch nicht
 
 **Ergebnis:** Die Paket-Installation läuft auf DSM 7.4 wieder durch. Revision

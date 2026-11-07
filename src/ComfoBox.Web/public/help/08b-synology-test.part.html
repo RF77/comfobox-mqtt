@@ -135,13 +135,21 @@ Datei <code>conf/privilege</code> wird vom DSM abgelehnt (Schritt 2). Löschen S
 deshalb zuerst alle älteren <code>.spk</code> auf der NAS.</p>
 </blockquote>
 <p><strong>Prüfen, ob die Datei die richtige ist</strong> – auf einem Rechner mit Bash:</p>
-<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk | grep conf
+<pre><code class="language-bash">tar tf ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk | grep conf
 # erwartet:  conf/
 #            conf/privilege
 #            conf/resource
 </code></pre>
 <p>Fehlt <code>conf/privilege</code>, ist die Datei zu alt. Fehlt <code>conf/resource</code>, startet
 der Container nicht.</p>
+<blockquote>
+<p><strong>Wichtig vor dem ersten Installationsversuch:</strong> Ist auf der NAS bereits
+ein <strong>fehlgeschlagenes</strong> Paket installiert, steht es im Status „broken“.
+DSM 7.4 versucht dann ein Update statt einer Neuinstallation und
+scheitert an <em>„package does not have preupgrade / postupgrade script“</em>.
+<strong>Vorher deinstallieren:</strong> <em>Paketcenter → ComfoBox Gateway →
+Deinstallieren</em> (bei Status „Installiert“ geht das direkt).</p>
+</blockquote>
 <h3 id="wenn-das-paketzentrum-das-paket-ablehnt">Wenn das Paketzentrum das Paket ablehnt</h3>
 <p>Das DSM nennt im Dialog nur die Ursache, nicht den Grund. Zwei Meldungen
 bedeuten zwei <strong>verschiedene</strong> Dinge:</p>
@@ -184,7 +192,7 @@ Terminal“):</p>
 <p>Beide Dateien kommen in <code>/tmp</code> der NAS. Sie können entweder die Dateien vom
 Rechner kopieren …</p>
 <pre><code class="language-bash">scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk admin@&lt;IP-der-NAS&gt;:/tmp/
 </code></pre>
 <p>… oder das Skript direkt auf der NAS herunterladen (das Paket selbst liegt
 dann schon auf der NAS, z. B. im Gemeinsamen Ordner):</p>
@@ -193,7 +201,7 @@ wget https://raw.githubusercontent.com/RF77/comfobox-mqtt/Upgrade/deploy/synolog
 </code></pre>
 <h4 id="4-diagnose-ausführen">4. Diagnose ausführen</h4>
 <p>In der SSH-Sitzung:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --install
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --install
 </code></pre>
 <p><code>sudo</code> fragt nach dem Passwort des DSM-Administrators. Ohne <code>--install</code> liest
 das Skript nur (keine Änderung an der NAS).</p>
@@ -210,7 +218,7 @@ Root-Rechten laufen. Die <strong>Log-Auszüge</strong> im Skript verraten den ge
 Grund – dort schreibt das DSM hin, was ihm nicht passt.</p>
 <p>Mit <code>--test</code> probiert das Skript zusätzlich mehrere Formen der
 <code>privilege</code>-Datei <strong>durch</strong> und installiert die erste, die funktioniert:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk --test
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0007.spk --test
 </code></pre>
 <p>Ein Fehler in dieser Phase ändert <strong>nichts</strong> an der NAS.</p>
 </blockquote>

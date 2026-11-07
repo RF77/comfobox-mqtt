@@ -220,15 +220,69 @@ else
     bad "conf/resource laesst sich nicht auspacken"
 fi
 
-# --- 3c. Compose-Datei des Workers ------------------------------------------
+# --- 3c. package.tgz: die Struktur ist entscheidend ------------------------
+#
+# Das DSM **entpackt package.tgz direkt in das Zielverzeichnis**:
+#
+#   mv -f …/install.XXXX/package /usr/local/packages/@appstore/ComfoBoxGateway
+#
+# Der Inhalt von package.tgz wird das Zielverzeichnis selbst. Deshalb
+# müssen die Dateien **direkt auf der obersten Ebene** liegen
+# (bin/, compose/, image) - nicht unter einer zusaetzlichen Ebene "target/".
+#
+# Mit der Ebene "target/" landen sie eine Stufe zu tief:
+#   <ziel>/target/compose/compose.yaml
+# Der Worker "docker-project" sucht aber <ziel>/compose (conf/resource:
+# "path": "compose", relativ zum Ziel) - findet nichts und meldet:
+#   Acquire docker-project for ComfoBoxGateway (fail)
+# Das war der Fehler in Revision 0006.
 echo ""
-echo "Compose-Datei (target/compose/compose.yaml)"
-if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null \
-   && tar tzf "$WORK/package.tgz" 2>/dev/null | grep -q "^target/compose/compose.yaml$"; then
-    ok "target/compose/compose.yaml ist im package.tgz"
+echo "package.tgz (Struktur)"
+if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null; then
+    TGZ_LIST="$WORK/tgz.list"
+    tar tzf "$WORK/package.tgz" 2>/dev/null | sed 's|/$||' | sort > "$TGZ_LIST"
+
+    if grep -q '^target/' "$TGZ_LIST"; then
+        bad "package.tgz enthaelt eine Ebene 'target/' - die Dateien landen zu tief"
+        echo "       Der DSM-Worker findet <ziel>/compose/compose.yaml dann nicht."
+        echo "       (Siehe build-spk.sh: package.tgz ohne 'target/'-Praefix bauen)"
+    else
+        ok "package.tgz hat keine zusaetzliche 'target/'-Ebene"
+    fi
+
+    # Die Compose-Datei muss auf der obersten Ebene unter compose/ liegen -
+    # genau dort, wo der Worker sie sucht (conf/resource: path = compose).
+    if grep -q '^compose/compose.yaml$' "$TGZ_LIST"; then
+        ok "compose/compose.yaml liegt auf der obersten Ebene (Pfad des Workers)"
+    else
+        bad "compose/compose.yaml liegt nicht auf der obersten Ebene"
+        echo "       Erwartet: compose/compose.yaml  (conf/resource: \"path\": \"compose\")"
+    fi
+
+    if grep -q '^bin/common.sh$' "$TGZ_LIST"; then
+        ok "bin/common.sh liegt auf der obersten Ebene"
+    else
+        bad "bin/common.sh liegt nicht auf der obersten Ebene"
+    fi
+
+    if grep -q '^image$' "$TGZ_LIST"; then
+        ok "image (Image-Referenz) liegt auf der obersten Ebene"
+    else
+        bad "image fehlt auf der obersten Ebene"
+    fi
+else
+    bad "package.tgz laesst sich nicht auspacken"
+fi
+
+# --- 3d. Compose-Datei des Workers ------------------------------------------
+echo ""
+echo "Compose-Datei (compose/compose.yaml)"
+if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
+   && tar tzf "$WORK/package.tgz2" 2>/dev/null | grep -q "^compose/compose.yaml$"; then
+    ok "compose/compose.yaml ist im package.tgz"
     mkdir -p "$WORK/c"
-    if ( cd "$WORK" && tar xzf package.tgz target/compose/compose.yaml ) 2>/dev/null; then
-        CF="$WORK/target/compose/compose.yaml"
+    if ( cd "$WORK" && tar xzf package.tgz2 compose/compose.yaml ) 2>/dev/null; then
+        CF="$WORK/compose/compose.yaml"
         if grep -q '@[A-Z_]*@' "$CF"; then
             bad "compose.yaml enthaelt noch Platzhalter (@IMAGE@/@VAR_DIR@) - build-spk.sh hat sie nicht ersetzt"
         else
@@ -241,7 +295,7 @@ if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null \
         fi
     fi
 else
-    bad "target/compose/compose.yaml fehlt im package.tgz"
+    bad "compose/compose.yaml fehlt im package.tgz"
 fi
 
 # --- 3d. Lifecycle-Skripte --------------------------------------------------
@@ -281,7 +335,7 @@ strip_comments()
     grep -v '^[[:space:]]*#' "$1" > "$2" 2>/dev/null || : > "$2"
 }
 
-for s in preinst postinst preuninst postuninst start-stop-status; do
+for s in preinst postinst preuninst postuninst preupgrade postupgrade start-stop-status; do
     if tar_unpack "$WORK/x" "scripts/$s"; then
         S="$WORK/x/scripts/$s"
         strip_comments "$S" "$S.code"
@@ -337,7 +391,7 @@ fi
 # in DSM 7 nicht. Das Datenverzeichnis liegt immer unter
 # /var/packages/<paket>/var.
 if tar_get_to "package.tgz" "$WORK/pkg2.tgz" \
-   && tar xzOf "$WORK/pkg2.tgz" target/bin/common.sh > "$WORK/common.sh" 2>/dev/null; then
+   && tar xzOf "$WORK/pkg2.tgz" bin/common.sh > "$WORK/common.sh" 2>/dev/null; then
     strip_comments "$WORK/common.sh" "$WORK/common.code"
     if grep -q 'SYNOPKG_PKGVAR' "$WORK/common.code"; then
         bad "common.sh benutzt SYNOPKG_PKGVAR - diese Variable gibt es in DSM 7 nicht"
@@ -363,8 +417,22 @@ if tar_get_to "package.tgz" "$WORK/pkg2.tgz" \
         fi
     done
 else
-    bad "target/bin/common.sh fehlt im package.tgz"
+    bad "bin/common.sh fehlt im package.tgz"
 fi
+
+# **preupgrade / postupgrade muessen vorhanden sein.** Fehlen sie, meldet
+# das DSM beim Update den Fehler 261 ("package does not have preupgrade /
+# postupgrade script"). Das trifft besonders dann zu, wenn eine
+# Installation zuvor fehlgeschlagen ist: DSM 7.4 laesst das Paket dann im
+# Status "broken" (150) zurueck und versucht beim naechsten Mal ein
+# Update statt einer Neuinstallation.
+for s in preupgrade postupgrade; do
+    if tar_unpack "$WORK/x" "scripts/$s"; then
+        ok "scripts/$s ist im Paket (verhindert Fehler 261 beim Update)"
+    else
+        bad "scripts/$s FEHLT - das Update scheitert dann mit Fehler 261"
+    fi
+done
 
 # --- 4. Icons ----------------------------------------------------------------
 echo ""
@@ -424,7 +492,7 @@ if tar_unpack "$WORK/x" "INFO"; then
     # Das Image im Paket muss zum Versions-Tag passen.
     IMAGE=""
     if tar_get_to "package.tgz" "$WORK/pkg-info.tgz"; then
-        IMAGE=$(tar xzOf "$WORK/pkg-info.tgz" target/image 2>/dev/null | head -n 1)
+        IMAGE=$(tar xzOf "$WORK/pkg-info.tgz" image 2>/dev/null | head -n 1)
     fi
     SPK_VERSION=$(grep '^version="' "$INFO" | head -n 1 | cut -d'"' -f2 | cut -d- -f1)
     if [ -n "$IMAGE" ]; then

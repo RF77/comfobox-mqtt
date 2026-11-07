@@ -115,6 +115,27 @@ echo "--- 3. Inhalt des SPK ---"
 tar tf "$SPK" 2>/dev/null
 echo ""
 
+# Die Struktur von package.tgz ist entscheidend: das DSM entpackt die Datei
+# DIREKT in das Zielverzeichnis. Deshalb muessen die Dateien auf der
+# obersten Ebene liegen (bin/, compose/, image) - nicht unter "target/".
+echo "--- 3a. Struktur von package.tgz ---"
+TGZ_DIR=$(mktemp -d 2>/dev/null) || TGZ_DIR=/tmp/diag-tgz.$$
+mkdir -p "$TGZ_DIR"
+if tar xf "$SPK" -C "$TGZ_DIR" package.tgz 2>/dev/null \
+   && tar tzf "$TGZ_DIR/package.tgz" 2>/dev/null; then
+    if tar tzf "$TGZ_DIR/package.tgz" 2>/dev/null | grep -q '^target/'; then
+        echo ">> WARNUNG: package.tgz enthaelt eine Ebene 'target/'!"
+        echo "   Die Dateien landen dann eine Stufe zu tief (<ziel>/target/...)"
+        echo "   und der DSM-Worker 'docker-project' findet die Compose-Datei nicht."
+    else
+        echo ">> OK: package.tgz hat die Dateien auf der obersten Ebene."
+    fi
+else
+    echo ">> package.tgz nicht lesbar"
+fi
+rm -rf "$TGZ_DIR"
+echo ""
+
 TMP=$(mktemp -d 2>/dev/null) || TMP=/tmp/diag.$$
 mkdir -p "$TMP"
 if tar xf "$SPK" -C "$TMP" conf/privilege 2>/dev/null; then
@@ -165,6 +186,53 @@ else
 fi
 echo ""
 
+# **Ein fehlgeschlagenes Update hinterlaesst das Paket im Status "broken"**
+# (150). DSM 7.4 versucht dann beim naechsten Mal ein UPDATE statt einer
+# Neuinstallation - und scheitert an "package does not have preupgrade /
+# postupgrade script" (Fehler 261), obwohl das Paket in Ordnung ist.
+# Deshalb wird vor dem Installationsversuch ein "broken"-Paket entfernt.
+remove_broken_install() {
+    command -v synopkg >/dev/null 2>&1 || return 0
+    STATUS=$(synopkg status ComfoBoxGateway 2>/dev/null \
+        | sed -n 's/.*"status":"\([a-z_]*\)".*/\1/p' | head -n 1)
+    [ "$STATUS" = "broken" ] || return 0
+
+    echo ">> Das Paket steht im Status 'broken' (eine Installation ist zuvor"
+    echo "   fehlgeschlagen). DSM 7.4 wuerde jetzt ein UPDATE versuchen und"
+    echo "   daran scheitern. Das alte Paket wird deshalb entfernt."
+    synopkg uninstall ComfoBoxGateway >/dev/null 2>&1 || true
+    sleep 2
+    synopkg status ComfoBoxGateway 2>&1 || true
+    echo ""
+}
+
+# Die Compose-Datei mit Docker pruefen - so sieht man einen Syntaxfehler,
+# bevor das DSM den Worker aufruft.
+validate_compose() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo "(docker nicht gefunden - Compose-Datei wird nicht geprueft)"
+        return 0
+    fi
+    WORK2=$(mktemp -d 2>/dev/null) || WORK2=/tmp/diag-cmp.$$
+    mkdir -p "$WORK2"
+    if tar xf "$SPK" -C "$WORK2" package.tgz 2>/dev/null \
+       && tar xzf "$WORK2/package.tgz" -C "$WORK2" compose/compose.yaml 2>/dev/null; then
+        echo ">> Compose-Datei:"
+        sed 's/^/   /' "$WORK2/compose/compose.yaml"
+        echo ""
+        echo ">> docker compose config (Syntaxpruefung):"
+        if docker compose -f "$WORK2/compose/compose.yaml" config >/dev/null 2>&1; then
+            echo "   OK - die Compose-Datei ist gueltig."
+        else
+            docker compose -f "$WORK2/compose/compose.yaml" config 2>&1 \
+                | head -n 20 | sed 's/^/   /'
+            echo "   WARNUNG: Die Compose-Datei hat einen Fehler!"
+        fi
+    fi
+    rm -rf "$WORK2"
+    echo ""
+}
+
 # ---------------------------------------------------------------------------
 # 7. Log-Auszüge (immer - hier steht der genaue Grund)
 # ---------------------------------------------------------------------------
@@ -174,9 +242,13 @@ show_logs
 # 8. Installationsversuch
 # ---------------------------------------------------------------------------
 if [ "$MODE" = "--install" ]; then
-    echo "--- 8. Installationsversuch ---"
+    echo "--- 8. Compose-Datei pruefen ---"
+    validate_compose
+
+    echo "--- 9. Installationsversuch ---"
     echo "Die Ausgabe ist JSON und enthaelt den echten Fehlercode."
     echo ""
+    remove_broken_install
     synopkg install "$SPK" 2>&1
     echo ""
     show_logs
