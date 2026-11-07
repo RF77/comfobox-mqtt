@@ -42,6 +42,37 @@ if [ ! -f "$SPK" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Docker finden
+#
+# **Wichtig:** Das Skript laeuft mit `sudo`. sudo setzt auf dem DSM einen
+# **minimalen PATH** - der Container Manager ist dort nicht enthalten. Ohne
+# diese Ergänzung findet das Skript kein `docker` und bricht mit
+# "docker ist nicht im PATH" ab, obwohl Docker installiert ist.
+#
+# Gesucht wird an den ueblichen Stellen:
+#   /var/packages/ContainerManager/target/usr/bin   (Container Manager)
+#   /var/packages/Docker/target/usr/bin            (aelteres Docker-Paket)
+#   /usr/local/bin                                 (System-Installation)
+# ---------------------------------------------------------------------------
+DOCKER_BIN=""
+for _candidate in \
+    /var/packages/ContainerManager/target/usr/bin/docker \
+    /var/packages/Docker/target/usr/bin/docker \
+    /usr/local/bin/docker \
+    /usr/bin/docker
+do
+    if [ -x "$_candidate" ]; then
+        DOCKER_BIN="$_candidate"
+        break
+    fi
+done
+
+if [ -n "$DOCKER_BIN" ]; then
+    PATH="$(dirname "$DOCKER_BIN"):$PATH"
+    export PATH
+fi
+
+# ---------------------------------------------------------------------------
 # Hilfsfunktionen
 # ---------------------------------------------------------------------------
 
@@ -261,8 +292,11 @@ worker_test() {
         echo "FEHLER: docker ist nicht im PATH."
         echo "       Auf dem DSM liegt der Docker-Binary unter"
         echo "       /var/packages/ContainerManager/target/usr/bin/docker"
+        echo "       (Ist der Container Manager nicht installiert, bitte ihn"
+        echo "        ueber das Paketzentrum nachinstallieren.)"
         return 1
     fi
+    echo ">> docker: $(command -v docker)"
 
     # Das Paket entpacken - genau wie das DSM es tut:
     #   SPK entpacken -> package.tgz -> Zielverzeichnis
@@ -315,20 +349,49 @@ worker_test() {
     #
     # WICHTIG: `docker compose up -d` liefert **Exit-Code 0**, auch wenn der
     # Container sofort wieder abstuerzt! Der DSM-Worker wartet dagegen, bis
-    # der Container laeuft (bzw. "healthy" ist) - genau dieser Unterschied
-    # hat den echten Fehler bisher versteckt.
+    # der Container laeuft - genau dieser Unterschied hat den echten Fehler
+    # bisher versteckt.
     #
-    # Deshalb wird hier `--wait` benutzt (Compose v2) und danach der
-    # Zustand des Containers gezeigt.
+    # Deshalb wird hier **ohne** `--wait` gestartet und danach von Hand auf
+    # den Zustand gewartet. Das funktioniert mit **jeder** Compose-Version
+    # (das `--wait`-Flag gibt es erst ab v2.1) und zeigt zusaetzlich, wie
+    # sich der Zustand entwickelt - man sieht eine Neustartschleife.
     echo ">> docker compose up (der Schritt, an dem die Installation scheitert):"
-    ( cd "$CF_DIR" && docker compose -p comfobox up -d --wait --wait-timeout 60 2>&1 ) \
-        | tail -n 40 | sed 's/^/   /'
+    ( cd "$CF_DIR" && docker compose -p comfobox up -d 2>&1 ) > "$WORK3/up.log" 2>&1
     RC=$?
+    tail -n 40 "$WORK3/up.log" | sed 's/^/   /'
     echo ""
-    echo "   (Exit-Code: $RC)"
+    echo "   (Exit-Code von 'compose up': $RC)"
     echo ""
 
-    # 5) Was ist daraus geworden?
+    # 5) Auf den Zustand warten - so macht es der DSM-Worker.
+    #
+    # Bis zu 60 Sekunden warten. Zwischen den Pruefungen wird der Zustand
+    # ausgegeben - so erkennt man eine Neustartschleife sofort.
+    echo ">> Warte auf den Container (max. 60 s):"
+    i=0
+    while [ "$i" -lt 12 ]; do
+        STATE=$(docker inspect comfobox-gateway --format '{{.State.Status}}' 2>/dev/null)
+        HEALTH=$(docker inspect comfobox-gateway --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' 2>/dev/null)
+        RESTARTS=$(docker inspect comfobox-gateway --format '{{.RestartCount}}' 2>/dev/null)
+        echo "   [$((i * 5)) s] Status=$STATE Health=$HEALTH Restarts=$RESTARTS"
+        case "$STATE" in
+            running)
+                if [ "$HEALTH" = "healthy" ] || [ "$HEALTH" = "n/a" ]; then
+                    break
+                fi
+                ;;
+            exited|dead)
+                echo "   -> der Container ist gestorben."
+                break
+                ;;
+        esac
+        i=$((i + 1))
+        sleep 5
+    done
+    echo ""
+
+    # 6) Was ist daraus geworden?
     echo ">> Container:"
     docker ps -a --filter "name=comfobox" 2>&1 | head -n 10 | sed 's/^/   /'
     echo ""
@@ -358,7 +421,7 @@ worker_test() {
         sh -c 'ls -ldn /data /data/logs 2>/dev/null' 2>&1 | head -n 5 | sed 's/^/   /'
     echo ""
 
-    # 6) Aufraeumen - es sollen keine Reste auf der NAS bleiben.
+    # 7) Aufraeumen - es sollen keine Reste auf der NAS bleiben.
     #    Das Volume bleibt dabei erhalten (kein -v) - es enthaelt den
     #    24-h-Schreibzaehler.
     echo ">> Aufraeumen:"
