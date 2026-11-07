@@ -2,7 +2,8 @@ param(
     [string]$Repo = 'RF77/comfobox-mqtt',
     [string]$Workflow = 'docker-publish.yml',
     [string]$Ref = 'Upgrade',
-    [string]$ImageTag = '1.0.2'
+    [string]$ImageTag = '1.0.2',
+    [string]$Platforms = 'linux/amd64'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,12 +18,12 @@ $auth = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+jso
            'X-GitHub-Api-Version' = '2022-11-28' }
 
 # --- Workflow-Dispatch ausloesen --------------------------------------------
-$body = @{ ref = $Ref; inputs = @{ tag = $ImageTag } } | ConvertTo-Json -Depth 5
+$body = @{ ref = $Ref; inputs = @{ tag = $ImageTag; platforms = $Platforms } } | ConvertTo-Json -Depth 5
 $uri = "https://api.github.com/repos/$Repo/actions/workflows/$Workflow/dispatches"
 
 try {
     Invoke-RestMethod -Method Post -Uri $uri -Headers $auth -Body $body -ContentType 'application/json'
-    Write-Host "Image-Build fuer Tag '$ImageTag' angestossen (Branch $Ref)."
+    Write-Host "Image-Build fuer Tag '$ImageTag' angestossen (Branch $Ref, Plattformen: $Platforms)."
 }
 catch {
     Write-Host "FEHLER: $($_.Exception.Message)"

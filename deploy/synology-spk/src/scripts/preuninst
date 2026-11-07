@@ -4,8 +4,17 @@
 #
 # Nichts zu tun: das Compose-Projekt stoppt der DSM-Worker "docker-project"
 # beim Release (conf/resource). Das ist das Muster des offiziellen
-# DSM-Beispiels für ein Docker-Paket.
-# ---------------------------------------------------------------------------
+# DSM-Beispiels für ein Docker-Paket.#
+# ACHTUNG - Reihenfolge: Der Worker gibt das Projekt beim Timing
+# "WHEN_PREUNINST" frei, also **nach** diesem Skript und **vor**
+# postuninst. Der 24-h-Schreibzaehler (EEPROM-Schutz) liegt im
+# Docker-Volume "comfobox-data" und waere danach weg.
+#
+# Deshalb wird er hier **vor** der Freigabe in das Paketverzeichnis
+# kopiert - das ueberlebt die Deinstallation. Der Schritt ist
+# "best effort": wenn der Docker-Binary fuer den Paket-Benutzer nicht
+# erreichbar ist, passiert nichts - die Deinstallation darf auf keinen
+# Fall daran scheitern.# ---------------------------------------------------------------------------
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
@@ -23,4 +32,46 @@ do
 done
 
 echo "ComfoBox Gateway: wird deinstalliert …"
+
+# ---------------------------------------------------------------------------
+# Schreibzaehler sichern (best effort)
+#
+# Der 24-h-Schreibzaehler schuetzt die Heizung vor zu vielen Schreibvorgaengen
+# (EEPROM-Lebensdauer). Geht er verloren, beginnt das Limit erneut - das ist
+# der einzige Punkt im Paket, der **nicht** verloren gehen darf.
+#
+# Gesichert wird nach /var/packages/ComfoBoxGateway/var/ - dieses Verzeichnis
+# ueberlebt die Deinstallation.
+# ---------------------------------------------------------------------------
+save_write_counter() {
+    VAR_DIR="/var/packages/ComfoBoxGateway/var"
+    [ -d "$VAR_DIR" ] || return 0
+
+    DOCKER=""
+    for _cand in \
+        /var/packages/ContainerManager/target/usr/bin/docker \
+        /var/packages/Docker/target/usr/bin/docker \
+        /usr/local/bin/docker
+    do
+        [ -x "$_cand" ] && DOCKER="$_cand" && break
+    done
+    [ -n "$DOCKER" ] || return 0
+
+    # Aus dem Volume lesen. Der Schreibzaehler wird atomar geschrieben -
+    # ein Lesen mitten im Vorgang liefert die alte oder die neue Datei,
+    # aber nie eine halbe.
+    "$DOCKER" run --rm -v comfobox-data:/data:ro alpine \
+        cat /data/write-counter.json > "$VAR_DIR/write-counter.json" 2>/dev/null \
+        || rm -f "$VAR_DIR/write-counter.json"
+
+    if [ -s "$VAR_DIR/write-counter.json" ]; then
+        chmod 0666 "$VAR_DIR/write-counter.json" 2>/dev/null || true
+        echo "Der 24-h-Schreibzähler wurde gesichert."
+    else
+        rm -f "$VAR_DIR/write-counter.json" 2>/dev/null || true
+    fi
+}
+
+save_write_counter
+
 exit 0

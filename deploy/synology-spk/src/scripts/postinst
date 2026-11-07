@@ -121,6 +121,45 @@ fi
 # die Datei schreiben - dann schluegt die Startvalidierung fehl und der
 # Container beendet sich in einer Neustartschleife.
 
+# 5) Schreibzähler zurückspielen (best effort)
+#
+# Wurde das Paket zuvor deinstalliert, liegt eine Sicherung des
+# 24-h-Schreibzählers in var/. Das Volume ist jetzt frisch - ohne diese
+# Rückspielung begönne das Schreiblimit erneut.
+#
+# Der Schritt ist "best effort": schlägt er fehl, startet der Container
+# ganz normal - nur der Zähler beginnt neu.
+restore_write_counter() {
+    VAR_DIR="/var/packages/ComfoBoxGateway/var"
+    SAVED="$VAR_DIR/write-counter.json"
+    [ -s "$SAVED" ] || return 0
+
+    DOCKER=""
+    for _cand in \
+        /var/packages/ContainerManager/target/usr/bin/docker \
+        /var/packages/Docker/target/usr/bin/docker \
+        /usr/local/bin/docker
+    do
+        [ -x "$_cand" ] && DOCKER="$_cand" && break
+    done
+    [ -n "$DOCKER" ] || return 0
+
+    # **Mit uid 1001 kopieren** - so gehört die Datei danach dem Benutzer
+    # des Containers (comfobox). Als root kopiert, könnte der Gateway sie
+    # nicht mehr beschreiben.
+    "$DOCKER" run --rm -u 1001:1001 \
+        -v comfobox-data:/data \
+        -v "$VAR_DIR":/backup:ro \
+        alpine sh -c 'cp /backup/write-counter.json /data/ 2>/dev/null || true' \
+        2>/dev/null || true
+
+    if [ -f "$SAVED" ]; then
+        echo "Der 24-h-Schreibzähler wurde ins Volume zurückgespielt."
+    fi
+}
+
+restore_write_counter
+
 log "postinst abgeschlossen"
 echo "ComfoBox Gateway ist vorbereitet. Die Web-Oberfläche öffnet sich automatisch."
 exit 0

@@ -278,6 +278,15 @@ einrichten. Die BACnet-Werte bleiben dann leer – das ist erwartet.
 
 ## Schritt 3 – Der erste Blick
 
+> **Zwei Meldungen im Protokoll sind normal** und bedeuten **keinen**
+> Fehler – sie kommen daher, dass die Ersteinrichtung noch nicht
+> abgeschlossen ist:
+>
+> | Meldung | Bedeutung | Lösung |
+> |---|---|---|
+> | `MQTT-Verbindung zu "localhost:1883" fehlgeschlagen` | Es ist noch kein Broker eingetragen (Standardwert). | Der Assistent (Schritt 5) fragt Host und Port ab. |
+> | `Access to the port '/dev/ttyUSB0' is denied … No such file or directory` | Der USB-Adapter ist nicht angesteckt oder heißt anders. | Adapter anstecken bzw. im Assistenten den richtigen Port wählen. |
+
 | Was prüfen | Wo | Erwartet |
 |---|---|---|
 | Läuft der Container? | Container Manager → `comfobox-gateway` | Status *läuft*, keine Neustarts |

@@ -9,6 +9,11 @@ on:
         description: 'Image-Tag (z. B. 1.1.0)'
         required: true
         type: string
+      platforms:
+        description: 'Plattformen (Komma-getrennt). "linux/amd64" ist schnell - "linux/amd64,linux/arm64" dauert unter QEMU sehr lange.'
+        required: false
+        default: 'linux/amd64'
+        type: string
 
 env:
   REGISTRY: ghcr.io
@@ -138,7 +143,20 @@ jobs:
           push: true
           # Multi-Arch ist Pflicht: das HA-Add-on laeuft auf Raspberry Pi 5
           # (arm64), das Synology-Paket auf x86_64.
-          platforms: linux/amd64,linux/arm64
+          #
+          # **Geschwindigkeit:** Der arm64-Build laeuft vollstaendig emuliert
+          # (QEMU). darin ist `npm ci` + der Angular-Build um ein Vielfaches
+          # langsamer - ein Multi-Arch-Build dauert ueber eine Stunde.
+          #
+          # Deshalb laesst sich die Plattform ueber `workflow_dispatch`
+          # einschraenken:
+          #   * "linux/amd64"                 - schnell (~10 min), reicht fuer
+          #                                    das Synology-Paket (DS923+)
+          #   * "linux/amd64,linux/arm64"     - vollstaendig, fuer das
+          #                                    HA-Add-on auf dem Pi
+          #
+          # Bei einem Tag-Push wird immer multi-arch gebaut.
+          platforms: ${{ github.event_name == 'workflow_dispatch' && inputs.platforms || 'linux/amd64,linux/arm64' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha,scope=gateway

@@ -109,6 +109,18 @@ Details: [Erste Schritte](01-erste-schritte.md)
 | `/var/packages/ComfoBoxGateway/target/` | Programm – wird beim Update ersetzt |
 | `/var/packages/ComfoBoxGateway/var/` | **Protokolle und Status** (auf der NAS lesbar) |
 | Docker-Volume `comfobox-data` | **Konfiguration, Schreibzähler, ports.json** (im Container) |
+
+> **Warum ein Docker-Volume?** Das DSM löscht bei jeder Installation
+> `/var/packages/<paket>` und legt es neu an. Ein Bind-Mount auf dieses
+> Verzeichnis gehört danach `root:root` – der Container (uid 1001) kann
+> dort weder die Konfiguration schreiben noch den **24-h-Schreibzähler**
+> (EEPROM-Schutz) sichern. Ein benanntes Volume übernimmt Rechte aus dem
+> Image – der Container kann dort immer schreiben.
+
+> **Achtung beim Deinstallieren:** Der DSM-Worker gibt das Projekt und
+> damit möglicherweise auch das Volume wieder frei. Der 24-h-Schreibzähler
+> geht dabei verloren, und das Schreiblimit beginnt erneut. **Vor dem
+> Deinstallieren sichern** (siehe [Backup](../03-deployment/synology-paketcenter.md)).
 | `/etc/udev/rules.d/99-comfobox-serial.rules` | USB-Regel |
 | `/etc/systemd/system/comfobox-gateway.service` | Dienst für die Überwachung |
 
@@ -174,7 +186,15 @@ Das dauert etwa 10 Sekunden.
 | Weg | Datei |
 |---|---|
 | Container-Manager → `comfobox-gateway` → Protokoll | live |
-| SSH | `docker exec comfobox-gateway cat /var/lib/comfobox/logs/gateway-$(date +%Y%m%d).jsonl` |
+| SSH | `docker logs comfobox-gateway` |
+
+> **Nach der Installation zu erwarten:** Im Protokoll stehen zwei Meldungen,
+> die **normal** sind und **keinen** Fehler darstellen:
+>
+> | Meldung | Bedeutung |
+> |---|---|
+> | `MQTT-Verbindung zu "localhost:1883" fehlgeschlagen` | Es ist noch kein Broker eingetragen. Der Assistent fragt ihn nach der Installation ab. |
+> | `Access to the port '/dev/ttyUSB0' is denied … No such file or directory` | Der USB-Adapter ist nicht angesteckt oder hat einen anderen Namen. Der Assistent listet alle erkannten Ports auf. |
 | Web-Oberfläche | **Diagnose** |
 
 > **Bei Supportfragen** ist das Protokoll aus der Web-Oberfläche (Diagnose) der
