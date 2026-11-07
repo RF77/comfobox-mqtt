@@ -22,6 +22,11 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   von dort ins SPK.
 - **`tools/check-spk.sh` prüft die privilege-Datei jetzt inhaltlich**: kein
   CR-Zeichen, kein `groupname`, keine Actions `prestart`/`prestop`.
+- **Der Build ist jetzt reproduzierbar.** Derselbe Quellstand ergibt
+  dieselbe MD5 – vorher wanderten Zeitstempel und Reihenfolge in das Archiv,
+  sodass die `checksum` in der `INFO` und die MD5 in der `packages.json`
+  nicht nachrechenbar waren. `tar` läuft jetzt mit `--sort=name`,
+  `--mtime=@<Commit-Zeitstempel>`, `--owner=root --group=root`.
 - **Das Paket-Icon war 256×256 statt 64×64.** DSM 7.0 verlangt für
   `PACKAGE_ICON.PNG` genau 64×64 (Breaking Change, vorher 72×72). Die große
   Variante liegt jetzt als `PACKAGE_ICON_256.PNG` daneben.

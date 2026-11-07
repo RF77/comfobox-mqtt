@@ -156,6 +156,15 @@ auf LF (`tr -d '\r'`).
 - `gh` ist auf dieser Maschine nicht installiert → REST-API per
   `git credential fill` + Bearer-Token. Der Token darf **nie** ausgegeben
   werden
+- **Der Build war nicht reproduzierbar:** Zeitstempel und Reihenfolge der
+  Einträge wanderten ins Archiv → jeder Build ergab eine andere MD5, und
+  die `checksum` in der INFO und die MD5 in der `packages.json` waren nicht
+  nachrechenbar. Behoben mit `--sort=name --mtime=@<Commit-Zeitstempel>
+  --owner=root --group=root` (wie in spksrc). Nachgewiesen: zwei Builds
+  3 Sekunden auseinander → identische MD5.
+- **GitHub cacht die Asset-Downloads.** Nach einem Replace lieferte der
+  Download ohne Cache-Buster noch die alte Datei. `?cb=<timestamp>` umgeht
+  das. Auch die Asset-Liste der API ist gecacht.
 
 ### 2026-11-07 (3) – Release 1.0.1: der Versions-Check der CI war rot
 
