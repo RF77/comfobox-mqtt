@@ -1,7 +1,7 @@
 param(
     [string]$Tag = 'v1.0.1',
-    [string]$SpkName = 'ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk',
-    [string]$ExpectedMd5 = '4f99cf9f134cd5750aecd831c54c2cee'
+    [string]$SpkName = 'ComfoBoxGateway_noarch-dsm7_1.0.1-0009.spk',
+    [string]$ExpectedMd5 = 'e8493128248671cbbc37bba2fa0b167a'
 )
 
 $ErrorActionPreference = 'Stop'
