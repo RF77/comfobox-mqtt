@@ -102,6 +102,37 @@ Für **DSM ≥ 7** erzeugt `SynoCommunity/spksrc` die Datei so:
 > explicitly. **Any privileged operation should be accomplished via resource
 > worker.**“
 
+### Die Ground Truth: das Plex-Paket auf der NAS
+
+Das auf dieser NAS **funktionierende** Plex-DSM7-Paket
+(`PlexMediaServer-…-x86_64_DSM7.spk`) hat:
+
+````json
+{
+    "defaults":{
+        "run-as": "package"
+    },
+    "username": "PlexMediaServer",
+    "groupname": "PlexMediaServer"
+}
+````
+
+und dazu eine `conf/resource`:
+
+````json
+{
+        "video-driver": {},
+        "port-config": "conf/PlexMediaServer.sc"
+}
+````
+
+Zwei Unterschiede zu unserem Paket:
+
+1. **kein `ctrl-script`** – DSM 7.4 verweigert die Root-Rechte in der
+   `privilege`-Datei offenbar für Drittanbieter
+2. **eine `conf/resource` ist vorhanden** – alle DSM-7-Pakete haben eine
+   (spksrc legt sie immer an, notfalls als `{}`)
+
 Privilegierte Operationen gehören also in den **Resource-Worker**
 (`conf/resource`) – nicht in ein root-Skript:
 

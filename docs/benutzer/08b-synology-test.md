@@ -198,6 +198,10 @@ das Skript nur (keine Änderung an der NAS).
 
 > Das Skript liegt auch **im Release** (neben dem `.spk`) und im Repository
 > unter `deploy/synology-spk/tools/dsm-diagnose.sh`.
+>
+> **Hinweis:** Der Fehler 319 entsteht **vor** jedem Logeintrag – die
+> Log-Auszüge zeigen darum oft nichts. Die entscheidende Information
+> liefert der Variantentest (`--test`).
 
 ---
 
