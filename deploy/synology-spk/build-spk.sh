@@ -48,6 +48,23 @@ cp src/INFO "$WORK/INFO"
 cp src/scripts/* "$WORK/scripts/"
 chmod 755 "$WORK"/scripts/*
 
+# **Zeilenenden auf LF erzwingen – für ALLE Textdateien.**
+# Das DSM führt die Lifecycle-Skripte mit BusyBox-ash aus. Ein CR am Zeilenende
+# macht daraus "command not found" (\r wird Teil des Befehlsnamens). Auf
+# Windows entstehen CRLF-Dateien sofort (core.autocrlf=false lässt sie
+# unverändert im Blob) - deshalb wird hier **immer** konvertiert, nicht nur
+# für conf/privilege.
+if command -v tr >/dev/null 2>&1; then
+    for text_file in \
+        "$WORK"/scripts/* \
+        "$WORK/target/bin/"*.sh \
+        "$WORK/target/compose/compose.yaml"
+    do
+        [ -f "$text_file" ] || continue
+        tr -d '\r' < "$text_file" > "$text_file.tmp" && mv "$text_file.tmp" "$text_file"
+    done
+fi
+
 # --- conf/privilege (Pflicht ab DSM 7.0) ------------------------------------
 # **Ohne** diese Datei gilt das Paket als Root-Paket und das DSM-Paketcenter
 # verweigert die Installation schon beim Hochladen:
@@ -66,6 +83,19 @@ fi
 mkdir -p "$WORK/conf"
 cp "$PRIVILEGE" "$WORK/conf/privilege"
 
+# --- conf/resource (Pflicht, sobald das Paket Worker benutzt) ---------------
+# `conf/resource` beschreibt die DSM-Worker, die das Paket anfordert. Ohne
+# diese Datei startet der Container nicht - der Worker "docker-project"
+# legt das Compose-Projekt an und startet/stoppt es beim Start/Stopp des
+# Pakets (als Root, damit das Paket selbst keine Root-Rechte braucht).
+RESOURCE="src/conf/resource"
+if [ ! -f "$RESOURCE" ]; then
+    echo "FEHLER: $RESOURCE fehlt." >&2
+    echo "       Ohne conf/resource startet der Container nicht." >&2
+    exit 1
+fi
+cp "$RESOURCE" "$WORK/conf/resource"
+
 # **Zeilenenden auf LF erzwingen.** Das DSM-Paketcenter lehnt eine
 # `privilege`-Datei mit CR-Zeichen ab ("invalid package privilege content",
 # Fehlercode 319) - der Parser verträgt das Windows-Zeilenende nicht.
@@ -73,15 +103,17 @@ cp "$PRIVILEGE" "$WORK/conf/privilege"
 # laesst sie unveraendert im Blob), deshalb wird hier **immer** konvertiert.
 # Die Referenzpakete von SynoCommunity entstehen mit `jq` auf Linux und
 # haben deshalb immer LF.
-if command -v tr >/dev/null 2>&1; then
-    tr -d '\r' < "$WORK/conf/privilege" > "$WORK/conf/privilege.tmp"
-    mv "$WORK/conf/privilege.tmp" "$WORK/conf/privilege"
-fi
+for conf_file in "$WORK/conf/privilege" "$WORK/conf/resource"; do
+    if command -v tr >/dev/null 2>&1; then
+        tr -d '\r' < "$conf_file" > "$conf_file.tmp"
+        mv "$conf_file.tmp" "$conf_file"
+    fi
+done
 
 # Rechte wie bei den funktionierenden Referenzpaketen (spksrc):
 # Verzeichnis 0755, Datei 0644.
 chmod 755 "$WORK/conf"
-chmod 644 "$WORK/conf/privilege"
+chmod 644 "$WORK/conf/privilege" "$WORK/conf/resource"
 
 # Icon: das Paketcenter braucht PACKAGE_ICON.PNG (256×256).
 # Erzeugt mit:  node tools/make-icon.mjs
@@ -117,6 +149,31 @@ echo "==> package.tgz erstellen"
 # Die Image-Referenz steht im Paket: der Supervisor zieht genau dieses
 # Image. So kann das SPK nie versehentlich eine andere Version starten.
 printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
+
+# --- Compose-Datei des Docker-Project-Workers ------------------------------
+# Die Datei liegt unter target/compose/compose.yaml und wird vom DSM-Worker
+# "docker-project" verwaltet. Sie muss statisch sein - der Worker startet
+# das Projekt beim Start des Pakets, also darf sie nicht erst zur Laufzeit
+# entstehen. Die Platzhalter werden hier ersetzt:
+#
+#   @IMAGE@   → das Image mit dem exakten Versions-Tag
+#   @VAR_DIR@ → das persistente Verzeichnis des Pakets
+COMPOSE_YAML="$WORK/target/compose/compose.yaml"
+if [ ! -f "$COMPOSE_YAML" ]; then
+    echo "FEHLER: $COMPOSE_YAML fehlt." >&2
+    echo "       Ohne Compose-Datei kann der DSM-Worker das Projekt nicht anlegen." >&2
+    exit 1
+fi
+sed -i -e "s|@IMAGE@|ghcr.io/rf77/comfobox-gateway:${VERSION}|g" \
+    -e "s|@VAR_DIR@|/var/packages/${PACKAGE}/var|g" \
+    "$COMPOSE_YAML"
+
+# Auch die Compose-Datei braucht LF (CRLF bricht den YAML-Parser von
+# Docker Compose in manchen Versionen).
+if command -v tr >/dev/null 2>&1; then
+    tr -d '\r' < "$COMPOSE_YAML" > "$COMPOSE_YAML.tmp"
+    mv "$COMPOSE_YAML.tmp" "$COMPOSE_YAML"
+fi
 
 # **Reproduzierbar bauen.** Ohne diese Optionen wandern der Zeitstempel und
 # die Reihenfolge der Einträge in das Archiv - derselbe Quellstand ergibt

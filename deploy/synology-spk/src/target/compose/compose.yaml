@@ -1,0 +1,63 @@
+# Compose-Datei des ComfoBox-Gateways (DSM 7 / Docker-Project-Worker).
+#
+# Diese Datei liegt unter target/compose/ und wird vom DSM-Worker
+# "docker-project" verwaltet (conf/resource). Der Worker legt daraus das
+# Projekt an und startet bzw. stoppt es beim Start/Stopp des Pakets -
+# als Root. Das Paket selbst braucht dadurch KEINE Root-Rechte; auf DSM 7
+# werden Drittanbieter-Paketen mit "run-as": "root" abgelehnt (Fehler 319).
+#
+# Die Datei ist bewusst STATISCH:
+#
+#   * Der Serial-Port steht hier NICHT. Der Container sieht alle seriellen
+#     Ports des NAS (/dev ist eingebunden) und der Gateway waehlt den Port
+#     zur Laufzeit aus der config.json aus. Dadurch muss der Container nach
+#     der Auswahl im Assistenten nicht neu erstellt werden.
+#   * Baudrate und Port stehen in var/config.json (Vorrang vor Env).
+#
+# Soll statt "/dev" ein einzelner fester Port verwendet werden, wird die
+# Zeile "devices:" mit "- /dev/ttyUSB0:/dev/ttyUSB0" eingetragen und der
+# Eintrag "/dev:/dev" entfernt.
+services:
+  gateway:
+    image: @IMAGE@
+    container_name: comfobox-gateway
+    restart: unless-stopped
+
+    ports:
+      - "8081:8080/tcp"
+
+    # Die Gruppe "dialout" wird auf dem Host aufgeloest - so bekommt der
+    # Container (uid 1001) Zugriff auf /dev/ttyUSB* ohne Root.
+    group_add:
+      - "dialout"
+
+    environment:
+      # Der Port und die Baudrate kommen aus var/config.json und haben dort
+      # Vorrang. Der Wert hier ist nur der Startwert.
+      - COMFOBOX_BACNET__Baudrate=38400
+      - ASPNETCORE_URLS=http://+:8080
+      - DOTNET_gcServer=1
+
+    volumes:
+      - "@VAR_DIR@:/var/lib/comfobox"
+      - "@VAR_DIR@/logs:/var/log/comfobox"
+      # Alle seriellen Ports (CH340/FTDI). Der Gateway waehlt aus, welcher
+      # Port benutzt wird - der Container muss deshalb nicht neu erstellt
+      # werden, wenn der Adapter spaeter gesteckt wird.
+      - "/dev:/dev"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 25s
+      retries: 3
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    security_opt:
+      - no-new-privileges:true

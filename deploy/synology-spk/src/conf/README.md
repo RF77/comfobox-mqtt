@@ -1,186 +1,167 @@
-# `conf/privilege` – die Rechte des Pakets
+# `conf/privilege` und `conf/resource` – die Rechte des Pakets
 
-> **Diese Datei wird nicht ins SPK gepackt** – nur `conf/privilege` selbst.
-> `build-spk.sh` kopiert ausschließlich die `privilege`-Datei.
+> **Ins SPK wandern nur `conf/privilege` und `conf/resource` selbst.**
+> `build-spk.sh` kopiert genau diese beiden Dateien in das Wurzelverzeichnis
+> des SPK (nicht in das `package.tgz`) – das DSM liest sie nur dort.
 
-## Warum es die Datei braucht
+## Warum es die Dateien braucht
 
 Ab **DSM 7.0** erzwingt Synology für jedes Paket eine **niedrigere Berechtigung**
 (*„Force lower privilege for package"*, siehe
 [Breaking Changes in 7.0](https://help.synology.com/developer-guide/breaking_changes.html)):
 
 > „All packages should provide `conf/privilege` with `package` in `run-as`
-> explicitly. Any privileged operation should be accomplished via resource worker."
+> explicitly. **Any privileged operation should be accomplished via resource
+> worker.**"
 
-Fehlt die Datei, gilt das Paket als **Root-Paket** und das Paketzentrum
+Fehlt `conf/privilege`, gilt das Paket als **Root-Paket** und das Paketzentrum
 verweigert die Installation **schon beim Hochladen**:
 
 > *„ComfoBox Gateway kann nicht installiert werden, da es mit Root-Rechten
 > ausgeführt wird. Pakete mit Root-Rechten können Befehle als Root-Benutzer
 > ausführen und die Sicherheit Ihres Systems gefährden."*
 
-Das ist **kein** Fehler im Paket, sondern die erwartete Reaktion des DSM auf
-fehlende Rechtedeklaration.
-
-## Der Aufbau
+## `conf/privilege` – die Identität des Pakets
 
 ```json
 {
-	"defaults":{
+	"defaults": {
 		"run-as": "package"
 	},
-	"username": "sc-ComfoBoxGateway",
-	"ctrl-script": [{
-		"action": "postinst",
-		"run-as": "root"
-	}]
+	"username": "ComfoBoxGateway",
+	"groupname": "ComfoBoxGateway"
 }
 ```
 
 | Feld | Bedeutung |
 |---|---|
-| `defaults.run-as` | **Pflicht.** `package` = der Paket-Benutzer `sc-ComfoBoxGateway`. `root` ist in DSM 7 **verboten** (`run-as system` wurde entfernt). |
+| `defaults.run-as` | **Pflicht.** `package` = der Paket-Benutzer. `root` ist in DSM 7 für Drittanbieter **verboten**. |
 | `username` | Der Paket-Benutzer. Ohne diese Angabe nimmt DSM den Paketnamen. |
-| `ctrl-script` | Pro Lifecycle-Skript die Identität. |
+| `groupname` | Die Gruppe des Paket-Benutzers. Optional – das Plex-Paket auf derselben NAS setzt sie genauso. |
 
-## Zwei Fallen, die das DSM mit **Fehler 319** quittiert
+### ⛔ `ctrl-script` ist der Auslöser für **Fehler 319**
 
 > *„invalid package privilege content“*
 
-Das DSM prüft die Datei gegen eine Whitelist. Zwei Dinge führen zu dieser
-Meldung – beide sind in **keinem** funktionierenden Referenzpaket zu finden
-(geprüft an `SynoCommunity/spksrc`, dem Buildsystem der Community-Pakete).
-Der Nachweis kam vom Variantentest des Diagnose-Skripts auf einem echten
-DSM 7.4.1.
+Die Datei mit `ctrl-script` und `"run-as": "root"` wurde vom DSM 7.4.1
+**abgelehnt**. Belegt durch den Variantentest auf der NAS (DS923+, DSM 7.4.1):
 
-### 1. `groupname` – **das ist der Auslöser**
+| `ctrl-script` | Ergebnis |
+|---|---|
+| vorhanden (mit `run-as: root`) | **Fehler 319** – das Paket wird abgelehnt |
+| nicht vorhanden | wird akzeptiert (die Installation läuft weiter) |
 
-Keines der Referenzpakete führt ein `groupname`. Die DSM prüft es gegen eine
-Whitelist und lehnt die Datei ab, wenn es gesetzt ist.
+DSM 7 lässt Drittanbieter-Pakete **nicht** mit Root-Rechten laufen. Wer
+privilegierte Aufgaben braucht, nutzt einen **Resource Worker** – siehe unten.
 
-> **Also:** `groupname` **weglassen**. DSM nimmt dann seinen eigenen Default.
+> **Merksatz:** Die Datei darf **nur** `defaults`, `username` und optional
+> `groupname` enthalten. Alles andere wird abgelehnt.
 
-### 2. Die Actions `prestart` / `prestop`
+### Das offizielle Muster
 
-Kein Referenzpaket führt sie. Die erlaubten Actions sind `preinst`,
-`postinst`, `preuninst`, `postuninst`, `preupgrade`, `postupgrade`, `start`,
-`stop`, `status`.
+Aus dem [Synology Developer Guide, „Docker package"](https://help.synology.com/developer-guide/examples/compile_docker_package.html)
+(DSM 7, amtliches Beispiel):
 
-`prestart` / `prestop` stehen zwar in der alten DSM-Doku (2016) noch drin,
-werden von DSM 7.4 aber nicht mehr akzeptiert. Sie werden deshalb **nicht**
-über `ctrl-script` gesteuert – `precheckstartstop="yes"` in der `INFO` sorgt
-dafür, dass sie trotzdem laufen, nur eben als `sc-ComfoBoxGateway`. Das
-`prestart` prüft nur, ob der Container Manager läuft (liest nur) – das
-gelingt dem Paket-Benutzer.
+```json
+{
+    "defaults": {
+        "run-as": "package"
+    },
+    "username": "Gitlab"
+}
+```
 
-### 3. Windows-Zeilenenden (CRLF) – zusätzlich riskant
+### Ground Truth: das Plex-Paket auf dieser NAS
+
+Das auf derselben NAS **funktionierende** Plex-DSM7-Paket hat:
+
+```json
+{
+    "defaults":{ "run-as": "package" },
+    "username": "PlexMediaServer",
+    "groupname": "PlexMediaServer"
+}
+```
+
+plus eine `conf/resource`. Kein `ctrl-script`, kein `scripts/`-Ordner.
+
+### Windows-Zeilenenden (CRLF)
 
 Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
 `jq` unter Linux und haben deshalb immer LF.
 
 > **Windows-Falle:** mit `core.autocrlf=false` schreibt Git die CRLF
 > **unverändert** in den Blob – auch der Linux-CI-Build packt sie dann so
-> ins SPK. Deshalb konvertiert `build-spk.sh` die Datei **immer** auf LF
+> ins SPK. Deshalb konvertiert `build-spk.sh` **alle** Textdateien auf LF
 > (`tr -d '\r'`), und `tools/check-spk.sh` prüft das.
 
-## Die Form, die DSM 7 erzeugt
+---
 
-Für **DSM ≥ 7** erzeugt `SynoCommunity/spksrc` die Datei so:
+## `conf/resource` – der Worker
 
 ```json
 {
-  "defaults": {
-    "run-as": "package"
-  },
-  "username": "sc-<paket>"
+	"docker-project": {
+		"projects": [
+			{
+				"name": "comfobox",
+				"path": "compose"
+			}
+		]
+	}
 }
 ```
 
-**Ohne** `ctrl-script`. Der Grund steht in den *Breaking Changes in 7.0*:
+Der **Docker-Project-Worker** (DSM 7.2.1+, Provider `ContainerManager>=1432`)
+liest die Compose-Datei unter `target/compose/compose.yaml`, legt daraus das
+Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
 
-> „All packages should provide `conf/privilege` with `package` in `run-as`
-> explicitly. **Any privileged operation should be accomplished via resource
-> worker.**“
+Der Worker arbeitet **als Root** – genau das ist der Punkt: Das Paket selbst
+braucht keine Root-Rechte mehr, und der DSM akzeptiert es damit.
 
-### Die Ground Truth: das Plex-Paket auf der NAS
+### Was der Worker kann – und was nicht
 
-Das auf dieser NAS **funktionierende** Plex-DSM7-Paket
-(`PlexMediaServer-…-x86_64_DSM7.spk`) hat:
-
-````json
-{
-    "defaults":{
-        "run-as": "package"
-    },
-    "username": "PlexMediaServer",
-    "groupname": "PlexMediaServer"
-}
-````
-
-und dazu eine `conf/resource`:
-
-````json
-{
-        "video-driver": {},
-        "port-config": "conf/PlexMediaServer.sc"
-}
-````
-
-Zwei Unterschiede zu unserem Paket:
-
-1. **kein `ctrl-script`** – DSM 7.4 verweigert die Root-Rechte in der
-   `privilege`-Datei offenbar für Drittanbieter
-2. **eine `conf/resource` ist vorhanden** – alle DSM-7-Pakete haben eine
-   (spksrc legt sie immer an, notfalls als `{}`)
-
-Privilegierte Operationen gehören also in den **Resource-Worker**
-(`conf/resource`) – nicht in ein root-Skript:
-
-| Aufgabe | DSM-7-Weg |
+| Aufgabe | Lösung |
 |---|---|
-| systemd-Unit | Datei nach `conf/systemd/pkg-<name>` – das Framework kopiert sie selbst nach `/usr/local/lib/systemd/system` |
-| Container | `conf/resource` mit dem **Docker-Worker** (`"docker"`) – er legt Compose-Datei, Volume, Image und Container an und startet/stoppt sie |
-| Port | `conf/resource` mit `"port-config"` |
-| udev-Regel | **Problemfall** – dafür gibt es keinen Worker. Alternative: den stabilen by-id-Pfad des Adapters verwenden |
+| Container starten/stoppen | Worker (`FROM_STARTUP_TO_HALT`) |
+| Container anlegen/entfernen | Worker (`FROM_POSTINST_TO_PREUNINST`) |
+| Compose-Datei | **statisch** unter `target/compose/compose.yaml` |
+| Docker-Socket | wird nicht gebraucht – der Worker spricht mit dem Container Manager |
+| Rechte auf `var/` | `chmod 0777` in `postinst` (kein `chown` ohne Root) |
 
-## Warum die Lifecycle-Skripte `root` brauchen
+### Die Compose-Datei ist statisch
 
-`defaults.run-as: package` gilt für die **Daten** des Pakets. Die
-Lifecycle-Skripte (`preinst`, `postinst`, …) brauchen echte Root-Rechte, weil
-sie auf dem NAS systemweite Dinge anlegen:
+Der Worker startet das Projekt beim Start des Pakets – die Datei muss also
+**vorher** existieren und darf nicht erst zur Laufzeit entstehen.
 
-| Skript | Tut was | Braucht |
-|---|---|---|
-| `preinst` | prüft DSM-Version, Container Manager, freien Port 8081 | root |
-| `postinst` | schreibt `/etc/udev/rules.d/99-comfobox-serial.rules` und `/etc/systemd/system/comfobox-gateway.service`, setzt Eigentümer (uid 1001) | root |
-| `preuninst` / `postuninst` | stoppt den Container, entfernt udev-Regel und Unit | root |
-| `start` / `stop` / `status` | steuern den Docker-Daemon des Container Managers (Socket-Zugriff) | root |
+Deshalb steht der **Serial-Port nicht** in der Compose-Datei. Stattdessen:
 
-> **Ohne** `run-as: root` bei `ctrl-script` würden diese Skripte als
-> `sc-ComfoBoxGateway` laufen und **an den Root-Pfaden scheitern** – der
-> Container würde nie starten.
+* Der Container bindet `/dev` ein → er sieht **alle** seriellen Ports des NAS.
+* Der Gateway wählt den Port zur Laufzeit aus `var/config.json` aus und
+  öffnet ihn neu, wenn die Konfiguration geändert wird.
 
-Die Alternative wäre der Weg über die **Resource-Worker** der DSM
-(`docker`-Worker u. a.). Das wäre der sauberere Weg, verlangt aber eine
-`conf/resource` mit Zugangsrechten auf den Container-Manager – das ist ein
-deutlich größerer Umbau und für dieses Paket nicht nötig, weil der Container
-selbst **unprivileged** läuft (`USER comfobox`, kein `privileged`, kein
-Docker-Socket im Container).
+Damit muss der Container nach der Auswahl im Assistenten **nicht** neu
+erstellt werden – und ein nachträglich angesteckter Adapter wird ohne
+Neustart erkannt.
 
-## Was das Package Center anzeigt
+> **Auf einen festen Port umstellen:** in `compose.yaml` die Zeile
+> `- "/dev:/dev"` durch `- "/dev/ttyUSB0:/dev/ttyUSB0"` ersetzen. Dann passt
+> der Port aber **nur**, wenn er schon beim Start des Pakets passt.
 
-Der Paket-Benutzer `sc-ComfoBoxGateway` erscheint in DSM unter
-*Control Panel → Shared Folder → Edit → Permission → System internal user*.
-Es ist **kein** Anmeldungskonto.
+### Die Lifecycle-Skripte
 
-## Wenn es trotzdem nicht klappt
+Weil der Worker den Container startet und stoppt, sind die Skripte schlank:
 
-`tools/dsm-diagnose.sh` (läuft auf der NAS) probiert die möglichen Varianten
-der `privilege`-Datei **durch** und meldet, welche funktioniert:
+| Skript | Aufgabe |
+|---|---|
+| `preinst` | Prüft nur die DSM-Version. **Kein Abbruch**, wenn der Container Manager fehlt – das Paketzentrum installiert ihn nach. |
+| `postinst` | Legt `var/` an, ermittelt die seriellen Ports, schreibt die Startkonfiguration. |
+| `preuninst` / `postuninst` | Der Worker erledigt das Aufräumen. `var/` bleibt **bewusst** erhalten (24-h-Schreibzähler!). |
+| `start-stop-status` | `start`/`stop` tun nichts (der Worker arbeitet), `status` prüft den Container über `docker_inspect`. |
 
-````bash
-sudo sh dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0003.spk --test
-````
-
-Der Test läuft in `prepare_install` – ein Fehler dort ändert nichts an der
-NAS. Die erste funktionierende Variante installiert das Paket.
+> **Fallstrick:** Die Skripte laufen als Paket-Benutzer **ohne** Root. Ein
+> `set -u` zusammen mit einer ungesetzten Variablen (`SYNOPKG_PKGDEST` ist in
+> der `preinst`-Phase nicht garantiert gesetzt) bricht das Skript mit
+> „unbound variable“ ab – das war die Fehlermeldung
+> *„failed to run preinst script“*. Deshalb lädt `common.sh` über den
+> **relativen** Pfad und die Skripte arbeiten **ohne** `set -u`.

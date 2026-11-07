@@ -2,50 +2,52 @@
 # ---------------------------------------------------------------------------
 # start-stop-status – Lifecycle des Pakets.
 #
-#   start     Container starten
-#   stop      Container stoppen (LWT wird ausgelöst → HA sieht 'offline')
-#   status    0 = läuft, 1 = tot (PID da), 2 = tot (Lock da), 3 = läuft nicht,
-#             4 = unbekannt, 150 = defekt
-#   prestart  wird vor 'start' aufgerufen (precheckstartstop=yes)
-#   prestop   wird vor 'stop' aufgerufen
+#   start     nichts zu tun – der DSM-Worker "docker-project" startet das
+#             Compose-Projekt. Er arbeitet als Root; das Paket selbst hat
+#             auf DSM 7 keine Root-Rechte.
+#   stop      nichts zu tun – der Worker stoppt das Projekt. Dadurch sieht
+#             Home Assistant beim Stopp zuverlässig 'offline'.
+#   status    0 = Container läuft, 1 = Container läuft nicht
+#   log       das Paket-Log ausgeben
+#
+# Das ist exakt das Muster des offiziellen DSM-Beispiels:
+# https://help.synology.com/developer-guide/examples/compile_docker_package.html
 # ---------------------------------------------------------------------------
-set -u
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-# shellcheck source=../target/bin/common.sh
-. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
+    # shellcheck source=../target/bin/common.sh
+    . "$SELF_DIR/../target/bin/common.sh"
+fi
 
 case "${1:-}" in
     start)
-        mkdir -p "$VAR_DIR" "$LOG_DIR"
-        "${PKG_DIR}/bin/supervisor.sh" start >> "$LOG_FILE" 2>&1
         exit 0
         ;;
 
     stop)
-        "${PKG_DIR}/bin/supervisor.sh" stop >> "$LOG_FILE" 2>&1
         exit 0
         ;;
 
     status)
-        "${PKG_DIR}/bin/supervisor.sh" status
-        exit $?
-        ;;
-
-    prestart)
-        # Vor dem Start: prüfen, ob der Container Manager bereit ist
-        if ! container_manager_running; then
-            sleep 5
+        # docker_inspect ist ein DSM-Werkzeug und darf als Paket-Benutzer
+        # aufgerufen werden (es arbeitet über den Docker-Daemon des DSM).
+        if [ -x /usr/local/bin/docker_inspect ]; then
+            if /usr/local/bin/docker_inspect comfobox-gateway 2>/dev/null \
+                | grep -q '"Status": "running"'; then
+                exit 0
+            fi
+            exit 1
         fi
-        exit 0
-        ;;
-
-    prestop)
+        # Ohne das Werkzeug lässt sich der Status nicht ermitteln – der
+        # Paketstatus bleibt dann unverändert.
         exit 0
         ;;
 
     log)
-        [ -f "$LOG_FILE" ] && cat "$LOG_FILE"
+        if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+            cat "$LOG_FILE"
+        fi
         exit 0
         ;;
 

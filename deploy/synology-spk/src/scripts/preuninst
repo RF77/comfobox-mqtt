@@ -1,13 +1,17 @@
 #!/bin/sh
 # ---------------------------------------------------------------------------
-# preuninst – Container vor der Deinstallation stoppen.
+# preuninst – vor der Deinstallation.
+#
+# Nichts zu tun: das Compose-Projekt stoppt der DSM-Worker "docker-project"
+# beim Release (conf/resource). Das ist das Muster des offiziellen
+# DSM-Beispiels für ein Docker-Paket.
 # ---------------------------------------------------------------------------
-set -u
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-# shellcheck source=../target/bin/common.sh
-. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
+    # shellcheck source=../target/bin/common.sh
+    . "$SELF_DIR/../target/bin/common.sh"
+fi
 
-echo "ComfoBox Gateway: Container werden gestoppt …"
-"${PKG_DIR}/bin/supervisor.sh" stop >> "$LOG_FILE" 2>&1 || true
+echo "ComfoBox Gateway: wird deinstalliert …"
 exit 0

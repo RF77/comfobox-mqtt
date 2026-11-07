@@ -7,7 +7,6 @@ FILES="
 build-spk.sh
 src/target/bin/common.sh
 src/target/bin/serial-scan.sh
-src/target/bin/supervisor.sh
 src/scripts/preinst
 src/scripts/postinst
 src/scripts/preuninst

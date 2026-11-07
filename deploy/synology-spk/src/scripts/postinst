@@ -5,54 +5,49 @@
 # Reihenfolge laut DSM:
 #   prereplace → preinst → postinst → postreplace → start-stop-status start
 #
-# Hier wird alles vorbereitet, was für einen Start ohne further user action
-# nötig ist. Der eigentliche Container-Start passiert in start-stop-status.
+# Der Container wird hier NICHT gestartet. Das übernimmt der DSM-Worker
+# "docker-project" (conf/resource): Er legt das Compose-Projekt an und
+# startet bzw. stoppt es beim Start/Stopp des Pakets – als Root.
+#
+# Grund: Auf DSM 7 werden Drittanbieter-Paketen mit Root-Rechten abgelehnt
+# (conf/privilege mit "run-as": "root" → Fehler 319). Der Worker ist der
+# offizielle Weg, privilegierte Aufgaben ohne Root-Rechte des Pakets zu
+# erledigen.
 # ---------------------------------------------------------------------------
-set -u
 
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-# shellcheck source=../target/bin/common.sh
-. "${SYNOPKG_PKGDEST}/bin/common.sh" 2>/dev/null || . "$SELF_DIR/../target/bin/common.sh"
+
+if [ -f "$SELF_DIR/../target/bin/common.sh" ]; then
+    # shellcheck source=../target/bin/common.sh
+    . "$SELF_DIR/../target/bin/common.sh"
+else
+    echo "ComfoBox Gateway: common.sh nicht gefunden."
+    exit 1
+fi
 
 echo "ComfoBox Gateway: Umgebung wird vorbereitet …"
 
 # 1) Verzeichnisse anlegen
-mkdir -p "$VAR_DIR" "$LOG_DIR" "${VAR_DIR}/data" "${VAR_DIR}/logs"
-chmod 700 "$VAR_DIR"
+prepare_permissions
 
-# 2) udev-Regel installieren (stabile Symlinks + dialout-Rechte)
-if [ -f "${PKG_DIR}/etc/99-comfobox-serial.rules" ]; then
-    cp -f "${PKG_DIR}/etc/99-comfobox-serial.rules" /etc/udev/rules.d/99-comfobox-serial.rules
-    if command -v udevadm >/dev/null 2>&1; then
-        udevadm control --reload-rules >/dev/null 2>&1 || true
-        udevadm trigger >/dev/null 2>&1 || true
-    fi
-    log "udev-Regel installiert"
-fi
-
-# 3) systemd-Unit installieren
-if [ -f "${PKG_DIR}/etc/comfobox-gateway.service" ]; then
-    cp -f "${PKG_DIR}/etc/comfobox-gateway.service" /etc/systemd/system/comfobox-gateway.service
-    if command -v systemctl >/dev/null 2>&1; then
-        systemctl daemon-reload >/dev/null 2>&1 || true
-        systemctl enable comfobox-gateway.service >/dev/null 2>&1 || true
-    fi
-    log "systemd-Unit installiert"
-fi
-
-# 4) Skripte ausführbar machen
+# 2) Skripte ausführbar machen
 chmod 755 "${PKG_DIR}/bin/"*.sh 2>/dev/null || true
 
-# 5) Erste Ports-Ermittlung
-"${PKG_DIR}/bin/serial-scan.sh" "${PORTS_FILE}.tmp" >/dev/null 2>&1 \
-    && mv -f "${PORTS_FILE}.tmp" "$PORTS_FILE" \
-    || true
+# 3) Erste Ports-Ermittlung (Anzeige im Getting-Started-Assistenten)
+if [ -x "${PKG_DIR}/bin/serial-scan.sh" ]; then
+    if "${PKG_DIR}/bin/serial-scan.sh" "${PORTS_FILE}.tmp" >/dev/null 2>&1; then
+        mv -f "${PORTS_FILE}.tmp" "$PORTS_FILE"
+    else
+        rm -f "${PORTS_FILE}.tmp" 2>/dev/null || true
+    fi
+    chmod 0666 "$PORTS_FILE" 2>/dev/null || true
+fi
 
-# 6) Startkonfiguration schreiben, falls noch keine existiert
+# 4) Startkonfiguration schreiben, falls noch keine existiert
 #
-# Wichtig: Die Datei folgt dem Schema der .NET-Konfiguration des Gateways
-# (Abschnittsnamen in Großbuchstaben). Das Gateway liest sie **und** die
-# appsettings.json des Images - die Datei hat Vorrang.
+# Die Datei folgt dem Schema der .NET-Konfiguration des Gateways
+# (Abschnittsnamen in Großbuchstaben). Das Gateway liest sie UND die
+# appsettings.json des Images – die Datei hat Vorrang.
 #
 # Deshalb wird hier bewusst nur das geschrieben, was der Setup-Modus
 # wirklich braucht:
@@ -75,11 +70,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
 EOF
     log "Startkonfiguration geschrieben (Setup-Modus)"
 fi
-chmod 600 "$CONFIG_FILE"
-
-# 7) Compose-Datei zum ersten Mal rendern und Container starten
-"${PKG_DIR}/bin/supervisor.sh" render >> "$LOG_FILE" 2>&1 || true
-"${PKG_DIR}/bin/supervisor.sh" start >> "$LOG_FILE" 2>&1 || true
+# Der Container läuft mit uid 1001 und muss die Datei lesen und schreiben
+# können → 0666 (der übergeordnete Pfad /var/packages ist nur für
+# System-Benutzer lesbar).
+chmod 0666 "$CONFIG_FILE" 2>/dev/null || true
 
 log "postinst abgeschlossen"
 echo "ComfoBox Gateway ist vorbereitet. Die Web-Oberfläche öffnet sich automatisch."

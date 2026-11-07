@@ -136,13 +136,28 @@ if tar_unpack "$WORK/x" "conf/privilege"; then
         bad "defaults.run-as ist nicht 'package'"
     fi
 
-    # ctrl-script: welche Identitaet?
-    CTRL=$(grep -o '"action"[[:space:]]*:[[:space:]]*"[a-z]*"' "$PRIV" 2>/dev/null \
-           | sed 's/.*"\([a-z]*\)"$/\1/' | sort -u | tr '\n' ' ')
-    if [ -n "$CTRL" ]; then
-        ok "ctrl-script: $CTRL"
+    # **KEIN ctrl-script!**
+    # Auf DSM 7 lehnt das Paketzentrum eine privilege-Datei ab, die ueber
+    # ctrl-script Root-Rechte verlangt ("invalid package privilege content",
+    # Fehler 319). Belegt durch den Variantentest auf der DS923+:
+    #   mit ctrl-script  -> 319
+    #   ohne ctrl-script -> akzeptiert
+    # Offizielles Muster (Synology Developer Guide, "Docker package"):
+    #   { "defaults": { "run-as": "package" }, "username": "Gitlab" }
+    if grep -q '"ctrl-script"' "$PRIV"; then
+        bad "conf/privilege enthaelt 'ctrl-script' - DSM 7 lehnt das mit Fehler 319 ab"
+        echo "       Erlaubt sind nur defaults, username und groupname."
+        echo "       Privilegierte Aufgaben uebernimmt der Worker in conf/resource."
     else
-        bad "ctrl-script ist leer - die Lifecycle-Skripte brauchen eine Identitaet"
+        ok "kein 'ctrl-script' (Pflicht ab DSM 7)"
+    fi
+
+    # username: der Paket-Benutzer. Er muss gesetzt sein, sonst laeuft das
+    # Paket unter einem Namen, den das DSM nicht kennt.
+    if grep -q '"username"' "$PRIV"; then
+        ok "username ist gesetzt"
+    else
+        bad "conf/privilege ohne 'username'"
     fi
 
     # Rechte der Datei: 0644 (wie spksrc es macht)
@@ -163,23 +178,70 @@ if tar_unpack "$WORK/x" "conf/privilege"; then
         echo "       Siehe deploy/synology-spk/src/conf/README.md"
     fi
 
-    # DSM 7.4 akzeptiert nur bestimmte Felder. "groupname" und die
-    # Actions "prestart"/"prestop" kommen in **keinem** funktionierenden
-    # Referenzpaket vor (SynoCommunity/spksrc) - sie sind der
-    # wahrscheinlichste Ausloeser fuer Fehler 319.
+    # "groupname" ist erlaubt - das Plex-Paket auf derselben NAS nutzt es
+    # genauso. Nur klein geschriebene Benutzernamen hat das DSM mit
+    # "failed to revise file attributes" (Fehler 313) abgelehnt.
     if grep -q '"groupname"' "$PRIV"; then
-        bad "conf/privilege enthaelt 'groupname' - das steht in keinem funktionierenden Referenzpaket"
+        ok "groupname ist gesetzt (wie im Plex-Paket)"
     else
-        ok "kein 'groupname' (wie in den Referenzpaketen)"
+        ok "kein 'groupname' (zulassen)"
     fi
-    for act in prestart prestop; do
-        if grep -q "\"$act\"" "$PRIV"; then
-            bad "conf/privilege enthaelt die Action '$act' - nicht in den Referenzpaketen"
-        fi
-    done
-    ok "keine Actions 'prestart'/'prestop' (wie in den Referenzpaketen)"
 else
     bad "conf/privilege laesst sich nicht auspacken"
+fi
+
+# --- 3b. conf/resource (Worker) ---------------------------------------------
+echo ""
+echo "conf/resource (DSM-Worker)"
+if grep -qx "conf/resource" "$LIST"; then
+    ok "conf/resource ist im Paket"
+else
+    bad "conf/resource FEHLT - ohne Worker startet der Container nicht"
+fi
+
+if tar_unpack "$WORK/x" "conf/resource"; then
+    RES="$WORK/x/conf/resource"
+    if tr -d '\r' < "$RES" | cmp -s - "$RES"; then
+        ok "conf/resource hat nur LF-Zeilenenden"
+    else
+        bad "conf/resource enthaelt CR-Zeichen (CRLF)"
+    fi
+    if grep -q '"docker-project"' "$RES"; then
+        ok "conf/resource nutzt den Worker 'docker-project'"
+    else
+        bad "conf/resource nutzt den Worker 'docker-project' nicht"
+    fi
+    if grep -q '"path"' "$RES"; then
+        ok "conf/resource specifies the compose path"
+    else
+        bad "conf/resource ohne 'path' - der Worker findet die Compose-Datei nicht"
+    fi
+else
+    bad "conf/resource laesst sich nicht auspacken"
+fi
+
+# --- 3c. Compose-Datei des Workers ------------------------------------------
+echo ""
+echo "Compose-Datei (target/compose/compose.yaml)"
+if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null \
+   && tar tzf "$WORK/package.tgz" 2>/dev/null | grep -q "^target/compose/compose.yaml$"; then
+    ok "target/compose/compose.yaml ist im package.tgz"
+    mkdir -p "$WORK/c"
+    if ( cd "$WORK" && tar xzf package.tgz target/compose/compose.yaml ) 2>/dev/null; then
+        CF="$WORK/target/compose/compose.yaml"
+        if grep -q '@[A-Z_]*@' "$CF"; then
+            bad "compose.yaml enthaelt noch Platzhalter (@IMAGE@/@VAR_DIR@) - build-spk.sh hat sie nicht ersetzt"
+        else
+            ok "compose.yaml hat keine Platzhalter mehr"
+        fi
+        if grep -q 'image: ghcr.io/rf77/comfobox-gateway:' "$CF"; then
+            ok "compose.yaml referenziert das Image aus GHCR"
+        else
+            bad "compose.yaml ohne Image-Referenz"
+        fi
+    fi
+else
+    bad "target/compose/compose.yaml fehlt im package.tgz"
 fi
 
 # --- 4. Icons ----------------------------------------------------------------
