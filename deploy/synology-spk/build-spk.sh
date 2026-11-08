@@ -58,7 +58,7 @@ if command -v tr >/dev/null 2>&1; then
     for text_file in \
         "$WORK"/scripts/* \
         "$WORK/target/bin/"*.sh \
-        "$WORK/target/compose/compose.yaml"
+        "$WORK/target/compose/docker-compose.yaml"
     do
         [ -f "$text_file" ] || continue
         tr -d '\r' < "$text_file" > "$text_file.tmp" && mv "$text_file.tmp" "$text_file"
@@ -151,24 +151,33 @@ echo "==> package.tgz erstellen"
 printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
 
 # --- Compose-Datei des Docker-Project-Workers ------------------------------
-# Die Datei liegt unter target/compose/compose.yaml und wird vom DSM-Worker
-# "docker-project" verwaltet. Sie muss statisch sein - der Worker startet
-# das Projekt beim Start des Pakets, also darf sie nicht erst zur Laufzeit
-# entstehen. Die Platzhalter werden hier ersetzt:
+# Die Datei liegt unter target/compose/docker-compose.yaml und wird vom
+# DSM-Worker "docker-project" verwaltet. Sie muss statisch sein - der Worker
+# startet das Projekt beim Start des Pakets, also darf sie nicht erst zur
+# Laufzeit entstehen. Die Platzhalter werden hier ersetzt:
 #
 #   @IMAGE@   → das Image mit dem exakten Versions-Tag
+#
+# **Der Dateiname ist PFLICHT.** Der Worker sucht ausschliesslich
+# `docker-compose.yaml`, `docker-compose.yml` oder `docker-compose.admin.yaml`
+# (nachgewiesen in `libdockerprojectgeneratorworker.so`). `compose.yaml`
+# erkennt nur Docker Compose selbst - der Worker nicht, und dann scheitert
+# er mit "fail compose up" (2201), bevor er Docker anfasst.
 #
 # **Kein** Platzhalter fuer das Datenverzeichnis: die Compose-Datei
 # benutzt das benannte Docker-Volume "comfobox-data". Ein Bind-Mount auf
 # /var/packages/<paket>/var waere fatal - das DSM legt das Verzeichnis
 # als root:root an, und der Container (uid 1001) kann dort nicht
-# schreiben (Details in src/target/compose/compose.yaml).
-COMPOSE_YAML="$WORK/target/compose/compose.yaml"
+# schreiben (Details in src/target/compose/docker-compose.yaml).
+COMPOSE_YAML="$WORK/target/compose/docker-compose.yaml"
 if [ ! -f "$COMPOSE_YAML" ]; then
     echo "FEHLER: $COMPOSE_YAML fehlt." >&2
     echo "       Ohne Compose-Datei kann der DSM-Worker das Projekt nicht anlegen." >&2
     exit 1
 fi
+# Ein alter Name darf NICHT mehr im Paket landen - der Worker ignoriert ihn,
+# und zwei Dateien im selben Verzeichnis stiften nur Verwirrung.
+rm -f "$WORK/target/compose/compose.yaml" 2>/dev/null || true
 sed -i -e "s|@IMAGE@|ghcr.io/rf77/comfobox-gateway:${VERSION}|g" \
     "$COMPOSE_YAML"
 
@@ -207,14 +216,14 @@ TAR_REPRODUCIBLE="--sort=name --mtime=@${SOURCE_DATE_EPOCH} --owner=root --group
 #
 #   bin/common.sh
 #   bin/serial-scan.sh
-#   compose/compose.yaml
+#   compose/docker-compose.yaml
 #   image
 #
 # Mit einer zusätzlichen Ebene "target/" (Revision 0006) landen die Dateien
 # eine Stufe zu tief:
 #
 #   <ziel>/target/bin/common.sh
-#   <ziel>/target/compose/compose.yaml
+#   <ziel>/target/compose/docker-compose.yaml
 #
 # Der DSM-Worker "docker-project" sucht die Compose-Datei aber unter
 # <ziel>/compose (conf/resource: "path": "compose", relativ zum Ziel) – und

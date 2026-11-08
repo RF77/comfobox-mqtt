@@ -429,12 +429,12 @@ compose_matrix() {
     WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/cbmatrix.$$
     mkdir -p "$WORK"
     if ! tar xf "$SPK" -C "$WORK" package.tgz 2>/dev/null \
-       || ! tar xzf "$WORK/package.tgz" -C "$WORK" compose/compose.yaml 2>/dev/null; then
-        echo "FEHLER: compose/compose.yaml laesst sich nicht aus dem SPK lesen"
+       || ! tar xzf "$WORK/package.tgz" -C "$WORK" compose/docker-compose.yaml 2>/dev/null; then
+        echo "FEHLER: compose/docker-compose.yaml laesst sich nicht aus dem SPK lesen"
         rm -rf "$WORK"
         return 1
     fi
-    SRC="$WORK/compose/compose.yaml"
+    SRC="$WORK/compose/docker-compose.yaml"
 
     echo ">> Docker-Share  : $SHARE"
     echo ">> Compose-Binary: $COMPOSE_BIN"
@@ -456,11 +456,11 @@ compose_matrix() {
         mkdir -p "$DIR"
         case "$V" in
             1)
-                cp "$SRC" "$DIR/compose.yaml"
+                cp "$SRC" "$DIR/docker-compose.yaml"
                 DESC="ausgeliefert (unveraendert)"
                 ;;
             2)
-                grep -v '^[[:space:]]*-[[:space:]]*"/dev:/dev"' "$SRC" > "$DIR/compose.yaml"
+                grep -v '^[[:space:]]*-[[:space:]]*"/dev:/dev"' "$SRC" > "$DIR/docker-compose.yaml"
                 DESC="ohne '/dev:/dev' (Serial-Passthrough)"
                 ;;
             3)
@@ -468,7 +468,7 @@ compose_matrix() {
                     /^[[:space:]]*group_add:[[:space:]]*$/ { skip = 1; next }
                     skip == 1 { skip = 0; if ($0 ~ /^[[:space:]]*-/) next }
                     { print }
-                ' "$SRC" > "$DIR/compose.yaml"
+                ' "$SRC" > "$DIR/docker-compose.yaml"
                 DESC="ohne 'group_add'"
                 ;;
             4)
@@ -476,22 +476,22 @@ compose_matrix() {
                     /^[[:space:]]*security_opt:[[:space:]]*$/ { skip = 1; next }
                     skip == 1 { skip = 0; if ($0 ~ /^[[:space:]]*-/) next }
                     { print }
-                ' "$SRC" > "$DIR/compose.yaml"
+                ' "$SRC" > "$DIR/docker-compose.yaml"
                 DESC="ohne 'security_opt'"
                 ;;
             5)
                 printf 'services:\n  gateway:\n    image: %s\n    container_name: cbm-test-5\n' \
-                    "$IMG" > "$DIR/compose.yaml"
+                    "$IMG" > "$DIR/docker-compose.yaml"
                 DESC="minimal (nur image + container_name)"
                 ;;
         esac
 
         # Eigener Containername je Variante - schliesst Namenskollisionen aus.
         sed -i "s|container_name: comfobox-gateway|container_name: cbm-test-$V|" \
-            "$DIR/compose.yaml" 2>/dev/null || true
+            "$DIR/docker-compose.yaml" 2>/dev/null || true
 
         echo "=== Variante $V: $DESC ==="
-        if ! docker compose -f "$DIR/compose.yaml" config >/dev/null 2>&1; then
+        if ! docker compose -f "$DIR/docker-compose.yaml" config >/dev/null 2>&1; then
             echo "   (Hinweis: 'docker compose config' meldet einen Syntaxfehler)"
         fi
         ( cd "$DIR" && "$COMPOSE_BIN" -p "cbm-test-$V" up -d ) > "$DIR/up.log" 2>&1
@@ -519,7 +519,7 @@ compose_matrix() {
 # ---------------------------------------------------------------------------
 # conf/resource aus dem SPK - und passt der "path" zum Inhalt?
 #
-# Der Worker liest die Compose-Datei unter <ziel>/<path>/compose.yaml.
+# Der Worker liest die Compose-Datei unter <ziel>/<path>/docker-compose.yaml.
 # Stimmen conf/resource und package.tgz nicht zusammen, meldet er nur
 # "(fail)". Der Check läuft hier **vor** der Installation.
 # ---------------------------------------------------------------------------
@@ -541,16 +541,29 @@ show_resource() {
         PROJ_PATH=""
     fi
 
-    # Passt der Pfad zum Inhalt von package.tgz?
+    # Passt der Pfad zum Inhalt von package.tgz? Der Worker akzeptiert nur
+    # drei Dateinamen - `compose.yaml` ist NICHT dabei.
     if [ -n "${PROJ_PATH:-}" ]; then
-        if tar xf "$SPK" -C "$TMP" package.tgz 2>/dev/null \
-           && tar tzf "$TMP/package.tgz" 2>/dev/null \
-              | sed 's|/$||' | grep -q "^${PROJ_PATH}/compose\.y"; then
-            echo ">> OK: '$PROJ_PATH/compose.yaml' liegt genau dort, wo der Worker sucht."
+        tar xf "$SPK" -C "$TMP" package.tgz 2>/dev/null || true
+        COMPOSE_FOUND=""
+        if [ -f "$TMP/package.tgz" ]; then
+            for name in docker-compose.yaml docker-compose.yml docker-compose.admin.yaml; do
+                if tar tzf "$TMP/package.tgz" 2>/dev/null \
+                   | sed 's|/$||' | grep -qx "${PROJ_PATH}/${name}"; then
+                    COMPOSE_FOUND="$name"
+                    break
+                fi
+            done
+        fi
+
+        if [ -n "$COMPOSE_FOUND" ]; then
+            echo ">> OK: '$PROJ_PATH/$COMPOSE_FOUND' liegt genau dort, wo der Worker sucht."
         else
-            echo ">> FEHLER: '$PROJ_PATH/compose.yaml' fehlt in package.tgz!"
-            echo "   Der Worker sucht die Datei unter <ziel>/$PROJ_PATH/ - er"
-            echo "   meldet dann nur '(fail)'. Inhalt von package.tgz:"
+            echo ">> FEHLER: keine Datei mit einem Namen, den der Worker kennt!"
+            echo "   Gesucht unter <ziel>/$PROJ_PATH/:"
+            echo "     docker-compose.yaml | docker-compose.yml | docker-compose.admin.yaml"
+            echo "   ('compose.yaml' erkennt nur Docker Compose selbst - nicht der Worker.)"
+            echo "   Inhalt von package.tgz:"
             tar tzf "$TMP/package.tgz" 2>/dev/null | sed 's/^/      /' | head -n 20
         fi
     fi
@@ -1051,14 +1064,14 @@ app_smoke() {
     WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/cbsmoke.$$
     mkdir -p "$WORK"
     tar xf "$SPK" -C "$WORK" package.tgz 2>/dev/null \
-        && tar xzf "$WORK/package.tgz" -C "$WORK" compose/compose.yaml 2>/dev/null || {
-            echo "FEHLER: compose.yaml nicht lesbar"; rm -rf "$WORK"; return 1; }
+        && tar xzf "$WORK/package.tgz" -C "$WORK" compose/docker-compose.yaml 2>/dev/null || {
+            echo "FEHLER: compose/docker-compose.yaml nicht lesbar"; rm -rf "$WORK"; return 1; }
 
     DIR="$SHARE/cbm-smoke"
     rm -rf "$DIR"
     mkdir -p "$DIR"
-    cp "$WORK/compose/compose.yaml" "$DIR/compose.yaml"
-    sed -i "s|container_name: comfobox-gateway|container_name: cbm-smoke|" "$DIR/compose.yaml" 2>/dev/null || true
+    cp "$WORK/compose/docker-compose.yaml" "$DIR/docker-compose.yaml"
+    sed -i "s|container_name: comfobox-gateway|container_name: cbm-smoke|" "$DIR/docker-compose.yaml" 2>/dev/null || true
 
     echo ">> Starte wie der Worker: $COMPOSE_BIN im Share $DIR"
     echo ""
@@ -1170,15 +1183,15 @@ validate_compose() {
     WORK2=$(mktemp -d 2>/dev/null) || WORK2=/tmp/diag-cmp.$$
     mkdir -p "$WORK2"
     if tar xf "$SPK" -C "$WORK2" package.tgz 2>/dev/null \
-       && tar xzf "$WORK2/package.tgz" -C "$WORK2" compose/compose.yaml 2>/dev/null; then
+       && tar xzf "$WORK2/package.tgz" -C "$WORK2" compose/docker-compose.yaml 2>/dev/null; then
         echo ">> Compose-Datei:"
-        sed 's/^/   /' "$WORK2/compose/compose.yaml"
+        sed 's/^/   /' "$WORK2/compose/docker-compose.yaml"
         echo ""
         echo ">> docker compose config (Syntaxpruefung):"
-        if docker compose -f "$WORK2/compose/compose.yaml" config >/dev/null 2>&1; then
+        if docker compose -f "$WORK2/compose/docker-compose.yaml" config >/dev/null 2>&1; then
             echo "   OK - die Compose-Datei ist gueltig."
         else
-            docker compose -f "$WORK2/compose/compose.yaml" config 2>&1 \
+            docker compose -f "$WORK2/compose/docker-compose.yaml" config 2>&1 \
                 | head -n 20 | sed 's/^/   /'
             echo "   WARNUNG: Die Compose-Datei hat einen Fehler!"
         fi
@@ -1232,8 +1245,8 @@ worker_test() {
     fi
 
     CF_DIR="$WORK3/target/compose"
-    if [ ! -f "$CF_DIR/compose.yaml" ]; then
-        echo "FEHLER: compose/compose.yaml fehlt in package.tgz"
+    if [ ! -f "$CF_DIR/docker-compose.yaml" ]; then
+        echo "FEHLER: compose/docker-compose.yaml fehlt in package.tgz"
         rm -rf "$WORK3"
         return 1
     fi

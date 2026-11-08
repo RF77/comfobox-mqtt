@@ -257,7 +257,7 @@ fi
 # (bin/, compose/, image) - nicht unter einer zusaetzlichen Ebene "target/".
 #
 # Mit der Ebene "target/" landen sie eine Stufe zu tief:
-#   <ziel>/target/compose/compose.yaml
+#   <ziel>/target/compose/docker-compose.yaml
 # Der Worker "docker-project" sucht aber <ziel>/compose (conf/resource:
 # "path": "compose", relativ zum Ziel) - findet nichts und meldet:
 #   Acquire docker-project for ComfoBoxGateway (fail)
@@ -277,15 +277,29 @@ if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null; then
     fi
 
     # Die Compose-Datei muss genau unter dem Pfad liegen, den conf/resource
-    # nennt (relativ zum Zielverzeichnis). Steht dort etwas anderes als
-    # "compose", wird **dieser** Pfad geprueft - sonst meldet der Worker nur
-    # "(fail)" und niemand sieht, warum.
+    # nennt (relativ zum Zielverzeichnis) - und sie muss **docker-compose.yaml**
+    # heissen. Der Worker sucht ausschliesslich `docker-compose.yaml`,
+    # `docker-compose.yml` oder `docker-compose.admin.yaml`; `compose.yaml`
+    # erkennt nur Docker Compose selbst. Mit dem falschen Namen bricht der
+    # Worker ab, ohne Docker anzufassen ("fail compose up", 2201) - das war
+    # die Ursache bis Revision 0011.
     WANT_PATH="${RES_PATH:-compose}"
-    if grep -q "^${WANT_PATH}/compose\.yaml$" "$TGZ_LIST"; then
-        ok "${WANT_PATH}/compose.yaml liegt auf der obersten Ebene (Pfad des Workers)"
+    if grep -q "^${WANT_PATH}/docker-compose\.yaml$" "$TGZ_LIST"; then
+        ok "${WANT_PATH}/docker-compose.yaml liegt auf der obersten Ebene (Name, den der Worker sucht)"
     else
-        bad "${WANT_PATH}/compose.yaml liegt nicht auf der obersten Ebene"
-        echo "       Erwartet: ${WANT_PATH}/compose.yaml  (conf/resource: \"path\": \"${WANT_PATH}\")"
+        bad "${WANT_PATH}/docker-compose.yaml fehlt - der Worker findet die Datei dann nicht"
+        echo "       Erwartet: ${WANT_PATH}/docker-compose.yaml  (conf/resource: \"path\": \"${WANT_PATH}\")"
+        echo "       Der Worker kennt nur: docker-compose.yaml, docker-compose.yml,"
+        echo "       docker-compose.admin.yaml - NICHT compose.yaml."
+    fi
+
+    # Der alte Name darf nicht mehr im Paket liegen - zwei Dateien im selben
+    # Verzeichnis stiften nur Verwirrung.
+    if grep -q "^${WANT_PATH}/compose\.yaml$" "$TGZ_LIST"; then
+        bad "package.tgz enthaelt noch '${WANT_PATH}/compose.yaml' (alter Name, wird vom Worker ignoriert)"
+        echo "       Datei in src/target/compose/ auf docker-compose.yaml umbenennen."
+    else
+        ok "kein 'compose.yaml' mehr im Paket (nur der Name, den der Worker kennt)"
     fi
 
     if grep -q '^bin/common.sh$' "$TGZ_LIST"; then
@@ -305,29 +319,29 @@ fi
 
 # --- 3d. Compose-Datei des Workers ------------------------------------------
 echo ""
-echo "Compose-Datei (compose/compose.yaml)"
+echo "Compose-Datei (compose/docker-compose.yaml)"
 if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
-   && tar tzf "$WORK/package.tgz2" 2>/dev/null | grep -q "^compose/compose.yaml$"; then
-    ok "compose/compose.yaml ist im package.tgz"
+   && tar tzf "$WORK/package.tgz2" 2>/dev/null | grep -q "^compose/docker-compose.yaml$"; then
+    ok "compose/docker-compose.yaml ist im package.tgz"
     mkdir -p "$WORK/c"
-    if ( cd "$WORK" && tar xzf package.tgz2 compose/compose.yaml ) 2>/dev/null; then
-        CF="$WORK/compose/compose.yaml"
+    if ( cd "$WORK" && tar xzf package.tgz2 compose/docker-compose.yaml ) 2>/dev/null; then
+        CF="$WORK/compose/docker-compose.yaml"
         if grep -q '@[A-Z_]*@' "$CF"; then
-            bad "compose.yaml enthaelt noch Platzhalter (@IMAGE@/@VAR_DIR@) - build-spk.sh hat sie nicht ersetzt"
+            bad "docker-compose.yaml enthaelt noch Platzhalter (@IMAGE@/@VAR_DIR@) - build-spk.sh hat sie nicht ersetzt"
         else
-            ok "compose.yaml hat keine Platzhalter mehr"
+            ok "docker-compose.yaml hat keine Platzhalter mehr"
         fi
         if grep -q 'image: ghcr.io/rf77/comfobox-gateway:' "$CF"; then
-            ok "compose.yaml referenziert das Image aus GHCR"
+            ok "docker-compose.yaml referenziert das Image aus GHCR"
         else
-            bad "compose.yaml ohne Image-Referenz"
+            bad "docker-compose.yaml ohne Image-Referenz"
         fi
         # Das Feld "version" ist bei Compose v1 Pflicht. Ohne es lehnt
         # der Parser die Dateien ab (Compose v1 < 1.27).
         if grep -q '^version:' "$CF"; then
-            ok "compose.yaml hat das Feld 'version'"
+            ok "docker-compose.yaml hat das Feld 'version'"
         else
-            bad "compose.yaml ohne 'version' - Compose v1 lehnt die Datei ab"
+            bad "docker-compose.yaml ohne 'version' - Compose v1 lehnt die Datei ab"
         fi
         # Nur EIN Mount fuer die persistenten Daten. Zwei Mounts, deren
         # Host-Pfade ineinander liegen, sind eine Fehlerquelle.
@@ -335,9 +349,9 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         # Pfad sein - mit oder ohne Anfuehrungszeichen.
         DATA_MOUNTS=$(grep -cE '^[[:space:]]*-[[:space:]]*"?[^":[:space:]]+:/var/lib/comfobox"?([[:space:]]|$)' "$CF")
         if [ "$DATA_MOUNTS" = "1" ]; then
-            ok "compose.yaml mountet genau ein Datenverzeichnis"
+            ok "docker-compose.yaml mountet genau ein Datenverzeichnis"
         else
-            bad "compose.yaml mountet $DATA_MOUNTS Datenverzeichnisse (erwartet: 1)"
+            bad "docker-compose.yaml mountet $DATA_MOUNTS Datenverzeichnisse (erwartet: 1)"
             echo "       Der Log-Pfad liegt im Datenverzeichnis:"
             echo "       COMFOBOX_Logging__Directory=/var/lib/comfobox/logs"
         fi
@@ -345,14 +359,14 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         if grep -q 'COMFOBOX_Logging__Directory=/var/lib/comfobox/logs' "$CF"; then
             ok "Der Log-Pfad liegt im Datenverzeichnis (passt zum Mount)"
         else
-            bad "compose.yaml ohne COMFOBOX_Logging__Directory im Datenverzeichnis"
+            bad "docker-compose.yaml ohne COMFOBOX_Logging__Directory im Datenverzeichnis"
         fi
         # **KEIN Bind-Mount auf /var/packages!** Das DSM legt das Verzeichnis
         # als root:root an - der Container (uid 1001) kann dort nicht
         # schreiben, Serilog bricht den Start ab und der DSM-Worker meldet
         # nur "fail compose up". Stattdessen: ein benanntes Volume.
         if grep -qE '^[[:space:]]*-[[:space:]]*"?/var/packages' "$CF"; then
-            bad "compose.yaml bindet /var/packages/... ein - das Verzeichnis gehoert root:root"
+            bad "docker-compose.yaml bindet /var/packages/... ein - das Verzeichnis gehoert root:root"
             echo "       Der Container (uid 1001) kann dort nicht schreiben - der Start bricht ab."
             echo "       Richtig: das benannte Volume 'comfobox-data'."
         else
@@ -367,7 +381,7 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         fi
     fi
 else
-    bad "compose/compose.yaml fehlt im package.tgz"
+    bad "compose/docker-compose.yaml fehlt im package.tgz"
 fi
 
 # --- 3d. Lifecycle-Skripte --------------------------------------------------

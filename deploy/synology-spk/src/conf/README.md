@@ -116,15 +116,40 @@ Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
 ```
 
 Der **Docker-Project-Worker** (DSM 7.2.1+, Provider `ContainerManager>=1432`)
-liest die Compose-Datei unter `target/compose/compose.yaml`, legt daraus das
-Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
+liest die Compose-Datei unter `target/compose/docker-compose.yaml`, legt daraus
+das Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
+
+### ⚠️ Der Dateiname ist Pflicht
+
+Der Worker hat eine **fest verdrahtete Namensliste** – nachgewiesen mit
+`strings` aus `libdockerprojectgeneratorworker.so` auf der DS923+:
+
+```
+docker-compose.yaml
+docker-compose.yml
+docker-compose.admin.yaml
+/var/packages/ContainerManager/target/usr/bin/docker-compose
+```
+
+**`compose.yaml` ist nicht dabei** – obwohl Docker Compose v2 ihn selbst
+erkennt. Mit `compose.yaml` findet der Worker die Datei nicht, bricht ab,
+**bevor** er Docker anfasst, und meldet nur:
+
+```
+project build fail: [`2201`] `fail compose up '<uuid>'`
+```
+
+Es entstehen dabei **kein** Volume, **kein** Container und **keine** Logzeile
+– das ist das Erkennungsmerkmal. Genau daran sind die Revisionen bis 0011
+gescheitert.
 
 ### Drei Regeln für diese Datei
 
 | Regel | Grund |
 |---|---|
+| Datei heisst **`docker-compose.yaml`** | Die einzigen Namen, die der Worker kennt (s. o.). |
 | `name` **klein** schreiben (`comfobox-gateway`) | Docker Compose akzeptiert als Projektnamen nur `[a-z0-9_-]`. Ein Name mit Großbuchstaben lässt das Anlegen scheitern – der Worker meldet dann nur `(fail)`. |
-| `path` ist **relativ zum Zielverzeichnis** | `target/compose/compose.yaml` → `"path": "compose"`. Steht dort etwas anderes, findet der Worker die Datei nicht (`tools/check-spk.sh` prüft beides gegeneinander). |
+| `path` ist **relativ zum Zielverzeichnis** | `target/compose/docker-compose.yaml` → `"path": "compose"`. Steht dort etwas anderes, findet der Worker die Datei nicht (`tools/check-spk.sh` prüft beides gegeneinander). |
 | `build_params.build = false` | Im Paket ist kein `Dockerfile` – der Build-Schritt entfällt. Er ist der einzige Schritt des Workers, der nichts tun kann; abgeschaltet kann er auch nicht scheitern. |
 
 > **Der Projektname ist frei wählbar** – er muss nur eindeutig und stabil
@@ -141,7 +166,7 @@ braucht keine Root-Rechte mehr, und der DSM akzeptiert es damit.
 |---|---|
 | Container starten/stoppen | Worker (`FROM_STARTUP_TO_HALT`) |
 | Container anlegen/entfernen | Worker (`FROM_POSTINST_TO_PREUNINST`) |
-| Compose-Datei | **statisch** unter `target/compose/compose.yaml` |
+| Compose-Datei | **statisch** unter `target/compose/docker-compose.yaml` |
 | Docker-Socket | wird nicht gebraucht – der Worker spricht mit dem Container Manager |
 | Rechte auf `var/` | `chmod 0777` in `postinst` (kein `chown` ohne Root) |
 
@@ -160,7 +185,7 @@ Damit muss der Container nach der Auswahl im Assistenten **nicht** neu
 erstellt werden – und ein nachträglich angesteckter Adapter wird ohne
 Neustart erkannt.
 
-> **Auf einen festen Port umstellen:** in `compose.yaml` die Zeile
+> **Auf einen festen Port umstellen:** in `docker-compose.yaml` die Zeile
 > `- "/dev:/dev"` durch `- "/dev/ttyUSB0:/dev/ttyUSB0"` ersetzen. Dann passt
 > der Port aber **nur**, wenn er schon beim Start des Pakets passt.
 

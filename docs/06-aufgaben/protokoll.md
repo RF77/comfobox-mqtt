@@ -2628,6 +2628,65 @@ prüft u. a. `docker compose version` (Plugin), `docker compose config` mit der
 ausgelieferten Datei, die Plugin-Suchpfade des Docker-CLI und die
 Dateinamen-Erwartungen aus `libdockerprojectgeneratorworker.so`.
 
+### ⭐ GEFUNDEN (2026-11-08, 19:00) – der Dateiname war es
+
+`probe-worker.sh` hat die Ursache geliefert. Block 6 (Texte aus
+`libdockerprojectgeneratorworker.so`):
+
+````
+docker-compose.admin.yaml
+docker-compose.yaml
+docker-compose.yml
+/var/packages/ContainerManager/target/usr/bin/docker-compose
+````
+
+**Der Worker hat eine fest verdrahtete Namensliste, und `compose.yaml` steht
+nicht darauf.** Unser Paket lieferte `compose/compose.yaml` – ein Name, den
+nur Docker Compose v2 selbst erkennt. Der Worker fand die Datei nicht, brach
+ab, **bevor** er Docker anfasste, und meldete `2201 fail compose up`.
+
+Das erklärt **jedes** Detail der bisherigen Befunde:
+
+| Beobachtung | Erklärung |
+|---|---|
+| kein Volume, kein Container, keine Logzeile | Der Worker kam nie bis Compose |
+| `2201` in unter einer Sekunde | Datei nicht gefunden, kein Docker-Aufruf |
+| alle fünf A/B-Varianten „OK" | dort wurde `-f <datei>` **explizit** übergeben |
+| `--app-smoke` grün | ebenfalls mit explizitem Dateinamen |
+| `docker compose config` grün | Compose erkennt `compose.yaml` selbst |
+
+Block 2/5 des Probe-Laufs waren unauffällig: das CLI-Plugin ist vorhanden
+(`v2.20.1`), und beide Compose-Varianten verarbeiten die Datei fehlerfrei –
+der Fehler lag allein im Namen.
+
+**Fix (Revision 0012):**
+- `src/target/compose/compose.yaml` → **`docker-compose.yaml`** (git mv,
+  Historie bleibt)
+- `build-spk.sh` – neuer Pfad, entfernt einen alten `compose.yaml` vorsorglich
+- `check-spk.sh` – prüft **`<path>/docker-compose.yaml`** und dass **kein**
+  `compose.yaml` mehr im Paket liegt (Regressionstest)
+- `check-compose.sh` – sucht alle drei zulässigen Namen, warnt bei
+  `compose.yaml` daneben
+- `dsm-diagnose.sh` / `probe-worker.sh` – alle Pfade umgestellt;
+  `show_resource` prüft jetzt **alle drei** Namen
+- `src/conf/README.md` – der Dateiname als Pflichtregel dokumentiert
+- `REVISION` → **0012**
+
+**Verifikation:**
+- `bash build-spk.sh` → `ComfoBoxGateway_noarch-dsm7_1.0.2-0012.spk`
+- `bash tools/check-spk.sh` → **OK**, inkl.
+  `compose/docker-compose.yaml liegt auf der obersten Ebene (Name, den der Worker sucht)`
+  und `kein 'compose.yaml' mehr im Paket`
+- `bash tools/check-tgz-layout.sh` → `compose/docker-compose.yaml` ✅
+- MD5: `7be00bc9b8a6c796525fb7247fb87954`
+
+**Lehre:** Ein Dateiname, den „alle Tools" verstehen, ist kein Beweis. Der
+Worker ist ein eigenes Programm mit eigener Liste – nachsehen (strings), nicht
+annehmen. Und: `docker compose up -d` mit **Exit 0** beweist nicht, dass der
+Container lebt; erst `docker inspect` + `docker logs` sagen die Wahrheit.
+
+**Offen:** Der Beweis auf der NAS (Installation mit 0012) steht aus.
+
 ---
 
 ## Nächste Session

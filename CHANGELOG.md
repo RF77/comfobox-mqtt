@@ -7,25 +7,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.2] – 2026-11-08
 
 ### Fixed
-- **Die Installation scheitert am Container-Manager-Worker**
-  (`project build fail: [2201] fail compose up`). Der A/B-Test auf der NAS
-  (`dsm-diagnose.sh --compose-matrix`) hat die Compose-Datei **entlastet**:
-  alle fünf Varianten – auch „nur `image`“ – starten mit dem Compose-Binary
-  des Container Managers im Docker-Share fehlerfrei. Dabei kam die Ursache
-  zum Vorschein:
+- **Die Installation scheiterte an einem Dateinamen.** Der DSM-Worker
+  `docker-project` sucht die Compose-Datei mit einer **fest verdrahteten
+  Namensliste** – nachgewiesen mit `strings` aus
+  `libdockerprojectgeneratorworker.so`:
   ```
-  WARN volume "comfobox-data" already exists but was created for
-       project "comfobox" (expected "comfobox-gateway")
+  docker-compose.yaml
+  docker-compose.yml
+  docker-compose.admin.yaml
   ```
-  Das Daten-Volume trägt noch das **Projekt-Label eines früheren
-  Projekts**. `docker compose` quittiert das nur mit einer Warnung, der
-  Container Manager verwaltet seine Projekte aber selbst
-  (`Docker::Project::WorkerProject`) und bricht beim Anlegen ab. Das Paket
-  ist dabei unschuldig – der Zustand auf der NAS war es.
-  → `dsm-diagnose.sh --reset-volume` (bzw. `--install-fresh`) sichert den
-  Volume-Inhalt nach `/tmp` und legt das Volume neu an. Vorher ergänzte
-  Punkte bleiben sinnvoll: eigener Projektname, `build_params.build = false`
-  und das Aufräumen der Reste.
+  Unser Paket lieferte **`compose/compose.yaml`**. Diesen Namen kennt nur
+  Docker Compose selbst, nicht der Worker. Er fand die Datei nicht, brach ab,
+  **bevor** er Docker anfasste (kein Volume, kein Container, keine Logzeile)
+  und meldete nur:
+  ```
+  project build fail: [`2201`] `fail compose up '<uuid>'`
+  ```
+  → Die Datei heisst jetzt **`compose/docker-compose.yaml`**. `build-spk.sh`
+  entfernt einen alten `compose.yaml` vorsorglich, `tools/check-spk.sh` und
+  `tools/check-compose.sh` prüfen den Namen, die Diagnose sucht alle drei
+  zulässigen Varianten.
+- **Was vorher ausgeschlossen wurde** (alles mit echtem Gerät geprüft): die
+  Compose-Datei selbst (fünf Varianten bis „nur `image`" liefen durch), das
+  Image (Smoke-Test: `Status=running`, `/api/health` → 200), der Projektname,
+  `build_params.build = false`, verwaiste Volumes/Container/Netzwerke und
+  fehlende CM-Projekt-Datensätze. Auch das CLI-Plugin `docker compose` ist
+  vorhanden und verarbeitet unsere Datei fehlerfrei.
 - **Die Volume-Sicherung im Diagnose-Skript lief ins Leere.** Der
   Hilfs-Container lief mit der Standardkennung des Images – das Gateway
   läuft als `uid 1001` und konnte das Backup-Verzeichnis (root, 0755) nicht
@@ -35,6 +42,14 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   `-u 0:0`, das Verzeichnis wird auf `0777` gesetzt, das Ergebnis wird
   geprüft (nicht die Ausgabe) und nach dem Löschen wird **verifiziert**,
   dass das Volume weg ist – sonst bricht das Skript ab.
+- **Neue Diagnose-Werkzeuge** (`deploy/synology-spk/tools/dsm-diagnose.sh`):
+  `--app-smoke` (startet das Projekt wie der Worker und zeigt `docker logs` –
+  `compose up -d` allein beweist **nicht**, dass der Container lebt),
+  `--reset-volume`, `--install-fresh`, `--install-trace` (mit
+  Container-Wache: kopiert `docker inspect` und `docker logs` im Moment von
+  `create`, bevor der Rollback löscht) und `--compose-matrix`.
+  Neu ausserdem `tools/probe-worker.sh`: zeigt in fünf Sekunden, welchen
+  Compose-Aufruf und welche Dateinamen der Worker benutzt.
 - **Das Diagnose-Skript zeigt jetzt den Grund.** Neu: `conf/resource` aus
   dem Paket samt Prüfung, ob der dort genannte `path` zum Inhalt von
   `package.tgz` passt; die **Syslog-Meldungen des Resource-Workers** aus

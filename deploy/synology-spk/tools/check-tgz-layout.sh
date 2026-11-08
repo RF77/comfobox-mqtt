@@ -34,7 +34,7 @@ if tar tzf "$TMP/package.tgz" | grep -q '^target/'; then
     echo "FEHLER: package.tgz enthaelt 'target/...' - eine Ebene zu viel!"
     echo "        Das DSM entpackt package.tgz DIREKT in das Zielverzeichnis."
     echo "        'target/bin/common.sh' landet dann in <ziel>/target/bin/common.sh"
-    echo "        und der Worker findet <ziel>/compose/compose.yaml nicht."
+    echo "        und der Worker findet <ziel>/compose/docker-compose.yaml nicht."
 else
     echo "OK: package.tgz enthaelt die Dateien direkt auf der obersten Ebene."
 fi

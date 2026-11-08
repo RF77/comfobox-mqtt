@@ -84,15 +84,15 @@ echo ""
 echo "5) Der echte Test: compose config ueber das Plugin"
 # Die Compose-Datei aus dem installierten Paket nehmen - oder aus dem SPK.
 CF=""
-if [ -f "/var/packages/$PKG/target/compose/compose.yaml" ]; then
-    CF="/var/packages/$PKG/target/compose/compose.yaml"
+if [ -f "/var/packages/$PKG/target/compose/docker-compose.yaml" ]; then
+    CF="/var/packages/$PKG/target/compose/docker-compose.yaml"
 fi
 if [ -z "$CF" ] && [ -n "$SPK" ] && [ -f "$SPK" ]; then
     T=$(mktemp -d 2>/dev/null) || T=/tmp/probe.$$
     mkdir -p "$T"
     if tar xf "$SPK" -C "$T" package.tgz 2>/dev/null \
-       && tar xzf "$T/package.tgz" -C "$T" compose/compose.yaml 2>/dev/null; then
-        CF="$T/compose/compose.yaml"
+       && tar xzf "$T/package.tgz" -C "$T" compose/docker-compose.yaml 2>/dev/null; then
+        CF="$T/compose/docker-compose.yaml"
     fi
 fi
 
@@ -126,10 +126,12 @@ echo "6) Wie ruft der Worker Compose auf? (Texte aus dem Binary)"
 LIB=/var/packages/ContainerManager/target/worker/libdockerprojectgeneratorworker.so
 if [ -f "$LIB" ]; then
     tr -c '[:print:]' '\n' < "$LIB" 2>/dev/null \
-        | grep -i -E 'compose[-_.a-z]*\.(ya?ml)|docker-compose|cli-plugins|/usr/bin/docker|"--?[a-z-]+"' \
+        | grep -i -E 'compose[-_.a-z]*\.(ya?ml)|docker-compose|cli-plugins|/usr/bin/docker' \
         | sort -u | head -n 40 | sed 's/^/   /'
     echo ""
-    echo "   (Dateinamen mit 'compose' darin - der erwartete Name muss hier stehen)"
+    echo "   **Die gefundenen Dateinamen sind die einzigen, die der Worker"
+    echo "   akzeptiert.** Steht 'compose.yaml' NICHT in der Liste, muss die"
+    echo "   Datei im Paket 'docker-compose.yaml' heissen."
 else
     echo "   $LIB nicht gefunden"
 fi

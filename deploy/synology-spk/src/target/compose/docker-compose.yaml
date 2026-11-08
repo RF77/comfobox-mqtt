@@ -1,5 +1,22 @@
 # Compose-Datei des ComfoBox-Gateways (DSM 7 / Docker-Project-Worker).
 #
+# **Der Dateiname ist PFLICHT: `docker-compose.yaml`.**
+# Der Worker "docker-project" hat eine fest verdrahtete Namensliste - im
+# Binary `libdockerprojectgeneratorworker.so` stehen genau drei Namen:
+#
+#     docker-compose.yaml
+#     docker-compose.yml
+#     docker-compose.admin.yaml
+#
+# `compose.yaml` ist NICHT dabei, obwohl Docker Compose v2 ihn selbst
+# erkennt. Mit `compose.yaml` findet der Worker die Datei nicht, bricht ab,
+# **bevor** er Docker anfasst (kein Volume, kein Container, keine Logzeile)
+# und meldet nur:
+#
+#     project build fail: [`2201`] `fail compose up '<uuid>'`
+#
+# Das war die Ursache der gescheiterten Installationen bis Revision 0011.
+#
 # Diese Datei liegt unter target/compose/ und wird vom DSM-Worker
 # "docker-project" verwaltet (conf/resource). Der Worker legt daraus das
 # Projekt an und startet bzw. stoppt es beim Start/Stopp des Pakets -
