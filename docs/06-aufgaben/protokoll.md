@@ -2687,6 +2687,87 @@ Container lebt; erst `docker inspect` + `docker logs` sagen die Wahrheit.
 
 **Offen:** Der Beweis auf der NAS (Installation mit 0012) steht aus.
 
+### 0012 – der Dateiname war es auch nicht (2026-11-08, 19:07)
+
+Der Lauf mit `1.0.2-0012` scheitert **identisch**:
+
+```
+Acquire docker-project for ComfoBoxGateway when 0x0001 (ready)
+Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)     ← 1 Sekunde
+project build fail: [`2201`] `fail compose up '04ac84e3-…'`
+rollback created projects: `comfobox-gateway`
+```
+
+Und weiterhin: **kein Volume**, **kein Container**, **kein Projektverzeichnis**,
+`/var/packages/ContainerManager/etc/projects` leer. Die Diagnose bestätigt
+`OK: 'compose/docker-compose.yaml' liegt genau dort, wo der Worker sucht.`
+
+⇒ Der Dateiname war **nicht** die (alleinige) Ursache. Der Worker legt den
+Projekt-Datensatz an (`rollback created projects` beweist, dass er ihn
+angelegt hat), ruft aber nie wirksam Compose auf.
+
+**Was sicher ausgeschlossen ist** (mit echtem Gerät belegt): Compose-Datei
+(fünf Varianten, auch „nur `image`"), Image (Smoke-Test: `running`,
+`/api/health` 200), Projektname, `build_params.build=false`, Volume-Label,
+Reste/Container/Netzwerke, fehlende CM-Projekt-Datensätze, fehlendes
+CLI-Plugin, Dateiname.
+
+**Der einzige verbleibende Anhaltspunkt** ist `SYNOShareGet failed.
+synoerr=[0x1400]` in `/var/log/packages/ContainerManager.log` – allerdings
+stammt die Zeile aus dem Container-Manager-Update vom 7.11. 13:38, ist also
+möglicherweise alt.
+
+**Neu `--worker-forensics`:** beobachtet den Prozessbaum während der
+Installation in einer engen Schleife (< 50 ms) und schneidet jeden
+`docker`/`compose`-Aufruf **mit Argumenten** mit; sucht zusätzlich die
+Dateien, die der Worker dabei schreibt (dort liegt sein Projekt-Log), und
+prüft die Registrierung des Docker-Share (`synoshare --get docker`), die
+Docker-Socket-Rechte und die Gruppen des Paketbenutzers.
+
+**Wenn das nichts ergibt:** Der Worker ist auf dieser NAS nicht
+funktionsfähig, dann wird der Container ohne ihn gestartet (Alternative:
+`conf/systemd` + eigenes Startskript, oder host-seitiger Supervisor wie in
+ADR-008 ursprünglich vorgesehen).
+
+### ⭐ Der Worker funktioniert – der Fehler liegt im Paket (2026-11-08, 19:30)
+
+**Zwei Erkenntnisse aus dem manuellen Test im Container Manager:**
+
+1. **Der Fehler `Plain value cannot start with reserved character @`** kam
+   davon, dass die **Quellvorlage** hochgeladen wurde. Dort steht
+   `image: @IMAGE@`; der Platzhalter wird erst von `build-spk.sh` ersetzt.
+   Die gebaute Datei liegt im SPK unter `compose/docker-compose.yaml` und
+   enthält `image: ghcr.io/rf77/comfobox-gateway:1.0.2`. Falscher Alarm –
+   kein Worker-Problem.
+
+2. **Das Projekt ließ sich mit derselben Datei erfolgreich erstellen.** Damit
+   ist bewiesen: Der `docker-project`-Worker ist auf dieser NAS
+   **funktionsfähig**. Das Problem liegt ausschließlich in der
+   Paket-Konfiguration (`conf/resource`), nicht in DSM, Docker, Compose, dem
+   Image oder der Compose-Datei.
+
+**Der entscheidende Unterschied (aus dem Dialog ablesbar):**
+
+| | Funktionierender Fall | Unser Paket |
+|---|---|---|
+| Projektname | `test` | `comfobox-gateway` |
+| **Pfad** | **`/docker`** (absolut, Share-Wurzel) | `compose` (relativ zum target) |
+| Quelle | hochgeladene Datei liegt im **Share** | Datei liegt im **target** |
+
+Der Worker arbeitet offenbar im Docker-Share. Bei `"path": "compose"` muss er
+die Datei erst aus dem target dorthin bringen – und genau an dieser Stelle
+scheitert er (`SYNOShareGet failed. synoerr=[0x1400]` im CM-Log).
+
+**Neu `--inspect-project [name]`:** beschreibt ein funktionierendes Projekt
+vollständig – Dateien im Share (Name, Inhalt, Rechte), die Datensätze unter
+`etc/projects`, Container/Netzwerk/Volume mit ihren Labels – und vergleicht
+es mit `comfobox-gateway`. Das ist die fehlende Ground Truth; danach wird
+`conf/resource` angepasst statt geraten.
+
+**Wichtig für den nächsten Versuch:** Das Testprojekt belegt den
+**Containernamen `comfobox-gateway`** und **Port 8081**. Es muss vor dem
+Paket-Test gelöscht werden, sonst scheitert der Start an einer Kollision.
+
 ---
 
 ## Nächste Session

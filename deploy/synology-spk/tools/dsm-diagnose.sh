@@ -10,7 +10,7 @@
 #   `synopkg install` liefert dagegen ein **JSON mit Fehlercode und Text**.
 #
 # Aufruf (auf der NAS, per SSH):
-#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--reset|--reset-volume|--install-fresh|--install-trace|--install|--worker|--compose-matrix|--test|--log]
+#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--reset|--reset-volume|--install-fresh|--install-trace|--worker-forensics|--install|--worker|--compose-matrix|--app-smoke|--test|--log]
 #
 #   --reset    **Raeumt alle Reste fehlgeschlagener Versuche weg**: Paket
 #              stoppen und deinstallieren (auch im Status "broken"), die
@@ -42,6 +42,20 @@
 #              Zustand, Exit-Code und `docker logs`. Damit ist belegt, ob der
 #              Gateway selbst laeuft - `compose up -d` allein beweist das
 #              nicht (es liefert auch bei einem sofort sterbenden Container 0).
+#   --worker-forensics
+#              **Beobachtet den Worker waehrend der Installation.** Schneidet
+#              in einer engen Schleife (< 50 ms) jeden docker/compose-Prozess
+#              mit Argumenten mit, sucht die Dateien, die der Worker dabei
+#              schreibt (dort liegt sein Projekt-Log) und prueft die
+#              Registrierung des Docker-Share (`synoshare`). Das ist die
+#              letzte fehlende Information, wenn `fail compose up` ohne
+#              Container, ohne Volume und ohne Logzeile auftritt.
+#   --inspect-project [name]
+#              **Ground Truth.** Beschreibt ein FUNKTIONIERENDES Projekt im
+#              Container Manager vollstaendig (Dateien im Docker-Share,
+#              Datensaetze unter etc/projects, Container/Netzwerk/Volume mit
+#              ihren Labels) und vergleicht es mit 'comfobox-gateway'.
+#              Aendert nichts. Der Projektname ist optional.
 #   --install  **Empfohlen.** Macht zuerst --reset, installiert dann das
 #              Paket und zeigt anschliessend, was der Resource-Worker
 #              "docker-project" ins Syslog geschrieben hat. Genau dort steht
@@ -72,7 +86,9 @@ set -u
 
 SPK="${1:-}"
 MODE="${2:-}"
-
+# Manche Modi nehmen ein drittes Argument (z. B. den Projektnamen bei
+# --inspect-project). Bei den anderen wird es ignoriert.
+ARG3="${3:-}"
 if [ -z "$SPK" ]; then
     echo "Aufruf: sh dsm-diagnose.sh <pfad/zum/paket.spk> [--install|--worker|--test|--log]" >&2
     exit 1
@@ -396,6 +412,113 @@ cm_compose_bin() {
         return 0
     fi
     return 1
+}
+
+# ---------------------------------------------------------------------------
+# Ground Truth: Wie sieht ein FUNKTIONIERENDES Projekt aus?
+#
+# Der Test im Container Manager (Projekt "test" aus einer hochgeladenen
+# docker-compose.yaml) war erfolgreich. Damit liegt ein Referenzfall vor:
+# der Worker kann es - nur bei unserem Paket nicht.
+#
+# Diese Funktion beschreibt das Referenzprojekt vollstaendig:
+#   * was im Docker-Share liegt (Dateiname, Inhalt, Rechte)
+#   * welchen Datensatz der Container Manager angelegt hat
+#   * wie Container, Netzwerk, Volume und Labels heissen
+#
+# Der Vergleich mit unserem Paket zeigt dann den Unterschied.
+# ---------------------------------------------------------------------------
+inspect_project() {
+    WANT=${1:-}
+    SHARE=$(docker_share_dir 2>/dev/null)
+
+    echo ">> Docker-Share: ${SHARE:-nicht gefunden}"
+    if [ -n "$SHARE" ]; then
+        echo ""
+        echo "   Inhalt:"
+        ls -la "$SHARE" 2>/dev/null | sed 's/^/      /'
+        echo ""
+        for d in "$SHARE"/*/; do
+            [ -d "$d" ] || continue
+            echo "   --- $d ---"
+            ls -la "$d" 2>/dev/null | tail -n +2 | sed 's/^/      /'
+            for f in "$d"*.yaml "$d"*.yml; do
+                [ -f "$f" ] || continue
+                echo "      >>> Inhalt von $(basename "$f"):"
+                grep -vE '^[[:space:]]*#' "$f" 2>/dev/null \
+                    | grep -vE '^[[:space:]]*$' | head -n 45 | sed 's/^/         /'
+            done
+            echo ""
+        done
+    fi
+
+    echo ">> Projekt-Datensaetze des Container Managers:"
+    CMP="/var/packages/ContainerManager/etc/projects"
+    if [ -d "$CMP" ]; then
+        ls -la "$CMP" 2>/dev/null | sed 's/^/   /'
+        for f in "$CMP"/*; do
+            [ -f "$f" ] || continue
+            echo "   --- $f ---"
+            head -c 2000 "$f" 2>/dev/null | sed 's/^/      /'
+            echo ""
+        done
+    else
+        echo "   ($CMP fehlt)"
+    fi
+    echo ""
+
+    echo ">> Docker-Projekte (Netzwerke mit Label com.docker.compose.project):"
+    for n in $(docker network ls --format '{{.Name}}' 2>/dev/null); do
+        P=$(docker network inspect "$n" --format \
+            '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null)
+        [ -n "$P" ] && [ "$P" != "<no value>" ] && echo "   $n  ->  Projekt '$P'"
+    done
+    echo ""
+
+    echo ">> Laufende/beendete Container mit Compose-Labels:"
+    docker ps -a --format \
+        '{{.Names}}  {{.Status}}  project={{.Label "com.docker.compose.project"}}  dir={{.Label "com.docker.compose.project.working_dir"}}  files={{.Label "com.docker.compose.project.config_files"}}' \
+        2>&1 | head -n 15 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Volumes mit Compose-Labels:"
+    for v in $(docker volume ls --format '{{.Name}}' 2>/dev/null); do
+        P=$(docker volume inspect "$v" --format \
+            '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null)
+        [ -n "$P" ] && [ "$P" != "<no value>" ] && echo "   $v  ->  Projekt '$P'"
+    done
+    echo ""
+
+    echo ">> Schreibt der Worker ins Paketverzeichnis? (Rechte!)"
+    PKGDEST=/var/packages/ComfoBoxGateway/target
+    if [ -d "$PKGDEST" ]; then
+        ls -ldn "$PKGDEST" "$PKGDEST/compose" 2>/dev/null | sed 's/^/   /'
+        echo "   Dateien in $PKGDEST/compose:"
+        ls -lan "$PKGDEST/compose" 2>/dev/null | tail -n +2 | sed 's/^/      /'
+    else
+        echo "   ($PKGDEST fehlt - Paket nicht installiert)"
+    fi
+    echo ""
+
+    if [ -n "$WANT" ] && [ -n "$SHARE" ]; then
+        echo ">> Vergleich mit dem Referenzprojekt '$WANT':"
+        REF="$SHARE/$WANT"
+        if [ -d "$REF" ]; then
+            echo "   INHALT von $REF:"
+            ls -la "$REF" 2>/dev/null | sed 's/^/      /'
+            echo ""
+            echo "   Unterschiede zu unserem Projekt 'comfobox-gateway':"
+            OUR="$SHARE/comfobox-gateway"
+            if [ -d "$OUR" ]; then
+                diff -r "$REF" "$OUR" 2>&1 | head -n 30 | sed 's/^/      /'
+            else
+                echo "      $OUR existiert NICHT (der Worker hat es nie angelegt)"
+            fi
+        else
+            echo "   $REF existiert nicht"
+        fi
+        echo ""
+    fi
 }
 
 # ---------------------------------------------------------------------------
@@ -1110,8 +1233,7 @@ app_smoke() {
     echo ""
 }
 
-install_with_trace() {
-    echo ">> Ausgangszustand"
+install_with_trace() {    echo ">> Ausgangszustand"
     echo "   Volume '$VOLUME_NAME':"
     if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
         docker volume inspect "$VOLUME_NAME" 2>/dev/null \
@@ -1171,6 +1293,102 @@ install_with_trace() {
     show_share_state
 
     rm -rf "$TRACE_DIR"
+}
+
+# ---------------------------------------------------------------------------
+# Forensik: WAS ruft der Worker auf?
+#
+# Der Worker meldet nur `fail compose up '<uuid>'` und rollt zurueck. Weder
+# Container noch Volume entstehen - Compose wird also gar nicht wirksam.
+# Die entscheidende Frage lautet: **welchen Befehl** fuehrt der Worker aus,
+# und **welche Ausgabe** bekommt er?
+#
+# Diese Funktion beobachtet den Prozessbaum waehrend der Installation in
+# einer engen Schleife (< 50 ms Takt). Ein `docker compose ...`-Aufruf
+# erscheint damit in der Liste - mit Argumenten. Zusaetzlich werden die
+# Dateien gesucht, die der Worker **waehrend** des Laufs schreibt (dort
+# liegt sein Projekt-Log), und die Registrierung des Docker-Share geprueft
+# (`SYNOShareGet failed` im CM-Log ist ein Kandidat fuer die Ursache).
+# ---------------------------------------------------------------------------
+worker_forensics() {
+    PSLOG=/tmp/cb-pswatch.log
+    : > "$PSLOG"
+
+    echo ">> Prozess-Beobachter starten (Takt < 50 ms)"
+    (
+        i=0
+        while [ "$i" -lt 200 ]; do
+            ps -ef 2>/dev/null | grep -E 'docker|compose' | grep -v 'grep' >> "$PSLOG"
+            sleep 0.05 2>/dev/null || sleep 1
+            i=$((i + 1))
+        done
+    ) &
+    PS_PID=$!
+    sleep 1
+
+    echo ">> synopkg install (Beobachter laeuft)"
+    synopkg install "$SPK" 2>&1 | tail -n 4 | sed 's/^/   /'
+    echo ""
+
+    sleep 2
+    kill "$PS_PID" 2>/dev/null || true
+    wait "$PS_PID" 2>/dev/null || true
+
+    echo ">> Aufgerufene docker/compose-Prozesse (dedupliziert):"
+    if [ -s "$PSLOG" ]; then
+        sort -u "$PSLOG" | grep -vE 'cb-pswatch|while|sleep 0\.05' \
+            | head -n 25 | cut -c1-200 | sed 's/^/   /'
+    else
+        echo "   (keine - der Worker hat kein docker/compose gestartet)"
+        echo "   Das bedeutet: er scheitert, BEVOR er Compose aufruft."
+    fi
+    echo ""
+
+    echo ">> Dateien, die der Worker angelegt/geaendert hat (letzte 3 Minuten):"
+    found=0
+    for d in /var/packages/ContainerManager \
+             /volume3/@appconf/ContainerManager \
+             /volume3/docker \
+             /volume2/docker \
+             /volume1/docker; do
+        [ -d "$d" ] || continue
+        hits=$(find "$d" -mmin -3 2>/dev/null | head -n 15)
+        if [ -n "$hits" ]; then
+            found=1
+            echo "   --- $d ---"
+            printf '%s\n' "$hits" | sed 's/^/      /'
+        fi
+    done
+    [ "$found" = "1" ] || echo "   (keine - der Worker hat nichts geschrieben)"
+    echo ""
+
+    echo ">> Docker-Share korrekt registriert?"
+    if command -v synoshare >/dev/null 2>&1; then
+        echo "   --- synoshare --get docker ---"
+        synoshare --get docker 2>&1 | head -n 12 | sed 's/^/      /'
+        echo "   --- alle Shares (Name + Pfad) ---"
+        synoshare --enum ALL 2>&1 | head -n 25 | sed 's/^/      /'
+    else
+        echo "   (synoshare nicht gefunden)"
+    fi
+    echo ""
+
+    echo ">> Docker-Socket und Rechte:"
+    ls -l /var/run/docker.sock 2>/dev/null | sed 's/^/   /'
+    ls -l /run/docker.sock 2>/dev/null | sed 's/^/   /'
+    echo "   Paketbenutzer:"
+    id ComfoBoxGateway 2>&1 | head -n 2 | sed 's/^/      /'
+    echo ""
+
+    echo ">> Container-Manager-Log (ungefiltert, letzte 30 Zeilen):"
+    for f in /var/log/packages/ContainerManager.log /var/log/docker.log; do
+        [ -f "$f" ] || continue
+        echo "   --- $f ---"
+        tail -n 30 "$f" 2>/dev/null | sed 's/^/      /'
+    done
+    echo ""
+
+    rm -f "$PSLOG"
 }
 
 # Die Compose-Datei mit Docker pruefen - so sieht man einen Syntaxfehler,
@@ -1447,6 +1665,21 @@ elif [ "$MODE" = "--install-trace" ]; then
     echo "$STATE" | head -n 3 | sed 's/^/   /'
     echo ""
     echo "--- 11. Was der Resource-Worker gemeldet hat ---"
+    show_worker_log
+elif [ "$MODE" = "--inspect-project" ]; then
+    echo "--- Ground Truth: wie sieht ein funktionierendes Projekt aus? ---"
+    echo ""
+    inspect_project "$ARG3"
+elif [ "$MODE" = "--worker-forensics" ]; then
+    echo "--- 8. Aufraeumen (ohne Daten-Volume) ---"
+    reset_all
+    echo "--- 9. Forensik: welchen Compose-Aufruf macht der Worker? ---"
+    echo "Es wird installiert; das Paket landet danach im Status 'broken'."
+    echo ""
+    worker_forensics
+    echo "--- 10. Ergebnis ---"
+    synopkg status ComfoBoxGateway 2>&1 | head -n 3 | sed 's/^/   /'
+    echo ""
     show_worker_log
 elif [ "$MODE" = "--install" ]; then
     echo "--- 8. Reste fehlgeschlagener Versuche entfernen ---"
