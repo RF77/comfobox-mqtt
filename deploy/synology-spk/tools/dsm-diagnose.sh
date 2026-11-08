@@ -81,6 +81,14 @@
 # Voraussetzung: nur BusyBox-Standardwerkzeuge (sh, tar, md5sum, sha256sum).
 # Ohne --reset/--reset-volume/--install-fresh/--install/--test/--worker/
 # --compose-matrix wird **nichts** veraendert.
+#
+# **Vor jedem Installationsversuch** laeuft eine Kollisionspruefung
+# (`precheck_conflicts`): ein fremder Container mit demselben Namen, ein
+# Volume 'comfobox-data' mit dem Projekt-Label eines anderen Projekts, ein
+# belegter Port 8081 oder ein gleichnamiger Projekt-Datensatz des Container
+# Managers lassen `compose up` **sofort** scheitern (2201) - ohne Container,
+# ohne Volume, ohne weitere Logzeile. Genau das war der Fehler nach dem
+# GUI-Test. Das Skript bricht in diesem Fall ab und nennt das Objekt.
 # ---------------------------------------------------------------------------
 set -u
 
@@ -415,6 +423,113 @@ cm_compose_bin() {
 }
 
 # ---------------------------------------------------------------------------
+# Projektname aus dem Paket lesen
+#
+# Der Name muss exakt dem aus `conf/resource` entsprechen - sonst prueft die
+# Kollisionskontrolle an einem anderen Projekt vorbei.
+# ---------------------------------------------------------------------------
+spk_project_name() {
+    _tmp=$(mktemp -d 2>/dev/null) || _tmp=/tmp/cbproj.$$
+    if tar xf "$SPK" -C "$_tmp" conf/resource 2>/dev/null; then
+        _p=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+            "$_tmp/conf/resource" 2>/dev/null | head -n 1)
+        rm -rf "$_tmp"
+        if [ -n "$_p" ]; then
+            printf '%s\n' "$_p"
+            return 0
+        fi
+    else
+        rm -rf "$_tmp"
+    fi
+    printf '%s\n' "comfobox-gateway"
+}
+
+# ---------------------------------------------------------------------------
+# Kollisionen finden, BEVOR installiert wird
+#
+# **Warum das die wichtigste Vorabpruefung ist:**
+# Ein einziges fremdes Objekt laesst `compose up` **sofort** scheitern - in
+# unter einer Sekunde, ohne Image-Pull und ohne `container create`:
+#
+#   * ein Container mit demselben `container_name`
+#   * ein Volume 'comfobox-data', das das Projekt-Label eines ANDEREN
+#     Projekts traegt (z.B. aus einem GUI-Test)
+#   * ein belegter Host-Port 8081
+#   * ein Projekt-Datensatz des Container Managers mit demselben Namen
+#
+# Genau so sah der Fehler aus: `Acquire docker-project ... (fail)` nach 1 s,
+# `project build fail: [2201] fail compose up '<uuid>'`, danach kein Container
+# und kein Volume. Deshalb wird **nach** dem Aufraeumen geprueft - so sieht
+# man sofort, ob das Aufraeumen wirklich gereicht hat.
+#
+# Rueckgabe: 0 = frei, 1 = Kollision vorhanden
+# ---------------------------------------------------------------------------
+precheck_conflicts() {
+    PROJ=$(spk_project_name)
+    HITS=0
+
+    echo ">> Kollisionen pruefen (Projekt '$PROJ')"
+
+    # 1) Container mit festem Namen
+    if docker ps -a --filter "name=^/${PROJ}$" --format '{{.Names}}' 2>/dev/null \
+        | grep -q .; then
+        HITS=$((HITS + 1))
+        echo "   KOLLISION: Container '$PROJ' existiert"
+        docker ps -a --filter "name=^/${PROJ}$" \
+            --format '      project={{.Label "com.docker.compose.project"}}  status={{.Status}}' \
+            2>/dev/null | head -n 3 | sed 's/^/   /'
+        echo "      -> docker rm -f $PROJ"
+    fi
+
+    # 2) Volume mit fremdem Projekt-Label
+    if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+        VL=$(docker volume inspect "$VOLUME_NAME" \
+            --format '{{index .Labels "com.docker.compose.project"}}' 2>/dev/null)
+        case "$VL" in
+            ""|"<no value>"|"$PROJ") : ;;
+            *)
+                HITS=$((HITS + 1))
+                echo "   KOLLISION: Volume '$VOLUME_NAME' gehoert Projekt '$VL'"
+                echo "      -> sudo docker volume rm $VOLUME_NAME   (oder --install-fresh)"
+                ;;
+        esac
+    fi
+
+    # 3) Host-Port 8081
+    PORT_HIT=$(docker ps --format '{{.Names}}  {{.Ports}}' 2>/dev/null \
+        | grep -E ':8081->|0\.0\.0\.0:8081' | head -n 1)
+    if [ -n "$PORT_HIT" ]; then
+        HITS=$((HITS + 1))
+        echo "   KOLLISION: Port 8081 belegt durch: $PORT_HIT"
+    fi
+
+    # 4) Projekt-Datensaetze des Container Managers
+    CMP="/var/packages/ContainerManager/etc/projects"
+    if [ -d "$CMP" ]; then
+        for f in "$CMP"/*.config.json; do
+            [ -f "$f" ] || continue
+            N=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+                "$f" 2>/dev/null | head -n 1)
+            [ "$N" = "$PROJ" ] || continue
+            HITS=$((HITS + 1))
+            echo "   KOLLISION: CM-Projekt '$N' existiert ($(basename "$f"))"
+            echo "      -> im Container Manager unter 'Projekt' entfernen"
+        done
+    fi
+
+    if [ "$HITS" = "0" ]; then
+        echo "   frei - nichts im Weg"
+        echo ""
+        return 0
+    fi
+    echo ""
+    echo "   $HITS Kollision(en): eine Installation wuerde wieder mit 2201"
+    echo "   (fail compose up) scheitern."
+    echo ""
+    return 1
+}
+
+# ---------------------------------------------------------------------------
 # Ground Truth: Wie sieht ein FUNKTIONIERENDES Projekt aus?
 #
 # Der Test im Container Manager (Projekt "test" aus einer hochgeladenen
@@ -495,8 +610,42 @@ inspect_project() {
         ls -ldn "$PKGDEST" "$PKGDEST/compose" 2>/dev/null | sed 's/^/   /'
         echo "   Dateien in $PKGDEST/compose:"
         ls -lan "$PKGDEST/compose" 2>/dev/null | tail -n +2 | sed 's/^/      /'
+        echo ""
+
+        # **Die Datei, die der Worker SELBST erzeugt.**
+        # Im Binary stehen die Namen `docker-compose.yaml`,
+        # `docker-compose.yml` und **`docker-compose.admin.yaml`**. Letztere
+        # legt der Worker beim Anlegen des Projekts an - sie gehoert nicht
+        # ins Paket. Ihr Inhalt zeigt, was der Worker vorhat (und woran er
+        # scheitert).
+        for f in "$PKGDEST/compose/docker-compose.admin.yaml" \
+                 "$PKGDEST/compose/docker-compose.yml"; do
+            [ -f "$f" ] || continue
+            echo "   >>> Inhalt von $(basename "$f") (vom Worker erzeugt):"
+            cat "$f" 2>/dev/null | sed 's/^/      /'
+            echo ""
+        done
     else
         echo "   ($PKGDEST fehlt - Paket nicht installiert)"
+    fi
+    echo ""
+
+    echo ">> Projekt-Logs des Container Managers (action.log):"
+    if [ -d "$CMP" ]; then
+        for f in "$CMP"/*.action.log; do
+            [ -f "$f" ] || continue
+            NAME=$(sed -n 's/.*"name":"\([^"]*\)".*/\1/p' "${f%.action.log}.config.json" 2>/dev/null)
+            echo "   --- $(basename "$f")  (Projekt: ${NAME:-?}) ---"
+            # Fehlerzeilen zuerst - die sind der Grund.
+            if grep -qiE 'error|fail|cannot|denied|no such' "$f" 2>/dev/null; then
+                grep -inE 'error|fail|cannot|denied|no such' "$f" 2>/dev/null \
+                    | head -n 15 | cut -c1-180 | sed 's/^/      /'
+            else
+                echo "      (keine Fehlerzeilen)"
+                tail -n 8 "$f" 2>/dev/null | cut -c1-180 | sed 's/^/      /'
+            fi
+            echo ""
+        done
     fi
     echo ""
 
@@ -1122,6 +1271,11 @@ start_container_watch() {
             --filter 'event=die' --filter 'event=destroy' \
             --format '{{.Action}} {{.Actor.ID}} exit={{.Actor.Attributes.exitCode}}' 2>/dev/null \
         | while read -r ACT ID EXIT rest; do
+            # Das Verzeichnis kann waehrend des Laufs verschwinden (das Skript
+            # raeumt am Ende auf). Ohne diese Pruefung schreibt die Schleife
+            # in eine geloeschte Datei und ueberschwemmt die Ausgabe mit
+            # "No such file or directory" - genau das stand im Lauf vom 08.11.
+            [ -d "$WATCH_DIR" ] || break
             {
                 echo "================================================================"
                 echo "Event: $ACT   ($EXIT)"
@@ -1160,6 +1314,15 @@ stop_container_watch() {
     [ -n "${WATCH_PID:-}" ] || return 0
     kill "$WATCH_PID" 2>/dev/null || true
     WATCH_PID=""
+    # **Wichtig:** `$!` ist nur das Subshell. Der darin gestartete Prozess
+    # `docker events` ueberlebt das `kill` und schreibt beim naechsten Ereignis
+    # weiter - nach dem Aufraeumen in eine geloeschte Datei:
+    #
+    #     dsm-diagnose.sh: line 977: /tmp/tmp.xxxx/containers.log: No such file
+    #
+    # Genau diese Zeilen standen im Lauf vom 08.11. Deshalb wird der Prozess
+    # hier ausdruecklich beendet.
+    pkill -f 'docker events --filter' 2>/dev/null || true
 }
 
 # ---------------------------------------------------------------------------
@@ -1233,6 +1396,45 @@ app_smoke() {
     echo ""
 }
 
+# ---------------------------------------------------------------------------
+# Was der Worker in target/compose hinterlassen hat
+#
+# **Die Datei, die der WORKER selbst erzeugt.** Im Worker-Binary stehen drei
+# Dateinamen: `docker-compose.yaml`, `docker-compose.yml` und
+# `docker-compose.admin.yaml`. Die letzte legt der Worker beim Anlegen des
+# Projekts SELBST an. Im Lauf vom 08.11. um 19:07 lag sie mit 953 Byte in
+# `<target>/compose/` - waehrend unsere Datei 5364 Byte hat. Der Worker
+# benutzt also moeglicherweise NICHT unsere Datei, sondern eine von ihm
+# erzeugte Kurzfassung.
+#
+# Diese Kurzfassung ist die einzige noch fehlende Information: wenn sie
+# ungueltig ist, scheitert `compose up` sofort - ohne Image-Pull, ohne
+# Netzwerk, ohne `container create`. Genau das zeigt der Mitschnitt.
+#
+# Sie muss DIREKT nach dem Fehlschlag kopiert werden: der naechste
+# `--install*`-Lauf beginnt mit `reset_all` und loescht
+# `/var/packages/ComfoBoxGateway`.
+# ---------------------------------------------------------------------------
+show_worker_compose_leftovers() {
+    PKGDEST=/var/packages/ComfoBoxGateway/target
+    [ -d "$PKGDEST/compose" ] || return 0
+
+    echo ">> Was der Worker in $PKGDEST/compose hinterlassen hat:"
+    ls -lan "$PKGDEST/compose" 2>/dev/null | tail -n +2 | sed 's/^/   /'
+    echo ""
+    for f in "$PKGDEST"/compose/docker-compose.admin.yaml \
+             "$PKGDEST"/compose/docker-compose.yml; do
+        [ -f "$f" ] || continue
+        echo "   >>> $(basename "$f") ($(wc -c < "$f" 2>/dev/null | tr -d ' ') Byte):"
+        sed 's/^/      /' "$f" 2>/dev/null
+        echo ""
+    done
+    rm -rf /tmp/cb-compose-after-install
+    cp -a "$PKGDEST/compose" /tmp/cb-compose-after-install 2>/dev/null \
+        && echo "   (Kopie bleibt unter /tmp/cb-compose-after-install)"
+    echo ""
+}
+
 install_with_trace() {    echo ">> Ausgangszustand"
     echo "   Volume '$VOLUME_NAME':"
     if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
@@ -1254,6 +1456,8 @@ install_with_trace() {    echo ">> Ausgangszustand"
     echo ">> synopkg install (ab $T0)"
     synopkg install "$SPK" 2>&1
     echo ""
+
+    show_worker_compose_leftovers
 
     # Etwas warten, damit auch 'die'/'destroy' noch erfasst werden.
     sleep 4
@@ -1629,11 +1833,19 @@ elif [ "$MODE" = "--install-fresh" ]; then
         echo ""
         exit 1
     fi
-    echo "--- 9. Compose-Datei pruefen ---"
+    echo "--- 9. Kollisionen pruefen ---"
+    echo "Ein fremder Container, ein fremdes Volume-Label oder ein belegter"
+    echo "Port 8081 lassen 'compose up' sofort scheitern (2201)."
+    echo ""
+    if ! precheck_conflicts; then
+        echo ">>> ABBRUCH: Erst die Kollision beseitigen, dann erneut starten."
+        exit 1
+    fi
+    echo "--- 10. Compose-Datei pruefen ---"
     validate_compose
-    echo "--- 10. Installationsversuch ---"
+    echo "--- 11. Installationsversuch ---"
     install_with_trace
-    echo "--- 11. Ergebnis ---"
+    echo "--- 12. Ergebnis ---"
     STATE=$(synopkg status ComfoBoxGateway 2>&1)
     echo "$STATE" | head -n 3 | sed 's/^/   /'
     echo ""
@@ -1656,15 +1868,23 @@ elif [ "$MODE" = "--install-trace" ]; then
         echo ""
         exit 1
     fi
-    echo "--- 9. Installation mit docker-events-Mitschnitt ---"
+    echo "--- 9. Kollisionen pruefen ---"
+    echo "Ein fremder Container, ein fremdes Volume-Label oder ein belegter"
+    echo "Port 8081 lassen 'compose up' sofort scheitern (2201)."
+    echo ""
+    if ! precheck_conflicts; then
+        echo ">>> ABBRUCH: Erst die Kollision beseitigen, dann erneut starten."
+        exit 1
+    fi
+    echo "--- 10. Installation mit docker-events-Mitschnitt ---"
     echo "Der Mitschnitt zeigt, ob der Worker ueberhaupt einen Container erzeugt."
     echo ""
     install_with_trace
-    echo "--- 10. Ergebnis ---"
+    echo "--- 11. Ergebnis ---"
     STATE=$(synopkg status ComfoBoxGateway 2>&1)
     echo "$STATE" | head -n 3 | sed 's/^/   /'
     echo ""
-    echo "--- 11. Was der Resource-Worker gemeldet hat ---"
+    echo "--- 12. Was der Resource-Worker gemeldet hat ---"
     show_worker_log
 elif [ "$MODE" = "--inspect-project" ]; then
     echo "--- Ground Truth: wie sieht ein funktionierendes Projekt aus? ---"
@@ -1673,11 +1893,16 @@ elif [ "$MODE" = "--inspect-project" ]; then
 elif [ "$MODE" = "--worker-forensics" ]; then
     echo "--- 8. Aufraeumen (ohne Daten-Volume) ---"
     reset_all
-    echo "--- 9. Forensik: welchen Compose-Aufruf macht der Worker? ---"
+    echo "--- 9. Kollisionen pruefen ---"
+    if ! precheck_conflicts; then
+        echo ">>> ABBRUCH: Erst die Kollision beseitigen, dann erneut starten."
+        exit 1
+    fi
+    echo "--- 10. Forensik: welchen Compose-Aufruf macht der Worker? ---"
     echo "Es wird installiert; das Paket landet danach im Status 'broken'."
     echo ""
     worker_forensics
-    echo "--- 10. Ergebnis ---"
+    echo "--- 11. Ergebnis ---"
     synopkg status ComfoBoxGateway 2>&1 | head -n 3 | sed 's/^/   /'
     echo ""
     show_worker_log
@@ -1685,14 +1910,22 @@ elif [ "$MODE" = "--install" ]; then
     echo "--- 8. Reste fehlgeschlagener Versuche entfernen ---"
     reset_all
 
-    echo "--- 9. Compose-Datei pruefen ---"
+    echo "--- 9. Kollisionen pruefen ---"
+    if ! precheck_conflicts; then
+        echo ">>> ABBRUCH: Erst die Kollision beseitigen. Traegt das Daten-Volume"
+        echo "    das Label eines alten Projekts, hilft nur '--install-fresh'."
+        exit 1
+    fi
+
+    echo "--- 10. Compose-Datei pruefen ---"
     validate_compose
 
-    echo "--- 10. Installationsversuch ---"
+    echo "--- 11. Installationsversuch ---"
     echo "Die Ausgabe ist JSON und enthaelt den echten Fehlercode."
     echo ""
     synopkg install "$SPK" 2>&1
     echo ""
+    show_worker_compose_leftovers
     echo "--- 11. Ergebnis ---"
     STATE=$(synopkg status ComfoBoxGateway 2>&1)
     echo "$STATE" | head -n 3 | sed 's/^/   /'

@@ -158,11 +158,20 @@ printf 'ghcr.io/rf77/comfobox-gateway:%s\n' "$VERSION" > "$WORK/target/image"
 #
 #   @IMAGE@   → das Image mit dem exakten Versions-Tag
 #
-# **Der Dateiname ist PFLICHT.** Der Worker sucht ausschliesslich
-# `docker-compose.yaml`, `docker-compose.yml` oder `docker-compose.admin.yaml`
-# (nachgewiesen in `libdockerprojectgeneratorworker.so`). `compose.yaml`
-# erkennt nur Docker Compose selbst - der Worker nicht, und dann scheitert
-# er mit "fail compose up" (2201), bevor er Docker anfasst.
+# **Der Dateiname ist PFLICHT - und die Quellen widersprechen sich:**
+#
+#   * Die offizielle Entwicklerdokumentation (Docker Project Worker) sagt:
+#     `path` = "directory of **compose.yaml**, relative path from target".
+#     Das Beispiel zeigt `django/compose.yaml` und `wordpress-mysql/compose.yml`.
+#   * In `libdockerprojectgeneratorworker.so` stehen die Namen
+#     `docker-compose.yaml`, `docker-compose.yml`, `docker-compose.admin.yaml`.
+#     Diese Liste war aber **abgeschnitten** (`strings | head -n 30`) - sie ist
+#     damit kein Beweis, dass `compose.yaml` fehlt.
+#
+# Bis Revision 0012 haben wir uns auf die (unvollstaendige) Binary-Liste
+# verlassen. Deshalb liegt die Datei jetzt unter **beiden** Namen im Paket -
+# byte-gleich, nur der Name unterscheidet sich. Welchen Namen der Worker
+# sucht, ist damit gleichgueltig.
 #
 # **Kein** Platzhalter fuer das Datenverzeichnis: die Compose-Datei
 # benutzt das benannte Docker-Volume "comfobox-data". Ein Bind-Mount auf
@@ -175,9 +184,6 @@ if [ ! -f "$COMPOSE_YAML" ]; then
     echo "       Ohne Compose-Datei kann der DSM-Worker das Projekt nicht anlegen." >&2
     exit 1
 fi
-# Ein alter Name darf NICHT mehr im Paket landen - der Worker ignoriert ihn,
-# und zwei Dateien im selben Verzeichnis stiften nur Verwirrung.
-rm -f "$WORK/target/compose/compose.yaml" 2>/dev/null || true
 sed -i -e "s|@IMAGE@|ghcr.io/rf77/comfobox-gateway:${VERSION}|g" \
     "$COMPOSE_YAML"
 
@@ -187,6 +193,12 @@ if command -v tr >/dev/null 2>&1; then
     tr -d '\r' < "$COMPOSE_YAML" > "$COMPOSE_YAML.tmp"
     mv "$COMPOSE_YAML.tmp" "$COMPOSE_YAML"
 fi
+
+# --- Zweiter Dateiname (siehe Begruendung oben) ----------------------------
+# `compose.yaml` ist der Name aus der offiziellen Dokumentation. Er wird als
+# byte-gleiche Kopie mitgeliefert. Beide Dateien tragen das fertige Image -
+# es gibt keinen Platzhalter mehr.
+cp "$COMPOSE_YAML" "$WORK/target/compose/compose.yaml"
 
 # **Reproduzierbar bauen.** Ohne diese Optionen wandern der Zeitstempel und
 # die Reihenfolge der Einträge in das Archiv - derselbe Quellstand ergibt

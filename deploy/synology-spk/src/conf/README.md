@@ -119,35 +119,33 @@ Der **Docker-Project-Worker** (DSM 7.2.1+, Provider `ContainerManager>=1432`)
 liest die Compose-Datei unter `target/compose/docker-compose.yaml`, legt daraus
 das Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
 
-### ⚠️ Der Dateiname ist Pflicht
+### ⚠️ Der Dateiname: zwei Quellen, zwei Aussagen
 
-Der Worker hat eine **fest verdrahtete Namensliste** – nachgewiesen mit
-`strings` aus `libdockerprojectgeneratorworker.so` auf der DS923+:
+| Quelle | Aussage |
+|---|---|
+| Offizielle Entwicklerdoku *Docker Project Worker* | `path` = „directory of **compose.yaml**, relative path from target". Das Beispiel zeigt `django/compose.yaml` und `wordpress-mysql/compose.yml`. |
+| `strings libdockerprojectgeneratorworker.so` auf der DS923+ | `docker-compose.yaml`, `docker-compose.yml`, `docker-compose.admin.yaml` |
 
-```
-docker-compose.yaml
-docker-compose.yml
-docker-compose.admin.yaml
-/var/packages/ContainerManager/target/usr/bin/docker-compose
-```
+**Die `strings`-Liste war abgeschnitten** (`strings | head -n 30`) – sie ist
+kein Beweis dafür, dass `compose.yaml` fehlt. Damit ist der Name bis
+Revision 0012 **nicht** geklärt.
 
-**`compose.yaml` ist nicht dabei** – obwohl Docker Compose v2 ihn selbst
-erkennt. Mit `compose.yaml` findet der Worker die Datei nicht, bricht ab,
-**bevor** er Docker anfasst, und meldet nur:
+Deshalb liefert `build-spk.sh` die Datei seit Revision 0013 unter **beiden**
+Namen aus (byte-gleich, aus derselben Quelle erzeugt):
 
 ```
-project build fail: [`2201`] `fail compose up '<uuid>'`
+target/compose/docker-compose.yaml
+target/compose/compose.yaml
 ```
 
-Es entstehen dabei **kein** Volume, **kein** Container und **keine** Logzeile
-– das ist das Erkennungsmerkmal. Genau daran sind die Revisionen bis 0011
-gescheitert.
+Welchen Namen der Worker sucht, ist damit gleichgültig. `tools/check-spk.sh`
+prüft, dass beide vorhanden und identisch sind.
 
 ### Drei Regeln für diese Datei
 
 | Regel | Grund |
 |---|---|
-| Datei heisst **`docker-compose.yaml`** | Die einzigen Namen, die der Worker kennt (s. o.). |
+| Datei liegt unter **beiden** Namen vor | Die Quellen widersprechen sich (s. o.) – `build-spk.sh` erzeugt die Kopie. |
 | `name` **klein** schreiben (`comfobox-gateway`) | Docker Compose akzeptiert als Projektnamen nur `[a-z0-9_-]`. Ein Name mit Großbuchstaben lässt das Anlegen scheitern – der Worker meldet dann nur `(fail)`. |
 | `path` ist **relativ zum Zielverzeichnis** | `target/compose/docker-compose.yaml` → `"path": "compose"`. Steht dort etwas anderes, findet der Worker die Datei nicht (`tools/check-spk.sh` prüft beides gegeneinander). |
 | `build_params.build = false` | Im Paket ist kein `Dockerfile` – der Build-Schritt entfällt. Er ist der einzige Schritt des Workers, der nichts tun kann; abgeschaltet kann er auch nicht scheitern. |

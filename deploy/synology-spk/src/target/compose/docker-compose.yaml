@@ -1,23 +1,25 @@
 # Compose-Datei des ComfoBox-Gateways (DSM 7 / Docker-Project-Worker).
 #
-# **Der Dateiname ist PFLICHT: `docker-compose.yaml`.**
-# Der Worker "docker-project" hat eine fest verdrahtete Namensliste - im
-# Binary `libdockerprojectgeneratorworker.so` stehen genau drei Namen:
+# **Der Dateiname ist nicht eindeutig geklaert - deshalb liegen zwei bei.**
 #
-#     docker-compose.yaml
-#     docker-compose.yml
-#     docker-compose.admin.yaml
+# Zwei Quellen widersprechen sich:
 #
-# `compose.yaml` ist NICHT dabei, obwohl Docker Compose v2 ihn selbst
-# erkennt. Mit `compose.yaml` findet der Worker die Datei nicht, bricht ab,
-# **bevor** er Docker anfasst (kein Volume, kein Container, keine Logzeile)
-# und meldet nur:
+#   * Offizielle Entwicklerdoku (Docker Project Worker): `path` ist das
+#     "directory of compose.yaml, relative path from target". Das Beispiel
+#     zeigt django/compose.yaml und wordpress-mysql/compose.yml.
+#   * `strings libdockerprojectgeneratorworker.so` nennt docker-compose.yaml,
+#     docker-compose.yml und docker-compose.admin.yaml - diese Liste war beim
+#     Auslesen aber abgeschnitten (`strings | head -n 30`).
 #
-#     project build fail: [`2201`] `fail compose up '<uuid>'`
+# `build-spk.sh` legt diese Datei deshalb seit Revision 0013 unter BEIDEN
+# Namen ab (byte-gleich):
 #
-# Das war die Ursache der gescheiterten Installationen bis Revision 0011.
+#     compose/docker-compose.yaml
+#     compose/compose.yaml
 #
-# Diese Datei liegt unter target/compose/ und wird vom DSM-Worker
+# Welchen Namen der Worker sucht, ist damit gleichgueltig.
+#
+# Die Datei liegt unter target/compose/ und wird vom DSM-Worker
 # "docker-project" verwaltet (conf/resource). Der Worker legt daraus das
 # Projekt an und startet bzw. stoppt es beim Start/Stopp des Pakets -
 # als Root. Das Paket selbst braucht dadurch KEINE Root-Rechte; auf DSM 7

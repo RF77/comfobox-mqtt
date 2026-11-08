@@ -277,29 +277,29 @@ if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null; then
     fi
 
     # Die Compose-Datei muss genau unter dem Pfad liegen, den conf/resource
-    # nennt (relativ zum Zielverzeichnis) - und sie muss **docker-compose.yaml**
-    # heissen. Der Worker sucht ausschliesslich `docker-compose.yaml`,
-    # `docker-compose.yml` oder `docker-compose.admin.yaml`; `compose.yaml`
-    # erkennt nur Docker Compose selbst. Mit dem falschen Namen bricht der
-    # Worker ab, ohne Docker anzufassen ("fail compose up", 2201) - das war
-    # die Ursache bis Revision 0011.
+    # nennt (relativ zum Zielverzeichnis). **Beide** Namen muessen vorhanden
+    # sein - die Quellen widersprechen sich:
+    #
+    #   * Offizielle Entwicklerdoku (Docker Project Worker):
+    #     `path` = "directory of compose.yaml, relative path from target".
+    #   * `libdockerprojectgeneratorworker.so` enthaelt die Zeichenketten
+    #     `docker-compose.yaml`, `docker-compose.yml`, `docker-compose.admin.yaml`
+    #     (die Liste war beim Auslesen aber abgeschnitten).
+    #
+    # Deshalb liefert build-spk.sh beide Namen mit identischem Inhalt aus.
     WANT_PATH="${RES_PATH:-compose}"
     if grep -q "^${WANT_PATH}/docker-compose\.yaml$" "$TGZ_LIST"; then
-        ok "${WANT_PATH}/docker-compose.yaml liegt auf der obersten Ebene (Name, den der Worker sucht)"
+        ok "${WANT_PATH}/docker-compose.yaml liegt auf der obersten Ebene"
     else
         bad "${WANT_PATH}/docker-compose.yaml fehlt - der Worker findet die Datei dann nicht"
         echo "       Erwartet: ${WANT_PATH}/docker-compose.yaml  (conf/resource: \"path\": \"${WANT_PATH}\")"
-        echo "       Der Worker kennt nur: docker-compose.yaml, docker-compose.yml,"
-        echo "       docker-compose.admin.yaml - NICHT compose.yaml."
     fi
 
-    # Der alte Name darf nicht mehr im Paket liegen - zwei Dateien im selben
-    # Verzeichnis stiften nur Verwirrung.
     if grep -q "^${WANT_PATH}/compose\.yaml$" "$TGZ_LIST"; then
-        bad "package.tgz enthaelt noch '${WANT_PATH}/compose.yaml' (alter Name, wird vom Worker ignoriert)"
-        echo "       Datei in src/target/compose/ auf docker-compose.yaml umbenennen."
+        ok "${WANT_PATH}/compose.yaml liegt ebenfalls bei (Name aus der Doku)"
     else
-        ok "kein 'compose.yaml' mehr im Paket (nur der Name, den der Worker kennt)"
+        bad "${WANT_PATH}/compose.yaml fehlt (Name aus der offiziellen Doku)"
+        echo "       build-spk.sh muss die Datei als Kopie mitliefern."
     fi
 
     if grep -q '^bin/common.sh$' "$TGZ_LIST"; then
@@ -378,6 +378,20 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
             ok "das Volume 'comfobox-data' hat einen festen Namen (Backup-Skript)"
         else
             bad "das Volume hat keinen festen Namen - das Backup-Skript findet es nicht"
+        fi
+
+        # **Beide Dateinamen muessen identisch sein.** Wenn sie auseinander-
+        # laufen, startet der Worker je nach gewaehltem Namen eine andere
+        # Konfiguration - ein Fehler, der sich nur auf der NAS zeigt.
+        if ( cd "$WORK" && tar xzf package.tgz2 compose/compose.yaml ) 2>/dev/null; then
+            if cmp -s "$CF" "$WORK/compose/compose.yaml"; then
+                ok "compose.yaml und docker-compose.yaml sind byte-gleich"
+            else
+                bad "compose.yaml und docker-compose.yaml unterscheiden sich"
+                echo "       Beide werden von build-spk.sh aus derselben Quelle erzeugt."
+            fi
+        else
+            bad "compose/compose.yaml fehlt im package.tgz"
         fi
     fi
 else

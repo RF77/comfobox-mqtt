@@ -7,6 +7,38 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.2] – 2026-11-08
 
 ### Fixed
+- **Der Dateiname ist jetzt doppelt abgesichert (Revision 0013).** Die
+  Diagnose vom 08.11. hat gezeigt, dass die Begründung aus 0012 auf einer
+  **unvollständigen** Grundlage stand: die `strings`-Ausgabe aus
+  `libdockerprojectgeneratorworker.so` war mit `head -n 30` **abgeschnitten**.
+  Damit war „`compose.yaml` kennt der Worker nicht“ **kein Beweis**.
+  Die offizielle Entwicklerdoku *Docker Project Worker* sagt dagegen
+  ausdrücklich: `path` ist das *„directory of **compose.yaml**, relative path
+  from target“* – und ihr Beispiel zeigt `django/compose.yaml`.
+  → `build-spk.sh` legt die Datei jetzt unter **beiden** Namen ab
+  (`compose/docker-compose.yaml` **und** `compose/compose.yaml`,
+  byte-gleich), `tools/check-spk.sh` prüft beide und vergleicht sie mit `cmp`.
+  Ausserdem wurde bestätigt: `compose.yaml` war in Revision 0011 **nie** unter
+  sauberen Bedingungen getestet – damals trug das Daten-Volume noch das
+  Projekt-Label `comfobox`, was für sich schon `2201` auslöst.
+- **Kollisionsprüfung vor jeder Installation** (`precheck_conflicts` in
+  `tools/dsm-diagnose.sh`): Container mit gleichem Namen, Daten-Volume mit
+  fremdem Projekt-Label, belegter Port 8081 und gleichnamiger
+  Container-Manager-Datensatz. Der Lauf vom 08.11. 19:50 hat gezeigt, dass
+  das Aufräumen wirklich greift (`frei - nichts im Weg`) – der Fehler lag
+  also nicht an Resten.
+- **Das Diagnose-Skript sichert jetzt die Datei, die der Worker selbst
+  erzeugt.** In `<target>/compose/` lag nach einem Fehlschlag ein
+  `docker-compose.admin.yaml` mit **953 Byte**, während unsere Datei
+  5364 Byte hat – der Worker arbeitet also mit einer eigenen Kurzfassung.
+  `show_worker_compose_leftovers` gibt sie direkt nach dem Fehlschlag aus und
+  kopiert sie nach `/tmp/cb-compose-after-install`, bevor der nächste Lauf
+  das Paketverzeichnis löscht.
+- **Die Container-Wache liess `docker events` weiterlaufen.** `kill` traf nur
+  das Subshell; der Prozess schrieb danach in ein gelöschtes Verzeichnis
+  (`containers.log: No such file or directory`, vier Mal im Lauf vom 08.11.).
+  Jetzt wird er ausdrücklich beendet (`pkill -f 'docker events --filter'`) und
+  die Schleife bricht ab, wenn das Verzeichnis verschwindet.
 - **Die Installation scheiterte an einem Dateinamen.** Der DSM-Worker
   `docker-project` sucht die Compose-Datei mit einer **fest verdrahteten
   Namensliste** – nachgewiesen mit `strings` aus
