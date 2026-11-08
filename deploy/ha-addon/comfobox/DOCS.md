@@ -30,11 +30,21 @@ Der Supervisor zeigt im Dropdown alle **seriellen** Geräte des Hosts an – bev
 stabilen `/dev/serial/by-id/…`-Pfaden. Diese Pfade überleben Neustarts und das Umstecken
 des Adapters.
 
+Das Add-on deklariert dafür `uart: true` im Manifest: der Supervisor reicht damit die
+seriellen Geräte in den Container durch **und** setzt die nötigen Geräte-Rechte. Ohne
+diese Zeile wäre der Port im Container unsichtbar, obwohl er im Dropdown steht.
+
+> **Wenn der `by-id`-Pfad nicht funktioniert:** Im Container existiert nur der
+> Geräteknoten selbst (`/dev/ttyUSB0`), nicht immer der `by-id`-Ordner. Dann in der
+> Add-on-Konfiguration **`/dev/ttyUSB0`** wählen. Bei nur einem Adapter ist dieser
+> Name stabil; er ändert sich nur, wenn ein zweiter Adapter dazukommt.
+
 | Problem | Lösung |
 |---|---|
 | Adapter wird nicht angezeigt | USB-Adapter an einen anderen Port stecken; Seite neu laden |
 | Falscher Port gewählt | Konfiguration ändern → Add-on neu starten |
-| „Permission denied" | Group-Rechte des Adapters prüfen (CH340 → `dialout`) |
+| „Permission denied" | `uart: true` prüfen (ist im Manifest gesetzt) |
+| Port im Dropdown, Gateway findet ihn nicht | `/dev/ttyUSB0` statt `by-id` wählen |
 
 ## Broker
 

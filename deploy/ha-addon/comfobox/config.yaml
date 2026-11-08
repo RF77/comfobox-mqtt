@@ -73,8 +73,26 @@ watchdog: "http://[HOST]:[PORT:8080]/api/health"
 # ─────────────────────────────────────────────────────────────────────────────
 # Hardware
 # ─────────────────────────────────────────────────────────────────────────────
-# Kein "uart: true" – der Nutzer wählt genau EINEN Port per device-Option.
-# Das ist die schmalste mögliche Rechtevergabe.
+# **Ohne diesen Eintrag sieht der Container KEIN serielles Gerät.**
+#
+# Der Schema-Filter unten (`device: "device(subsystem=tty)"`) baut nur das
+# Dropdown im Add-on-Formular. Er reicht dem Container **nichts** durch:
+# laut Supervisor-Referenz sind `devices` und `uart` beide per Default
+# `false` – ohne sie bleibt /dev/ttyUSB0 außerhalb des Containers.
+#
+# Folge ohne `uart`: der Benutzer wählt im Dropdown einen Port, und im
+# Assistenten steht trotzdem "kein serieller Port gefunden" – genau das
+# Fehlerbild, das wir auf der Synology hatten.
+#
+# **Warum `uart` und nicht `devices`:** `devices` listet feste Pfade, die
+# beim Start des Containers feststehen. Der Gateway sucht den Port aber zur
+# **Laufzeit** (Assistent, Hot-Plug, Wechsel ohne Neustart) und muss dafür
+# alle Ports sehen. `uart: true` ist genau dafür gedacht.
+#
+uart: true
+
+# Zugriff auf die rohen USB-Geräte – **nicht** nötig, siehe oben.
+# usb: false
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Ablage

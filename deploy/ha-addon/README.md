@@ -30,6 +30,7 @@ Repository-URL:
 | Punkt | Wert |
 |---|---|
 | Serieller Port | `device(subsystem=tty)` → Dropdown mit stabilen `by-id`-Pfaden |
+| Gerätezugriff | `uart: true` → der Supervisor reicht die seriellen Geräte in den Container **und** setzt die Rechte |
 | Web-UI | `ingress: true` → Panel in Home Assistant, kein zusätzlicher Port |
 | Integration | REST/SSE auf Host-Port **8099** (`http://<ha-host>:8099`) |
 | Broker | `mqtt:want` → optional; ohne Broker läuft das Gateway ohne MQTT |
