@@ -20,6 +20,7 @@ tools/check-tgz-layout.sh
 tools/check-compose.sh
 tools/dsm-diagnose.sh
 tools/probe-worker.sh
+tools/usb-serial-check.sh
 "
 
 fail=0

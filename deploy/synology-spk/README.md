@@ -151,6 +151,23 @@ echten Fehlercode:
 sudo sh dsm-diagnose.sh /volume1/pfad/ComfoBoxGateway_noarch-dsm7_1.0.0-0003.spk --install
 ````
 
+### Der Adapter wird nicht erkannt
+
+Zeigt der Assistent „Kein serieller Port gefunden", sehen fünf verschiedene
+Ursachen von außen gleich aus (Hardware, Kernel-Treiber, Mount, Device-Cgroup,
+Anwendung). `tools/usb-serial-check.sh` grenzt sie ein – es **ändert nichts**
+und nennt am Ende genau eine Ursache:
+
+````bash
+sudo sh usb-serial-check.sh            # Containername optional, Vorgabe comfobox-gateway
+````
+
+Geprüft wird der Reihe nach: USB-Geräte am Bus (`/sys/bus/usb/devices`,
+bekannte Chips `1a86:7523`, `0403:*`, `10c4:*`, `067b:2303`), geladene und
+vorhandene Kernelmodule (`ch341`, `ftdi_sio`, `cp210x`, `pl2303`, `usbserial`),
+die Gerätedateien auf der NAS, die Sicht des Containers, das Öffnen des Geräts
+im Container sowie `GET /api/config/serial-ports`.
+
 ## Sicherheit
 
 - Container läuft **unprivileged** (`USER comfobox`), kein `privileged`

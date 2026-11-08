@@ -131,6 +131,30 @@ sudo fuser -v /dev/ttyUSB0
 | Port ohne Berechtigung | Benutzer zur Gruppe `dialout` hinzufügen |
 | Adapter wird nach dem Reboot später erkannt | das Gateway wartet mit Wiederholung – das ist normal |
 
+### Auf einem Synology-NAS: das Prüfskript
+
+Auf einem NAS lässt sich von der Web-Oberfläche aus nicht erkennen, **warum**
+kein Port erscheint – Hardware, Kernel-Treiber, Container und Anwendung sehen
+von außen gleich aus. Dafür gibt es ein Skript, das nichts verändert und am
+Ende genau eine Ursache nennt:
+
+````bash
+cd /volume1/homes/<benutzer>
+sudo sh usb-serial-check.sh            # Containername ist optional
+````
+
+Es prüft der Reihe nach: Ist der Adapter am USB-Bus sichtbar? Hat der Kernel
+den passenden Treiber geladen? Gibt es `/dev/ttyUSB*`? Sieht der Container das
+Gerät? Darf er es öffnen? Und was meldet das Gateway selbst?
+
+| Befund des Skripts | Bedeutung |
+|---|---|
+| „Der Adapter ist nicht angeschlossen …" | Hardware, Kabel oder USB-Buchse – nicht der Gateway |
+| „Der Adapter STECKT … keine Gerätedatei" | dem NAS fehlt der Treiber (`modprobe ch341`) |
+| „NAS hat das Gerät, der Container sieht es nicht" | Durchreichung des Pakets |
+| „Container sieht das Gerät, die Anwendung meldet keinen Port" | Fehler im Gateway – Ausgabe an den Entwickler geben |
+| „NAS, Container und Anwendung sehen denselben Port" | Erkennung in Ordnung – dann liegt es an der Oberfläche |
+
 ---
 
 ## Reichweite und Störungen

@@ -41,6 +41,21 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   `/var/log/comfobox` sind deshalb jetzt `0777`.
 
 ### Added
+- **`tools/usb-serial-check.sh` – findet den USB-RS485-Adapter oder den Grund,
+  warum er fehlt.** Zeigt der Assistent „Kein serieller Port gefunden", sehen
+  fünf Ursachen von außen gleich aus: Hardware, fehlender Kernel-Treiber,
+  fehlende Durchreichung in den Container, Device-Cgroup (sichtbar, aber nicht
+  öffenbar) oder ein Fehler in der Anwendung. Das Skript ändert **nichts** und
+  prüft der Reihe nach: USB-Geräte am Bus samt bekannter Seriell-Chips
+  (`1a86:7523`, `0403:*`, `10c4:*`, `067b:2303`), vorhandene und geladene
+  Kernelmodule (`ch341`, `ftdi_sio`, `cp210x`, `pl2303`, `usbserial`), die
+  Gerätedateien auf der NAS, die Sicht des Containers, einen echten
+  Öffnen/Schließen-Test im Container und `GET /api/config/serial-ports`.
+  Am Ende steht genau ein Befund mit dem nächsten Schritt.
+- `dsm-diagnose.sh --start`: startet das Paket und prüft Containerzustand,
+  Health, Container-Kennung, **Schreibzugriff auf die seriellen Geräte**,
+  `/api/health` und das Log. Nötig, weil `synopkg install` das Paket
+  absichtlich gestoppt zurücklässt — der Container steht danach auf `Created`.
 - `dsm-diagnose.sh --pkguser-probe`: prüft, unter welcher Kennung der Worker
   arbeitet, ob der Paket-Benutzer an den Docker-Daemon kommt und in den
   Docker-Share schreiben darf, zeigt die Rechte der seriellen Geräte und
