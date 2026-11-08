@@ -56,6 +56,14 @@
 #              Datensaetze unter etc/projects, Container/Netzwerk/Volume mit
 #              ihren Labels) und vergleicht es mit 'comfobox-gateway'.
 #              Aendert nichts. Der Projektname ist optional.
+#   --start
+#              **Nach der erfolgreichen Installation.** Startet das Paket
+#              (`synopkg start`) - erst dann startet der Worker das Projekt -
+#              und prueft danach alles, was fuer den Betrieb zaehlt:
+#              Paketstatus, Containerzustand, Health, die letzten Logzeilen
+#              und ob der Container die seriellen Geraete sehen/schreiben darf.
+#              Ohne diesen Schritt bleibt der Container auf "Created" stehen,
+#              weil `synopkg install` das Paket **gestoppt** zuruecklaesst.
 #   --pkguser-probe
 #              **Unter welcher Kennung arbeitet der Worker?** Der Worker legt
 #              eine eigene `docker-compose.admin.yaml` mit `user: <paket-uid>`
@@ -1495,17 +1503,19 @@ Mounts:
 
 stop_container_watch() {
     [ -n "${WATCH_PID:-}" ] || return 0
-    kill "$WATCH_PID" 2>/dev/null || true
-    WATCH_PID=""
-    # **Wichtig:** `$!` ist nur das Subshell. Der darin gestartete Prozess
-    # `docker events` ueberlebt das `kill` und schreibt beim naechsten Ereignis
-    # weiter - nach dem Aufraeumen in eine geloeschte Datei:
+    # **Reihenfolge ist wichtig.** `$!` ist nur das Subshell. Ein `kill` darauf
+    # beendet den darin gestarteten Prozess `docker events` NICHT - der schreibt
+    # beim naechsten Ereignis weiter (in eine geloeschte Datei). Deshalb:
     #
-    #     dsm-diagnose.sh: line 977: /tmp/tmp.xxxx/containers.log: No such file
+    #   1. den LESER beenden (`docker events`),
+    #   2. dann auf das Subshell warten.
     #
-    # Genau diese Zeilen standen im Lauf vom 08.11. Deshalb wird der Prozess
-    # hier ausdruecklich beendet.
+    # Damit endet die Pipe, die `while`-Schleife laeuft aus und das Subshell
+    # beendet sich **regulaer** - das Job-Control meldet dann kein
+    # "Terminated (... docker events ...)" mehr mitten in die Ausgabe.
     pkill -f 'docker events --filter' 2>/dev/null || true
+    wait "$WATCH_PID" 2>/dev/null || true
+    WATCH_PID=""
 }
 
 # ---------------------------------------------------------------------------
@@ -1776,6 +1786,98 @@ worker_forensics() {
     echo ""
 
     rm -f "$PSLOG"
+}
+
+# ---------------------------------------------------------------------------
+# Paket starten und pruefen
+#
+# **Warum das ein eigener Schritt ist:** `synopkg install` endet mit
+# "installed_and_stopped". Der Worker legt das Projekt in der postinst-Phase
+# nur **an** (FROM_POSTINST_TO_PREUNINST: "create (or update) and build").
+# Gestartet wird es erst in der Startup-Phase des Workers
+# (FROM_STARTUP_TO_HALT: "Start projects") - also beim Start des Pakets.
+#
+# Deshalb steht der Container nach einer erfolgreichen Installation auf
+# "Created" und nicht auf "running". Das ist **kein** Fehler.
+#
+# Geprueft wird danach, was den Betrieb ausmacht:
+#   * Paketstatus (muss "running" sein)
+#   * Containerzustand, Health, RestartCount
+#   * die letzten Logzeilen (dort steht, ob BACnet/MQTT hochkommen)
+#   * ob der Container die seriellen Geraete sieht und oeffnen darf - der
+#     Worker erzwingt `user: <paket-uid>`, also NICHT uid 1001 aus dem Image
+# ---------------------------------------------------------------------------
+start_and_verify() {
+    NAME=comfobox-gateway
+
+    echo ">> Paket starten"
+    synopkg start ComfoBoxGateway 2>&1 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Warten (max. 60 s), bis der Container laeuft"
+    i=0
+    while [ "$i" -lt 12 ]; do
+        STATE=$(docker inspect "$NAME" --format '{{.State.Status}}' 2>/dev/null)
+        HEALTH=$(docker inspect "$NAME" \
+            --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' 2>/dev/null)
+        RESTARTS=$(docker inspect "$NAME" --format '{{.RestartCount}}' 2>/dev/null)
+        echo "   [$((i * 5)) s] Status=${STATE:-(kein Container)} Health=$HEALTH Restarts=$RESTARTS"
+        case "$STATE" in
+            running)
+                [ "$HEALTH" = "healthy" ] && break
+                [ "$HEALTH" = "n/a" ] && break
+                ;;
+            exited|dead) break ;;
+        esac
+        i=$((i + 1))
+        sleep 5
+    done
+    echo ""
+
+    echo ">> Paketstatus"
+    synopkg status ComfoBoxGateway 2>&1 | head -n 3 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Container"
+    docker ps -a --filter "name=$NAME" --format \
+        '   {{.Names}}  {{.Status}}  {{.Image}}' 2>&1 | head -n 5
+    echo ""
+
+    echo ">> Kennung im Container (der Worker erzwingt die Paket-UID)"
+    docker exec "$NAME" id 2>&1 | head -n 3 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Serielle Geraete im Container"
+    docker exec "$NAME" sh -c \
+        'ls -l /dev/ttyUSB* /dev/ttyACM* 2>/dev/null || echo "(keine gefunden)"' 2>&1 \
+        | sed 's/^/   /'
+    echo "   Schreibtest (der entscheidende Punkt fuer den RS485-Zugriff):"
+    docker exec "$NAME" sh -c '
+        found=0
+        for d in /dev/ttyUSB0 /dev/ttyACM0; do
+            [ -e "$d" ] || continue
+            found=1
+            if [ -r "$d" ] && [ -w "$d" ]; then
+                echo "   $d: lesbar und schreibbar"
+            else
+                echo "   $d: NICHT zugaenglich - Rechte/Gruppe pruefen"
+            fi
+        done
+        [ "$found" = "1" ] || echo "   (kein Adapter gesteckt)"' 2>&1 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Health-Endpunkt von innen"
+    docker exec "$NAME" sh -c 'curl -fsS -m 5 http://localhost:8080/api/health' 2>&1 \
+        | head -c 600 | sed 's/^/   /'
+    echo ""
+    echo ""
+
+    echo ">> Log des Containers (letzte 40 Zeilen)"
+    docker logs "$NAME" --tail 40 2>&1 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Von aussen erreichbar:  http://<NAS-IP>:8081/"
+    echo ""
 }
 
 # Die Compose-Datei mit Docker pruefen - so sieht man einen Syntaxfehler,
@@ -2102,6 +2204,12 @@ elif [ "$MODE" = "--inspect-project" ]; then
     echo "--- Ground Truth: wie sieht ein funktionierendes Projekt aus? ---"
     echo ""
     inspect_project "$ARG3"
+elif [ "$MODE" = "--start" ]; then
+    echo "--- Nach der Installation: Paket starten und pruefen ---"
+    echo "Der Container steht nach 'synopkg install' auf 'Created' - das ist"
+    echo "normal, das Paket ist gestoppt. Erst der Start startet das Projekt."
+    echo ""
+    start_and_verify
 elif [ "$MODE" = "--pkguser-probe" ]; then
     echo "--- Unter welcher Kennung arbeitet der Worker? ---"
     echo ""
