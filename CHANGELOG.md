@@ -7,24 +7,34 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.2] – 2026-11-08
 
 ### Fixed
-- **Die Installation scheiterte weiterhin am DSM-Worker**
-  (`Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)`).
-  Der Worker scheiterte dabei **innerhalb einer Sekunde und ohne jede
-  Syslog-Zeile** – er kam also gar nicht bis zu Docker. Drei Korrekturen:
-  - **Der Projektname ist jetzt `comfobox-gateway`** (vorher `comfobox`).
-    Docker Compose akzeptiert nur `[a-z0-9_-]`; ein liegengebliebener
-    Projekt-Datensatz des Container Managers kann einen erneuten Versuch
-    sonst sofort scheitern lassen.
-  - **Der Build-Schritt des Workers ist abgeschaltet**
-    (`build_params.build = false`). Das Paket bringt kein `Dockerfile` mit –
-    der Schritt kann nichts tun, also soll er auch nicht laufen.
-  - **Reste fehlgeschlagener Versuche werden vor der Installation
-    entfernt.** Ein Paket im Status „broken“ (150) wird vom DSM beim
-    nächsten Mal wie ein *Update* behandelt, und liegengebliebene Container
-    oder Netzwerke blockieren das Anlegen des Projekts. Das Diagnose-Skript
-    hat dafür den neuen Modus `--reset`; `--install` ruft ihn automatisch
-    auf. Das Docker-Volume `comfobox-data` (24-h-Schreibzähler) bleibt
-    erhalten.
+- **Die Installation scheitert am Container-Manager-Worker**
+  (`project build fail: [2201] fail compose up`). Der A/B-Test auf der NAS
+  (`dsm-diagnose.sh --compose-matrix`) hat die Compose-Datei **entlastet**:
+  alle fünf Varianten – auch „nur `image`“ – starten mit dem Compose-Binary
+  des Container Managers im Docker-Share fehlerfrei. Dabei kam die Ursache
+  zum Vorschein:
+  ```
+  WARN volume "comfobox-data" already exists but was created for
+       project "comfobox" (expected "comfobox-gateway")
+  ```
+  Das Daten-Volume trägt noch das **Projekt-Label eines früheren
+  Projekts**. `docker compose` quittiert das nur mit einer Warnung, der
+  Container Manager verwaltet seine Projekte aber selbst
+  (`Docker::Project::WorkerProject`) und bricht beim Anlegen ab. Das Paket
+  ist dabei unschuldig – der Zustand auf der NAS war es.
+  → `dsm-diagnose.sh --reset-volume` (bzw. `--install-fresh`) sichert den
+  Volume-Inhalt nach `/tmp` und legt das Volume neu an. Vorher ergänzte
+  Punkte bleiben sinnvoll: eigener Projektname, `build_params.build = false`
+  und das Aufräumen der Reste.
+- **Die Volume-Sicherung im Diagnose-Skript lief ins Leere.** Der
+  Hilfs-Container lief mit der Standardkennung des Images – das Gateway
+  läuft als `uid 1001` und konnte das Backup-Verzeichnis (root, 0755) nicht
+  beschreiben. `cp` scheiterte, `|| true` verschluckte den Fehler, und weil
+  die Sicherung „fehlschlug“, wurde das Volume **nicht** gelöscht. Ergebnis:
+  `--install-fresh` lief ohne Wirkung durch. Jetzt läuft der Container mit
+  `-u 0:0`, das Verzeichnis wird auf `0777` gesetzt, das Ergebnis wird
+  geprüft (nicht die Ausgabe) und nach dem Löschen wird **verifiziert**,
+  dass das Volume weg ist – sonst bricht das Skript ab.
 - **Das Diagnose-Skript zeigt jetzt den Grund.** Neu: `conf/resource` aus
   dem Paket samt Prüfung, ob der dort genannte `path` zum Inhalt von
   `package.tgz` passt; die **Syslog-Meldungen des Resource-Workers** aus

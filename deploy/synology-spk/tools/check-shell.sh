@@ -19,6 +19,7 @@ tools/check-spk.sh
 tools/check-tgz-layout.sh
 tools/check-compose.sh
 tools/dsm-diagnose.sh
+tools/probe-worker.sh
 "
 
 fail=0

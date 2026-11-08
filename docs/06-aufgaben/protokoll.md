@@ -2434,6 +2434,200 @@ er Docker angefasst hat – und das Paket stand zu diesem Zeitpunkt auf
 - Wenn im Container Manager noch ein Projekt **`comfobox`** auftaucht: das
   ist der Datensatz des alten Versuchs und darf gelöscht werden.
 
+### Nachtrag: der Zustand war es NICHT
+
+Der Lauf mit `1.0.2-0011` auf der DS923+ (2026-11-08, 12:01) widerlegt die
+Zustands-These. Nach vollständigem Aufräumen (kein Container, kein Netzwerk,
+Port frei, neuer Projektname) steht im Syslog:
+
+````
+12:01:01 docker_project_worker/…cpp:354 project build fail: [`2201`] `fail compose up 'd896dda1-…'`
+12:01:01 docker_project_worker/…cpp:254 rollback created projects: `comfobox-gateway`
+````
+
+**Das ist die entscheidende Erkenntnis:** Der Worker scheitert **an
+`compose up`** – nicht an seiner Konfiguration und nicht an Resten. Dieselbe
+Datei startet manuell einwandfrei (Container `healthy`, `/api/health` → 200),
+und zwar mit **demselben** Docker (24.0.2) und **derselben** Compose-Version
+(v2.20.1). Der Unterschied liegt also im **Ausführungsumfeld** des Workers:
+er läuft im Docker-Share (`/volume3/docker/…`) und mit dem Compose-Binary des
+Container Managers.
+
+**Konsequenz für `dsm-diagnose.sh`:** neuer Modus `--compose-matrix`. Er
+startet die Compose-Datei genau so wie der Worker (CM-Binary, Docker-Share)
+und lässt danach einzelne Einträge weg – `/dev:/dev`, `group_add`,
+`security_opt`, zuletzt alles bis auf `image`. Der erste Lauf, der
+funktioniert, nennt den schuldigen Eintrag. Zusätzlich zeigt das Skript die
+**Logs des Container Managers** (`/var/log/packages/ContainerManager.log`
+usw. – dort steht die Compose-Meldung, die `synopkg` nicht weitergibt) und die
+**Meldungstexte aus `libdockerprojectgeneratorworker.so`**.
+
+**Offen:** Der A/B-Test ist auf der NAS noch nicht gelaufen.
+
+### A/B-Test gelaufen (2026-11-08, 12:35) – die Compose-Datei ist unschuldig
+
+`--compose-matrix` hat fünf Varianten mit dem **Compose-Binary des Container
+Managers** (v2.20.1) **im Docker-Share** (`/volume3/docker/cbm-test-N`)
+gestartet:
+
+| Variante | Ergebnis |
+|---|---|
+| 1 ausgeliefert | `OK` exit=0 |
+| 2 ohne `/dev:/dev` | `OK` exit=0 |
+| 3 ohne `group_add` | `OK` exit=0 |
+| 4 ohne `security_opt` | `OK` exit=0 |
+| 5 nur `image` + `container_name` | `OK` exit=0 |
+
+**Damit ist die Compose-Datei als Ursache ausgeschlossen** – auch ein
+minimales Projekt startet im selben Verzeichnis mit demselben Binary.
+
+Der Test hat aber den entscheidenden Hinweis geliefert:
+
+````
+WARN volume "comfobox-data" already exists but was created for
+     project "comfobox" (expected "cbm-test-1")
+````
+
+Das Daten-Volume trägt noch das **Projekt-Label des ersten Projekts**
+(`comfobox`) – aus den Versuchen vor der Umbenennung. Für `docker compose`
+ist das nur eine Warnung, der **Container Manager** verwaltet seine Projekte
+aber selbst (`Docker::Project::WorkerProject`,
+`/var/packages/ContainerManager/etc/projects/<uuid>.lock`, im Binary:
+`AcquireProjects`, `adminCompose`, `WorkerProject`) und bricht beim Anlegen
+ab:
+
+````
+project build fail: [`2201`] `fail compose up '<uuid>'`
+````
+
+`SYNOShareGet failed. synoerr=[0x1400]` in
+`/var/log/packages/ContainerManager.log` passt dazu (fehlgeschlagene
+Zuordnung des Volumes/Share zum Projekt).
+
+**Konsequenz:** `dsm-diagnose.sh` hat zwei neue Modi:
+- `--reset-volume` – sichert den Volume-Inhalt über das Gateway-Image nach
+  `/tmp/comfobox-volume-backup`, löscht `comfobox-data` (Compose legt es
+  danach mit dem richtigen Label an) und entfernt liegengebliebene
+  Projekt-Datensätze unter `/var/packages/ContainerManager/etc/projects` mit
+  „comfobox“ im Namen. Ohne erfolgreiche Sicherung wird **nicht** gelöscht.
+- `--install-fresh` – dasselbe, danach installieren.
+
+Zusätzlich zeigt `show_container_state` jetzt die **Labels** der Volumes und
+die **Projekt-Datensätze** des Container Managers.
+
+**Lehre für die Zukunft:** Ein Projektname ist nicht „nur ein Name“ – er
+steht als Label am Volume. Wird er geändert, gehört das alte Volume einem
+Projekt, das es nicht mehr gibt. Deshalb bleibt der Name ab jetzt stabil
+(`comfobox-gateway`), und das Volume hat einen festen Namen.
+
+### Nachtrag: `--install-fresh` lief ins Leere (2026-11-08, 12:43)
+
+Der Lauf mit `--install-fresh` scheiterte erneut mit `2201`, und der
+Zustandsbericht zeigte das Volume-Label weiterhin als `comfobox`.
+
+**Ursache im Diagnose-Skript selbst:** Die Sicherung des Volume-Inhalts lief
+über einen Hilfs-Container mit `--entrypoint sh` – **ohne** `-u`. Das
+Gateway-Image hat `USER comfobox` (uid 1001) und konnte das Backup-Verzeichnis
+(root, 0755) nicht beschreiben. `cp` scheiterte, `|| true` verschluckte den
+Fehler, die Prüfung `[ -n "$(ls -A …)" ]` schlug fehl → „Sicherung
+fehlgeschlagen“ → das Volume wurde **nicht** gelöscht. Das Skript meldete
+brav „nichts zu tun“ und installierte.
+
+**Fix:**
+- `docker run -u 0:0` (als root im Container) und `chmod 0777` auf das
+  Backup-Verzeichnis
+- Ergebnis über den **Exit-Code** prüfen, nicht über die Ausgabe
+- nach `docker volume rm` **verifizieren**, dass das Volume wirklich weg ist
+- `--install-fresh`/`--install-trace` **brechen ab**, wenn das Volume noch
+  existiert – sonst wiederholt sich derselbe Fehler stumm
+
+**Neu `--install-trace`:** zeichnet während der Installation die
+**docker events** auf (`container create/start/die`) und zeigt das
+Projektverzeichnis im Docker-Share. Damit ist belegt, ob der Worker einen
+Container erzeugt oder schon vorher scheitert.
+
+**Offen:** Der Nachweis, dass das Volume-Label die Ursache war, steht noch
+aus – der nächste Lauf mit `--install-trace` entscheidet es.
+
+### Der Volume-Reset hat gewirkt – und die Ursache liegt woanders (2026-11-08, 18:04)
+
+Der Lauf mit `--install-trace` zeigt: Das Volume wurde **wirklich** entfernt
+(„OK - 2 Datei(en) gesichert", „ist weg (verifiziert)"), der Projektname
+`comfobox-gateway` ist aktiv, keine CM-Projekt-Reste. Trotzdem wieder `2201`.
+
+**Der Mitschnitt beantwortet die Frage nach dem Container:**
+
+````
+volume     create   <id>
+container  create   wizardly_lederberg
+container  attach   wizardly_lederberg
+network    connect  bridge
+volume     mount    <id>
+volume     mount    <id>
+container  start    wizardly_lederberg
+network    disconnect bridge
+volume     unmount  <id>
+volume     unmount  <id>
+container  die      wizardly_lederberg
+volume     destroy  <id>
+container  destroy  wizardly_lederberg
+volume     destroy  <id>
+````
+
+Ein Container wird erzeugt, gestartet und stirbt **innerhalb einer Sekunde**.
+Zwei Dinge passen dabei **nicht** zu unserem Compose-Projekt:
+
+| Beobachtung | Erwartung bei unserem Projekt |
+|---|---|
+| Name `wizardly_lederberg` (Docker-Zufallsname) | `container_name: comfobox-gateway` |
+| `network connect bridge` (Standard-Bridge) | Projektnetz `comfobox-gateway_default` |
+
+⇒ Der sterbende Container stammt **nicht** aus unserer Compose-Datei.
+
+**Zweite Erkenntnis – eine Lücke im bisherigen A/B-Test:** `docker compose up
+-d` liefert **Exit-Code 0, auch wenn der Container eine Sekunde später
+stirbt**. Die fünf „OK"-Varianten haben also nur bewiesen, dass Compose die
+Datei akzeptiert – **nicht**, dass der Gateway läuft. Der A/B-Test war damit
+zu schwach; er wird durch `--app-smoke` ersetzt (startet wie der Worker,
+wartet 15 s, zeigt Zustand, Exit-Code und `docker logs`).
+
+**Neu im Skript:**
+- `--app-smoke` (Rauchtest der Anwendung ohne DSM-Worker)
+- Container-Wache in `--install-trace`: hängt am `docker events`-Strom und
+  kopiert bei `create` sofort `docker inspect` (Image, Pfad, Exit-Code,
+  Projekt-Label) und `docker logs` heraus – **bevor** der Rollback den
+  Container löscht. Bisher war nur bekannt, *dass* er starb, nicht warum.
+
+**Nächster Schritt:** `--app-smoke` beantwortet, ob der Gateway selbst läuft;
+`--install-trace` zeigt, welches Image der sterbende Container benutzt.
+
+### Zwischenstand 18:29 – Image ist gesund, der Worker ruft Compose nie auf
+
+**`--app-smoke` (18:29):** Der Gateway **läuft**.
+`Status=running, ExitCode=0, Restarts=0`, „Now listening on: http://[::]:8080".
+Serial (`/dev/ttyUSB0` fehlt) und MQTT (`localhost:1883`) scheitern
+erwartungsgemäß – das sind keine Startfehler. **Image 1.0.2 ist in Ordnung.**
+
+**Der „mysteriöse" Container war mein eigener.** Das Ereignis
+`wizardly_lederberg` (Zufallsname, Standard-Bridge, zwei Volume-Mounts,
+Lebensdauer < 1 s) stammte aus `reset_volume` – dort startet ein Hilfs-Container
+mit `/data` **und** `/backup`. Kein Fremdprozess, Fehlalarm.
+
+**`--install-trace` (18:30):** Die Wache hat **nichts** mitgeschnitten, das
+Volume wurde **nicht** angelegt, `/volume3/docker` enthält kein
+Projektverzeichnis. Der Worker fasst Docker also überhaupt nicht an und meldet
+trotzdem `2201 fail compose up` in unter einer Sekunde.
+
+⇒ Der Worker scheitert an **seinem eigenen Compose-Aufruf**, bevor Compose
+läuft. Bisher wurde nur das **Standalone**-Binary
+`/var/packages/ContainerManager/target/usr/bin/docker-compose` getestet – der
+Worker benutzt aber vermutlich das **CLI-Plugin** `docker compose`.
+
+**Neu `tools/probe-worker.sh`** (nichts wird verändert, Laufzeit < 5 s):
+prüft u. a. `docker compose version` (Plugin), `docker compose config` mit der
+ausgelieferten Datei, die Plugin-Suchpfade des Docker-CLI und die
+Dateinamen-Erwartungen aus `libdockerprojectgeneratorworker.so`.
+
 ---
 
 ## Nächste Session

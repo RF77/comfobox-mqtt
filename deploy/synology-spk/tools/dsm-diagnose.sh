@@ -10,7 +10,7 @@
 #   `synopkg install` liefert dagegen ein **JSON mit Fehlercode und Text**.
 #
 # Aufruf (auf der NAS, per SSH):
-#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--reset|--install|--worker|--test|--log]
+#   sudo sh dsm-diagnose.sh /pfad/zum/paket.spk [--reset|--reset-volume|--install-fresh|--install-trace|--install|--worker|--compose-matrix|--test|--log]
 #
 #   --reset    **Raeumt alle Reste fehlgeschlagener Versuche weg**: Paket
 #              stoppen und deinstallieren (auch im Status "broken"), die
@@ -19,6 +19,29 @@
 #              Docker-Volume "comfobox-data" bleibt erhalten (dort liegt der
 #              24-h-Schreibzaehler). Danach ist die NAS wieder in dem
 #              Zustand, den eine Erstinstallation erwartet.
+#   --reset-volume
+#              Wie --reset, entfernt **zusaetzlich das Daten-Volume**
+#              'comfobox-data'. Noetig, wenn es noch das Projekt-Label eines
+#              frueheren Projekts traegt - der Container Manager bricht dann
+#              mit "fail compose up" (2201) ab. Der Inhalt wird vorher nach
+#              /tmp/comfobox-volume-backup gesichert; ohne erfolgreiche
+#              Sicherung wird nicht geloescht.
+#   --install-fresh
+#              --reset-volume und danach installieren. Das ist der
+#              vollstaendige Neuanfang. Bricht ab, wenn das Volume nicht
+#              wirklich verschwunden ist (sonst wiederholt sich der Fehler).
+#   --install-trace
+#              Wie --install-fresh, zeichnet aber zusaetzlich die
+#              **docker events** waehrend der Installation auf und zeigt das
+#              Projektverzeichnis im Docker-Share. Damit ist belegt, ob der
+#              Worker einen Container erzeugt (`create`/`start`/`die`) oder
+#              schon vorher scheitert.
+#   --app-smoke
+#              **Rauchtest ohne DSM-Worker.** Startet das Compose-Projekt wie
+#              der Worker (CM-Binary, Docker-Share), wartet 15 s und zeigt
+#              Zustand, Exit-Code und `docker logs`. Damit ist belegt, ob der
+#              Gateway selbst laeuft - `compose up -d` allein beweist das
+#              nicht (es liefert auch bei einem sofort sterbenden Container 0).
 #   --install  **Empfohlen.** Macht zuerst --reset, installiert dann das
 #              Paket und zeigt anschliessend, was der Resource-Worker
 #              "docker-project" ins Syslog geschrieben hat. Genau dort steht
@@ -27,13 +50,23 @@
 #              volle Fehlermeldung von `docker compose up`. Das Paket wird
 #              dabei NICHT installiert - nur die Compose-Datei wird
 #              ausprobiert und danach wieder aufgeraeumt.
+#   --compose-matrix
+#              **A/B-Test der Compose-Datei.** Startet sie mit dem
+#              Compose-Binary des Container Managers im Docker-Share - also
+#              so, wie es der Worker tut - und laesst danach einzelne
+#              Eintraege weg ('/dev:/dev', 'group_add', 'security_opt',
+#              alles bis auf 'image'). Der erste Lauf, der funktioniert,
+#              nennt den schuldigen Eintrag. Nuetzlich, wenn der Worker
+#              `fail compose up` (2201) meldet, die Datei manuell aber
+#              startet. Installiert nichts, laesst das Volume unangetastet.
 #   --test     Probiert mehrere Varianten der privilege-Datei durch und
 #              installiert die erste, die das DSM akzeptiert. Ein Fehler in
 #              prepare_install aendert nichts an der NAS.
 #   --log      Zeigt nur die Log-Auszuege des DSM (nichts wird installiert)
 #
 # Voraussetzung: nur BusyBox-Standardwerkzeuge (sh, tar, md5sum, sha256sum).
-# Ohne --reset/--install/--test/--worker wird **nichts** veraendert.
+# Ohne --reset/--reset-volume/--install-fresh/--install/--test/--worker/
+# --compose-matrix wird **nichts** veraendert.
 # ---------------------------------------------------------------------------
 set -u
 
@@ -186,6 +219,45 @@ show_container_state() {
     docker volume ls --filter "name=comfobox" --format '   {{.Name}}  {{.Driver}}' 2>&1 | head -n 10
     echo ""
 
+    # **Die Labels eines Volumes sind der entscheidende Hinweis.**
+    # Compose legt an jedem selbst erzeugten Volume das Label
+    # "com.docker.compose.project" ab. Gehoert das Volume zu einem anderen
+    # Projekt als dem, das der Worker gerade anlegt, meldet `docker compose`
+    # nur eine Warnung - der Container Manager verwaltet seine Projekte aber
+    # selbst und bricht dann mit "fail compose up" (2201) ab.
+    echo ">> Volume-Details (Projekt-Label):"
+    for v in $(docker volume ls --filter "name=comfobox" --format '{{.Name}}' 2>/dev/null); do
+        docker volume inspect "$v" 2>/dev/null \
+            | sed -n 's/.*"com.docker.compose.project": "\([^"]*\)".*/   Label com.docker.compose.project = \1/p' \
+            | head -n 1
+        docker volume inspect "$v" 2>/dev/null \
+            | sed -n 's|.*"Mountpoint": "\([^"]*\)".*|   \1|p' | head -n 1
+        echo "   ($v)"
+    done
+    echo ""
+
+    # Projekte des Container Managers. Der Worker legt dort seinen
+    # Projekt-Datensatz ab ("/var/packages/ContainerManager/etc/projects/
+    # <uuid>.lock"). Bleibt ein Datensatz eines gerollten Projekts liegen,
+    # kann derselbe Name nicht neu angelegt werden.
+    echo ">> Projekte des Container Managers:"
+    CMP="/var/packages/ContainerManager/etc/projects"
+    if [ -d "$CMP" ]; then
+        ls -la "$CMP" 2>/dev/null | head -n 20 | sed 's/^/   /'
+        for f in "$CMP"/*; do
+            [ -f "$f" ] || continue
+            case "$f" in
+                *.json|*.conf|*.lock) ;;
+                *) continue ;;
+            esac
+            echo "   --- $f ---"
+            grep -o '"name"[^,]*' "$f" 2>/dev/null | head -n 5 | sed 's/^/      /'
+        done
+    else
+        echo "   (Verzeichnis $CMP fehlt)"
+    fi
+    echo ""
+
     # Der Container Manager (Provider des Workers) muss laufen - ohne ihn
     # kann der Worker kein Projekt anlegen.
     if command -v synopkg >/dev/null 2>&1; then
@@ -231,6 +303,217 @@ show_reference_projects() {
         echo "   (keins - es gibt auf dieser NAS kein Vergleichspaket)"
     fi
     echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Logs des Container Managers
+#
+# Der Resource-Worker steckt IM Container Manager
+# (`worker/libdockerprojectgeneratorworker.so`). Seine ausfuehrliche Ausgabe -
+# also die eigentliche Compose-Fehlermeldung - landet deshalb in dessen eigenem
+# Log. In /var/log/messages steht nur die Kurzform:
+#
+#   project build fail: [`2201`] `fail compose up '<uuid>'`
+#
+# Genau diese Zeile beweist: der Worker scheitert **an compose up** - nicht an
+# seiner Konfiguration. Der Grund steht nur hier.
+# ---------------------------------------------------------------------------
+show_cm_logs() {
+    echo ">> Logs des Container Managers (dort steht der Compose-Fehler)"
+    found=0
+    for f in /var/log/packages/ContainerManager.log \
+             /var/log/packages/Docker.log \
+             /var/log/docker.log \
+             /var/log/container_manager.log \
+             /var/log/synolog/synolog.log \
+             /var/log/synolog/synopkg.log
+    do
+        [ -f "$f" ] || continue
+        LINES=$(grep -i -E "compose|comfobox|project (build|create)|2201|error|fail" \
+            "$f" 2>/dev/null | tail -n 25)
+        [ -n "$LINES" ] || continue
+        found=1
+        echo "   --- $f ---"
+        echo "$LINES" | sed 's/^/   /'
+    done
+    if [ "$found" = "0" ]; then
+        echo "   (keine passenden Log-Dateien gefunden)"
+        echo "   Vorhandene Logs in /var/log/packages:"
+        ls /var/log/packages/ 2>/dev/null | head -n 20 | sed 's/^/      /'
+    fi
+    echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Fehlertexte aus dem Worker-Binary
+#
+# Das Binary ist nicht quelloffen, enthaelt aber seine Meldungstexte. Ein Blick
+# hinein zeigt, **welche** Faelle der Worker ueberhaupt unterscheidet - und
+# damit, was "2201" bedeuten kann.
+# ---------------------------------------------------------------------------
+show_worker_binary_hints() {
+    LIB="/var/packages/ContainerManager/target/worker/libdockerprojectgeneratorworker.so"
+    echo ">> Meldungstexte des Workers ($LIB)"
+    if [ ! -f "$LIB" ]; then
+        echo "   (Binary nicht gefunden)"
+        echo ""
+        return 0
+    fi
+    # `strings` gibt es auf dem DSM nicht immer - deshalb rohe Byte-Folgen
+    # ueber `tr` in Zeilen zerlegen.
+    tr -c '[:print:]' '\n' < "$LIB" 2>/dev/null \
+        | grep -i -E "compose|project|docker" \
+        | grep -v -E '^[[:space:]]*$' \
+        | sort -u | head -n 30 | sed 's/^/   /'
+    echo ""
+}
+
+# ---------------------------------------------------------------------------
+# Wo legt der Container Manager seine Projekte an, und womit ruft der Worker
+# Compose auf?
+# ---------------------------------------------------------------------------
+docker_share_dir() {
+    for d in /volume1/docker /volume2/docker /volume3/docker /volume4/docker \
+             /volume5/docker /volume6/docker /volumeUSB1/usbshare/docker; do
+        if [ -d "$d" ]; then
+            printf '%s\n' "$d"
+            return 0
+        fi
+    done
+    return 1
+}
+
+cm_compose_bin() {
+    for c in /var/packages/ContainerManager/target/usr/bin/docker-compose \
+             /usr/local/bin/docker-compose; do
+        if [ -x "$c" ]; then
+            printf '%s\n' "$c"
+            return 0
+        fi
+    done
+    if command -v docker-compose >/dev/null 2>&1; then
+        command -v docker-compose
+        return 0
+    fi
+    return 1
+}
+
+# ---------------------------------------------------------------------------
+# A/B-Test: welcher Eintrag der Compose-Datei laesst `compose up` scheitern?
+#
+# Ausgangslage: Die ausgelieferte Datei laesst sich **manuell** starten (der
+# Container wird "healthy"), im Worker scheitert sie aber mit 2201. Also wird
+# hier so nah wie moeglich am Worker getestet:
+#
+#   * mit dem Compose-Binary des Container Managers (nicht mit dem Plugin)
+#   * **im Docker-Share** (dort legt der Worker das Projekt an) - nicht in /tmp
+#   * mit einem eigenen Projektnamen je Variante
+#
+# Danach werden einzelne Eintraege weggelassen - der erste Lauf, der
+# funktioniert, nennt den schuldigen Eintrag.
+#
+# Das Volume 'comfobox-data' wird **nicht** geloescht (kein `down -v`).
+# ---------------------------------------------------------------------------
+compose_matrix() {
+    SHARE=$(docker_share_dir)
+    if [ -z "$SHARE" ]; then
+        echo "FEHLER: kein Docker-Share (/volume*/docker) gefunden."
+        return 1
+    fi
+    COMPOSE_BIN=$(cm_compose_bin)
+    if [ -z "$COMPOSE_BIN" ]; then
+        echo "FEHLER: docker-compose des Container Managers nicht gefunden."
+        return 1
+    fi
+
+    WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/cbmatrix.$$
+    mkdir -p "$WORK"
+    if ! tar xf "$SPK" -C "$WORK" package.tgz 2>/dev/null \
+       || ! tar xzf "$WORK/package.tgz" -C "$WORK" compose/compose.yaml 2>/dev/null; then
+        echo "FEHLER: compose/compose.yaml laesst sich nicht aus dem SPK lesen"
+        rm -rf "$WORK"
+        return 1
+    fi
+    SRC="$WORK/compose/compose.yaml"
+
+    echo ">> Docker-Share  : $SHARE"
+    echo ">> Compose-Binary: $COMPOSE_BIN"
+    "$COMPOSE_BIN" version 2>&1 | head -n 2 | sed 's/^/   /'
+    echo ""
+
+    IMG=$(sed -n 's/^[[:space:]]*image:[[:space:]]*//p' "$SRC" | head -n 1)
+    echo ">> Image: $IMG"
+    if docker image inspect "$IMG" >/dev/null 2>&1; then
+        echo "   -> lokal vorhanden (kein Pull noetig)"
+    else
+        echo "   -> NICHT lokal vorhanden (muesste gezogen werden)"
+    fi
+    echo ""
+
+    for V in 1 2 3 4 5; do
+        DIR="$SHARE/cbm-test-$V"
+        rm -rf "$DIR"
+        mkdir -p "$DIR"
+        case "$V" in
+            1)
+                cp "$SRC" "$DIR/compose.yaml"
+                DESC="ausgeliefert (unveraendert)"
+                ;;
+            2)
+                grep -v '^[[:space:]]*-[[:space:]]*"/dev:/dev"' "$SRC" > "$DIR/compose.yaml"
+                DESC="ohne '/dev:/dev' (Serial-Passthrough)"
+                ;;
+            3)
+                awk '
+                    /^[[:space:]]*group_add:[[:space:]]*$/ { skip = 1; next }
+                    skip == 1 { skip = 0; if ($0 ~ /^[[:space:]]*-/) next }
+                    { print }
+                ' "$SRC" > "$DIR/compose.yaml"
+                DESC="ohne 'group_add'"
+                ;;
+            4)
+                awk '
+                    /^[[:space:]]*security_opt:[[:space:]]*$/ { skip = 1; next }
+                    skip == 1 { skip = 0; if ($0 ~ /^[[:space:]]*-/) next }
+                    { print }
+                ' "$SRC" > "$DIR/compose.yaml"
+                DESC="ohne 'security_opt'"
+                ;;
+            5)
+                printf 'services:\n  gateway:\n    image: %s\n    container_name: cbm-test-5\n' \
+                    "$IMG" > "$DIR/compose.yaml"
+                DESC="minimal (nur image + container_name)"
+                ;;
+        esac
+
+        # Eigener Containername je Variante - schliesst Namenskollisionen aus.
+        sed -i "s|container_name: comfobox-gateway|container_name: cbm-test-$V|" \
+            "$DIR/compose.yaml" 2>/dev/null || true
+
+        echo "=== Variante $V: $DESC ==="
+        if ! docker compose -f "$DIR/compose.yaml" config >/dev/null 2>&1; then
+            echo "   (Hinweis: 'docker compose config' meldet einen Syntaxfehler)"
+        fi
+        ( cd "$DIR" && "$COMPOSE_BIN" -p "cbm-test-$V" up -d ) > "$DIR/up.log" 2>&1
+        RC=$?
+        if [ "$RC" = "0" ]; then
+            echo "   OK   compose up: exit=0"
+        else
+            echo "   FEHLER compose up: exit=$RC"
+        fi
+        tail -n 15 "$DIR/up.log" | sed 's/^/   /'
+        echo ""
+
+        ( cd "$DIR" && "$COMPOSE_BIN" -p "cbm-test-$V" down --remove-orphans ) \
+            >/dev/null 2>&1 || true
+        docker rm -f "cbm-test-$V" >/dev/null 2>&1 || true
+        docker network rm "cbm-test-${V}_default" >/dev/null 2>&1 || true
+        rm -rf "$DIR"
+    done
+
+    echo ">> Aufgeraeumt. Das Volume 'comfobox-data' wurde NICHT angetastet."
+    echo ""
+    rm -rf "$WORK"
 }
 
 # ---------------------------------------------------------------------------
@@ -494,6 +777,135 @@ reset_all() {
     echo ""
 }
 
+# ---------------------------------------------------------------------------
+# Das Daten-Volume ersetzen
+#
+# **Warum das noetig sein kann:**
+# Compose legt an jedem selbst erzeugten Volume ein Label
+# `com.docker.compose.project=<projektname>` ab. Ueberlebt das Volume einen
+# Projektwechsel oder ein gerolltes Projekt, gehoert es weiter dem **alten**
+# Namen. `docker compose` meldet dann nur
+#
+#   WARN volume "comfobox-data" already exists but was created for
+#        project "comfobox" (expected "comfobox-gateway")
+#
+# und macht weiter - der Container Manager verwaltet seine Projekte jedoch
+# selbst (`Docker::Project::WorkerProject`,
+# `/var/packages/ContainerManager/etc/projects/<uuid>.lock`) und bricht beim
+# Anlegen ab:
+#
+#   project build fail: [`2201`] `fail compose up '<uuid>'`
+#
+# Der Inhalt wird vorher nach /tmp gesichert; das Volume wird danach von
+# Compose frisch - mit dem richtigen Label - angelegt.
+# ---------------------------------------------------------------------------
+VOLUME_NAME="comfobox-data"
+VOLUME_BACKUP="/tmp/comfobox-volume-backup"
+
+reset_volume() {
+    if ! command -v docker >/dev/null 2>&1; then
+        echo ">> docker nicht im PATH - Volume kann nicht geprueft werden"
+        echo ""
+        return 0
+    fi
+
+    if ! docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+        echo ">> Volume '$VOLUME_NAME' existiert nicht (nichts zu tun)"
+        echo ""
+        return 0
+    fi
+
+    echo ">> Volume '$VOLUME_NAME' vor dem Loeschen"
+    docker volume inspect "$VOLUME_NAME" 2>/dev/null \
+        | grep -E '"(Name|Mountpoint)"|com\.docker\.compose\.project|com\.synology' \
+        | head -n 8 | sed 's/^/   /'
+    echo ""
+
+    # Inhalt sichern - ueber das Image des Gateways (es ist lokal vorhanden
+    # und bringt eine Shell mit).
+    #
+    # **Zwei Fallen, die hier beide zugeschlagen haben:**
+    #   1. Das Image laeuft als uid 1001 (`USER comfobox`). Ein Container
+    #      mit dieser Kennung kann ein root-eigenes Verzeichnis (0755)
+    #      nicht beschreiben - `cp` scheitert stumm, die Sicherung ist leer
+    #      und das Volume bleibt liegen. Deshalb `-u 0:0`.
+    #   2. `|| true` im cp-Befehl verschluckte den Fehler. Jetzt wird das
+    #      Ergebnis geprueft, nicht die Ausgabe.
+    IMG=""
+    if [ -f "/var/packages/ComfoBoxGateway/target/image" ]; then
+        IMG=$(head -n 1 "/var/packages/ComfoBoxGateway/target/image" 2>/dev/null)
+    fi
+    [ -n "$IMG" ] || IMG="ghcr.io/rf77/comfobox-gateway:1.0.2"
+
+    rm -rf "$VOLUME_BACKUP"
+    mkdir -p "$VOLUME_BACKUP"
+    chmod 0777 "$VOLUME_BACKUP" 2>/dev/null || true
+    echo ">> Inhalt sichern nach $VOLUME_BACKUP (Image: $IMG, als root im Container)"
+    SAVE_LOG=$(docker run --rm -u 0:0 --entrypoint sh \
+        -v "${VOLUME_NAME}:/data:ro" -v "${VOLUME_BACKUP}:/backup" \
+        "$IMG" -c 'cp -a /data/. /backup/' 2>&1)
+    SAVE_RC=$?
+    SAVED_FILES=$(find "$VOLUME_BACKUP" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$SAVE_RC" = "0" ] && [ "$SAVED_FILES" != "0" ]; then
+        echo "   OK - $SAVED_FILES Datei(en) gesichert"
+    elif [ "$SAVE_RC" = "0" ]; then
+        echo "   OK - das Volume war leer (nichts zu sichern)"
+    else
+        echo "   WARNUNG: Sicherung fehlgeschlagen (exit=$SAVE_RC) - Volume bleibt"
+        printf '%s\n' "$SAVE_LOG" | head -n 8 | sed 's/^/      /'
+        echo "   Bewusst ohne Sicherung loeschen:"
+        echo "     sudo docker volume rm $VOLUME_NAME"
+        echo ""
+        return 1
+    fi
+
+    if docker volume rm "$VOLUME_NAME" >/dev/null 2>&1; then
+        echo "   Volume entfernt (Compose legt es mit neuem Label an)"
+    else
+        echo "   WARNUNG: Volume liess sich nicht entfernen (noch in Benutzung?)"
+    fi
+
+    # **Verifizieren, nicht hoffen.** Genau hier lag der Fehler: das Volume
+    # galt als "gesichert", wurde aber nie geloescht - und der Worker
+    # scheiterte danach am alten Projekt-Label.
+    if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+        echo ">> FEHLER: Volume '$VOLUME_NAME' existiert weiterhin!"
+        echo "   Pruefen: docker ps -a | grep $VOLUME_NAME"
+        echo ""
+        return 1
+    fi
+    echo ">> Volume '$VOLUME_NAME' ist weg (verifiziert)"
+    echo ""
+
+    # Projekt-Reste des Container Managers: ein liegengebliebener Datensatz
+    # verhindert das erneute Anlegen desselben Projekts.
+    CMP="/var/packages/ContainerManager/etc/projects"
+    if [ -d "$CMP" ]; then
+        echo ">> Projekt-Datensaetze des Container Managers pruefen"
+        found=0
+        for f in "$CMP"/*; do
+            [ -e "$f" ] || continue
+            case "$(basename "$f")" in
+                *comfobox*) found=1 ;;
+            esac
+        done
+        if [ "$found" = "1" ]; then
+            echo "   Reste mit 'comfobox' im Namen werden entfernt:"
+            for f in "$CMP"/*comfobox*; do
+                [ -e "$f" ] || continue
+                if rm -rf "$f" 2>/dev/null; then
+                    echo "   entfernt: $f"
+                else
+                    echo "   WARNUNG: $f liess sich nicht entfernen"
+                fi
+            done
+        else
+            echo "   keine Reste gefunden"
+        fi
+        echo ""
+    fi
+}
+
 # Nach einer erfolgreichen Installation: die gesicherten var-Dateien
 # zurueckspielen (Portliste, Sicherung des Schreibzaehlers).
 restore_kept_var() {
@@ -503,6 +915,249 @@ restore_kept_var() {
     cp -a "$KEEP_DIR/var/." "/var/packages/ComfoBoxGateway/var/" 2>/dev/null || true
     echo ">> var/ aus $KEEP_DIR zurueckgespielt"
     rm -rf "$KEEP_DIR"
+}
+
+# ---------------------------------------------------------------------------
+# Installation mit Mitschnitt
+#
+# Warum: Der Worker meldet nur `fail compose up '<uuid>'` und rollt danach
+# zurueck - Container und Netzwerk sind weg, bevor man sie ansehen kann.
+# `docker events` zeichnet dagegen auf, was **waehrend** der Installation
+# passiert:
+#
+#   container create  → der Worker hat einen Container erzeugt
+#   container start   → er ist gestartet
+#   container die     → er ist gestorben (mit Exit-Code)
+#
+# Bleibt `create` aus, scheitert Compose **vor** dem Containerstart - dann
+# liegt es an Volume, Netzwerk, Image oder an der Compose-Datei, die der
+# Worker tatsaechlich benutzt.
+#
+# Zusaetzlich wird das Projektverzeichnis im Docker-Share gezeigt: Was der
+# Worker dort ablegt, ist die Datei, mit der er wirklich arbeitet.
+# ---------------------------------------------------------------------------
+show_share_state() {
+    SHARE=$(docker_share_dir 2>/dev/null)
+    if [ -z "$SHARE" ]; then
+        echo "   (kein Docker-Share gefunden)"
+        return 0
+    fi
+    echo ">> Inhalt von $SHARE:"
+    ls -la "$SHARE" 2>/dev/null | head -n 20 | sed 's/^/   /'
+    echo ""
+    for d in "$SHARE"/*comfobox*; do
+        [ -d "$d" ] || continue
+        echo ">> Projektverzeichnis $d (was der Worker dort abgelegt hat):"
+        ls -la "$d" 2>/dev/null | head -n 20 | sed 's/^/   /'
+        for f in "$d"/*.yaml "$d"/*.yml; do
+            [ -f "$f" ] || continue
+            echo "   --- $(basename "$f") ---"
+            grep -v '^[[:space:]]*#' "$f" 2>/dev/null \
+                | grep -v '^[[:space:]]*$' | head -n 40 | sed 's/^/      /'
+        done
+        echo ""
+    done
+}
+
+# ---------------------------------------------------------------------------
+# Container-Wache
+#
+# Der Worker rollt bei einem Fehler sofort zurueck - Container, Netzwerk und
+# Volume sind weg, bevor man sie ansehen kann. `docker events` allein zeigt
+# nur, DASS ein Container starb (siehe Mitschnitt: create → start → die in
+# unter einer Sekunde), aber nicht warum.
+#
+# Diese Wache haengt am Event-Strom und greift im Moment von `create` zu:
+# sie kopiert `docker inspect` (Image, Befehl, Labels, Mounts) und
+# `docker logs` (die Ausgabe des Prozesses) heraus, solange der Container
+# noch existiert.
+# ---------------------------------------------------------------------------
+CONTAINER_WATCH=""
+
+start_container_watch() {
+    WATCH_DIR=$1
+    CONTAINER_WATCH="$WATCH_DIR/containers.log"
+    : > "$CONTAINER_WATCH"
+
+    (
+        docker events \
+            --filter 'type=container' \
+            --filter 'event=create' --filter 'event=start' \
+            --filter 'event=die' --filter 'event=destroy' \
+            --format '{{.Action}} {{.Actor.ID}} exit={{.Actor.Attributes.exitCode}}' 2>/dev/null \
+        | while read -r ACT ID EXIT rest; do
+            {
+                echo "================================================================"
+                echo "Event: $ACT   ($EXIT)"
+                echo "----------------------------------------------------------------"
+                # `docker inspect -f` statt JSON+Parsing: die Feldnamen sind
+                # stabil, und die Labels verraten die **tatsaechlich benutzte**
+                # Compose-Datei. Genau das ist hier die Frage.
+                docker inspect -f 'Name:       {{.Name}}
+Image:      {{.Config.Image}}
+ImageId:    {{.Image}}
+Entrypoint: {{json .Config.Entrypoint}}
+Cmd:        {{json .Config.Cmd}}
+User:       {{.Config.User}}
+State:      {{.State.Status}}  exit={{.State.ExitCode}}  err={{.State.Error}}
+
+Labels:
+  compose.project        = {{index .Config.Labels "com.docker.compose.project"}}
+  compose.service        = {{index .Config.Labels "com.docker.compose.service"}}
+  compose.project.working_dir   = {{index .Config.Labels "com.docker.compose.project.working_dir"}}
+  compose.project.config_files  = {{index .Config.Labels "com.docker.compose.project.config_files"}}
+  compose.version        = {{index .Config.Labels "com.docker.compose.version"}}
+
+Mounts:
+{{range .Mounts}}  {{.Type}}  {{.Source}} -> {{.Destination}}
+{{end}}' "$ID" 2>&1
+                echo "--- docker logs ($ACT) ---"
+                docker logs "$ID" 2>&1 | tail -n 40
+                echo ""
+            } >> "$CONTAINER_WATCH" 2>&1
+        done
+    ) &
+    WATCH_PID=$!
+}
+
+stop_container_watch() {
+    [ -n "${WATCH_PID:-}" ] || return 0
+    kill "$WATCH_PID" 2>/dev/null || true
+    WATCH_PID=""
+}
+
+# ---------------------------------------------------------------------------
+# Rauchtest der Anwendung - ohne DSM-Worker
+#
+# **Die Luecke im bisherigen A/B-Test:** `docker compose up -d` liefert
+# Exit-Code 0, auch wenn der Container eine Sekunde spaeter stirbt. Der Test
+# hat deshalb nur bewiesen, dass Compose die Datei akzeptiert - nicht, dass
+# der Gateway laeuft.
+#
+# Dieser Test startet das Projekt mit dem Compose-Binary des Container
+# Managers im Docker-Share (wie der Worker), wartet und zeigt dann:
+#   * ob der Container noch laeuft,
+#   * seinen Exit-Code,
+#   * seine Ausgabe (`docker logs`) - dort steht der Absturzgrund.
+# ---------------------------------------------------------------------------
+app_smoke() {
+    SHARE=$(docker_share_dir 2>/dev/null)
+    COMPOSE_BIN=$(cm_compose_bin 2>/dev/null)
+    if [ -z "$SHARE" ] || [ -z "$COMPOSE_BIN" ]; then
+        echo "FEHLER: Docker-Share oder Compose-Binary nicht gefunden."
+        return 1
+    fi
+
+    WORK=$(mktemp -d 2>/dev/null) || WORK=/tmp/cbsmoke.$$
+    mkdir -p "$WORK"
+    tar xf "$SPK" -C "$WORK" package.tgz 2>/dev/null \
+        && tar xzf "$WORK/package.tgz" -C "$WORK" compose/compose.yaml 2>/dev/null || {
+            echo "FEHLER: compose.yaml nicht lesbar"; rm -rf "$WORK"; return 1; }
+
+    DIR="$SHARE/cbm-smoke"
+    rm -rf "$DIR"
+    mkdir -p "$DIR"
+    cp "$WORK/compose/compose.yaml" "$DIR/compose.yaml"
+    sed -i "s|container_name: comfobox-gateway|container_name: cbm-smoke|" "$DIR/compose.yaml" 2>/dev/null || true
+
+    echo ">> Starte wie der Worker: $COMPOSE_BIN im Share $DIR"
+    echo ""
+    ( cd "$DIR" && "$COMPOSE_BIN" -p cbm-smoke up -d ) 2>&1 | sed 's/^/   /'
+    echo ""
+
+    echo ">> 15 s warten - stirbt der Gateway, passiert es jetzt"
+    sleep 15
+
+    STATE=$(docker inspect cbm-smoke --format '{{.State.Status}}' 2>/dev/null)
+    EXITC=$(docker inspect cbm-smoke --format '{{.State.ExitCode}}' 2>/dev/null)
+    RESTARTS=$(docker inspect cbm-smoke --format '{{.RestartCount}}' 2>/dev/null)
+    HEALTH=$(docker inspect cbm-smoke --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}n/a{{end}}' 2>/dev/null)
+
+    echo ">> Zustand nach 15 s:"
+    echo "   Status=$STATE  ExitCode=$EXITC  Restarts=$RESTARTS  Health=$HEALTH"
+    echo ""
+
+    if [ "$STATE" = "running" ]; then
+        echo "   -> Der Gateway LAEUFT. Die Anwendung ist in Ordnung; der Fehler"
+        echo "      liegt dann ausschliesslich im Zusammenspiel mit dem Worker."
+    else
+        echo "   -> Der Gateway laeuft NICHT. Das ist die Ursache."
+    fi
+    echo ""
+
+    echo ">> Ausgabe des Containers (docker logs):"
+    docker logs cbm-smoke 2>&1 | tail -n 60 | sed 's/^/   /'
+    echo ""
+
+    echo ">> Aufraeumen"
+    ( cd "$DIR" && "$COMPOSE_BIN" -p cbm-smoke down --remove-orphans ) 2>&1 \
+        | tail -n 5 | sed 's/^/   /'
+    docker rm -f cbm-smoke >/dev/null 2>&1 || true
+    rm -rf "$DIR" "$WORK"
+    echo ""
+}
+
+install_with_trace() {
+    echo ">> Ausgangszustand"
+    echo "   Volume '$VOLUME_NAME':"
+    if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+        docker volume inspect "$VOLUME_NAME" 2>/dev/null \
+            | sed -n 's/.*"com.docker.compose.project": "\([^"]*\)".*/      Label com.docker.compose.project = \1/p'
+    else
+        echo "      (existiert nicht)"
+    fi
+    echo ""
+
+    TRACE_DIR=$(mktemp -d 2>/dev/null) || TRACE_DIR=/tmp/cbtrace.$$
+    mkdir -p "$TRACE_DIR"
+
+    echo ">> Container-Wache starten (greift bei 'create' zu, vor dem Rollback)"
+    start_container_watch "$TRACE_DIR"
+    sleep 2
+
+    T0=$(date '+%Y-%m-%dT%H:%M:%S')
+    echo ">> synopkg install (ab $T0)"
+    synopkg install "$SPK" 2>&1
+    echo ""
+
+    # Etwas warten, damit auch 'die'/'destroy' noch erfasst werden.
+    sleep 4
+    stop_container_watch
+    T1=$(date '+%Y-%m-%dT%H:%M:%S')
+
+    echo ">> docker events zwischen $T0 und $T1:"
+    docker events --since "$T0" --until "$T1" \
+        --filter 'type=container' --filter 'type=volume' \
+        --filter 'type=network' --filter 'type=image' \
+        --format '   {{.Type}}  {{.Action}}  {{.Actor.ID}}' 2>&1 \
+        | cut -c1-90 | head -n 60
+    echo ""
+
+    echo ">> Was die Wache mitgeschnitten hat:"
+    if [ -s "$CONTAINER_WATCH" ]; then
+        head -n 120 "$CONTAINER_WATCH" | sed 's/^/   /'
+    else
+        echo "   (nichts - es wurde kein Container erzeugt)"
+    fi
+    echo ""
+
+    echo ">> Volume '$VOLUME_NAME' nach dem Lauf:"
+    if docker volume inspect "$VOLUME_NAME" >/dev/null 2>&1; then
+        docker volume inspect "$VOLUME_NAME" 2>/dev/null \
+            | sed -n 's/.*"com.docker.compose.project": "\([^"]*\)".*/   Label com.docker.compose.project = \1/p'
+        echo "   (existiert)"
+    else
+        echo "   (existiert nicht - der Worker hat es also nicht angelegt)"
+    fi
+    echo ""
+
+    echo ">> Alle Images auf der NAS (welches der Worker benutzt):"
+    docker images 2>&1 | head -n 15 | sed 's/^/   /'
+    echo ""
+
+    show_share_state
+
+    rm -rf "$TRACE_DIR"
 }
 
 # Die Compose-Datei mit Docker pruefen - so sieht man einen Syntaxfehler,
@@ -710,6 +1365,7 @@ worker_test() {
 # ---------------------------------------------------------------------------
 show_logs
 show_worker_log
+show_cm_logs
 show_container_state
 show_reference_projects
 
@@ -719,6 +1375,65 @@ show_reference_projects
 if [ "$MODE" = "--reset" ]; then
     echo "--- 8. Aufraeumen (kein Installationsversuch) ---"
     reset_all
+    show_worker_log
+elif [ "$MODE" = "--reset-volume" ]; then
+    echo "--- 8. Aufraeumen inkl. Daten-Volume ---"
+    echo "Der Inhalt des Volumes wird vorher nach $VOLUME_BACKUP gesichert."
+    echo ""
+    reset_all
+    reset_volume
+    echo ">> Danach installieren mit:"
+    echo "   sudo sh $0 $SPK --install"
+    echo ""
+elif [ "$MODE" = "--install-fresh" ]; then
+    echo "--- 8. Aufraeumen inkl. Daten-Volume ---"
+    reset_all
+    if ! reset_volume; then
+        echo ""
+        echo ">>> ABBRUCH: Das Daten-Volume liess sich nicht entfernen."
+        echo "    Eine Installation wuerde wieder am alten Projekt-Label scheitern."
+        echo "    Loeschen Sie es bewusst und starten Sie erneut:"
+        echo "      sudo docker volume rm $VOLUME_NAME"
+        echo "      sudo sh $0 $SPK --install-fresh"
+        echo ""
+        exit 1
+    fi
+    echo "--- 9. Compose-Datei pruefen ---"
+    validate_compose
+    echo "--- 10. Installationsversuch ---"
+    install_with_trace
+    echo "--- 11. Ergebnis ---"
+    STATE=$(synopkg status ComfoBoxGateway 2>&1)
+    echo "$STATE" | head -n 3 | sed 's/^/   /'
+    echo ""
+    case "$STATE" in
+        *broken*|*install_corruption*|"") : ;;
+        *) restore_kept_var ;;
+    esac
+    echo ""
+    echo "--- 12. Was der Resource-Worker gemeldet hat ---"
+    show_worker_log
+    show_container_state
+    show_logs
+elif [ "$MODE" = "--install-trace" ]; then
+    echo "--- 8. Aufraeumen inkl. Daten-Volume ---"
+    reset_all
+    if ! reset_volume; then
+        echo ""
+        echo ">>> ABBRUCH: Das Daten-Volume liess sich nicht entfernen."
+        echo "      sudo docker volume rm $VOLUME_NAME"
+        echo ""
+        exit 1
+    fi
+    echo "--- 9. Installation mit docker-events-Mitschnitt ---"
+    echo "Der Mitschnitt zeigt, ob der Worker ueberhaupt einen Container erzeugt."
+    echo ""
+    install_with_trace
+    echo "--- 10. Ergebnis ---"
+    STATE=$(synopkg status ComfoBoxGateway 2>&1)
+    echo "$STATE" | head -n 3 | sed 's/^/   /'
+    echo ""
+    echo "--- 11. Was der Resource-Worker gemeldet hat ---"
     show_worker_log
 elif [ "$MODE" = "--install" ]; then
     echo "--- 8. Reste fehlgeschlagener Versuche entfernen ---"
@@ -747,6 +1462,19 @@ elif [ "$MODE" = "--install" ]; then
     show_worker_log
     show_container_state
     show_logs
+elif [ "$MODE" = "--app-smoke" ]; then
+    echo "--- 8. Rauchtest der Anwendung (ohne DSM-Worker) ---"
+    echo "Es wird nichts installiert. Der Container wird nach 15 s entfernt."
+    echo ""
+    app_smoke
+elif [ "$MODE" = "--compose-matrix" ]; then
+    echo "--- 8. A/B-Test der Compose-Datei (wie der Worker) ---"
+    echo "Es wird nichts installiert. Das Volume bleibt unangetastet."
+    echo ""
+    compose_matrix
+    echo "--- 9. Fehlertexte und Logs ---"
+    show_worker_binary_hints
+    show_cm_logs
 elif [ "$MODE" = "--worker" ]; then
     echo "--- 8. Worker-Emulation (docker compose up) ---"
     echo "Das Paket wird dabei NICHT installiert."
