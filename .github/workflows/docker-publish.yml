@@ -278,9 +278,45 @@ jobs:
             echo ''
             echo '- Integration (HACS): `custom_components/comfobox`'
             echo '- Add-on: `comfobox` (Port 8099)'
+            echo ''
+            echo '## Raspberry Pi'
+            echo ''
+            echo 'Ein Befehl auf dem Pi (64-Bit-Betriebssystem vorausgesetzt):'
+            echo ''
+            echo '```bash'
+            echo "curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/master/deploy/pi/install.sh | sudo sh"
+            echo '```'
+            echo ''
+            echo 'Das Image liegt zusätzlich als `comfobox-gateway-arm64.tar.gz` bei – für'
+            echo 'einen Pi ohne Registry-Zugriff:'
+            echo ''
+            echo '```bash'
+            echo "sudo sh install.sh --offline comfobox-gateway-arm64.tar.gz"
+            echo '```'
+            echo ''
+            echo 'Anleitung: `docs/benutzer/07b-raspberry-pi.md`'
           } > release-notes.md
 
           cat release-notes.md
+
+      # Das Image zusätzlich als **Datei** am Release.
+      #
+      # Warum überhaupt: Auf einem Pi ohne Registry-Zugriff (kein Internet,
+      # Firewall, oder GHCR nicht erreichbar) ist ein Release-Asset der
+      # einzige Weg. Der Installer lädt es mit --offline.
+      #
+      # `docker pull --platform` funktioniert auf dem amd64-Runner ohne QEMU:
+      # das Image wird nur gespeichert, nicht ausgeführt. `docker save` behält
+      # die Architektur im Manifest – auf dem Pi erkennt Docker sie wieder.
+      - name: Image als Release-Asset exportieren (arm64)
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          set -euo pipefail
+          IMAGE="${REGISTRY}/rf77/comfobox-gateway:${VERSION}"
+          docker pull --platform linux/arm64 "$IMAGE"
+          docker save "$IMAGE" | gzip -9 > comfobox-gateway-arm64.tar.gz
+          ls -lh comfobox-gateway-arm64.tar.gz
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -289,3 +325,4 @@ jobs:
           body_path: release-notes.md
           files: |
             CHANGELOG.md
+            comfobox-gateway-arm64.tar.gz

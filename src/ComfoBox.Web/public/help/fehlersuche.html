@@ -21,6 +21,7 @@
         <li><a href="home-assistant.html">Home Assistant</a></li>
         <li><a href="bedienung.html">Bedienung</a></li>
         <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="07b-raspberry-pi.html">Raspberry Pi</a></li>
         <li><a href="synology.html">Synology</a></li>
         <li><a href="08b-synology-test.html">Synology testen</a></li>
         <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
@@ -166,7 +167,7 @@ dagegen genau, welcher Schritt geklappt hat:</p>
 </thead>
 <tbody><tr>
 <td><code>Acquire docker-project … (fail)</code></td>
-<td>Der Worker hat das Compose-Projekt nicht angelegt. Meist stimmt die Struktur von <code>package.tgz</code> nicht.</td>
+<td>Der Worker hat das Compose-Projekt nicht angelegt. Meist stimmt die Struktur von <code>package.tgz</code> nicht – oder es liegen Reste eines früheren Versuchs herum.</td>
 </tr>
 <tr>
 <td><code>Acquire docker-project … (done)</code></td>
@@ -177,25 +178,34 @@ dagegen genau, welcher Schritt geklappt hat:</p>
 <td>Die Skripte liefen durch.</td>
 </tr>
 </tbody></table>
+<p><strong>Den Grund nennt nur das Syslog</strong>, nicht <code>synopkg.log</code>. Der Worker schreibt
+nach <code>/var/log/messages</code>:</p>
+<pre><code class="language-bash">sudo grep -i -E &quot;docker_project|comfobox&quot; /var/log/messages | tail -20
+</code></pre>
+<p>Steht dort <strong>gar nichts</strong>, ist der Worker gescheitert, <em>bevor</em> er mit Docker
+gesprochen hat – dann liegt es am Zustand des Pakets (siehe nächster
+Abschnitt) oder an <code>conf/resource</code>.</p>
 <p><strong>Lösung:</strong> Holen Sie den echten Fehlercode mit dem Diagnose-Skript (unten).</p>
 <h3>Wichtig: „broken“ nach einem Fehlversuch</h3>
 <p>Schlägt eine Installation fehl, hinterlässt DSM 7.4 das Paket im Status
 <strong>„broken“ (150)</strong>. Beim nächsten Versuch versucht DSM dann ein <strong>Update</strong>
 statt einer Neuinstallation – und scheitert an <em>„package does not have
 preupgrade / postupgrade script“</em> (Fehler <strong>261</strong>), obwohl das Paket
-in Ordnung ist.</p>
-<p><strong>Vor dem nächsten Installationsversuch das Paket entfernen:</strong></p>
-<blockquote>
-<p><strong>Paketcenter → ComfoBox Gateway → Deinstallieren</strong></p>
-<p>(geht nur, wenn der Status „Installiert“ ist – sonst über SSH:
-<code>sudo synopkg uninstall ComfoBoxGateway</code>)</p>
-</blockquote>
+in Ordnung ist. Zusätzlich bleiben Verzeichnisse, Container und Netzwerke
+des Fehlversuchs liegen – auch die lassen den Worker sofort scheitern.</p>
+<p><strong>Vor dem nächsten Installationsversuch deshalb aufräumen</strong> – ein Befehl
+erledigt alles (Paket deinstallieren, Verzeichnisse entfernen, Container und
+Netzwerke löschen):</p>
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/&lt;paket&gt;.spk --reset
+</code></pre>
+<p>Das Docker-Volume <code>comfobox-data</code> bleibt dabei <strong>erhalten</strong> – dort liegt der
+24-h-Schreibzähler (EEPROM-Schutz).</p>
 <blockquote>
 <p><strong>Meistens ist es die falsche Datei:</strong> Auf der NAS liegen oft mehrere
 <code>.spk</code> nebeneinander, und im Dateiauswahler wird die <strong>alte</strong> angeklickt.
 Prüfen Sie das so:</p>
 <pre><code class="language-bash">tar tf /volume1/pfad/zur/datei.spk | grep conf
-# erwartet: conf/ und conf/privilege
+# erwartet: conf/ und conf/privilege und conf/resource
 </code></pre>
 </blockquote>
 <h3>Den echten Fehlercode holen</h3>
@@ -207,17 +217,21 @@ ssh admin@&lt;IP-der-NAS&gt;
 
 # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
 scp dsm-diagnose.sh admin@&lt;IP-der-NAS&gt;:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk admin@&lt;IP-der-NAS&gt;:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_&lt;version&gt;.spk admin@&lt;IP-der-NAS&gt;:/tmp/
 
-# 4. Diagnose ausführen
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --install
+# 4. Diagnose ausführen - räumt zuerst auf und installiert dann
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_&lt;version&gt;.spk --install
 </code></pre>
 <p>Das Skript zeigt unter anderem:</p>
 <ul>
 <li>die <strong>Struktur von <code>package.tgz</code></strong> (muss auf der obersten Ebene liegen)</li>
+<li><strong><code>conf/resource</code></strong> und ob der dort genannte <code>path</code> zum Paketinhalt passt</li>
 <li>die <strong>Compose-Datei</strong> und prüft sie mit <code>docker compose config</code></li>
+<li>die <strong>Reste</strong> früherer Versuche (Broken-Status, Container, Netzwerke) und
+räumt sie weg</li>
 <li>den <strong>Fehlercode</strong> aus der JSON-Ausgabe von <code>synopkg install</code></li>
-<li>entfernt ein Paket im Status „broken“ <strong>vor</strong> dem Versuch</li>
+<li>die <strong>Meldungen des Resource-Workers</strong> aus <code>/var/log/messages</code></li>
+<li>ob ein <strong>anderes Paket auf der NAS</strong> denselben Worker nutzt (Vergleich)</li>
 </ul>
 <p>Die vollständige Anleitung steht in
 <a href="08b-synology-test.html">Synology testen</a>.</p>
@@ -246,7 +260,7 @@ verborgen.</p>
 </tbody></table>
 <p><strong>Lösung:</strong> Der Modus <code>--worker</code> macht exakt das, was der DSM-Worker macht,
 und zeigt die <strong>volle</strong> Docker-Fehlermeldung:</p>
-<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --worker
+<pre><code class="language-bash">sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_&lt;version&gt;.spk --worker
 </code></pre>
 <p>Das Skript entpackt das Paket wie das DSM, zieht das Image, prüft die
 belegten Ports und führt <code>docker compose up</code> aus – mit der vollständigen

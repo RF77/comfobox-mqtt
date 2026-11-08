@@ -20,6 +20,7 @@
         <li><a href="home-assistant.html">Home Assistant</a></li>
         <li><a href="bedienung.html">Bedienung</a></li>
         <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="07b-raspberry-pi.html">Raspberry Pi</a></li>
         <li><a href="synology.html">Synology</a></li>
         <li><a href="08b-synology-test.html">Synology testen</a></li>
         <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
@@ -214,8 +215,8 @@ sudo fuser -v /dev/ttyUSB0
 <td>einstecken, Seite neu laden</td>
 </tr>
 <tr>
-<td>kein Treiber</td>
-<td>CH340/FTDI-Treiber des NAS/HA-Betriebssystems installieren</td>
+<td>kein Treiber im Betriebssystem</td>
+<td>Treiber installieren (unter Linux <code>ch341</code> bzw. <code>ftdi_sio</code>; unter Windows den CH340-Treiber)</td>
 </tr>
 <tr>
 <td>Port ohne Berechtigung</td>
@@ -225,7 +226,73 @@ sudo fuser -v /dev/ttyUSB0
 <td>Adapter wird nach dem Reboot später erkannt</td>
 <td>das Gateway wartet mit Wiederholung – das ist normal</td>
 </tr>
+<tr>
+<td>Port verschwindet im Betrieb</td>
+<td>Kabel, Hub oder Stromversorgung – der Adapter wird neu verhandelt</td>
+</tr>
 </tbody></table>
+<h3>Auf einem Synology-NAS: das Prüfskript</h3>
+<p>Auf einem NAS lässt sich von der Web-Oberfläche aus nicht erkennen, <strong>warum</strong>
+kein Port erscheint – Hardware, Kernel-Treiber, Container und Anwendung sehen
+von außen gleich aus. Dafür gibt es ein Skript, das nichts verändert und am
+Ende genau eine Ursache nennt:</p>
+<pre><code class="language-bash">cd /volume1/homes/&lt;benutzer&gt;
+sudo sh usb-serial-check.sh            # Containername ist optional
+</code></pre>
+<p>Es prüft der Reihe nach: Ist der Adapter am USB-Bus sichtbar? Hat der Kernel
+den passenden Treiber geladen? Gibt es <code>/dev/ttyUSB*</code>? Sieht der Container das
+Gerät? Darf er es öffnen? Und was meldet das Gateway selbst?</p>
+<table>
+<thead>
+<tr>
+<th>Befund des Skripts</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>„Der Adapter ist nicht angeschlossen …&quot;</td>
+<td>Hardware, Kabel oder USB-Buchse – nicht der Gateway</td>
+</tr>
+<tr>
+<td>„Dieser Kernel hat GAR KEINEN USB-Seriell-Treiber&quot;</td>
+<td>das NAS kann <strong>keinen</strong> Adapter bedienen – siehe unten</td>
+</tr>
+<tr>
+<td>„Der Treiber ist im Kernel vorhanden, aber nicht geladen&quot;</td>
+<td><code>modprobe ch341</code> (bzw. der Treiber des Chips), einmalig als root</td>
+</tr>
+<tr>
+<td>„NAS hat das Gerät, der Container sieht es nicht&quot;</td>
+<td>Durchreichung des Pakets</td>
+</tr>
+<tr>
+<td>„Der Container SIEHT den Port, darf ihn aber nicht ÖFFNEN&quot;</td>
+<td>Device-Cgroup – <code>device_cgroup_rules</code> in der Compose-Datei</td>
+</tr>
+<tr>
+<td>„Container sieht das Gerät, die Anwendung meldet keinen Port&quot;</td>
+<td>Fehler im Gateway – Ausgabe an den Entwickler geben</td>
+</tr>
+<tr>
+<td>„NAS, Container und Anwendung sehen denselben Port&quot;</td>
+<td>Erkennung in Ordnung – dann liegt es an der Oberfläche</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Wenn das Skript „GAR KEINEN Treiber&quot; meldet:</strong> Dann fehlen dem NAS
+<em>alle</em> USB-Seriell-Module – auch <code>usbserial</code> und <code>ftdi_sio</code>. Ein anderer
+Adapter hilft in diesem Fall <strong>nicht</strong>. Entweder die Treibermodule für den
+eigenen Kernel nachinstallieren (nicht von Synology unterstützt, muss nach
+jedem DSM-Update wiederholt werden) oder das Gateway auf einem Raspberry Pi
+betreiben – dort ist der Treiber im Kernel enthalten. Das Skript nennt am
+Ende den Weg für den konkreten Kernel.</p>
+</blockquote>
+<blockquote>
+<p><strong>Wenn der Adapter mehrmals hintereinander abgelehnt wird</strong> (<code>error -32</code>,
+<code>error -71</code>, „unable to enumerate&quot; im Kernel-Protokoll), steckt er meist an
+einem Hub oder an einem zu langen Kabel. Er gehört direkt an eine Buchse des
+NAS. Mit Treiber wäre die Verbindung sonst trotzdem instabil.</p>
+</blockquote>
 <hr>
 <h2>Reichweite und Störungen</h2>
 <table>

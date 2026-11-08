@@ -261,6 +261,30 @@ USB-Adapter. Sie können Web-Oberfläche, MQTT-Anbindung und Kennwort
 einrichten. Die BACnet-Werte bleiben dann leer – das ist erwartet.</p>
 <hr>
 <h2 id="schritt-3-der-erste-blick">Schritt 3 – Der erste Blick</h2>
+<blockquote>
+<p><strong>Zwei Meldungen im Protokoll sind normal</strong> und bedeuten <strong>keinen</strong>
+Fehler – sie kommen daher, dass die Ersteinrichtung noch nicht
+abgeschlossen ist:</p>
+<table>
+<thead>
+<tr>
+<th>Meldung</th>
+<th>Bedeutung</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MQTT-Verbindung zu &quot;localhost:1883&quot; fehlgeschlagen</code></td>
+<td>Es ist noch kein Broker eingetragen (Standardwert).</td>
+<td>Der Assistent (Schritt 5) fragt Host und Port ab.</td>
+</tr>
+<tr>
+<td><code>Access to the port &#39;/dev/ttyUSB0&#39; is denied … No such file or directory</code></td>
+<td>Der USB-Adapter ist nicht angesteckt oder heißt anders.</td>
+<td>Adapter anstecken bzw. im Assistenten den richtigen Port wählen.</td>
+</tr>
+</tbody></table>
+</blockquote>
 <table>
 <thead>
 <tr>

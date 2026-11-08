@@ -120,7 +120,7 @@ Details: [Erste Schritte](01-erste-schritte.md)
 > **Achtung beim Deinstallieren:** Der DSM-Worker gibt das Projekt und
 > damit möglicherweise auch das Volume wieder frei. Der 24-h-Schreibzähler
 > geht dabei verloren, und das Schreiblimit beginnt erneut. **Vor dem
-> Deinstallieren sichern** (siehe [Backup](../03-deployment/synology-paketcenter.md)).
+> Deinstallieren sichern** – siehe [Backup](08-monitoring.md#6-backup).
 | `/etc/udev/rules.d/99-comfobox-serial.rules` | USB-Regel |
 | `/etc/systemd/system/comfobox-gateway.service` | Dienst für die Überwachung |
 

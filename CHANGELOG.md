@@ -53,6 +53,27 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
     vor dem Adapter, Prüfung von `modules.builtin` und der Nachweis, ob die
     Device-Cgroup `c 188:` erlaubt.
 
+### Added
+
+- **Installation auf einem Raspberry Pi in einem Befehl.**
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/install.sh | sudo sh
+  ```
+  `deploy/pi/install.sh` prüft die Architektur (32-Bit wird mit Begründung
+  abgelehnt – das Image gibt es nur als `aarch64`), installiert Docker samt
+  Compose-Plugin, aktiviert den Docker-Dienst für den **Autostart**, schreibt
+  `/opt/comfobox/compose.yaml` und startet den Container. Wiederholbar: ein
+  erneuter Aufruf aktualisiert das Image, die Daten bleiben.
+  Der Container bekommt `/dev` durchgereicht (Adapter darf später gesteckt
+  werden) plus `device_cgroup_rules` für `ttyUSB`/`ttyACM` und
+  `group_add: ["20"]` für `dialout`. `DOTNET_gcServer=0`, weil der Server-GC
+  auf einem Pi 3 mit 1 GB Speicher die falsche Wahl ist.
+- **Das Image liegt an jedem Release als `comfobox-gateway-arm64.tar.gz`**
+  (`docker save`). Damit lässt sich ein Pi ohne Registry-Zugriff versorgen:
+  `sudo sh install.sh --offline comfobox-gateway-arm64.tar.gz`.
+- **Neue Benutzerseite [`docs/benutzer/07b-raspberry-pi.md`](docs/benutzer/07b-raspberry-pi.md)** –
+  Voraussetzungen, der Befehl, Assistent, HACS-Integration, Betrieb, Fehlersuche.
+
 ## [1.0.3] – 2026-11-08
 
 ### Fixed

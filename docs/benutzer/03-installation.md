@@ -1,6 +1,6 @@
 ---
 title: Installation
-description: Die vier Möglichkeiten, das Gateway zu installieren
+description: Die fünf Möglichkeiten, das Gateway zu installieren
 order: 30
 icon: pi pi-download
 tags: [installation]
@@ -8,11 +8,12 @@ tags: [installation]
 
 # Installation
 
-Es gibt **vier** Wege. Alle verwenden dieselbe Software – Sie wählen nur den
+Es gibt **fünf** Wege. Alle verwenden dieselbe Software – Sie wählen nur den
 Weg, der zu Ihrer Umgebung passt.
 
 | Weg | Passend für | Aufwand |
 |---|---|---|
+| [Raspberry Pi](07b-raspberry-pi.md) | Pi 3/4/5 mit Raspberry Pi OS | **ein Befehl** |
 | [Synology-Paket](08-synology.md) | DS923+ und andere DSM-Nas | 1 Klick |
 | [Home-Assistant-Add-on](07-ha-addon.md) | Home Assistant auf HA OS / Supervised | 2 Klicks |
 | [Docker-Container](03-installation.md#docker-container) | jeder Rechner mit Docker | eine Datei |

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raspberry Pi – ComfoBox Gateway</title>
+  <meta name="description" content="Das Gateway mit einem Befehl auf einem Raspberry Pi installieren">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="08b-synology-test.html">Synology testen</a></li>
+        <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Raspberry Pi</h1>
+        <p class="description">Das Gateway mit einem Befehl auf einem Raspberry Pi installieren</p>
+        <div class="tags"><span class="tag">installation</span><span class="tag">raspberry-pi</span><span class="tag">docker</span></div>
+      </header>
+
+      <article class="prose">
+<h1>Raspberry Pi</h1>
+<p>Auf einem Raspberry Pi genügt <strong>eine Zeile</strong> im Terminal. Sie installiert
+Docker (falls nötig), richtet den Container ein und sorgt dafür, dass er nach
+jedem Neustart von selbst wieder läuft.</p>
+<blockquote>
+<p><strong>Zwei Wege – bitte zuerst prüfen, welcher passt:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Auf dem Pi läuft …</th>
+<th>Weg</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Raspberry Pi OS</strong> (mit oder ohne Desktop)</td>
+<td>diese Seite – der eine Befehl</td>
+</tr>
+<tr>
+<td><strong>Home Assistant OS</strong></td>
+<td><a href="ha-addon.html">HA-Add-on</a> – dort gibt es kein <code>sudo</code></td>
+</tr>
+</tbody></table>
+<p>„Pi V3&quot; ist ein 32/64-Bit-Gerät. Das Gateway gibt es <strong>nur für 64-Bit</strong>;
+ein 32-Bit-Raspberry-Pi-OS wird vom Installer mit einem klaren Hinweis
+abgelehnt.</p>
+</blockquote>
+<hr>
+<h2>Voraussetzungen</h2>
+<table>
+<thead>
+<tr>
+<th>Was</th>
+<th>Anforderung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Betriebssystem</td>
+<td><strong>Raspberry Pi OS 64-bit</strong> (Lite genügt) – prüfen mit <code>getconf LONG_BIT</code> → muss <code>64</code> sein</td>
+</tr>
+<tr>
+<td>Netzteil</td>
+<td>das <strong>offizielle</strong> Netzteil; bei Unterspannung setzt der Pi den USB-Bus zurück</td>
+</tr>
+<tr>
+<td>USB-RS485-Adapter</td>
+<td>direkt in eine USB-Buchse des Pi – <strong>kein Hub, keine Verlängerung</strong></td>
+</tr>
+<tr>
+<td>Internet</td>
+<td>nur für die Installation (das Image kommt aus der Registry)</td>
+</tr>
+<tr>
+<td>SD-Karte</td>
+<td>mindestens 4 GB frei</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Speicher beachten:</strong> Der Pi 3 hat 1 GB Arbeitsspeicher, der Pi 4/5 mehr.
+Das Gateway läuft auf dem Pi 3, ist dort aber träge – die Oberfläche braucht
+beim ersten Aufruf einige Sekunden. Wer Home Assistant <strong>und</strong> Gateway auf
+demselben Gerät betreiben will, sollte einen Pi 4/5 nehmen.</p>
+</blockquote>
+<hr>
+<h2>Der eine Befehl</h2>
+<p>Per SSH auf dem Pi anmelden und diesen Befehl ausführen:</p>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/install.sh | sudo sh
+</code></pre>
+<p>Das Skript ist <strong>wiederholbar</strong>: ein zweiter Aufruf aktualisiert das Image und
+lässt alle Daten stehen. Am Ende erscheint die Adresse der Oberfläche.</p>
+<h3>Was das Skript tut</h3>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>prüft die Architektur (bricht bei 32-Bit verständlich ab)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ermittelt das neueste Release als Image-Version</td>
+</tr>
+<tr>
+<td>3</td>
+<td>installiert Docker, falls es fehlt, und aktiviert den <strong>Autostart</strong></td>
+</tr>
+<tr>
+<td>4</td>
+<td>zeigt vorhandene serielle Adapter an (ein fehlender ist kein Hindernis)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>schreibt <code>/opt/comfobox/compose.yaml</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td>zieht das Image und startet den Container</td>
+</tr>
+<tr>
+<td>7</td>
+<td>wartet, bis die Oberfläche antwortet, und zeigt die Adressen</td>
+</tr>
+</tbody></table>
+<h3>Optionen</h3>
+<pre><code class="language-bash"># Anderer Port (Vorgabe 8099)
+curl -fsSL …/install.sh | sudo sh -s -- --port 8080
+
+# Bestimmte Version
+curl -fsSL …/install.sh | sudo sh -s -- --version 1.0.4
+
+# Image aus einer Datei (Pi ohne Internet) – Datei vorher auf den Pi kopieren
+sudo sh install.sh --offline comfobox-gateway-arm64.tar.gz
+
+# Entfernen (Daten bleiben erhalten)
+curl -fsSL …/install.sh | sudo sh -s -- --uninstall
+</code></pre>
+<p>Das Image liegt an jedem GitHub-Release auch als Datei
+<code>comfobox-gateway-arm64.tar.gz</code> bei. Das ist der Weg für einen Pi ohne
+Registry-Zugriff.</p>
+<hr>
+<h2>Nach der Installation</h2>
+<h3>1. Assistent durchlaufen</h3>
+<p>Die Oberfläche unter <code>http://&lt;IP-des-Pi&gt;:8099</code> öffnen. Beim ersten Aufruf
+startet der Assistent:</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Eingabe</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serieller Port</td>
+<td>den angebotenen Port wählen (bei einem Adapter <code>ttyUSB0</code>)</td>
+</tr>
+<tr>
+<td>BACnet</td>
+<td><strong>38400 Baud</strong> – die ComfoBox muss ebenfalls darauf stehen und <strong>neu gestartet</strong> sein</td>
+</tr>
+<tr>
+<td>MQTT</td>
+<td>Broker-Adresse, z. B. die IP Ihres Home-Assistant-Rechners mit Port <code>1883</code></td>
+</tr>
+<tr>
+<td>Sicherheit</td>
+<td>Benutzer und Passwort für die Oberfläche (mindestens 12 Zeichen)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>MQTT ist optional.</strong> Ohne Broker laufen die Werte trotzdem in die
+Oberfläche und über die REST-Schnittstelle nach Home Assistant.</p>
+</blockquote>
+<h3>2. API-Token erzeugen</h3>
+<p><strong>Konfiguration → API-Token → Token erzeugen.</strong> Der Token wird <strong>genau einmal</strong>
+angezeigt – jetzt kopieren. Er ist das Passwort für die Home-Assistant-Integration.</p>
+<h3>3. Home Assistant verbinden</h3>
+<ol>
+<li>HACS → Integrationen → <strong>ComfoBox</strong> installieren (Repository
+<code>https://github.com/RF77/comfobox-mqtt</code>)</li>
+<li>Home Assistant neu starten</li>
+<li><strong>Einstellungen → Geräte &amp; Dienste → Integration hinzufügen → ComfoBox</strong></li>
+<li>Adresse <code>http://&lt;IP-des-Pi&gt;:8099</code> und den Token eintragen</li>
+</ol>
+<p>Danach erscheint die ComfoBox als <strong>ein Gerät</strong> mit ihren Entitäten. Die
+Integration fragt das Gateway über REST ab (kein MQTT nötig) und aktualisiert
+alle 10 Sekunden.</p>
+<blockquote>
+<p><strong>Beides gleichzeitig ist erlaubt und sinnvoll:</strong> MQTT für Home Assistant und
+andere Verbraucher, REST für die Integration. Beide beschreiben dieselben
+Werte – der Schreibschutz (24-h-Zähler) gilt für jeden Weg.</p>
+</blockquote>
+<hr>
+<h2>Betrieb</h2>
+<table>
+<thead>
+<tr>
+<th>Aufgabe</th>
+<th>Befehl</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Protokoll ansehen</td>
+<td><code>cd /opt/comfobox &amp;&amp; sudo docker compose logs -f gateway</code></td>
+</tr>
+<tr>
+<td>Neu starten</td>
+<td><code>cd /opt/comfobox &amp;&amp; sudo docker compose restart</code></td>
+</tr>
+<tr>
+<td>Aktualisieren</td>
+<td>denselben Ein-Zeilen-Befehl erneut ausführen</td>
+</tr>
+<tr>
+<td>Zustand</td>
+<td><code>docker ps --filter name=comfobox-gateway</code></td>
+</tr>
+<tr>
+<td>Oberfläche</td>
+<td><code>curl -s http://localhost:8099/api/health</code></td>
+</tr>
+</tbody></table>
+<p><strong>Autostart:</strong> Der Container hat die Neustart-Regel <code>unless-stopped</code>, und der
+Docker-Dienst ist beim Booten aktiviert. Nach einem Neustart des Pi ist das
+Gateway ohne Zutun wieder da. Der 24-h-Schreibzähler liegt im Volume
+<code>comfobox-data</code> und überlebt jedes Update.</p>
+<blockquote>
+<p><strong>Niemals <code>docker compose down -v</code></strong> ausführen – das <code>-v</code> löscht das Volume
+und damit den Schreibzähler. Der EEPROM-Schutz der ComfoBox beginnt dann
+wieder bei null.</p>
+</blockquote>
+<hr>
+<h2>Wenn etwas nicht klappt</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Dieses System ist 32-Bit</code></td>
+<td>32-Bit-Raspberry-Pi-OS</td>
+<td>64-Bit-System installieren (<code>getconf LONG_BIT</code> → 64)</td>
+</tr>
+<tr>
+<td>Kein Port im Assistenten</td>
+<td>Adapter nicht erkannt</td>
+<td><code>ls -l /dev/ttyUSB*</code> prüfen; Adapter direkt anstecken, kein Hub</td>
+</tr>
+<tr>
+<td>Port da, aber „Permission denied&quot;</td>
+<td>Gruppe fehlt</td>
+<td><code>sudo docker compose down &amp;&amp; sudo docker compose up -d</code> – die Compose-Datei enthält die Gruppe <code>dialout</code> bereits</td>
+</tr>
+<tr>
+<td><code>no_iam</code> im Protokoll</td>
+<td>ComfoBox auf 76800 Baud</td>
+<td>auf 38400 umstellen und die Anlage <strong>neu starten</strong></td>
+</tr>
+<tr>
+<td>Oberfläche nach 2 Minuten nicht erreichbar</td>
+<td>Pi 3 ist langsam, oder Port belegt</td>
+<td><code>sudo docker compose logs gateway</code>; <code>ss -ltnp | grep 8099</code></td>
+</tr>
+<tr>
+<td>Container startet nach Neustart nicht</td>
+<td>Docker-Dienst nicht aktiviert</td>
+<td><code>sudo systemctl enable --now docker</code></td>
+</tr>
+<tr>
+<td>Entitäten in HA „nicht verfügbar&quot;</td>
+<td>falsche Adresse oder Token</td>
+<td><code>curl -s http://&lt;IP&gt;:8099/api/health</code> vom HA-Rechner testen</td>
+</tr>
+</tbody></table>
+<h3>Adapter wird nicht erkannt</h3>
+<p>Der Kernel von Raspberry Pi OS bringt die Treiber für CH340, FTDI, CP210x und
+PL2303 mit – hier ist das kein Thema wie auf einem NAS. Bleibt der Port
+trotzdem weg, hilft das Prüfskript, das auch auf dem Pi läuft:</p>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/synology-spk/tools/usb-serial-check.sh -o /tmp/usb-serial-check.sh
+sudo sh /tmp/usb-serial-check.sh comfobox-gateway
+</code></pre>
+<p>Es ändert nichts und nennt am Ende genau eine Ursache. Weitere Fälle:
+<a href="fehlersuche.html">Fehlersuche</a>.</p>
+<hr>
+<h2>Warum Docker und nicht „einfach installieren&quot;?</h2>
+<p>Weil es <strong>dieselbe Software</strong> ist, die auch als Synology-Paket und als
+HA-Add-on läuft – ein Image, eine Oberfläche, ein Verhalten. Der Container
+bringt alles mit (.NET, Web-Oberfläche, Hilfeseiten); auf dem Pi selbst wird
+nichts installiert außer Docker. Und weil der Container als <strong>ein</strong> Paket
+aktualisiert, gesichert und wieder entfernt werden kann.</p>
+<p>Verwandte Seiten: <a href="installation.html">Installation im Überblick</a> ·
+<a href="ha-addon.html">HA-Add-on</a> · <a href="home-assistant.html">Home Assistant</a> ·
+<a href="mqtt.html">MQTT</a></p>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="ha-addon.html">&larr; Home-Assistant-Add-on</a>
+          <a class="nav-next" href="synology.html">Synology &rarr;</a>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.1</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -16,11 +16,12 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 |---|---|
 | [Erste Schritte](01-erste-schritte.md) | Installation, Anschluss und die ersten gelesenen Werte |
 | [Anschluss](02-anschluss.md) | Adapter, Verdrahtung, Baudrate, Fehlersuche am Kabel |
-| [Installation](03-installation.md) | Die vier Installationsmöglichkeiten im Vergleich |
+| [Installation](03-installation.md) | Die fünf Installationsmöglichkeiten im Vergleich |
 | [MQTT](04-mqtt.md) | Broker einrichten, Topics, Werte schreiben |
 | [Home Assistant](05-home-assistant.md) | Automatische Entitäten und die HACS-Integration |
 | [Bedienung](06-bedienung.md) | Web-Oberfläche, Werte schreiben, Schreibschutz, **Protokoll ansehen** |
 | [HA-Add-on](07-ha-addon.md) | Installation als Add-on in Home Assistant |
+| [Raspberry Pi](07b-raspberry-pi.md) | **Ein Befehl im Terminal – inklusive Autostart** |
 | [Synology](08-synology.md) | Installation als Paket auf der DS923+ |
 | [Synology testen](08b-synology-test.md) | **Schritt für Schritt: Paket installieren, Image freigeben, ersten Test machen** |
 | [Monitoring](08-monitoring.md) | Health überwachen, Alarmierung, **Backup und Wiederherstellung** |
@@ -43,9 +44,9 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 
 1. **Anschließen:** Adapter an A/B der ComfoBox, USB in den Computer oder das NAS
 2. **Baudrate:** ComfoBox auf **38400** umstellen und **neu starten**
-3. **Installieren:** entweder als Synology-Paket, als Home-Assistant-Add-on,
-   als Docker-Container oder – wenn Sie nur Home Assistant nutzen – direkt als
-   HACS-Integration
+3. **Installieren:** entweder als Raspberry-Pi-Container (ein Befehl), als
+   Synology-Paket, als Home-Assistant-Add-on, als Docker-Container oder – wenn
+   Sie nur Home Assistant nutzen – direkt als HACS-Integration
 4. **Einrichten:** den Assistenten durchlaufen, Benutzer und Passwort setzen
 5. **Fertig:** die Werte erscheinen in der Web-Oberfläche und – falls gewünscht –
    in Home Assistant

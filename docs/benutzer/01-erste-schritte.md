@@ -54,10 +54,11 @@ Raspberry Pi.
 
 ## 3. Software installieren
 
-Wählen Sie eine der vier Möglichkeiten:
+Wählen Sie eine der fünf Möglichkeiten:
 
 | Ihre Situation | Empfehlung |
 |---|---|
+| Raspberry Pi mit Raspberry Pi OS | [Ein Befehl im Terminal](07b-raspberry-pi.md) |
 | Synology-NAS (DS923+) | [Paket aus dem Paketzentrum](08-synology.md) |
 | Home Assistant auf HA OS / Supervised | [Add-on](07-ha-addon.md) |
 | Eigenes Linux-System mit Docker | [Docker-Container](03-installation.md#docker-container) |

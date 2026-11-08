@@ -158,15 +158,23 @@ Adapter umgesteckt haben.</p>
 <td>Docker-Volume <code>comfobox-data</code></td>
 <td><strong>Konfiguration, Schreibzähler, ports.json</strong> (im Container)</td>
 </tr>
-<tr>
-<td><code>/etc/udev/rules.d/99-comfobox-serial.rules</code></td>
-<td>USB-Regel</td>
-</tr>
-<tr>
-<td><code>/etc/systemd/system/comfobox-gateway.service</code></td>
-<td>Dienst für die Überwachung</td>
-</tr>
 </tbody></table>
+<blockquote>
+<p><strong>Warum ein Docker-Volume?</strong> Das DSM löscht bei jeder Installation
+<code>/var/packages/&lt;paket&gt;</code> und legt es neu an. Ein Bind-Mount auf dieses
+Verzeichnis gehört danach <code>root:root</code> – der Container (uid 1001) kann
+dort weder die Konfiguration schreiben noch den <strong>24-h-Schreibzähler</strong>
+(EEPROM-Schutz) sichern. Ein benanntes Volume übernimmt Rechte aus dem
+Image – der Container kann dort immer schreiben.</p>
+</blockquote>
+<blockquote>
+<p><strong>Achtung beim Deinstallieren:</strong> Der DSM-Worker gibt das Projekt und
+damit möglicherweise auch das Volume wieder frei. Der 24-h-Schreibzähler
+geht dabei verloren, und das Schreiblimit beginnt erneut. <strong>Vor dem
+Deinstallieren sichern</strong> – siehe <a href="/help/monitoring#6-backup">Backup</a>.
+| <code>/etc/udev/rules.d/99-comfobox-serial.rules</code> | USB-Regel |
+| <code>/etc/systemd/system/comfobox-gateway.service</code> | Dienst für die Überwachung |</p>
+</blockquote>
 <blockquote>
 <p><strong>Bei einem Update wird <code>target/</code> ersetzt, <code>var/</code> bleibt.</strong> Ihre Einstellungen
 und der Schreibzähler bleiben erhalten.</p>
@@ -271,13 +279,30 @@ kaputt ist.</p>
 </tr>
 <tr>
 <td>SSH</td>
-<td><code>docker exec comfobox-gateway cat /var/lib/comfobox/logs/gateway-$(date +%Y%m%d).jsonl</code></td>
-</tr>
-<tr>
-<td>Web-Oberfläche</td>
-<td><strong>Diagnose</strong></td>
+<td><code>docker logs comfobox-gateway</code></td>
 </tr>
 </tbody></table>
+<blockquote>
+<p><strong>Nach der Installation zu erwarten:</strong> Im Protokoll stehen zwei Meldungen,
+die <strong>normal</strong> sind und <strong>keinen</strong> Fehler darstellen:</p>
+<table>
+<thead>
+<tr>
+<th>Meldung</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>MQTT-Verbindung zu &quot;localhost:1883&quot; fehlgeschlagen</code></td>
+<td>Es ist noch kein Broker eingetragen. Der Assistent fragt ihn nach der Installation ab.</td>
+</tr>
+<tr>
+<td><code>Access to the port &#39;/dev/ttyUSB0&#39; is denied … No such file or directory</code></td>
+<td>Der USB-Adapter ist nicht angesteckt oder hat einen anderen Namen. Der Assistent listet alle erkannten Ports auf.</td>
+</tr>
+</tbody></table>
+<p>| Web-Oberfläche | <strong>Diagnose</strong> |</p>
+</blockquote>
 <blockquote>
 <p><strong>Bei Supportfragen</strong> ist das Protokoll aus der Web-Oberfläche (Diagnose) der
 einfachste Weg – es ist ohne SSH erreichbar.</p>
