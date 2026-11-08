@@ -2,8 +2,11 @@
 	"docker-project": {
 		"projects": [
 			{
-				"name": "comfobox",
-				"path": "compose"
+				"name": "comfobox-gateway",
+				"path": "compose",
+				"build_params": {
+					"build": false
+				}
 			}
 		]
 	}

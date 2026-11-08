@@ -2334,6 +2334,108 @@ sichtbar machte – vorher war die Action nie gelaufen:
 
 ---
 
+## 2026-11-08 (2) – Installation scheitert weiterhin am Worker `docker-project`
+
+**Ergebnis:** Die Ursache ist eingegrenzt, der Zustand ist bereinigt und das
+Diagnose-Skript beweist jetzt den Grund. Revision 0011 ist gebaut und geprüft.
+
+**Der Befund aus dem `--worker`-Lauf auf der DS923+ (SPK `1.0.2-0010`):**
+
+````
+docker compose config        → OK
+docker pull                  → OK
+docker compose up -d         → OK, Container "healthy", /api/health → 200
+````
+
+Am Paket, an der Compose-Datei und am Image liegt es also **nicht**. Der
+Fehler passiert davor:
+
+````
+00:31:47 Acquire systemd-unit for ComfoBoxGateway when 0x0001 (done)
+00:31:47 Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)
+00:31:48 End postinst ret=[0]
+00:31:48 install ComfoBoxGateway 1.0.2-0010 failed
+````
+
+**Entscheidend ist, was FEHLT:** Der Worker scheitert in **derselben
+Sekunde** und schreibt **keine einzige Syslog-Zeile**. Beim Versuch um
+23:51 stand dagegen noch
+
+````
+synopkg[…]: docker_project_worker/…/docker_project_generater_worker.cpp:254
+             rollback created projects: `comfobox`
+````
+
+im `/var/log/messages`. Der Worker ist bei 00:31 also gescheitert, **bevor**
+er Docker angefasst hat – und das Paket stand zu diesem Zeitpunkt auf
+`broken` (150, `install_corruption`) aus dem Versuch davor.
+
+**Damit bleiben genau zwei realistische Ursachen – beide werden beseitigt:**
+
+1. **Reste des Fehlversuchs.** Ein `broken`-Paket wird vom DSM beim nächsten
+   Mal wie ein *Update* behandelt; zusätzlich bleiben Verzeichnisse,
+   Container und Netzwerke liegen. Ein liegengebliebener Container mit festem
+   Namen oder ein Projekt-Datensatz des Container Managers lässt `Acquire`
+   sofort scheitern – ohne Logzeile.
+2. **Der Projektname.** Docker Compose akzeptiert nur `[a-z0-9_-]`;
+   `comfobox` war gültig, ist aber nach einem Rollback ein Kandidat für einen
+   verwaisten Projekt-Datensatz.
+
+**Geänderte Dateien:**
+- `deploy/synology-spk/src/conf/resource` – Projektname `comfobox-gateway`
+  (frischer Projekt-Datensatz), `build_params.build = false` (das Paket
+  bringt kein `Dockerfile` mit – der Schritt entfällt). Der **Containername**
+  bleibt `comfobox-gateway`, damit `docker logs`/`docker_inspect` und die
+  Doku unverändert stimmen.
+- `deploy/synology-spk/tools/dsm-diagnose.sh`
+  - **neu `--reset`**: Paket stoppen/deinstallieren (auch `broken`),
+    Verzeichnisse unter `/var/packages` und `@appstore` entfernen, Container
+    und Netzwerke löschen, `var/` nach `/tmp` sichern. Das Volume
+    `comfobox-data` (Schreibzähler) bleibt **immer** stehen.
+  - **`--install` ruft `--reset` jetzt selbst auf** und zeigt danach die
+    Syslog-Meldungen des Workers.
+  - **neu `show_worker_log()`** – `/var/log/messages` nach
+    `docker_project`/`project worker` durchsuchen (dort schreibt der Worker,
+    **nicht** in `synopkg.log`).
+  - **neu `show_container_state()`** – Container/Netzwerke/Volumes,
+    `synopkg status ContainerManager`, `/volume*/docker`.
+  - **neu `show_reference_projects()`** – andere Pakete auf derselben NAS,
+    die `docker-project` nutzen, mit ihrer `conf/resource` (Ground Truth).
+  - **neu `show_resource()`** – die `conf/resource` aus dem SPK und die
+    Prüfung, ob `<path>/compose.yaml` wirklich in `package.tgz` liegt.
+  - Die Worker-Emulation liest den Projektnamen jetzt aus `conf/resource`
+    statt ihn fest zu verdrahten.
+- `deploy/synology-spk/tools/check-spk.sh` – prüft den Projektnamen gegen
+  `[a-z0-9_-]` und vergleicht `path` aus `conf/resource` mit dem Inhalt von
+  `package.tgz` (vorher war `compose/` hart verdrahtet).
+- `deploy/synology-spk/tools/check-tgz-layout.sh` – nimmt ohne Argument das
+  **neueste** Paket aus `dist/`. Vorher stand dort `…1.0.1-0006.spk` fest –
+  der Test hat damit ein längst behobenes Paket geprüft und einen Fehler
+  gemeldet, den es nicht mehr gab.
+- `deploy/synology-spk/src/conf/README.md` – die drei Regeln für
+  `conf/resource` (Name klein, `path` relativ + passend zum `package.tgz`,
+  `build_params.build = false`).
+- `docs/benutzer/09-fehlersuche.md` – Syslog als eigener Kanal, `--reset`
+  als Pflichtschritt nach einem Fehlversuch.
+- `CHANGELOG.md`, `deploy/synology-spk/REVISION` (0011)
+
+**Verifikation:**
+- `bash build-spk.sh` → `ComfoBoxGateway_noarch-dsm7_1.0.2-0011.spk`
+- `bash tools/check-spk.sh` → **OK** (inkl. der neuen `conf/resource`-Checks)
+- `bash tools/check-tgz-layout.sh` → `package.tgz` ohne `target/`-Ebene ✅
+- `bash tools/check-shell.sh` → alle Skripte syntaktisch korrekt
+- `conf/resource` im SPK: `comfobox-gateway` + `build_params.build = false`
+
+**Offen / nicht gemacht:**
+- **Der Beweis auf der NAS fehlt.** Bitte einmal
+  `sudo sh dsm-diagnose.sh <paket>.spk --install` laufen lassen: das Skript
+  räumt auf, installiert und zeigt zum ersten Mal die Syslog-Zeile des
+  Workers. Bleibt es bei `(fail)`, steht der Grund dann in der Ausgabe.
+- Wenn im Container Manager noch ein Projekt **`comfobox`** auftaucht: das
+  ist der Datensatz des alten Versuchs und darf gelöscht werden.
+
+---
+
 ## Nächste Session
 
 **Phase 7** – Parallelbetrieb & Umschaltung (7.1–7.5): zwei Gateways

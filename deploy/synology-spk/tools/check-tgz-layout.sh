@@ -1,9 +1,25 @@
 #!/bin/bash
 # Zeigt die Struktur von package.tgz im gebauten SPK.
 set -u
-SPK="${1:-dist/ComfoBoxGateway_noarch-dsm7_1.0.1-0006.spk}"
+
+# Ohne Argument das **neueste** Paket in dist/ nehmen. Ein fest
+# eingetragener Dateiname zeigt sonst auf ein altes Paket - und der Test
+# meldet dann Fehler, die laengst behoben sind (oder umgekehrt).
+SPK="${1:-}"
+if [ -z "$SPK" ]; then
+    SPK=$(ls -t dist/*.spk 2>/dev/null | head -n 1)
+fi
+if [ -z "$SPK" ] || [ ! -f "$SPK" ]; then
+    echo "FEHLER: Kein SPK gefunden (${SPK:-dist/*.spk})" >&2
+    echo "        Erst bauen: bash build-spk.sh" >&2
+    exit 1
+fi
+
 SPK_DIR=$(CDPATH= cd -- "$(dirname -- "$SPK")" && pwd) || exit 1
 SPK_NAME=$(basename -- "$SPK")
+
+echo "Pruefe: $SPK"
+echo ""
 
 TMP=$(mktemp -d) || exit 1
 ( cd "$SPK_DIR" && tar xpf "$SPK_NAME" -C "$TMP" package.tgz ) 2>/dev/null || {

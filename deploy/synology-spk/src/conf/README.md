@@ -104,8 +104,11 @@ Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
 	"docker-project": {
 		"projects": [
 			{
-				"name": "comfobox",
-				"path": "compose"
+				"name": "comfobox-gateway",
+				"path": "compose",
+				"build_params": {
+					"build": false
+				}
 			}
 		]
 	}
@@ -115,6 +118,19 @@ Das DSM verträgt **kein** `\r` in der Datei. Die Referenzpakete entstehen mit
 Der **Docker-Project-Worker** (DSM 7.2.1+, Provider `ContainerManager>=1432`)
 liest die Compose-Datei unter `target/compose/compose.yaml`, legt daraus das
 Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
+
+### Drei Regeln für diese Datei
+
+| Regel | Grund |
+|---|---|
+| `name` **klein** schreiben (`comfobox-gateway`) | Docker Compose akzeptiert als Projektnamen nur `[a-z0-9_-]`. Ein Name mit Großbuchstaben lässt das Anlegen scheitern – der Worker meldet dann nur `(fail)`. |
+| `path` ist **relativ zum Zielverzeichnis** | `target/compose/compose.yaml` → `"path": "compose"`. Steht dort etwas anderes, findet der Worker die Datei nicht (`tools/check-spk.sh` prüft beides gegeneinander). |
+| `build_params.build = false` | Im Paket ist kein `Dockerfile` – der Build-Schritt entfällt. Er ist der einzige Schritt des Workers, der nichts tun kann; abgeschaltet kann er auch nicht scheitern. |
+
+> **Der Projektname ist frei wählbar** – er muss nur eindeutig und stabil
+> sein. Er bestimmt den Namen des Docker-Netzes (`<name>_default`) und das
+> Label `com.docker.compose.project`. Der **Containername** steht separat in
+> der Compose-Datei (`container_name: comfobox-gateway`) und bleibt gleich.
 
 Der Worker arbeitet **als Root** – genau das ist der Punkt: Das Paket selbst
 braucht keine Root-Rechte mehr, und der DSM akzeptiert es damit.

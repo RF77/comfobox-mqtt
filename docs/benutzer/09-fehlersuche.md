@@ -105,9 +105,20 @@ grep -E "Acquire|failed" /var/log/synopkg.log | tail -10
 
 | Zeile | Bedeutung |
 |---|---|
-| `Acquire docker-project … (fail)` | Der Worker hat das Compose-Projekt nicht angelegt. Meist stimmt die Struktur von `package.tgz` nicht. |
+| `Acquire docker-project … (fail)` | Der Worker hat das Compose-Projekt nicht angelegt. Meist stimmt die Struktur von `package.tgz` nicht – oder es liegen Reste eines früheren Versuchs herum. |
 | `Acquire docker-project … (done)` | Der Worker war in Ordnung – der Fehler liegt in einem Skript. |
 | `End postinst ret=[0]` | Die Skripte liefen durch. |
+
+**Den Grund nennt nur das Syslog**, nicht `synopkg.log`. Der Worker schreibt
+nach `/var/log/messages`:
+
+````bash
+sudo grep -i -E "docker_project|comfobox" /var/log/messages | tail -20
+````
+
+Steht dort **gar nichts**, ist der Worker gescheitert, *bevor* er mit Docker
+gesprochen hat – dann liegt es am Zustand des Pakets (siehe nächster
+Abschnitt) oder an `conf/resource`.
 
 **Lösung:** Holen Sie den echten Fehlercode mit dem Diagnose-Skript (unten).
 
@@ -117,14 +128,19 @@ Schlägt eine Installation fehl, hinterlässt DSM 7.4 das Paket im Status
 **„broken“ (150)**. Beim nächsten Versuch versucht DSM dann ein **Update**
 statt einer Neuinstallation – und scheitert an *„package does not have
 preupgrade / postupgrade script“* (Fehler **261**), obwohl das Paket
-in Ordnung ist.
+in Ordnung ist. Zusätzlich bleiben Verzeichnisse, Container und Netzwerke
+des Fehlversuchs liegen – auch die lassen den Worker sofort scheitern.
 
-**Vor dem nächsten Installationsversuch das Paket entfernen:**
+**Vor dem nächsten Installationsversuch deshalb aufräumen** – ein Befehl
+erledigt alles (Paket deinstallieren, Verzeichnisse entfernen, Container und
+Netzwerke löschen):
 
-> **Paketcenter → ComfoBox Gateway → Deinstallieren**
->
-> (geht nur, wenn der Status „Installiert“ ist – sonst über SSH:
-> `sudo synopkg uninstall ComfoBoxGateway`)
+````bash
+sudo sh /tmp/dsm-diagnose.sh /tmp/<paket>.spk --reset
+````
+
+Das Docker-Volume `comfobox-data` bleibt dabei **erhalten** – dort liegt der
+24-h-Schreibzähler (EEPROM-Schutz).
 
 > **Meistens ist es die falsche Datei:** Auf der NAS liegen oft mehrere
 > `.spk` nebeneinander, und im Dateiauswahler wird die **alte** angeklickt.
@@ -132,7 +148,7 @@ in Ordnung ist.
 >
 > ````bash
 > tar tf /volume1/pfad/zur/datei.spk | grep conf
-> # erwartet: conf/ und conf/privilege
+> # erwartet: conf/ und conf/privilege und conf/resource
 > ````
 
 ### Den echten Fehlercode holen
@@ -147,18 +163,22 @@ ssh admin@<IP-der-NAS>
 
 # 3. Skript und Paket nach /tmp legen (von Ihrem Rechner)
 scp dsm-diagnose.sh admin@<IP-der-NAS>:/tmp/
-scp ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk admin@<IP-der-NAS>:/tmp/
+scp ComfoBoxGateway_noarch-dsm7_<version>.spk admin@<IP-der-NAS>:/tmp/
 
-# 4. Diagnose ausführen
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --install
+# 4. Diagnose ausführen - räumt zuerst auf und installiert dann
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_<version>.spk --install
 ````
 
 Das Skript zeigt unter anderem:
 
 - die **Struktur von `package.tgz`** (muss auf der obersten Ebene liegen)
+- **`conf/resource`** und ob der dort genannte `path` zum Paketinhalt passt
 - die **Compose-Datei** und prüft sie mit `docker compose config`
+- die **Reste** früherer Versuche (Broken-Status, Container, Netzwerke) und
+  räumt sie weg
 - den **Fehlercode** aus der JSON-Ausgabe von `synopkg install`
-- entfernt ein Paket im Status „broken“ **vor** dem Versuch
+- die **Meldungen des Resource-Workers** aus `/var/log/messages`
+- ob ein **anderes Paket auf der NAS** denselben Worker nutzt (Vergleich)
 
 Die vollständige Anleitung steht in
 [Synology testen](08b-synology-test.md).
@@ -184,7 +204,7 @@ grep -E "Acquire|failed" /var/log/synopkg.log | tail -10
 und zeigt die **volle** Docker-Fehlermeldung:
 
 ````bash
-sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_1.0.1-0008.spk --worker
+sudo sh /tmp/dsm-diagnose.sh /tmp/ComfoBoxGateway_noarch-dsm7_<version>.spk --worker
 ````
 
 Das Skript entpackt das Paket wie das DSM, zieht das Image, prüft die

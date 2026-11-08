@@ -216,8 +216,34 @@ if tar_unpack "$WORK/x" "conf/resource"; then
     else
         bad "conf/resource ohne 'path' - der Worker findet die Compose-Datei nicht"
     fi
+
+    # **Der Projektname muss klein geschrieben sein.** Docker Compose
+    # akzeptiert als Projektnamen nur [a-z0-9_-]; ein Name mit
+    # Grossbuchstaben laesst das Anlegen des Projekts scheitern - und der
+    # Worker meldet dann nur "Acquire docker-project … (fail)".
+    RES_PROJECT=$(sed -n 's/.*"name"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$RES" | head -n 1)
+    if [ -z "$RES_PROJECT" ]; then
+        bad "conf/resource ohne Projektnamen ('name')"
+    elif echo "$RES_PROJECT" | grep -q '^[a-z0-9][a-z0-9_-]*$'; then
+        ok "Projektname '$RES_PROJECT' ist fuer Docker Compose gueltig"
+    else
+        bad "Projektname '$RES_PROJECT' ist ungueltig - nur [a-z0-9_-] erlaubt"
+    fi
+
+    # Der Pfad, unter dem der Worker die Compose-Datei sucht (relativ zum
+    # Zielverzeichnis). Wird in 3c gegen den Inhalt von package.tgz geprueft.
+    RES_PATH=$(sed -n 's/.*"path"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$RES" | head -n 1)
+
+    # Wir bauen kein Image im Paket - der Worker soll den Build-Schritt
+    # deshalb ueberspringen ("build_params": {"build": false}).
+    if grep -q '"build"[[:space:]]*:[[:space:]]*false' "$RES"; then
+        ok "conf/resource schaltet den Build-Schritt ab (build_params.build = false)"
+    else
+        ok "kein 'build_params' (der Worker baut dann selbst - hier nicht noetig)"
+    fi
 else
     bad "conf/resource laesst sich nicht auspacken"
+    RES_PATH=""
 fi
 
 # --- 3c. package.tgz: die Struktur ist entscheidend ------------------------
@@ -250,13 +276,16 @@ if tar_get_to "package.tgz" "$WORK/package.tgz" 2>/dev/null; then
         ok "package.tgz hat keine zusaetzliche 'target/'-Ebene"
     fi
 
-    # Die Compose-Datei muss auf der obersten Ebene unter compose/ liegen -
-    # genau dort, wo der Worker sie sucht (conf/resource: path = compose).
-    if grep -q '^compose/compose.yaml$' "$TGZ_LIST"; then
-        ok "compose/compose.yaml liegt auf der obersten Ebene (Pfad des Workers)"
+    # Die Compose-Datei muss genau unter dem Pfad liegen, den conf/resource
+    # nennt (relativ zum Zielverzeichnis). Steht dort etwas anderes als
+    # "compose", wird **dieser** Pfad geprueft - sonst meldet der Worker nur
+    # "(fail)" und niemand sieht, warum.
+    WANT_PATH="${RES_PATH:-compose}"
+    if grep -q "^${WANT_PATH}/compose\.yaml$" "$TGZ_LIST"; then
+        ok "${WANT_PATH}/compose.yaml liegt auf der obersten Ebene (Pfad des Workers)"
     else
-        bad "compose/compose.yaml liegt nicht auf der obersten Ebene"
-        echo "       Erwartet: compose/compose.yaml  (conf/resource: \"path\": \"compose\")"
+        bad "${WANT_PATH}/compose.yaml liegt nicht auf der obersten Ebene"
+        echo "       Erwartet: ${WANT_PATH}/compose.yaml  (conf/resource: \"path\": \"${WANT_PATH}\")"
     fi
 
     if grep -q '^bin/common.sh$' "$TGZ_LIST"; then

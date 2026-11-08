@@ -7,6 +7,35 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ## [1.0.2] – 2026-11-08
 
 ### Fixed
+- **Die Installation scheiterte weiterhin am DSM-Worker**
+  (`Acquire docker-project for ComfoBoxGateway when 0x0001 (fail)`).
+  Der Worker scheiterte dabei **innerhalb einer Sekunde und ohne jede
+  Syslog-Zeile** – er kam also gar nicht bis zu Docker. Drei Korrekturen:
+  - **Der Projektname ist jetzt `comfobox-gateway`** (vorher `comfobox`).
+    Docker Compose akzeptiert nur `[a-z0-9_-]`; ein liegengebliebener
+    Projekt-Datensatz des Container Managers kann einen erneuten Versuch
+    sonst sofort scheitern lassen.
+  - **Der Build-Schritt des Workers ist abgeschaltet**
+    (`build_params.build = false`). Das Paket bringt kein `Dockerfile` mit –
+    der Schritt kann nichts tun, also soll er auch nicht laufen.
+  - **Reste fehlgeschlagener Versuche werden vor der Installation
+    entfernt.** Ein Paket im Status „broken“ (150) wird vom DSM beim
+    nächsten Mal wie ein *Update* behandelt, und liegengebliebene Container
+    oder Netzwerke blockieren das Anlegen des Projekts. Das Diagnose-Skript
+    hat dafür den neuen Modus `--reset`; `--install` ruft ihn automatisch
+    auf. Das Docker-Volume `comfobox-data` (24-h-Schreibzähler) bleibt
+    erhalten.
+- **Das Diagnose-Skript zeigt jetzt den Grund.** Neu: `conf/resource` aus
+  dem Paket samt Prüfung, ob der dort genannte `path` zum Inhalt von
+  `package.tgz` passt; die **Syslog-Meldungen des Resource-Workers** aus
+  `/var/log/messages` (dort schreibt er – nicht in `synopkg.log`); der
+  Docker-Zustand (Container, Netzwerke, Volumes, Container Manager) und ein
+  Vergleich mit anderen Paketen auf derselben NAS, die denselben Worker
+  nutzen.
+- **`tools/check-spk.sh` prüft `conf/resource` jetzt gegen das Paket:** der
+  Projektname muss für Docker Compose gültig sein (klein geschrieben), und
+  `<path>/compose.yaml` muss genau dort in `package.tgz` liegen, wo der
+  Worker sucht.
 - **Der 24-h-Schreibzähler (EEPROM-Schutz) geht beim Deinstallieren nicht
   mehr verloren.** Der DSM-Worker gibt das Projekt und damit das Volume
   `comfobox-data` frei, bevor `postuninst` läuft. Das `preuninst` sichert
