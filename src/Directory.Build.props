@@ -37,9 +37,9 @@
     Sie muss mit dem Release-Tag uebereinstimmen - sonst meldet das Gateway
     eine andere Version als das Image, aus dem es laeuft.
 
-    **Im Image setzt die CI diesen Wert:** `docker build --build-arg
-    VERSION=<tag>` ueberschreibt ihn per `/p:Version` (siehe Dockerfile).
-    Der Wert hier gilt fuer lokale Builds und Tests.
+    **Im Image setzt die CI diesen Wert:** der Docker-Build bekommt die
+    Version als Build-Arg und reicht sie per `/p:Version` weiter (siehe
+    Dockerfile). Der Wert hier gilt fuer lokale Builds und Tests.
   -->
   <PropertyGroup>
     <Version>1.0.4</Version>
