@@ -4,6 +4,55 @@ Alle wesentlichen Änderungen an diesem Projekt.
 
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
+
+## [1.0.4] – 2026-11-08
+
+### Fixed
+
+- **Der serielle Port wäre im Container nie zu öffnen gewesen.** Der Mount
+  `/dev:/dev` macht die Gerätedatei nur **sichtbar**; ob `open()` gelingt,
+  entscheidet die Device-Cgroup des Containers – und dort erlaubt Docker
+  standardmäßig kein USB-Seriell. `/dev/ttyUSB0` wäre mit Modus `0666`
+  erschienen und hätte trotzdem `EPERM` geliefert. Die Compose-Datei setzt
+  jetzt:
+  ```yaml
+  device_cgroup_rules:
+    - "c 188:* rwm"   # ttyUSB*
+    - "c 166:* rwm"   # ttyACM*
+  ```
+  Die Werte überleben den Roundtrip des DSM-Workers (er entfernt die
+  Anführungszeichen, aus `"c 188:* rwm"` wird weiterhin ein String – anders
+  als bei `"20"`, siehe 1.0.3).
+- **Das Image meldete die falsche Version.** `ghcr.io/…:1.0.3` antwortete auf
+  `/api/status` und `ComfoBox/Version` mit `1.0.1`: die Version kam aus
+  `src/Directory.Build.props`, das Image wurde aber über den Release-Tag
+  gebaut. Der Wert geht jetzt als `--build-arg VERSION` in
+  `dotnet publish /p:Version` und ins OCI-Label
+  (`org.opencontainers.image.version`). `Directory.Build.props` ist auf
+  `1.0.4` nachgezogen.
+- Das HA-Add-on verwies mit `image:` noch auf `:1.0.1`, bei `version: 1.0.3`.
+  Jetzt einheitlich.
+
+### Changed
+
+- **`tools/usb-serial-check.sh` korrigiert** – die erste Ausgabe führte an
+  zwei Stellen in die Irre:
+  - Abschnitt 2 las den Treiber über *alle* Unterverzeichnisse des
+    USB-Geräts. Dadurch stand bei jedem Gerät `power -> Treiber: driver`
+    (der Name des Symlinks selbst), und ein **nicht** gebundenes Interface
+    meldete „Treiber: driver" statt „KEIN Treiber gebunden". Jetzt werden nur
+    die Interface-Verzeichnisse (`*:*.*`) geprüft.
+  - Der Befund empfahl bei fehlender Gerätedatei pauschal
+    `modprobe ch341` und einen FTDI-Adapter. Auf einer DS923+ fehlt aber
+    **jedes** USB-Seriell-Modul, auch `ftdi_sio` – der Ratschlag war dort
+    falsch. Der Befund unterscheidet jetzt „Modul vorhanden, nicht geladen"
+    von „Kernel hat gar keinen Treiber" und nennt für den zweiten Fall die
+    realen Wege.
+  - Neu: Erkennung fehlerhafter Enumerationsversuche (`error -32`/`-71`,
+    „unable to enumerate", „attempt power cycle"), Anzahl der Zwischen-Hubs
+    vor dem Adapter, Prüfung von `modules.builtin` und der Nachweis, ob die
+    Device-Cgroup `c 188:` erlaubt.
+
 ## [1.0.3] – 2026-11-08
 
 ### Fixed

@@ -146,6 +146,33 @@ Volume, ohne Logzeile. **Deshalb: keine numerischen Werte in
 Anführungszeichen** in Feldern, die Strings erwarten. `tools/check-spk.sh`
 lehnt `group_add` ab, `dsm-diagnose.sh` simuliert den Roundtrip.
 
+> **Ausnahme, die funktioniert:** Werte, die auch ohne Quotes Strings bleiben,
+> sind unkritisch. `device_cgroup_rules` braucht die Quotes nur wegen des `*`,
+> nicht wegen des Typs:
+>
+> ```yaml
+> device_cgroup_rules:
+>   - "c 188:* rwm"     # → c 188:* rwm  (weiterhin ein String)
+> ```
+
+### Die Device-Cgroup: sichtbar ist nicht erlaubt
+
+`volumes: - "/dev:/dev"` macht die Gerätedateien im Container **sichtbar**.
+Ob der Prozess sie **öffnen** darf, entscheidet die Device-Cgroup — und Docker
+erlaubt dort standardmäßig nur `null`, `zero`, `random`, `tty`, `ptmx` und
+wenige andere. USB-Seriell gehört **nicht** dazu:
+
+| Major | Geräte |
+|---|---|
+| 188 | `ttyUSB0…n` (CH340, FTDI, CP210x, PL2303) |
+| 166 | `ttyACM0…n` (CDC-ACM) |
+
+Ohne `device_cgroup_rules` zeigt `ls -l /dev/ttyUSB0` im Container Modus
+`0666` — und `open()` scheitert trotzdem mit `EPERM`. Das sieht im Assistenten
+genauso aus wie ein fehlender Adapter. `usb-serial-check.sh` weist es nach
+(Abschnitt 6: „ttyUSB in Device-Cgroup: NICHT erlaubt", Abschnitt 7:
+`OPEN-FEHLER`).
+
 ### Was der Worker zusätzlich einträgt
 
 ```yaml

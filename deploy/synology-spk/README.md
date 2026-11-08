@@ -163,10 +163,59 @@ sudo sh usb-serial-check.sh            # Containername optional, Vorgabe comfobo
 ````
 
 Geprüft wird der Reihe nach: USB-Geräte am Bus (`/sys/bus/usb/devices`,
-bekannte Chips `1a86:7523`, `0403:*`, `10c4:*`, `067b:2303`), geladene und
-vorhandene Kernelmodule (`ch341`, `ftdi_sio`, `cp210x`, `pl2303`, `usbserial`),
+bekannte Chips `1a86:7523`, `0403:*`, `10c4:*`, `067b:2303`), vorhandene und
+geladene Kernelmodule (`ch341`, `ftdi_sio`, `cp210x`, `pl2303`, `usbserial`),
 die Gerätedateien auf der NAS, die Sicht des Containers, das Öffnen des Geräts
-im Container sowie `GET /api/config/serial-ports`.
+im Container, die Device-Cgroup sowie `GET /api/config/serial-ports`.
+
+#### Der DSM-Kernel bringt keinen USB-Seriell-Treiber mit
+
+Das ist der häufigste Befund auf einer DS923+ und er hat eine unangenehme
+Eigenschaft: **er sieht wie ein kaputter Adapter aus.**
+
+Der Adapter erscheint im `sysfs` (z. B. `1a86:7523  USB2.0-Serial`), aber an
+seinem Interface steht **kein Treiber** – und es entsteht kein
+`/dev/ttyUSB0`. Ursache: im DSM-Kernel fehlen *alle* USB-Seriell-Module,
+einschließlich `usbserial`, des gemeinsamen Unterbaus:
+
+| Modul | Zweck |
+|---|---|
+| `usbserial` | Unterbau für **alle** USB-Seriell-Chips |
+| `ch341` | CH340/CH341 (`1a86:7523`) |
+| `ftdi_sio` | FTDI (`0403:*`) |
+| `cp210x` | Silicon Labs (`10c4:*`) |
+| `pl2303` | Prolific (`067b:2303`) |
+
+`modprobe ch341` scheitert deshalb mit `module not found`. **Ein anderer
+Adapter hilft nicht** – auch ein FTDI-Adapter braucht `ftdi_sio`, und das
+fehlt genauso. Es gibt drei Wege:
+
+| Weg | Aufwand | Haltbarkeit |
+|---|---|---|
+| **A** Treibermodule für den eigenen Kernel nachinstallieren ([`robertklep/dsm7-usb-serial-drivers`](https://github.com/robertklep/dsm7-usb-serial-drivers)) | mittel | muss nach **jedem** DSM-Update wiederholt und nach jedem Boot erneut geladen werden (Aufgabe im DSM-Aufgabenplaner: „bei Systemstart") |
+| **B** Gateway auf einem Raspberry Pi (HA-Add-on) oder Mini-PC betreiben | gering | dauerhaft – dort ist der Treiber im Kernel |
+| **C** Anderer USB-Port / kürzeres Kabel | gering | behebt **nur** Enumeration-Fehler, nicht den fehlenden Treiber |
+
+Weg A ist nicht von Synology unterstützt und kann durch ein DSM-Update
+jederzeit wieder verschwinden – das Skript nennt am Ende den passenden Weg für
+den konkreten Kernel.
+
+#### Die Device-Cgroup ist der zweite Blocker
+
+Der Mount `/dev:/dev` macht die Gerätedatei im Container nur **sichtbar**.
+Ob `open()` gelingt, entscheidet die Device-Cgroup, und Docker erlaubt dort
+standardmäßig kein USB-Seriell. Deshalb steht in der Compose-Datei:
+
+````yaml
+device_cgroup_rules:
+  - "c 188:* rwm"   # ttyUSB*
+  - "c 166:* rwm"   # ttyACM*
+````
+
+Ohne diese Regeln erscheint `/dev/ttyUSB0` mit Modus `0666` im Container und
+lässt sich trotzdem nicht öffnen (`OPEN-FEHLER` in Abschnitt 7 des Skripts).
+`group_add` ist dafür **kein** Ersatz – siehe den Kommentar in der
+Compose-Datei.
 
 ## Sicherheit
 

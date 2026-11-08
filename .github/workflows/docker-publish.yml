@@ -159,6 +159,12 @@ jobs:
           platforms: ${{ github.event_name == 'workflow_dispatch' && inputs.platforms || 'linux/amd64,linux/arm64' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Die Version geht in die Assembly (ComfoBox/Status/Version,
+          # /api/status) und ins OCI-Label. Ohne diesen Durchgriff meldet
+          # das Image die Version aus `Directory.Build.props` - bei 1.0.3
+          # war das noch 1.0.1.
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
           cache-from: type=gha,scope=gateway
           cache-to: type=gha,mode=max,scope=gateway
 

@@ -81,6 +81,26 @@ services:
     # `devices:`-Eintrag hin (siehe unten) - **nicht** `group_add`.
     # ---------------------------------------------------------------------
 
+    # ---------------------------------------------------------------------
+    # Device-Cgroup: der Mount "/dev" macht die Geraeteknoten nur SICHTBAR.
+    #
+    # Ob der Prozess sie **oeffnen** darf, entscheidet die Device-Cgroup des
+    # Containers. Docker erlaubt dort standardmaessig nur eine kurze Liste
+    # (null, zero, random, tty, ptmx, ...) - USB-Seriell gehoert NICHT dazu:
+    # Major 188 = ttyUSB0..n, Major 166 = ttyACM0..n.
+    #
+    # Folge ohne diese Zeilen: /dev/ttyUSB0 erscheint im Container, `ls -l`
+    # zeigt 0666, und `open()` scheitert trotzdem mit EPERM. Genau das
+    # meldet usb-serial-check.sh als "OPEN-FEHLER".
+    #
+    # **Warum hier keine Anfuehrungszeichen-Falle droht:** der Worker
+    # entfernt die Quotes (siehe oben). Aus "c 188:* rwm" wird dabei
+    # weiterhin ein String - aus "20" wurde dagegen eine Zahl.
+    # ---------------------------------------------------------------------
+    device_cgroup_rules:
+      - "c 188:* rwm"   # ttyUSB* (CH340, FTDI, CP210x, PL2303)
+      - "c 166:* rwm"   # ttyACM* (CDC-ACM)
+
     environment:
       # Das Datenverzeichnis und der 24-h-Schreibzaehler (EEPROM-Schutz)
       # liegen im Volume "comfobox-data" - siehe unten.

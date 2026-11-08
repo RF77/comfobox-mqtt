@@ -40,6 +40,16 @@ WORKDIR /src
 
 # Restore zuerst → Layer-Cache bleibt gültig, wenn nur der Code geändert wurde.
 COPY src/global.json src/Directory.Build.props src/Directory.Packages.props ./
+
+# Die Version des Gateways.
+#
+# Sie MUSS von außen kommen. `Directory.Build.props` trägt nur den
+# Entwicklungs-Stand (und bleibt dort leicht veraltet zurück) - das Image
+# wird aber über den Release-Tag gebaut. Ohne diesen Durchgriff meldet
+# `ComfoBox/Status/Version` bzw. `/api/status` die Version aus der
+# Projektdatei, während das Image `:<tag>` heißt. Genau das war der Fall bei
+# 1.0.3: Image 1.0.3, gemeldete Version 1.0.1.
+ARG VERSION=0.0.0-dev
 COPY src/ComfoBox.Domain/ComfoBox.Domain.csproj src/ComfoBox.Domain/
 COPY src/ComfoBox.Domain/packages.lock.json src/ComfoBox.Domain/
 COPY src/ComfoBox.Bacnet/ComfoBox.Bacnet.csproj src/ComfoBox.Bacnet/
@@ -60,7 +70,8 @@ RUN dotnet publish src/ComfoBox.Gateway/ComfoBox.Gateway.csproj \
         --output /app/publish \
         --no-restore \
         /p:UseAppHost=false \
-        /p:InvariantGlobalization=false
+        /p:InvariantGlobalization=false \
+        /p:Version="${VERSION}"
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -68,10 +79,15 @@ RUN dotnet publish src/ComfoBox.Gateway/ComfoBox.Gateway.csproj \
 # ═════════════════════════════════════════════════════════════════════════════
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 
+# Dieselbe Version wie im Build-Stage - sie landet im OCI-Label und ist damit
+# mit `docker inspect` prüfbar, ohne den Container zu starten.
+ARG VERSION=0.0.0-dev
+
 LABEL org.opencontainers.image.title="ComfoBox MQTT Gateway" \
       org.opencontainers.image.description="MQTT-Gateway für die Zehnder ComfoBox Series 5 (BACnet/MS-TP)" \
       org.opencontainers.image.source="https://github.com/rf77/comfobox-mqtt" \
-      org.opencontainers.image.licenses="MIT"
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${VERSION}"
 
 # tini: PID 1 ohne Zombie-Reaping und ohne Signal-Weiterleitung.
 # curl:   nur für den Healthcheck (busybox-wget reicht nicht für -fsS mit

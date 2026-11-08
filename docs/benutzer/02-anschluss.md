@@ -127,9 +127,10 @@ sudo fuser -v /dev/ttyUSB0
 | Ursache | Lösung |
 |---|---|
 | Adapter nicht angesteckt | einstecken, Seite neu laden |
-| kein Treiber | CH340/FTDI-Treiber des NAS/HA-Betriebssystems installieren |
+| kein Treiber im Betriebssystem | Treiber installieren (unter Linux `ch341` bzw. `ftdi_sio`; unter Windows den CH340-Treiber) |
 | Port ohne Berechtigung | Benutzer zur Gruppe `dialout` hinzufügen |
 | Adapter wird nach dem Reboot später erkannt | das Gateway wartet mit Wiederholung – das ist normal |
+| Port verschwindet im Betrieb | Kabel, Hub oder Stromversorgung – der Adapter wird neu verhandelt |
 
 ### Auf einem Synology-NAS: das Prüfskript
 
@@ -150,10 +151,25 @@ Gerät? Darf er es öffnen? Und was meldet das Gateway selbst?
 | Befund des Skripts | Bedeutung |
 |---|---|
 | „Der Adapter ist nicht angeschlossen …" | Hardware, Kabel oder USB-Buchse – nicht der Gateway |
-| „Der Adapter STECKT … keine Gerätedatei" | dem NAS fehlt der Treiber (`modprobe ch341`) |
+| „Dieser Kernel hat GAR KEINEN USB-Seriell-Treiber" | das NAS kann **keinen** Adapter bedienen – siehe unten |
+| „Der Treiber ist im Kernel vorhanden, aber nicht geladen" | `modprobe ch341` (bzw. der Treiber des Chips), einmalig als root |
 | „NAS hat das Gerät, der Container sieht es nicht" | Durchreichung des Pakets |
+| „Der Container SIEHT den Port, darf ihn aber nicht ÖFFNEN" | Device-Cgroup – `device_cgroup_rules` in der Compose-Datei |
 | „Container sieht das Gerät, die Anwendung meldet keinen Port" | Fehler im Gateway – Ausgabe an den Entwickler geben |
 | „NAS, Container und Anwendung sehen denselben Port" | Erkennung in Ordnung – dann liegt es an der Oberfläche |
+
+> **Wenn das Skript „GAR KEINEN Treiber" meldet:** Dann fehlen dem NAS
+> *alle* USB-Seriell-Module – auch `usbserial` und `ftdi_sio`. Ein anderer
+> Adapter hilft in diesem Fall **nicht**. Entweder die Treibermodule für den
+> eigenen Kernel nachinstallieren (nicht von Synology unterstützt, muss nach
+> jedem DSM-Update wiederholt werden) oder das Gateway auf einem Raspberry Pi
+> betreiben – dort ist der Treiber im Kernel enthalten. Das Skript nennt am
+> Ende den Weg für den konkreten Kernel.
+
+> **Wenn der Adapter mehrmals hintereinander abgelehnt wird** (`error -32`,
+> `error -71`, „unable to enumerate" im Kernel-Protokoll), steckt er meist an
+> einem Hub oder an einem zu langen Kabel. Er gehört direkt an eine Buchse des
+> NAS. Mit Treiber wäre die Verbindung sonst trotzdem instabil.
 
 ---
 

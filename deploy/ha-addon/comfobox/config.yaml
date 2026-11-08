@@ -1,5 +1,5 @@
 name: "ComfoBox Gateway"
-version: "1.0.3"
+version: "1.0.4"
 slug: "comfobox"
 description: "MQTT-Gateway für die Zehnder ComfoBox Series 5 (ELESTA) – BACnet/MS-TP über RS485."
 url: "https://github.com/RF77/comfobox-mqtt"
@@ -22,7 +22,7 @@ homeassistant: "2024.11.0"
 # Multi-Arch-Image; der Supervisor zieht den Tag, der "version" entspricht.
 # Ohne den Versions-Tag findet der Supervisor das Image nicht - die CI
 # (ha-release.yml) prüft das bei jedem Release.
-image: "ghcr.io/rf77/comfobox-gateway:1.0.1"
+image: "ghcr.io/rf77/comfobox-gateway:1.0.4"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Optionen
