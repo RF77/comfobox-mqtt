@@ -4,6 +4,59 @@ Alle wesentlichen Änderungen an diesem Projekt.
 
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
+## [1.0.3] – 2026-11-08
+
+### Fixed
+- **Die Ursache für `fail compose up` (2201) ist gefunden: eine einzige
+  Zeile in der Compose-Datei.** Der DSM-Worker `docker-project` benutzt
+  unsere Datei **nicht** unverändert. Er liest sie ein, ergänzt `user:` und
+  `cap_add:` und schreibt sie als `docker-compose.admin.yaml` neu — dabei
+  **gehen die Anführungszeichen verloren**:
+  ```yaml
+  group_add:
+    - "20"        # unsere Datei
+  ```
+  wird zu
+  ```yaml
+  group_add:
+    - 20          # die Datei des Workers
+  ```
+  Sein eigener Parser erwartet an dieser Stelle einen String und bricht ab:
+  ```
+  1 error(s) decoding:
+  * 'group_add[0]' expected type 'string', got unconvertible type 'int', value: '20'
+  ```
+  Genau das ist der Grund, warum der Fehler nur beim Paket auftrat: Beim
+  manuellen Anlegen im Container Manager wird unsere Datei **mit**
+  Anführungszeichen benutzt — dort lief alles.
+  → `group_add` ist entfernt; der Zugriff auf `/dev/ttyUSB*` läuft über den
+  Mount `/dev`. `tools/check-spk.sh` lehnt `group_add` jetzt ab, und
+  `dsm-diagnose.sh` simuliert den Roundtrip des Workers (entfernt die
+  Anführungszeichen und lässt Compose die Datei erneut prüfen).
+- **Der Container läuft auf dem NAS unter der Paket-Kennung, nicht als
+  `uid 1001`.** Der Worker schreibt `user: <paket-uid>` in die erzeugte
+  Datei. Das Datenverzeichnis im Image gehört aber `comfobox` (1001) und hat
+  `0755` — der Prozess könnte weder `config.json` schreiben noch das Log
+  anlegen und würde sofort sterben. `/var/lib/comfobox` und
+  `/var/log/comfobox` sind deshalb jetzt `0777`.
+
+### Added
+- `dsm-diagnose.sh --pkguser-probe`: prüft, unter welcher Kennung der Worker
+  arbeitet, ob der Paket-Benutzer an den Docker-Daemon kommt und in den
+  Docker-Share schreiben darf, zeigt die Rechte der seriellen Geräte und
+  startet die echte Worker-Datei als `root` und als Paket-Benutzer — mit der
+  vollständigen Fehlermeldung, die DSM sonst verschluckt.
+- `dsm-diagnose.sh` zeigt direkt nach einem Fehlschlag den Inhalt der vom
+  Worker erzeugten `docker-compose.admin.yaml` und sichert sie nach
+  `/tmp/cb-compose-after-install`.
+
+### Changed
+- Das Paket liefert die Compose-Datei unter **beiden** Namen aus
+  (`compose.yaml` und `docker-compose.yaml`, byte-gleich). Die offizielle
+  Entwicklerdoku nennt `compose.yaml`, die Namensliste im Worker-Binary
+  `docker-compose.yaml` — welchen Namen der Worker sucht, ist damit
+  gleichgültig.
+
 ## [1.0.2] – 2026-11-08
 
 ### Fixed

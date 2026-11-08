@@ -393,6 +393,25 @@ if tar_get_to "package.tgz" "$WORK/package.tgz2" 2>/dev/null \
         else
             bad "compose/compose.yaml fehlt im package.tgz"
         fi
+
+        # **Kein `group_add` mit Zahlenwert.** Der Worker liest die Datei ein,
+        # ergaenzt `user:` und `cap_add:` und schreibt sie neu - dabei
+        # **verliert er die Anfuehrungszeichen**. Aus `- "20"` wird `- 20`,
+        # und sein eigener Parser lehnt das ab:
+        #
+        #   1 error(s) decoding:
+        #   * 'group_add[0]' expected type 'string', got unconvertible
+        #     type 'int', value: '20'
+        #
+        # Genau daran scheiterte Revision 0013 mit `fail compose up` (2201).
+        if grep -qE '^[[:space:]]*group_add:' "$CF"; then
+            bad "docker-compose.yaml enthaelt 'group_add' - der Worker-Roundtrip macht daraus eine YAML-Zahl"
+            echo "       Der Worker schreibt die Datei neu und entfernt die Quotes;"
+            echo "       sein Parser erwartet aber einen String. Ergebnis: 2201."
+            echo "       Stattdessen: Zugriff auf /dev/ttyUSB* ueber den Mount '/dev'."
+        else
+            ok "kein 'group_add' (ueberlebt den Worker-Roundtrip nicht)"
+        fi
     fi
 else
     bad "compose/docker-compose.yaml fehlt im package.tgz"

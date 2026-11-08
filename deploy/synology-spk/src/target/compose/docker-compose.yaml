@@ -50,16 +50,36 @@ services:
     ports:
       - "8081:8080/tcp"
 
-    # Die Gruppe "dialout" wird auf dem Host aufgeloest - so bekommt der
-    # Container (uid 1001) Zugriff auf /dev/ttyUSB* ohne Root.
+    # ---------------------------------------------------------------------
+    # **HIER LAG DER FEHLER - KEIN `group_add` mehr!**
     #
-    # **Numerische GID statt Gruppename:** Auf DSM hat "dialout" ueblicher-
-    # weise die GID 20. Ein *Name* wuerde aber die Container-Erstellung
-    # abbrechen, wenn die Gruppe auf dem NAS anders heisst oder fehlt
-    # ("unable to find group dialout") - damit waere auch die Installation
-    # des Pakets gescheitert. Die numerische GID ist robust.
-    group_add:
-      - "20"
+    # Bis Revision 0013 stand an dieser Stelle:
+    #
+    #     group_add:
+    #       - "20"
+    #
+    # Der Worker schreibt die Compose-Datei **um**: er liest sie ein,
+    # ergaenzt `user:` und `cap_add:` und schreibt sie als
+    # `docker-compose.admin.yaml` neu. Dabei **verliert er die
+    # Anfuehrungszeichen**:
+    #
+    #     group_add:
+    #       - 20            <- jetzt eine YAML-Zahl, kein String mehr
+    #
+    # Beim anschliessenden `compose up` scheitert dann sein eigener Parser:
+    #
+    #     1 error(s) decoding:
+    #     * 'group_add[0]' expected type 'string', got unconvertible
+    #       type 'int', value: '20'
+    #
+    # Das erklaert, warum **nur** der Paket-Weg scheiterte: beim manuellen
+    # Anlegen im Container Manager wird unsere Datei unveraendert benutzt
+    # (mit Anfuehrungszeichen) - dort funktionierte alles.
+    #
+    # Der Zugriff auf /dev/ttyUSB* laeuft deshalb ueber den Mount "/dev".
+    # Ist ein Port auf dem NAS nicht zugaenglich, gehoert dort ein
+    # `devices:`-Eintrag hin (siehe unten) - **nicht** `group_add`.
+    # ---------------------------------------------------------------------
 
     environment:
       # Das Datenverzeichnis und der 24-h-Schreibzaehler (EEPROM-Schutz)

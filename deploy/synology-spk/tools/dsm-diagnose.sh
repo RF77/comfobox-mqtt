@@ -56,6 +56,14 @@
 #              Datensaetze unter etc/projects, Container/Netzwerk/Volume mit
 #              ihren Labels) und vergleicht es mit 'comfobox-gateway'.
 #              Aendert nichts. Der Projektname ist optional.
+#   --pkguser-probe
+#              **Unter welcher Kennung arbeitet der Worker?** Der Worker legt
+#              eine eigene `docker-compose.admin.yaml` mit `user: <paket-uid>`
+#              an - er arbeitet also als Paket-Benutzer. Diese Probe prueft,
+#              ob dieser Benutzer an den Docker-Daemon kommt und in den
+#              Docker-Share schreiben darf, und startet die echte
+#              Worker-Datei als root und als Paket-Benutzer (mit voller
+#              Fehlermeldung). Aendert nichts an der Installation.
 #   --install  **Empfohlen.** Macht zuerst --reset, installiert dann das
 #              Paket und zeigt anschliessend, was der Resource-Worker
 #              "docker-project" ins Syslog geschrieben hat. Genau dort steht
@@ -668,6 +676,181 @@ inspect_project() {
         fi
         echo ""
     fi
+}
+
+# ---------------------------------------------------------------------------
+# Probe: unter WELCHER Kennung laeuft der Worker, und was darf er?
+#
+# **Der Befund vom 08.11. (Revision 0013):** Der Worker legt neben unserer
+# Datei eine eigene `docker-compose.admin.yaml` an - und darin stehen zwei
+# Eintraege, die NICHT aus unserem Paket stammen:
+#
+#     user: 286035:286035          <- die UID/GID des Paket-Benutzers
+#     cap_add:
+#       - NET_BIND_SERVICE
+#
+# Die Datei gehoert **286035** (Modus 0600). Der Worker arbeitet also unter
+# der Kennung des Pakets, nicht als root. Genau daraus folgen die beiden
+# moeglichen Ursachen fuer `2201`:
+#
+#   1. Der Paket-Benutzer darf nicht mit dem Docker-Daemon sprechen
+#      (/var/run/docker.sock gehoert root:root oder root:docker).
+#   2. Der Paket-Benutzer darf nicht in den Docker-Share schreiben
+#      (/volume3/docker gehoert root:root 0755) - dort legt der Worker das
+#      Projektverzeichnis an.
+#
+# Beides scheitert **sofort**, ohne Image-Pull, ohne `container create` -
+# genau wie im Mitschnitt vom 21:39 (kein einziges docker-Event).
+#
+# Diese Probe aendert nichts an der Installation. Sie probiert die Kette
+# der Reihe nach aus und zeigt bei jedem Schritt die **vollstaendige**
+# Fehlermeldung:
+#
+#   a) Kennung, Gruppen, Socket-Rechte
+#   b) `docker ps` als Paket-Benutzer
+#   c) Schreibtest im Docker-Share als Paket-Benutzer
+#   d) die echte Worker-Datei (admin.yaml) per Compose - als root und als
+#      Paket-Benutzer, jeweils im Share
+#   e) dieselbe Datei mit `user: 1001:1001` - zeigt, ob die erzwungene
+#      Paket-UID der naechste Fehler waere
+#
+# Danach bleiben keine Container zurueck.
+# ---------------------------------------------------------------------------
+pkguser_probe() {
+    PKGUSER=ComfoBoxGateway
+    SHARE=$(docker_share_dir 2>/dev/null)
+    COMPOSE_BIN=$(cm_compose_bin 2>/dev/null)
+    PKGDEST=/var/packages/ComfoBoxGateway/target
+
+    echo ">> Paket-Benutzer"
+    id "$PKGUSER" 2>&1 | sed 's/^/   /'
+    echo "   (die UID hier muss der UID in docker-compose.admin.yaml entsprechen)"
+    echo ""
+
+    echo ">> Docker-Socket"
+    for s in /var/run/docker.sock /run/docker.sock; do
+        [ -e "$s" ] || continue
+        ls -ln "$s" 2>/dev/null | sed 's/^/   /'
+        echo "   Gruppen-Zugriff: $(stat -c '%A %U:%G' "$s" 2>/dev/null)"
+    done
+    echo ""
+
+    echo ">> Darf der Paket-Benutzer mit Docker sprechen?"
+    OUT=$(su -s /bin/sh -c 'docker ps -q >/dev/null 2>&1 && echo DOCKER-OK || echo DOCKER-FAIL' "$PKGUSER" 2>&1)
+    echo "   $OUT"
+    case "$OUT" in
+        *DOCKER-FAIL*)
+            echo "   -> Der Paket-Benutzer kommt NICHT an den Daemon. Das ist eine"
+            echo "      der beiden Ursachen fuer 'fail compose up' (2201)."
+            ;;
+    esac
+    echo ""
+
+    if [ -z "$SHARE" ]; then
+        echo ">> Kein Docker-Share gefunden - Probe endet hier."
+        return 1
+    fi
+
+    echo ">> Rechte des Docker-Share"
+    ls -ldn "$SHARE" 2>/dev/null | sed 's/^/   /'
+    if command -v synoacltool >/dev/null 2>&1; then
+        echo "   ACL:"
+        synoacltool -get "$SHARE" 2>&1 | head -n 20 | sed 's/^/      /'
+    fi
+    echo ""
+
+    echo ">> Darf der Paket-Benutzer in den Docker-Share schreiben?"
+    OUT=$(su -s /bin/sh -c "touch '$SHARE/.cb-probe' && echo WRITE-OK || echo WRITE-FAIL" "$PKGUSER" 2>&1)
+    echo "   $OUT"
+    rm -f "$SHARE/.cb-probe" 2>/dev/null || true
+    case "$OUT" in
+        *WRITE-FAIL*)
+            echo "   -> Ohne Schreibrecht kann der Worker kein Projektverzeichnis"
+            echo "      anlegen. Das ist die zweite Ursache fuer 2201."
+            ;;
+    esac
+    echo ""
+
+    # **Die seriellen Geraete.** Der Container laeuft (durch die vom Worker
+    # erzeugte `docker-compose.admin.yaml`) unter der Paket-Kennung, nicht
+    # unter uid 1001 aus dem Image. Ob /dev/ttyUSB* zugaenglich ist, haengt
+    # deshalb allein an den Rechten der Geraetedatei auf dem NAS.
+    echo ">> Serielle Geraete (Rechte entscheiden ueber den RS485-Zugriff)"
+    found=0
+    for d in /dev/ttyUSB* /dev/ttyACM*; do
+        [ -e "$d" ] || continue
+        found=1
+        ls -l "$d" 2>/dev/null | sed 's/^/   /'
+        echo "      Gruppe (Name -> GID): $(stat -c '%G -> %g' "$d" 2>/dev/null)"
+    done
+    [ "$found" = "1" ] || echo "   (kein Adapter gesteckt - /dev/ttyUSB* fehlt)"
+    echo "   Der Container laeuft unter der Paket-Kennung (siehe oben), nicht als"
+    echo "   uid 1001. Lesen/Schreiben geht nur, wenn die Gruppe der Geraetedatei"
+    echo "   passt ODER die Datei fuer alle offen ist."
+    echo ""
+
+    # Die Datei, die der Worker selbst erzeugt - sie ist die Wahrheit.
+    SRC=""
+    for c in /tmp/cb-compose-after-install/docker-compose.admin.yaml \
+             "$PKGDEST/compose/docker-compose.admin.yaml" \
+             "$PKGDEST/compose/docker-compose.yaml"; do
+        [ -f "$c" ] || continue
+        SRC="$c"
+        break
+    done
+    if [ -z "$SRC" ]; then
+        echo ">> Keine Compose-Datei gefunden - bitte zuerst --install-trace laufen lassen."
+        return 1
+    fi
+    echo ">> Testdatei: $SRC"
+
+    DIR="$SHARE/cb-probe"
+    run_up() {
+        WHO=$1
+        FILE=$2
+        rm -rf "$DIR"
+        mkdir -p "$DIR"
+        cp "$FILE" "$DIR/docker-compose.yaml"
+        chmod -R 0777 "$DIR" 2>/dev/null || true
+        echo ""
+        echo "   --- compose up als '$WHO' ($(basename "$FILE")) ---"
+        if [ "$WHO" = "root" ]; then
+            ( cd "$DIR" && "$COMPOSE_BIN" -p cb-probe up -d ) 2>&1 \
+                | tail -n 25 | sed 's/^/      /'
+        else
+            su -s /bin/sh -c "cd $DIR && $COMPOSE_BIN -p cb-probe up -d" "$WHO" 2>&1 \
+                | tail -n 25 | sed 's/^/      /'
+        fi
+        sleep 5
+        echo "      Zustand: $(docker inspect comfobox-gateway --format '{{.State.Status}} exit={{.State.ExitCode}}' 2>/dev/null || echo 'kein Container')"
+        echo "      Log:"
+        docker logs comfobox-gateway 2>&1 | tail -n 10 | sed 's/^/         /'
+        ( cd "$DIR" && "$COMPOSE_BIN" -p cb-probe down --remove-orphans ) >/dev/null 2>&1 || true
+        docker rm -f comfobox-gateway >/dev/null 2>&1 || true
+    }
+
+    echo ""
+    echo ">> d) Die echte Worker-Datei - als root"
+    run_up root "$SRC"
+
+    echo ""
+    echo ">> d) Die echte Worker-Datei - als Paket-Benutzer"
+    run_up "$PKGUSER" "$SRC"
+
+    echo ""
+    echo ">> e) Dieselbe Datei mit user 1001:1001 (wie im Image)"
+    ALT="/tmp/cb-probe-uid1001.yaml"
+    sed 's/^[[:space:]]*user:.*/    user: "1001:1001"/' "$SRC" > "$ALT" 2>/dev/null
+    if grep -q '1001:1001' "$ALT" 2>/dev/null; then
+        run_up root "$ALT"
+    else
+        echo "   (uebersprungen - die Datei enthaelt keine 'user:'-Zeile)"
+    fi
+
+    rm -rf "$DIR" "$ALT" 2>/dev/null || true
+    echo ""
+    echo ">> Aufraeumen fertig. Volume 'comfobox-data' bleibt erhalten."
+    echo ""
 }
 
 # ---------------------------------------------------------------------------
@@ -1606,16 +1789,45 @@ validate_compose() {
     mkdir -p "$WORK2"
     if tar xf "$SPK" -C "$WORK2" package.tgz 2>/dev/null \
        && tar xzf "$WORK2/package.tgz" -C "$WORK2" compose/docker-compose.yaml 2>/dev/null; then
+        CF="$WORK2/compose/docker-compose.yaml"
         echo ">> Compose-Datei:"
-        sed 's/^/   /' "$WORK2/compose/docker-compose.yaml"
+        sed 's/^/   /' "$CF"
         echo ""
         echo ">> docker compose config (Syntaxpruefung):"
-        if docker compose -f "$WORK2/compose/docker-compose.yaml" config >/dev/null 2>&1; then
+        if docker compose -f "$CF" config >/dev/null 2>&1; then
             echo "   OK - die Compose-Datei ist gueltig."
         else
-            docker compose -f "$WORK2/compose/docker-compose.yaml" config 2>&1 \
-                | head -n 20 | sed 's/^/   /'
+            docker compose -f "$CF" config 2>&1 | head -n 20 | sed 's/^/   /'
             echo "   WARNUNG: Die Compose-Datei hat einen Fehler!"
+        fi
+        echo ""
+
+        # **Simulation des Worker-Roundtrips - der eigentliche Test.**
+        #
+        # Der Worker liest die Datei ein, ergaenzt `user:` und `cap_add:` und
+        # schreibt sie neu. Dabei gehen die Anfuehrungszeichen verloren. Genau
+        # daran ist Revision 0013 gescheitert:
+        #
+        #     group_add:
+        #       - "20"     ->  - 20     (YAML-Zahl!)
+        #
+        #    1 error(s) decoding:
+        #    * 'group_add[0]' expected type 'string', got unconvertible
+        #      type 'int', value: '20'
+        #
+        # Diese Pruefung entfernt die Anfuehrungszeichen genauso und laesst
+        # Compose die Datei erneut lesen. Was hier scheitert, scheitert auch
+        # bei der Installation.
+        echo ">> Simulation des Worker-Roundtrips (ohne Anfuehrungszeichen):"
+        SIM="$WORK2/worker-sim.yaml"
+        sed -E 's/^([[:space:]]*-[[:space:]]*)"([^"]*)"([[:space:]]*)$/\1\2\3/' "$CF" > "$SIM"
+        if docker compose -f "$SIM" config >/dev/null 2>&1; then
+            echo "   OK - auch ohne Anfuehrungszeichen gueltig."
+        else
+            docker compose -f "$SIM" config 2>&1 | head -n 20 | sed 's/^/   /'
+            echo "   WARNUNG: Der Worker-Roundtrip macht die Datei ungueltig!"
+            echo "            Numerische Werte in Anfuehrungszeichen (z. B. group_add)"
+            echo "            verlieren ihre Quotes und werden zu YAML-Zahlen."
         fi
     fi
     rm -rf "$WORK2"
@@ -1890,6 +2102,10 @@ elif [ "$MODE" = "--inspect-project" ]; then
     echo "--- Ground Truth: wie sieht ein funktionierendes Projekt aus? ---"
     echo ""
     inspect_project "$ARG3"
+elif [ "$MODE" = "--pkguser-probe" ]; then
+    echo "--- Unter welcher Kennung arbeitet der Worker? ---"
+    echo ""
+    pkguser_probe
 elif [ "$MODE" = "--worker-forensics" ]; then
     echo "--- 8. Aufraeumen (ohne Daten-Volume) ---"
     reset_all

@@ -1,5 +1,5 @@
 name: "ComfoBox Gateway"
-version: "1.0.1"
+version: "1.0.3"
 slug: "comfobox"
 description: "MQTT-Gateway für die Zehnder ComfoBox Series 5 (ELESTA) – BACnet/MS-TP über RS485."
 url: "https://github.com/RF77/comfobox-mqtt"

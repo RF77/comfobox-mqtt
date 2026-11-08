@@ -88,8 +88,30 @@ COPY --from=build /app/publish ./
 
 # Datenverzeichnis (persistenter 24-h-Schreibzähler + config.json) und
 # Logverzeichnis. Beide gehören dem Benutzer comfobox (kein Root).
+#
+# **Die Rechte 0777 sind Absicht - sie sind der Preis für den DSM-Worker.**
+# Der Worker "docker-project" erzeugt beim Anlegen des Projekts eine eigene
+# `docker-compose.admin.yaml`. Darin steht eine Zeile, die NICHT aus unserer
+# Compose-Datei stammt:
+#
+#     user: 286035:286035        <- die UID/GID des Paket-Benutzers
+#
+# Der Container läuft auf dem NAS also **nicht** als uid 1001 aus dem Image,
+# sondern unter der Kennung, die DSM dem Paket zuweist - und die ist auf jeder
+# NAS anders. Ein Verzeichnis, das `comfobox` (1001) gehört und 0755 hat,
+# kann dieser Benutzer nicht beschreiben: Serilog kann das Log nicht
+# schreiben, der Schreibzähler nicht gesichert werden, der Prozess stirbt
+# beim Start.
+#
+# Deshalb ist das Datenverzeichnis für **jede** Kennung beschreibbar. Es
+# gehört ausschließlich diesem einen Container - die Alternative wäre, den
+# Container als root laufen zu lassen, und das ist auf DSM 7 verboten.
+#
+# Beim `docker run` ohne Compose (Entwicklung) ändert sich nichts: der
+# Standardbenutzer bleibt `comfobox`.
 RUN mkdir -p /var/lib/comfobox /var/log/comfobox \
- && chown -R comfobox:comfobox /app /var/lib/comfobox /var/log/comfobox
+ && chown -R comfobox:comfobox /app /var/lib/comfobox /var/log/comfobox \
+ && chmod 0777 /var/lib/comfobox /var/log/comfobox
 
 USER comfobox
 

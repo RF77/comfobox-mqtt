@@ -119,6 +119,47 @@ Der **Docker-Project-Worker** (DSM 7.2.1+, Provider `ContainerManager>=1432`)
 liest die Compose-Datei unter `target/compose/docker-compose.yaml`, legt daraus
 das Projekt an und **startet bzw. stoppt es beim Start/Stopp des Pakets**.
 
+### ⚠️ Der Worker schreibt die Datei um — und zerstört dabei Quotes
+
+Das ist die **wichtigste Regel** für diese Datei und war die Ursache aller
+fehlgeschlagenen Installationen bis 1.0.2:
+
+Der Worker benutzt unsere Datei **nicht** unverändert. Er liest sie ein,
+ergänzt zwei Einträge und schreibt sie als `docker-compose.admin.yaml` neu.
+Dabei **verliert er die Anführungszeichen**:
+
+```yaml
+# unsere Datei                    # was der Worker daraus macht
+group_add:                        group_add:
+  - "20"                            - 20
+```
+
+Sein eigener Parser erwartet dort einen **String** und bricht ab:
+
+```
+1 error(s) decoding:
+* 'group_add[0]' expected type 'string', got unconvertible type 'int', value: '20'
+```
+
+DSM meldet davon nur `fail compose up '<uuid>'` (2201) — ohne Container, ohne
+Volume, ohne Logzeile. **Deshalb: keine numerischen Werte in
+Anführungszeichen** in Feldern, die Strings erwarten. `tools/check-spk.sh`
+lehnt `group_add` ab, `dsm-diagnose.sh` simuliert den Roundtrip.
+
+### Was der Worker zusätzlich einträgt
+
+```yaml
+user: 286035:286035      # die UID/GID des Paket-Benutzers auf dieser NAS
+cap_add:
+  - NET_BIND_SERVICE
+```
+
+Der Container läuft auf dem NAS also **nicht** unter der UID aus dem Image
+(`comfobox`, 1001), sondern unter der Kennung, die DSM dem Paket zuweist — und
+die ist auf jeder NAS anders. Konsequenz für das Image: das Datenverzeichnis
+muss für **jede** Kennung beschreibbar sein (siehe
+`src/ComfoBox.Gateway/Dockerfile`, `chmod 0777`).
+
 ### ⚠️ Der Dateiname: zwei Quellen, zwei Aussagen
 
 | Quelle | Aussage |
