@@ -89,7 +89,7 @@ jobs:
 
       - name: Testlog hochladen
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: testlog
           path: /tmp/test.log
@@ -104,7 +104,7 @@ jobs:
           fi
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-dotnet
           path: '**/TestResults/**'
@@ -175,7 +175,7 @@ jobs:
         run: npm run build -- --configuration production
 
       - name: Upload bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bundle-web
           path: src/ComfoBox.Web/dist
