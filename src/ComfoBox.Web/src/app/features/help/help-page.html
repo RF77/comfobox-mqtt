@@ -2,7 +2,7 @@
   <p>
     <a routerLink="/help" class="cb-back-link">
       <i class="pi pi-arrow-left" aria-hidden="true"></i>
-      Alle Hilfeseiten
+      {{ t().help.allPages }}
     </a>
   </p>
 
@@ -18,7 +18,7 @@
         <div class="cb-help-header">
           <h1 class="cb-help-heading">{{ entry.title }}</h1>
           <p-tag
-            [value]="entry.audience === 'user' ? 'Anleitung' : 'Referenz'"
+            [value]="entry.audience === 'user' ? t().help.guide : t().help.reference"
             severity="info"
           />
         </div>
@@ -31,14 +31,14 @@
       <ng-template #footer>
         <div class="cb-help-footer">
           <p-button
-            label="Zurück"
+            [label]="t().common.back"
             icon="pi pi-arrow-left"
             [text]="true"
             [disabled]="!previous()"
             (onClick)="go(previous())"
           />
           <p-button
-            label="Weiter"
+            [label]="t().common.next"
             icon="pi pi-arrow-right"
             iconPos="right"
             [text]="true"

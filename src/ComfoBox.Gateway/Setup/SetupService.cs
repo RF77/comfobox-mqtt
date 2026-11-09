@@ -441,9 +441,21 @@ public sealed class SetupService
     /// <summary>
     /// Schließt die Ersteinrichtung ab.
     /// </summary>
+    /// <remarks>
+    /// Sobald ein Administrator existiert, wird die Anmeldung <b>eingeschaltet</b>
+    /// - die Oberfläche ist dann ohne Benutzername und Passwort nicht mehr
+    /// erreichbar. Eine ausdrückliche Einstellung in der <c>config.json</c>
+    /// bleibt unangetastet.
+    /// </remarks>
     public void CompleteSetup()
     {
         _security.SetSetupCompleted(true);
+
+        if (_security.HasAdmin && _security.RequireAuthenticationOverride is null)
+        {
+            _security.SetRequireAuthentication(true);
+        }
+
         _logger.LogInformation("Die Ersteinrichtung ist abgeschlossen - die Setup-Endpunkte sind jetzt geschützt.");
     }
 

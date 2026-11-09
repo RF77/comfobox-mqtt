@@ -1,5 +1,5 @@
 <section class="cb-diagnostics">
-  <h1 class="cb-page-title">Diagnose</h1>
+  <h1 class="cb-page-title">{{ t().diagnostics.title }}</h1>
 
   <!--
     Die Tab-Auswahl ist ein Signal mit Two-Way-Binding: mit einem statischen
@@ -8,12 +8,12 @@
   <p-tabs [(value)]="activeTab">
     <!-- Health-Checks -->
     <p-tablist>
-      <p-tab value="checks">Health-Checks</p-tab>
-      <p-tab value="errors">Fehlerhistorie</p-tab>
-      <p-tab value="logs">Protokoll</p-tab>
-      <p-tab value="writes">Schreibvorgänge</p-tab>
-      <p-tab value="connections">Verbindungen</p-tab>
-      <p-tab value="bus">BACnet-Bus</p-tab>
+      <p-tab value="checks">{{ t().diagnostics.tabChecks }}</p-tab>
+      <p-tab value="errors">{{ t().diagnostics.tabErrors }}</p-tab>
+      <p-tab value="logs">{{ t().diagnostics.tabLogs }}</p-tab>
+      <p-tab value="writes">{{ t().diagnostics.tabWrites }}</p-tab>
+      <p-tab value="connections">{{ t().diagnostics.tabConnections }}</p-tab>
+      <p-tab value="bus">{{ t().diagnostics.tabBus }}</p-tab>
     </p-tablist>
 
     <p-tabpanels>
@@ -21,10 +21,10 @@
         <p-table [value]="checks()" styleClass="cb-table-full">
           <ng-template #header>
             <tr>
-              <th>Komponente</th>
-              <th>Zustand</th>
-              <th>Meldung</th>
-              <th>Seit</th>
+              <th>{{ t().diagnostics.component }}</th>
+              <th>{{ t().diagnostics.state }}</th>
+              <th>{{ t().diagnostics.message }}</th>
+              <th>{{ t().diagnostics.since }}</th>
             </tr>
           </ng-template>
           <ng-template #body let-check>
@@ -42,7 +42,7 @@
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="4">Noch keine Health-Checks vorhanden.</td>
+              <td colspan="4">{{ t().diagnostics.noChecks }}</td>
             </tr>
           </ng-template>
         </p-table>
@@ -52,14 +52,14 @@
       <p-tabpanel value="errors">
         <div class="cb-toolbar">
           <label class="cb-switch">
-            <span>Schweregrad:</span>
+            <span>{{ t().diagnostics.severity }}:</span>
             <select
               class="cb-select"
               [ngModel]="severity()"
               (ngModelChange)="severity.set($event)"
-              aria-label="Fehler nach Schweregrad filtern"
+              [attr.aria-label]="t().diagnostics.severityAria"
             >
-              <option [ngValue]="null">Alle</option>
+              <option [ngValue]="null">{{ t().diagnostics.all }}</option>
               @for (value of severities(); track value) {
                 <option [ngValue]="value">{{ value }}</option>
               }
@@ -68,7 +68,7 @@
 
           <p-button
             icon="pi pi-refresh"
-            label="Neu laden"
+            [label]="t().common.reload"
             [text]="true"
             (onClick)="load()"
           />
@@ -77,11 +77,11 @@
         <p-table [value]="filteredErrors()" styleClass="cb-table-full">
           <ng-template #header>
             <tr>
-              <th>Zeit</th>
-              <th>Schweregrad</th>
-              <th>Quelle</th>
+              <th>{{ t().diagnostics.time }}</th>
+              <th>{{ t().diagnostics.severity }}</th>
+              <th>{{ t().diagnostics.source }}</th>
               <th>Code</th>
-              <th>Meldung</th>
+              <th>{{ t().diagnostics.message }}</th>
             </tr>
           </ng-template>
           <ng-template #body let-error>
@@ -104,7 +104,7 @@
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="5">Keine Fehler aufgetreten.</td>
+              <td colspan="5">{{ t().diagnostics.noErrors }}</td>
             </tr>
           </ng-template>
         </p-table>
@@ -123,26 +123,28 @@
           `@if`-Zweig bleibt dabei als sichtbare Waise im DOM stehen.
         -->
         <p-message severity="info" styleClass="w-full" [class.cb-hidden]="!!health.status()">
-          <p>Der Status wird geladen …</p>
+          <p>{{ t().diagnostics.loading }}</p>
         </p-message>
 
         @if (health.status(); as status) {
           <div class="cb-tiles">
-            <p-card header="Schreibzähler (24 h)">
+            <p-card [header]="t().diagnostics.writeCounter">
               <div class="cb-tile">
                 <span class="cb-tile-value">
                   {{ status.writes.count }} / {{ status.writes.limit }}
                 </span>
                 <span class="cb-tile-hint">
-                  Zurückgesetzt am {{ formatDate(status.writes.resetsAt) }}
+                  {{ t().diagnostics.resetsAt(formatDate(status.writes.resetsAt)) }}
                 </span>
               </div>
             </p-card>
 
-            <p-card header="Laufzeit">
+            <p-card [header]="t().diagnostics.uptime">
               <div class="cb-tile">
                 <span class="cb-tile-value">{{ formatUptime(status.uptimeSeconds) }}</span>
-                <span class="cb-tile-hint">Gestartet: {{ formatDate(health.health()?.startedAt) }}</span>
+                <span class="cb-tile-hint">
+                  {{ t().diagnostics.startedAt(formatDate(health.health()?.startedAt)) }}
+                </span>
               </div>
             </p-card>
           </div>
@@ -152,7 +154,7 @@
       <!-- Verbindungen -->
       <p-tabpanel value="connections">
         <p-message severity="info" styleClass="w-full" [class.cb-hidden]="!!health.status()">
-          <p>Der Status wird geladen …</p>
+          <p>{{ t().diagnostics.loading }}</p>
         </p-message>
 
         @if (health.status(); as status) {
@@ -160,10 +162,10 @@
             <p-card header="BACnet">
               <div class="cb-tile">
                 <p-tag
-                  [value]="status.bacnet.connected ? 'verbunden' : 'getrennt'"
+                  [value]="status.bacnet.connected ? t().diagnostics.connected : t().diagnostics.disconnected"
                   [severity]="status.bacnet.connected ? 'success' : 'danger'"
                 />
-                <span class="cb-tile-hint">Port: {{ status.bacnet.port }}</span>
+                <span class="cb-tile-hint">{{ t().diagnostics.portLabel(status.bacnet.port) }}</span>
                 @if (status.bacnet.lastError; as error) {
                   <span class="cb-tile-error" role="alert">{{ error }}</span>
                 }
@@ -173,17 +175,19 @@
             <p-card header="MQTT">
               <div class="cb-tile">
                 <p-tag
-                  [value]="status.mqtt.connected ? 'verbunden' : 'getrennt'"
+                  [value]="status.mqtt.connected ? t().diagnostics.connected : t().diagnostics.disconnected"
                   [severity]="status.mqtt.connected ? 'success' : 'danger'"
                 />
-                <span class="cb-tile-hint">Broker: {{ status.mqtt.broker || '–' }}</span>
+                <span class="cb-tile-hint">
+                  {{ t().diagnostics.brokerLabel(status.mqtt.broker || t().common.dash) }}
+                </span>
               </div>
             </p-card>
 
-            <p-card header="Gateway">
+            <p-card [header]="t().dashboard.gateway">
               <div class="cb-tile">
                 <span class="cb-tile-value">{{ status.version }}</span>
-                <span class="cb-tile-hint">Gerät {{ status.deviceId }}</span>
+                <span class="cb-tile-hint">{{ t().diagnostics.deviceLabel(status.deviceId) }}</span>
               </div>
             </p-card>
           </div>
@@ -194,24 +198,21 @@
       <p-tabpanel value="bus">
         <p-message severity="info" styleClass="w-full">
           <p>
-            Die Analyse liest nur: sie stellt keine Anfragen an die ComfoBox und
-            schreibt keine Werte. Sie zeigt, ob ein MS/TP-Token durch den Ring läuft.
+            {{ t().diagnostics.busReadOnly }}
           </p>
           <p>
-            Der Token hat nur wenige Millisekunden Zeit (95 ms bis zur Übernahme).
-            Deshalb protokolliert der Gateway im laufenden Betrieb <b>keine</b>
-            Frames - die Auswertung passiert außerhalb des Bus-Takts.
+            {{ t().diagnostics.busTokenNote }}
           </p>
         </p-message>
 
         <div class="cb-toolbar">
           <label class="cb-switch">
-            <span>Dauer:</span>
+            <span>{{ t().diagnostics.durationLabel }}:</span>
             <select
               class="cb-select"
               [ngModel]="bacnetDuration()"
               (ngModelChange)="bacnetDuration.set($event)"
-              aria-label="Dauer der Beobachtung"
+              [attr.aria-label]="t().diagnostics.durationAria"
             >
               @for (value of bacnetDurations; track value) {
                 <option [ngValue]="value">{{ value }} s</option>
@@ -225,13 +226,13 @@
               [ngModel]="bacnetPausePolling()"
               (ngModelChange)="bacnetPausePolling.set($event)"
             />
-            <span>Polling pausieren</span>
+            <span>{{ t().diagnostics.pausePolling }}</span>
           </label>
 
           @if (observing()) {
             <p-button
               icon="pi pi-stop"
-              label="Beobachtung beenden"
+              [label]="t().diagnostics.stopObservation"
               severity="danger"
               [outlined]="true"
               [disabled]="bacnetBusy()"
@@ -240,7 +241,7 @@
           } @else {
             <p-button
               icon="pi pi-play"
-              label="Beobachtung starten"
+              [label]="t().diagnostics.startObservation"
               [disabled]="bacnetBusy()"
               (onClick)="startBacnetObservation()"
             />
@@ -248,7 +249,7 @@
 
           <p-button
             icon="pi pi-refresh"
-            label="Neu laden"
+            [label]="t().common.reload"
             [text]="true"
             (onClick)="loadBacnet()"
           />
@@ -260,7 +261,7 @@
           styleClass="w-full"
           [class.cb-hidden]="!!bacnet()"
         >
-          <p>Die Bus-Analyse wird geladen …</p>
+          <p>{{ t().diagnostics.loadingBus }}</p>
         </p-message>
 
         @if (bacnet()) {
@@ -272,31 +273,39 @@
           </p-message>
 
           <div class="cb-tiles">
-            <p-card header="Bus">
+            <p-card [header]="t().diagnostics.busCard">
               <div class="cb-tile">
                 <span class="cb-tile-value">{{ bacnet()!.totalEvents }}</span>
                 <span class="cb-tile-hint">
-                  Ereignisse in {{ bacnet()!.durationSeconds | number: '1.0-1' }} s
+                  {{ t().diagnostics.eventsIn((bacnet()!.durationSeconds | number: '1.0-1') ?? '0') }}
                 </span>
               </div>
             </p-card>
 
-            <p-card header="Schnittstelle">
+            <p-card [header]="t().diagnostics.interfaceCard">
               <div class="cb-tile">
-                <span class="cb-tile-value">{{ bacnet()!.port || '–' }}</span>
+                <span class="cb-tile-value">{{ bacnet()!.port || t().common.dash }}</span>
                 <span class="cb-tile-hint">
-                  {{ bacnet()!.baudrate }} Baud · Station {{ bacnet()!.thisStation }}
+                  {{ t().diagnostics.interfaceHint(bacnet()!.baudrate, bacnet()!.thisStation) }}
                 </span>
               </div>
             </p-card>
 
-            <p-card header="Stationen gesehen">
+            <p-card [header]="t().diagnostics.stationsSeen">
               <div class="cb-tile">
                 <span class="cb-tile-value">
-                  {{ bacnet()!.stationsSeen.length > 0 ? bacnet()!.stationsSeen.join(', ') : '–' }}
+                  {{
+                    bacnet()!.stationsSeen.length > 0
+                      ? bacnet()!.stationsSeen.join(', ')
+                      : t().common.dash
+                  }}
                 </span>
                 <span class="cb-tile-hint">
-                  {{ bacnet()!.pollingPaused ? 'Polling pausiert' : 'Polling läuft' }}
+                  {{
+                    bacnet()!.pollingPaused
+                      ? t().diagnostics.pollingPaused
+                      : t().diagnostics.pollingRunning
+                  }}
                 </span>
               </div>
             </p-card>
@@ -315,10 +324,10 @@
           <p-table [value]="bacnet()!.events" styleClass="cb-table-full">
             <ng-template #header>
               <tr>
-                <th>Zeit</th>
-                <th>Ereignis</th>
-                <th>Station</th>
-                <th>Frame</th>
+                <th>{{ t().diagnostics.time }}</th>
+                <th>{{ t().diagnostics.event }}</th>
+                <th>{{ t().diagnostics.station }}</th>
+                <th>{{ t().diagnostics.frame }}</th>
               </tr>
             </ng-template>
             <ng-template #body let-event>
@@ -332,8 +341,7 @@
             <ng-template #emptymessage>
               <tr>
                 <td colspan="4">
-                  Noch keine Ereignisse. Starte eine Beobachtung, um den
-                  Token-Umlauf zu sehen.
+                  {{ t().diagnostics.noEvents }}
                 </td>
               </tr>
             </ng-template>

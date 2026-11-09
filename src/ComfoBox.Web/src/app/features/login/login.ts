@@ -6,7 +6,10 @@ import { CardModule } from '@openng/optimus-ui/card';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { MessageModule } from '@openng/optimus-ui/message';
 import { PasswordModule } from '@openng/optimus-ui/password';
+import { SelectModule } from '@openng/optimus-ui/select';
 
+import { I18n } from '../../core/i18n/i18n';
+import type { Language } from '../../core/i18n/translations';
 import { SessionStore } from '../../core/state/session.store';
 
 /**
@@ -26,6 +29,7 @@ import { SessionStore } from '../../core/state/session.store';
     MessageModule,
     PasswordModule,
     RouterLink,
+    SelectModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login.html',
@@ -34,6 +38,15 @@ import { SessionStore } from '../../core/state/session.store';
 export class LoginComponent {
   /** Der Zustand der Sitzung. */
   readonly session = inject(SessionStore);
+
+  /** Die Sprache der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte. */
+  readonly t = this.i18n.t;
+
+  /** Die Sprachwahl. */
+  readonly languages = this.i18n.options;
 
   private readonly router = inject(Router);
 
@@ -62,12 +75,15 @@ export class LoginComponent {
     this.password.set('');
 
     if (!ok) {
-      this.error.set(
-        this.session.error() ?? 'Benutzername oder Passwort ist falsch.',
-      );
+      this.error.set(this.session.error() ?? this.t().login.invalid);
       return;
     }
 
     await this.router.navigate(['/']);
+  }
+
+  /** Wechselt die Sprache. */
+  setLanguage(language: Language): void {
+    this.i18n.set(language);
   }
 }

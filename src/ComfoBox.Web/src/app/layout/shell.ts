@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { ButtonModule } from '@openng/optimus-ui/button';
-import { MenuModule } from '@openng/optimus-ui/menu';
+import { SelectModule } from '@openng/optimus-ui/select';
 
 import { EventsService } from '../core/api/events.service';
+import { I18n } from '../core/i18n/i18n';
+import type { Language } from '../core/i18n/translations';
 import { HealthStore } from '../core/state/health.store';
 import { ItemsStore } from '../core/state/items.store';
 import { SessionStore } from '../core/state/session.store';
@@ -17,10 +20,11 @@ import { HealthBannerComponent } from '../shared/health-banner';
   selector: 'app-shell',
   imports: [
     ButtonModule,
-    MenuModule,
+    FormsModule,
     RouterLink,
     RouterLinkActive,
     RouterOutlet,
+    SelectModule,
     HealthBannerComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +41,12 @@ export class ShellComponent {
   /** Die Items (für die Schnellzüge auf dem Dashboard). */
   readonly items = inject(ItemsStore);
 
+  /** Die Sprache der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte. */
+  readonly t = this.i18n.t;
+
   private readonly events = inject(EventsService);
   private readonly router = inject(Router);
 
@@ -44,13 +54,20 @@ export class ShellComponent {
   readonly menuOpen = signal(false);
 
   /** Die Navigationspunkte. */
-  readonly navigation = [
-    { label: 'Übersicht', icon: 'pi pi-home', route: '/' },
-    { label: 'Geräte', icon: 'pi pi-sliders-h', route: '/items' },
-    { label: 'Konfiguration', icon: 'pi pi-cog', route: '/config' },
-    { label: 'Diagnose', icon: 'pi pi-wrench', route: '/diagnostics' },
-    { label: 'Hilfe', icon: 'pi pi-book', route: '/help' },
-  ];
+  readonly navigation = computed(() => {
+    const texts = this.t();
+
+    return [
+      { label: texts.nav.dashboard, icon: 'pi pi-home', route: '/' },
+      { label: texts.nav.items, icon: 'pi pi-sliders-h', route: '/items' },
+      { label: texts.nav.config, icon: 'pi pi-cog', route: '/config' },
+      { label: texts.nav.diagnostics, icon: 'pi pi-wrench', route: '/diagnostics' },
+      { label: texts.nav.help, icon: 'pi pi-book', route: '/help' },
+    ];
+  });
+
+  /** Die Sprachwahl. */
+  readonly languages = this.i18n.options;
 
   constructor() {
     // Der SSE-Stream liefert die Live-Werte - er wird beim Start der
@@ -60,6 +77,11 @@ export class ShellComponent {
       void this.health.load();
       void this.items.load();
     });
+  }
+
+  /** Wechselt die Sprache. */
+  setLanguage(language: Language): void {
+    this.i18n.set(language);
   }
 
   /** Schließt das Menü (nach der Auswahl auf dem Handy). */

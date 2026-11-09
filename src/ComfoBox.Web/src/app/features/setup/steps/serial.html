@@ -1,9 +1,8 @@
-<p-card header="Serielle Schnittstelle">
+<p-card [header]="t().setupSteps.serialCard">
   <p-message severity="info" styleClass="w-full cb-block">
-    <p class="font-semibold">Hinweis</p>
+    <p class="font-semibold">{{ t().setupSteps.serialHintTitle }}</p>
     <p>
-      Die ComfoBox muss auf <b>38400 Baud</b> umgestellt und <b>neu gestartet</b> sein.
-      Steht sie noch auf 76800, antwortet sie nicht.
+      {{ t().setupSteps.serialHintText }}
     </p>
   </p-message>
 
@@ -18,25 +17,25 @@
     styleClass="w-full cb-block"
   >
     @if (setup.ports().length === 0) {
-      <p>Kein serieller Port gefunden. Bitte den USB-RS485-Adapter einstecken.</p>
+      <p>{{ t().setupSteps.serialNone }}</p>
       <p>
         <a routerLink="/help/anschluss" fragment="adapter-erkennen">
-          Hilfe: Adapter erkennen (ohne Anmeldung)
+          {{ t().setupSteps.serialHelpLink }}
         </a>
       </p>
     } @else {
-      <p>Wählen Sie den Anschluss, an dem der USB-RS485-Adapter steckt.</p>
+      <p>{{ t().setupSteps.serialChoose }}</p>
     }
   </p-message>
 
   <p-button
-    label="Erneut suchen"
+    [label]="t().setupSteps.serialRescan"
     icon="pi pi-refresh"
     [loading]="setup.loadingPorts()"
     (onClick)="setup.reloadPorts()"
   />
 
-  <div class="cb-ports" role="radiogroup" aria-label="Serielle Ports">
+  <div class="cb-ports" role="radiogroup" [attr.aria-label]="t().serial.portsAria">
     @for (port of setup.ports(); track port.port) {
       <div class="cb-port" [class.cb-port-selected]="setup.selectedPort() === port.port">
         <p-radiobutton
@@ -54,7 +53,7 @@
           </span>
           <code class="cb-port-path">{{ port.port }}</code>
           @if (port.stablePath) {
-            <span class="cb-port-stable">stabil: {{ port.stablePath }}</span>
+            <span class="cb-port-stable">{{ t().setupSteps.serialStable(port.stablePath) }}</span>
           }
         </label>
       </div>
@@ -68,7 +67,7 @@
       (ngModelChange)="setup.passAllDevices.set($event)"
     />
     <label for="pass-all">
-      Alle seriellen Ports durchreichen (empfohlen – ermöglicht den Verbindungstest)
+      {{ t().setupSteps.serialPassAll }}
     </label>
   </div>
 </p-card>

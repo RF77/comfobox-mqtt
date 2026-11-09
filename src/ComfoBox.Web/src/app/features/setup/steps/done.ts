@@ -6,6 +6,7 @@ import { MessageModule } from '@openng/optimus-ui/message';
 import { ProgressBarModule } from '@openng/optimus-ui/progressbar';
 
 import { SetupStore } from '../../../core/state/setup.store';
+import { I18n } from '../../../core/i18n/i18n';
 
 /**
  * Schritt 5: die Zusammenfassung und das Übernehmen.
@@ -23,21 +24,29 @@ export class DoneStep {
 
   private readonly router = inject(Router);
 
+  private readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
+
   /** Die Checkliste. */
   readonly checklist = computed(() => [
-    { text: `Serieller Port: ${this.setup.selectedPort() ?? '–'}`, ok: this.setup.selectedPort() !== null },
     {
-      text: `BACnet: ${this.setup.bacnetResult()?.ok ? 'verbunden' : 'nicht geprüft'}`,
+      text: `${this.t().setupSteps.checkPort}: ${this.setup.selectedPort() ?? this.t().common.dash}`,
+      ok: this.setup.selectedPort() !== null,
+    },
+    {
+      text: `${this.t().setupSteps.checkBacnet}: ${this.setup.bacnetResult()?.ok ? this.t().diagnostics.connected : this.t().diagnostics.disconnected}`,
       ok: this.setup.bacnetResult()?.ok === true,
     },
     {
       text: this.setup.hasBroker()
-        ? `MQTT: ${this.setup.mqttResult()?.ok ? 'verbunden' : 'nicht geprüft'}`
-        : 'MQTT: kein Broker (übersprungen)',
+        ? `${this.t().setupSteps.checkMqtt}: ${this.setup.mqttResult()?.ok ? this.t().diagnostics.connected : this.t().diagnostics.disconnected}`
+        : `${this.t().setupSteps.checkMqtt}: ${this.t().common.dash}`,
       ok: this.setup.mqttResult()?.ok === true || !this.setup.hasBroker(),
     },
     {
-      text: `Administrator: ${this.setup.adminUsername() || '–'}`,
+      text: `${this.t().setupSteps.checkAdmin}: ${this.setup.adminUsername() || this.t().common.dash}`,
       ok: this.setup.adminUsername().trim().length >= 3,
     },
   ]);

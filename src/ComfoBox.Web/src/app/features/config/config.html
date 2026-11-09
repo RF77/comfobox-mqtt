@@ -1,5 +1,5 @@
 <section class="cb-config">
-  <h1 class="cb-page-title">Konfiguration</h1>
+  <h1 class="cb-page-title">{{ t().config.title }}</h1>
 
   @if (config.error(); as error) {
     <p-message severity="error" styleClass="w-full">
@@ -8,9 +8,9 @@
   }
 
   <!-- Allgemein -->
-  <p-card header="Allgemein" styleClass="cb-card">
+  <p-card [header]="t().config.general" styleClass="cb-card">
     <div class="cb-field">
-      <label for="config-base-topic">Basis-Topic</label>
+      <label for="config-base-topic">{{ t().config.baseTopic }}</label>
       <input
         pInputText
         id="config-base-topic"
@@ -18,12 +18,12 @@
         readonly
       />
       <span class="cb-hint">
-        Der Topic-Vertrag ist unverhandelbar - das Basis-Topic bleibt „ComfoBox".
+        {{ t().config.baseTopicHint }}
       </span>
     </div>
 
     <div class="cb-field">
-      <label for="config-poll">Poll-Intervall (Sekunden)</label>
+      <label for="config-poll">{{ t().config.pollInterval }}</label>
       <p-inputnumber
         inputId="config-poll"
         [ngModel]="pollInterval()"
@@ -32,26 +32,26 @@
         [max]="3600"
         [useGrouping]="false"
       />
-      <span class="cb-hint">Wie oft die Heizung abgefragt wird. Kleiner = genauer, mehr Last.</span>
+      <span class="cb-hint">{{ t().config.pollIntervalHint }}</span>
     </div>
 
     <div class="cb-field">
-      <label for="config-retain">Werte „retained" publizieren</label>
+      <label for="config-retain">{{ t().config.retain }}</label>
       <p-toggleswitch
         inputId="config-retain"
         [ngModel]="useRetain()"
         (ngModelChange)="useRetain.set($event)"
       />
       <span class="cb-hint">
-        Bei „aus" übernimmt Home Assistant die Werte nach einem Neustart nicht automatisch.
+        {{ t().config.retainHint }}
       </span>
     </div>
   </p-card>
 
   <!-- Schreibschutz -->
-  <p-card header="Schreibschutz" styleClass="cb-card">
+  <p-card [header]="t().config.writeProtection" styleClass="cb-card">
     <div class="cb-field">
-      <label for="config-writes">Maximale Schreibvorgänge je 24 h</label>
+      <label for="config-writes">{{ t().config.maxWrites }}</label>
       <p-inputnumber
         inputId="config-writes"
         [ngModel]="maxWrites()"
@@ -61,39 +61,121 @@
         [useGrouping]="false"
       />
       <span class="cb-hint">
-        Der Zähler schützt den EEPROM der Heizung. 0 bedeutet: kein Limit.
+        {{ t().config.maxWritesHint }}
       </span>
     </div>
 
     <div class="cb-field">
-      <label for="config-expert">Experten-Modus</label>
+      <label for="config-expert">{{ t().config.expertMode }}</label>
       <p-toggleswitch
         inputId="config-expert"
         [ngModel]="expertMode()"
         (ngModelChange)="toggleExpertMode()"
       />
       <span class="cb-hint">
-        Erlaubt das Schreiben sensibler Parameter. Standard: aus.
+        {{ t().config.expertModeHint }}
       </span>
+    </div>
+  </p-card>
+
+  <!-- Sicherheit -->
+  <p-card [header]="t().config.security" styleClass="cb-card">
+    <p class="cb-hint">{{ t().config.securityHint }}</p>
+
+    <div class="cb-field">
+      <label for="config-require-auth">{{ t().config.requireAuth }}</label>
+      <p-toggleswitch
+        inputId="config-require-auth"
+        [ngModel]="requireAuth()"
+        (ngModelChange)="requireAuth.set($event)"
+      />
+      <span class="cb-hint">{{ t().config.requireAuthHint }}</span>
+    </div>
+
+    <div class="cb-actions">
+      <p-button
+        [label]="t().common.save"
+        icon="pi pi-check"
+        [outlined]="true"
+        (onClick)="saveSecurity()"
+      />
+    </div>
+
+    <div class="cb-field">
+      <label for="config-admin-user">{{ t().config.adminUser }}</label>
+      <input
+        pInputText
+        id="config-admin-user"
+        [ngModel]="adminUserName()"
+        (ngModelChange)="adminUserName.set($event)"
+        autocomplete="username"
+      />
+    </div>
+
+    <div class="cb-field">
+      <label for="config-current-password">{{ t().config.currentPassword }}</label>
+      <p-password
+        inputId="config-current-password"
+        [ngModel]="currentPassword()"
+        (ngModelChange)="currentPassword.set($event)"
+        [feedback]="false"
+        [toggleMask]="true"
+        autocomplete="current-password"
+      />
+    </div>
+
+    <div class="cb-field">
+      <label for="config-new-password">{{ t().config.newPassword }}</label>
+      <p-password
+        inputId="config-new-password"
+        [ngModel]="newPassword()"
+        (ngModelChange)="newPassword.set($event)"
+        [toggleMask]="true"
+        autocomplete="new-password"
+      />
+    </div>
+
+    <div class="cb-field">
+      <label for="config-repeat-password">{{ t().config.repeatPassword }}</label>
+      <p-password
+        inputId="config-repeat-password"
+        [ngModel]="repeatPassword()"
+        (ngModelChange)="repeatPassword.set($event)"
+        [feedback]="false"
+        [toggleMask]="true"
+        autocomplete="new-password"
+      />
+      @if (passwordMismatch()) {
+        <span class="cb-hint">{{ t().config.passwordMismatch }}</span>
+      }
+    </div>
+
+    <div class="cb-actions">
+      <p-button
+        [label]="t().config.changeAdmin"
+        icon="pi pi-key"
+        [disabled]="passwordMismatch()"
+        (onClick)="changeAdmin()"
+      />
     </div>
   </p-card>
 
   <!-- BACnet / MQTT: nur Konfigurationsdatei -->
   @if (config.config(); as cfg) {
-    <p-card header="BACnet (serielle Schnittstelle)" styleClass="cb-card">
-      <p-tag value="wirkt sofort" severity="success" />
+    <p-card [header]="t().config.bacnetSection" styleClass="cb-card">
+      <p-tag [value]="t().config.appliesImmediately" severity="success" />
 
       <div class="cb-readonly-grid">
         <div>
-          <span class="cb-label">Geräte-ID</span>
+          <span class="cb-label">{{ t().config.deviceId }}</span>
           <span class="cb-value">{{ cfg.bacnet.deviceId }}</span>
         </div>
         <div>
-          <span class="cb-label">MSTP-Adresse</span>
+          <span class="cb-label">{{ t().config.mstpAddress }}</span>
           <span class="cb-value">{{ cfg.bacnet.thisStation }}</span>
         </div>
         <div>
-          <span class="cb-label">Item-Timeout</span>
+          <span class="cb-label">{{ t().config.itemTimeout }}</span>
           <span class="cb-value">{{ cfg.bacnet.itemTimeoutMs }} ms</span>
         </div>
       </div>
@@ -105,22 +187,22 @@
       />
     </p-card>
 
-    <p-card header="MQTT (nur Konfigurationsdatei)" styleClass="cb-card">
-      <p-tag value="Neustart erforderlich" severity="warn" />
+    <p-card [header]="t().config.mqttSection" styleClass="cb-card">
+      <p-tag [value]="t().config.restartRequired" severity="warn" />
 
       <div class="cb-readonly-grid">
         <div>
-          <span class="cb-label">Discovery</span>
+          <span class="cb-label">{{ t().config.discovery }}</span>
           <span class="cb-value">
             @if (cfg.mqtt.enableDiscovery) {
-              <p-tag value="aktiv" severity="success" />
+              <p-tag [value]="t().config.active" severity="success" />
             } @else {
-              <p-tag value="aus" severity="info" />
+              <p-tag [value]="t().config.inactive" severity="info" />
             }
           </span>
         </div>
         <div>
-          <span class="cb-label">Discovery-Präfix</span>
+          <span class="cb-label">{{ t().config.discoveryPrefix }}</span>
           <span class="cb-value">{{ cfg.mqtt.discoveryPrefix }}</span>
         </div>
       </div>
@@ -128,31 +210,31 @@
       <p-table [value]="cfg.mqtt.brokers" [tableStyle]="{ 'min-width': '100%' }">
         <ng-template #header>
           <tr>
-            <th>Broker</th>
-            <th>Port</th>
-            <th>Benutzer</th>
-            <th>Passwort</th>
-            <th>TLS</th>
+            <th>{{ t().config.broker }}</th>
+            <th>{{ t().config.port }}</th>
+            <th>{{ t().config.user }}</th>
+            <th>{{ t().config.password }}</th>
+            <th>{{ t().config.tls }}</th>
           </tr>
         </ng-template>
         <ng-template #body let-broker>
           <tr>
             <td>{{ broker.host }}</td>
             <td>{{ broker.port }}</td>
-            <td>{{ broker.username ?? '–' }}</td>
+            <td>{{ broker.username ?? t().common.dash }}</td>
             <td>
               @if (broker.passwordSet) {
-                <p-tag value="gesetzt" severity="success" />
+                <p-tag [value]="t().config.set" severity="success" />
               } @else {
-                <span>–</span>
+                <span>{{ t().common.dash }}</span>
               }
             </td>
-            <td>{{ broker.useTls ? 'ja' : 'nein' }}</td>
+            <td>{{ broker.useTls ? t().config.active : t().config.inactive }}</td>
           </tr>
         </ng-template>
         <ng-template #emptymessage>
           <tr>
-            <td colspan="5">Kein Broker konfiguriert.</td>
+            <td colspan="5">{{ t().config.noBroker }}</td>
           </tr>
         </ng-template>
       </p-table>
@@ -160,14 +242,13 @@
   }
 
   <!-- API-Token -->
-  <p-card header="API-Token" styleClass="cb-card">
+  <p-card [header]="t().config.tokens" styleClass="cb-card">
     <p class="cb-hint">
-      Ein Token erlaubt einem Programm (z. B. der Home-Assistant-Integration) den Zugriff auf die
-      Schnittstelle. Der Klartext ist nur beim Erzeugen sichtbar.
+      {{ t().config.tokensHint }}
     </p>
 
     <div class="cb-token-create">
-      <label for="token-name">Name</label>
+      <label for="token-name">{{ t().config.tokenName }}</label>
       <input
         pInputText
         id="token-name"
@@ -175,21 +256,35 @@
         (ngModelChange)="tokenName.set($event)"
       />
 
-      <p-checkbox
-        [binary]="true"
-        [ngModel]="tokenAdmin()"
-        (ngModelChange)="tokenAdmin.set($event)"
-        inputId="token-admin"
+      <label for="token-scope">{{ t().config.tokenScope }}</label>
+      <p-select
+        inputId="token-scope"
+        [options]="scopeChoices()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="tokenScope()"
+        (ngModelChange)="tokenScope.set($event)"
       />
-      <label for="token-admin">Administrative Rechte</label>
 
-      <p-button label="Token erzeugen" icon="pi pi-plus" (onClick)="createToken()" />
+      <label for="token-days">{{ t().config.tokenExpiry }}</label>
+      <p-select
+        inputId="token-days"
+        [options]="dayChoices()"
+        optionLabel="label"
+        optionValue="value"
+        [ngModel]="tokenDays()"
+        (ngModelChange)="tokenDays.set($event)"
+      />
+
+      <p-button [label]="t().config.tokenCreate" icon="pi pi-plus" (onClick)="createToken()" />
     </div>
 
     @if (createdToken(); as created) {
       <p-message severity="warn" styleClass="w-full cb-token-created">
-        <p class="font-semibold">Token: {{ created.name }}</p>
-        <p>Bitte jetzt kopieren - danach ist der Klartext nicht mehr sichtbar.</p>
+        <p class="font-semibold">
+          {{ t().config.tokenCreated }}: {{ created.name }} ({{ scopeText(created.scope) }})
+        </p>
+        <p>{{ t().config.tokenCreatedHint }}</p>
         <code class="cb-token-value">{{ created.token }}</code>
       </p-message>
     }
@@ -197,10 +292,11 @@
     <p-table [value]="tokenList()" [tableStyle]="{ 'min-width': '100%' }">
       <ng-template #header>
         <tr>
-          <th>Name</th>
-          <th>Id</th>
-          <th>Erstellt</th>
-          <th>Rechte</th>
+          <th>{{ t().config.tokenNameColumn }}</th>
+          <th>{{ t().config.tokenId }}</th>
+          <th>{{ t().config.tokenCreatedAt }}</th>
+          <th>{{ t().config.tokenScopeColumn }}</th>
+          <th>{{ t().config.tokenExpires }}</th>
           <th></th>
         </tr>
       </ng-template>
@@ -211,9 +307,15 @@
           <td>{{ formatDate(token.createdAt) }}</td>
           <td>
             @if (token.isAdmin) {
-              <p-tag value="Administrator" severity="warn" />
+              <p-tag [value]="scopeText(token.scope)" severity="warn" />
             } @else {
-              <p-tag value="Lesen/Schreiben" severity="info" />
+              <p-tag [value]="scopeText(token.scope)" severity="info" />
+            }
+          </td>
+          <td>
+            {{ formatExpiry(token.expiresAt) }}
+            @if (token.expired) {
+              <p-tag [value]="t().config.tokenExpired" severity="danger" />
             }
           </td>
           <td>
@@ -221,7 +323,7 @@
               icon="pi pi-trash"
               [text]="true"
               severity="danger"
-              [ariaLabel]="'Token ' + token.name + ' widerrufen'"
+              [ariaLabel]="t().config.tokenRevoke(token.name)"
               (onClick)="revoke(token)"
             />
           </td>
@@ -229,17 +331,17 @@
       </ng-template>
       <ng-template #emptymessage>
         <tr>
-          <td colspan="5">Es gibt noch kein Token.</td>
+          <td colspan="6">{{ t().config.tokenNone }}</td>
         </tr>
       </ng-template>
     </p-table>
   </p-card>
 
   <!-- Diagnose -->
-  <p-card header="Diagnose" styleClass="cb-card">
+  <p-card [header]="t().config.diagnostics" styleClass="cb-card">
     <div class="cb-actions">
       <p-button
-        label="Gateway neu starten"
+        [label]="t().config.restart"
         icon="pi pi-power-off"
         severity="danger"
         [outlined]="true"
@@ -247,7 +349,7 @@
       />
 
       <p-button
-        label="Neu laden"
+        [label]="t().common.reload"
         icon="pi pi-refresh"
         [outlined]="true"
         (onClick)="load()"
@@ -258,15 +360,14 @@
   <!-- Speichern -->
   <div class="cb-actions cb-save">
     <p-button
-      label="Änderungen speichern"
+      [label]="t().common.save"
       icon="pi pi-check"
       [loading]="saving()"
       (onClick)="save()"
     />
 
     <span class="cb-hint">
-      Die Änderungen werden in die <code>config.json</code> geschrieben und sind nach einem Neustart
-      wirksam.
+      {{ t().config.savedHint }}
     </span>
   </div>
 

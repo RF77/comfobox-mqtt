@@ -1,9 +1,8 @@
 <section class="cb-help">
-  <h1 class="cb-page-title">Hilfe</h1>
+  <h1 class="cb-page-title">{{ t().help.title }}</h1>
 
   <p class="cb-lead">
-    Anleitungen für die Inbetriebnahme, die Bedienung und die Fehlersuche. Die Seiten sind auch
-    ohne Internetverbindung verfügbar.
+    {{ t().help.lead }}
   </p>
 
   <span class="cb-search">
@@ -13,8 +12,8 @@
       type="search"
       [ngModel]="term()"
       (ngModelChange)="term.set($event)"
-      placeholder="Hilfe durchsuchen …"
-      aria-label="Hilfe durchsuchen"
+      [placeholder]="t().help.search"
+      [attr.aria-label]="t().help.searchAria"
     />
   </span>
 
@@ -42,7 +41,7 @@
       </p-card>
     } @empty {
       <p-message severity="info" styleClass="w-full">
-        <p>Keine Seite gefunden. Versuchen Sie einen anderen Suchbegriff.</p>
+        <p>{{ t().help.empty }}</p>
       </p-message>
     }
   </div>

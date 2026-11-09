@@ -1,7 +1,7 @@
 <div class="cb-login">
-  <p-card header="Anmeldung">
+  <p-card [header]="t().login.title">
     <p class="cb-hint">
-      Bitte melden Sie sich mit dem Administrator an, den Sie bei der Einrichtung angelegt haben.
+      {{ t().login.hint }}
     </p>
 
     @if (error(); as message) {
@@ -12,7 +12,7 @@
 
     <form (ngSubmit)="login()">
       <div class="cb-field">
-        <label for="login-user">Benutzername</label>
+        <label for="login-user">{{ t().login.username }}</label>
         <input
           pInputText
           id="login-user"
@@ -25,7 +25,7 @@
       </div>
 
       <div class="cb-field">
-        <label for="login-password">Passwort</label>
+        <label for="login-password">{{ t().login.password }}</label>
         <p-password
           inputId="login-password"
           name="password"
@@ -39,7 +39,7 @@
 
       <p-button
         type="submit"
-        label="Anmelden"
+        [label]="t().login.submit"
         icon="pi pi-sign-in"
         [loading]="busy()"
         [disabled]="!userName().trim() || !password()"
@@ -47,7 +47,18 @@
     </form>
 
     <p class="cb-hint cb-block">
-      <a routerLink="/help">Zur Hilfe (ohne Anmeldung)</a>
+      <a routerLink="/help">{{ t().login.helpLink }}</a>
     </p>
+
+    <div class="cb-login-language">
+      <p-select
+        [options]="languages"
+        optionLabel="label"
+        optionValue="code"
+        [ngModel]="i18n.language()"
+        (ngModelChange)="setLanguage($event)"
+        [ariaLabel]="t().language.label"
+      />
+    </div>
   </p-card>
 </div>

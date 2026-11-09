@@ -1,11 +1,11 @@
 <div class="cb-setup">
   <header class="cb-setup-header">
-    <h1>Einrichtung des ComfoBox-Gateways</h1>
+    <h1>{{ t().setup.title }}</h1>
     <p class="cb-progress-text" role="status">
-      Schritt {{ setup.stepIndex() + 1 }} von {{ setup.steps.length }} ({{ progress() }} %)
+      {{ t().setup.progress(setup.stepIndex() + 1, setup.steps.length, progress()) }}
     </p>
 
-    <ol class="cb-steps" aria-label="Schritte der Einrichtung">
+    <ol class="cb-steps" [attr.aria-label]="t().setup.steps">
       @for (item of items(); track item.route) {
         <li
           class="cb-step"
@@ -31,7 +31,7 @@
 
   <footer class="cb-setup-footer">
     <p-button
-      label="Zurück"
+      [label]="t().setup.back"
       icon="pi pi-arrow-left"
       [text]="true"
       [disabled]="setup.stepIndex() === 0"
@@ -39,7 +39,7 @@
     />
 
     <p-button
-      label="Weiter"
+      [label]="t().setup.next"
       icon="pi pi-arrow-right"
       iconPos="right"
       [disabled]="!setup.canAdvance() || setup.step() === 'done'"

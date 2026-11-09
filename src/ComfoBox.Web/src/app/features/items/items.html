@@ -1,5 +1,5 @@
 <section class="cb-items">
-  <h1 class="cb-page-title">Geräte</h1>
+  <h1 class="cb-page-title">{{ t().items.title }}</h1>
 
   <div class="cb-toolbar">
     <span class="cb-search">
@@ -9,8 +9,8 @@
         type="search"
         [ngModel]="items.search()"
         (ngModelChange)="items.search.set($event)"
-        placeholder="Name, Beschreibung oder Topic suchen …"
-        aria-label="Items durchsuchen"
+        [placeholder]="t().items.search"
+        [attr.aria-label]="t().items.searchAria"
       />
     </span>
 
@@ -21,7 +21,7 @@
         (ngModelChange)="items.onlyWritable.set($event)"
         inputId="filter-writable"
       />
-      <label for="filter-writable">Nur schreibbar</label>
+      <label for="filter-writable">{{ t().items.onlyWritable }}</label>
 
       <p-checkbox
         [binary]="true"
@@ -29,7 +29,7 @@
         (ngModelChange)="items.onlyExpert.set($event)"
         inputId="filter-expert"
       />
-      <label for="filter-expert">Nur Expertenmodus</label>
+      <label for="filter-expert">{{ t().items.onlyExpert }}</label>
 
       <p-checkbox
         [binary]="true"
@@ -37,22 +37,22 @@
         (ngModelChange)="items.onlyStale.set($event)"
         inputId="filter-stale"
       />
-      <label for="filter-stale">Nur veraltet</label>
+      <label for="filter-stale">{{ t().items.onlyStale }}</label>
     </div>
 
     <div class="cb-toolbar-end">
-      <span class="cb-count">{{ visibleCount() }} von {{ items.count() }} Items</span>
+      <span class="cb-count">{{ t().items.count(visibleCount(), items.count()) }}</span>
 
       <p-button
         icon="pi pi-refresh"
         [text]="true"
-        ariaLabel="Katalog neu laden"
+        [ariaLabel]="t().items.reload"
         (onClick)="reload()"
       />
 
       <p-button
         icon="pi pi-filter-slash"
-        label="Filter zurücksetzen"
+        [label]="t().items.reset"
         [text]="true"
         [disabled]="
           !items.search() &&
@@ -74,13 +74,13 @@
 
   @if (items.loading()) {
     <p-message severity="info" styleClass="w-full">
-      <p>Der Item-Katalog wird geladen …</p>
+      <p>{{ t().items.loading }}</p>
     </p-message>
   }
 
   @if (items.grouped().length === 0 && !items.loading()) {
     <p-message severity="info" styleClass="w-full">
-      <p>Keine Items gefunden. Bitte die Suche oder die Filter anpassen.</p>
+      <p>{{ t().items.empty }}</p>
     </p-message>
   }
 

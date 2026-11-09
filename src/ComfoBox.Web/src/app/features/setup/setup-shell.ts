@@ -7,6 +7,7 @@ import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { SetupStore } from '../../core/state/setup.store';
+import { I18n } from '../../core/i18n/i18n';
 import type { SetupStep } from '../../core/models/setup.model';
 
 /**
@@ -29,6 +30,12 @@ export class SetupShellComponent implements OnInit {
   private readonly router = inject(Router);
 
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
 
   ngOnInit(): void {
     // Die gespeicherten Werte vorladen - damit ist der Assistent auch nach
@@ -60,15 +67,19 @@ export class SetupShellComponent implements OnInit {
     }
   }
 
-  /** Die Schrittbeschriftungen. */
-  readonly labels: Readonly<Record<string, string>> = {
-    welcome: 'Willkommen',
-    serial: 'Schnittstelle',
-    bacnet: 'BACnet',
-    mqtt: 'MQTT',
-    security: 'Web-Zugang',
-    done: 'Fertig',
-  };
+  /** Die Schrittbeschriftungen (in der gewählten Sprache). */
+  readonly labels = computed<Record<string, string>>(() => {
+    const s = this.t().setupSteps;
+
+    return {
+      welcome: s.stepWelcome,
+      serial: s.stepSerial,
+      bacnet: s.stepBacnet,
+      mqtt: s.stepMqtt,
+      security: s.stepSecurity,
+      done: s.stepDone,
+    };
+  });
 
   /** Der Fortschritt in Prozent (für die Textangabe). */
   readonly progress = computed(() =>
@@ -76,15 +87,17 @@ export class SetupShellComponent implements OnInit {
   );
 
   /** Die Schrittliste für die Anzeige. */
-  readonly items = computed(() =>
-    this.setup.steps.map((step, index) => ({
+  readonly items = computed(() => {
+    const labels = this.labels();
+
+    return this.setup.steps.map((step, index) => ({
       step,
-      label: this.labels[step] ?? step,
+      label: labels[step] ?? step,
       route: `/setup/${step}`,
       active: index === this.setup.stepIndex(),
       completed: index < this.setup.stepIndex(),
-    })),
-  );
+    }));
+  });
 
   /** Springt zu einem Schritt (die Schrittliste oben). */
   goTo(step: string): void {

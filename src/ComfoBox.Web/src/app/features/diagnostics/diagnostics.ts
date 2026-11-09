@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { DecimalPipe, KeyValuePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { CardModule } from '@openng/optimus-ui/card';
@@ -17,6 +17,7 @@ import { TabsModule } from '@openng/optimus-ui/tabs';
 
 import { HealthService } from '../../core/api/health.service';
 import { BacnetService } from '../../core/api/bacnet.service';
+import { I18n } from '../../core/i18n/i18n';
 import { HealthStore } from '../../core/state/health.store';
 import { LogsStore } from '../../core/state/logs.store';
 import { formatDateTime, formatRelative, formatUptime } from '../../core/util/format';
@@ -35,7 +36,6 @@ import { LogViewerComponent } from './logs/log-viewer';
     CardModule,
     DecimalPipe,
     FormsModule,
-    KeyValuePipe,
     LogViewerComponent,
     MessageModule,
     TableModule,
@@ -56,6 +56,12 @@ export class DiagnosticsComponent {
   private readonly api = inject(HealthService);
 
   private readonly bacnetApi = inject(BacnetService);
+
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
 
   /** Die Fehlerhistorie. */
   readonly errors = signal<ErrorEntryDto[]>([]);
@@ -218,31 +224,33 @@ export class DiagnosticsComponent {
   }
 
   /**
-   * Die deutsche Bezeichnung einer Ereignisart.
+   * Die Bezeichnung einer Ereignisart.
    *
    * @param kind Die Ereignisart (englischer Name aus dem Gateway).
-   * @returns Die deutsche Bezeichnung.
+   * @returns Die Bezeichnung in der gewählten Sprache.
    */
   bacnetKindLabel(kind: string): string {
+    const k = this.t().diagnostics;
+
     switch (kind) {
       case 'TokenReceived':
-        return 'Token übernommen';
+        return k.kindTokenReceived;
       case 'TokenUsed':
-        return 'Token benutzt';
+        return k.kindTokenUsed;
       case 'TokenPassed':
-        return 'Token weitergegeben';
+        return k.kindTokenPassed;
       case 'PollForMaster':
-        return 'Poll-For-Master';
+        return k.kindPollForMaster;
       case 'SoleMaster':
-        return 'Alleiniger Master';
+        return k.kindSoleMaster;
       case 'FrameReceived':
-        return 'Frame empfangen';
+        return k.kindFrameReceived;
       case 'FrameSent':
-        return 'Frame gesendet';
+        return k.kindFrameSent;
       case 'DataReceived':
-        return 'BACnet-Daten empfangen';
+        return k.kindDataReceived;
       case 'ReplyPosted':
-        return 'Reply Postponed';
+        return k.kindReplyPosted;
       default:
         return kind;
     }

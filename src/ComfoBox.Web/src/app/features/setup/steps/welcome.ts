@@ -1,7 +1,9 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CardModule } from '@openng/optimus-ui/card';
 import { MessageModule } from '@openng/optimus-ui/message';
+
+import { I18n } from '../../../core/i18n/i18n';
 
 /**
  * Schritt 0: die Erklärung.
@@ -11,37 +13,33 @@ import { MessageModule } from '@openng/optimus-ui/message';
   imports: [CardModule, MessageModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <p-card header="Willkommen">
+    <p-card [header]="t().setupSteps.welcomeCard">
       <p>
-        Dieser Assistent bringt das ComfoBox-Gateway in Betrieb. Er führt Sie in sechs
-        Schritten durch die Einrichtung: den seriellen Anschluss, die BACnet-Konfiguration,
-        den MQTT-Broker, den Web-Zugang und die Zusammenfassung.
+        {{ t().setupSteps.welcomeText }}
       </p>
 
-      <p class="cb-lead">Sie brauchen dafür:</p>
+      <p class="cb-lead">{{ t().setupSteps.welcomeNeeds }}</p>
 
       <ul class="cb-list">
-        <li>die ComfoBox mit ELESTA-Controller,</li>
-        <li>einen USB-RS485-Adapter (z. B. FTDI oder CH340),</li>
-        <li>ein A/B-Kabel für die Verbindung zur Heizung,</li>
-        <li>optional einen MQTT-Broker (z. B. Mosquitto) für Home Assistant.</li>
+        <li>{{ t().setupSteps.welcomeItem1 }}</li>
+        <li>{{ t().setupSteps.welcomeItem2 }}</li>
+        <li>{{ t().setupSteps.welcomeItem3 }}</li>
+        <li>{{ t().setupSteps.welcomeItem4 }}</li>
       </ul>
 
       <p-message severity="warn" styleClass="w-full cb-hint-block">
-        <p class="font-semibold">Wichtig vor dem Start</p>
+        <p class="font-semibold">{{ t().setupSteps.welcomeWarnTitle }}</p>
         <p>
-          Die ComfoBox muss auf <b>38400 Baud</b> umgestellt und <b>neu gestartet</b> sein.
-          Steht sie noch auf 76800, antwortet sie nicht.
+          {{ t().setupSteps.welcomeWarnText }}
         </p>
         <p>
-          <a routerLink="/help/anschluss">Zur Anleitung „Anschluss" (ohne Anmeldung)</a>
+          <a routerLink="/help/anschluss">{{ t().setupSteps.welcomeHelpLink }}</a>
         </p>
       </p-message>
 
       <p-message severity="info" styleClass="w-full cb-hint-block">
         <p>
-          Der Assistent ist <b>wiederholbar</b>: Sie können ihn später erneut durchlaufen, um
-          den Port oder den Broker zu wechseln.
+          <b>{{ t().setupSteps.welcomeRepeatTitle }}</b> {{ t().setupSteps.welcomeRepeatText }}
         </p>
       </p-message>
     </p-card>
@@ -63,4 +61,7 @@ import { MessageModule } from '@openng/optimus-ui/message';
     }
   `,
 })
-export class WelcomeStep {}
+export class WelcomeStep {
+  /** Die Texte der gewählten Sprache. */
+  readonly t = inject(I18n).t;
+}

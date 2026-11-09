@@ -5,6 +5,77 @@ Alle wesentlichen Änderungen an diesem Projekt.
 Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/),
 die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
+> **Status:** Diese Version ist **nicht freigegeben**. Es gab bis heute keinen
+> einzigen erfolgreichen Zugriff auf eine echte ComfoBox – siehe
+> [README.md](README.md).
+
+## [Unreleased]
+
+### Added
+
+- **Die Web-Oberfläche lässt sich durch Benutzer und Passwort schützen.**
+  Einrichtung im Assistenten, spätere Verwaltung unter
+  *Konfiguration → Sicherheit*: Benutzername, Passwortwechsel (verlangt das
+  aktuelle Passwort – ein gestohlenes Sitzungs-Cookie genügt nicht) und der
+  Schalter *Anmeldung erforderlich*. Passwörter liegen als
+  PBKDF2-SHA256-Hash (600 000 Iterationen, zufälliges Salt) in der
+  `config.json`; ein Passwortwechsel verwirft alle Sitzungen. Ohne
+  Administrator lässt sich die Anmeldepflicht nicht einschalten
+  (`409 admin_missing`) – sonst wäre es eine Aussperrung.
+- **API-Token mit Umfang und Gültigkeitsdauer.** Die Erzeugung fragt drei
+  Dinge ab:
+  | Feld | Werte |
+  |---|---|
+  | Name | frei, z. B. `home-assistant` |
+  | Umfang | `read` (nur lesen), `control` (regeln), `admin` (verwalten) |
+  | Gültig für | unbegrenzt, 30, 90 oder 365 Tage |
+
+  Der Umfang ist die **äußere** Grenze: ein `read`-Token erhält beim
+  Schreiben `403 read_only_token` (nicht `401` – sonst liefe der Client in
+  eine Anmeldeschleife). Ein abgelaufenes Token wirkt sofort nicht mehr,
+  bleibt aber in der Liste und ist dort als *abgelaufen* markiert. Der
+  Klartext ist genau einmal sichtbar.
+- **Die Oberfläche ist in Deutsch, Englisch und Französisch verfügbar.**
+  Typisierte Wörterbücher (`src/app/core/i18n/`); fehlt in einer Sprache ein
+  Schlüssel, bricht der TypeScript-Build ab. Die Sprachwahl steht in der
+  Anmeldung und in der Navigation, wird im `localStorage` gemerkt und
+  entscheidet beim ersten Besuch die Browsersprache. Zahlen und Datumsangaben
+  folgen derselben Sprache (`de-DE`, `en-GB`, `fr-FR`).
+- **Englische Dokumentation unter [`docs/en/`](docs/en/README.md)** für alle
+  drei Betriebsarten: Raspberry Pi (Ein-Befehl-Installation), Synology DSM 7,
+  Docker Compose – dazu Home Assistant, Sicherheit/Token, REST-API,
+  Fehlersuche und Architektur.
+- **`README.md` und Hilfe auf Englisch** neu geschrieben, mit Verweisen auf
+  die Dokumentation, die Betriebsarten und den **alten Quellcode**
+  ([`src_old/`](src_old/)) – inklusive der Klarstellung, dass diese Version
+  **nicht freigegeben** ist, weil noch nie eine echte ComfoBox geantwortet
+  hat.
+
+### Changed
+
+- Die Konfigurationsseite ist vollständig übersetzt und enthält jetzt die
+  Bereiche *Sicherheit* und *API-Token*; die frühere Checkbox
+  „Administrative Rechte" ist durch die Umfangsauswahl ersetzt.
+- Der Home-Assistant-Config-Flow nennt den passenden Umfang: `read` genügt für
+  Sensoren, `control` ist zum Schreiben nötig.
+- Der Diagnose-Tab *BACnet-Bus* übersetzt die Ereignisarten (Token
+  übernommen/benutzt/weitergegeben …).
+
+### Fixed
+
+- Ein ungenutzter `KeyValuePipe`-Import in der Diagnose-Komponente erzeugte
+  bei jedem Build eine Warnung (`NG8113`).
+- Die Sprachwahl war als `readonly`-Array typisiert; `p-select` akzeptiert das
+  nicht und der Angular-Build brach mit `TS4104` ab.
+
+### Notes
+
+- **Die Meldungen der REST-API bleiben deutsch.** Der stabile Fehlercode
+  (`error`) ist sprachneutral und für Programme gedacht; nur die Oberfläche
+  ist übersetzt.
+- Die Hilfe-Seiten in der Anwendung (`/help`) bleiben deutsch – sie sind die
+  deutsche Benutzerdokumentation (`docs/benutzer/`).
+
 ## [1.0.4] – 2026-11-08
 
 ### Fixed

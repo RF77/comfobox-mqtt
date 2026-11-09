@@ -4,12 +4,21 @@
  * <p>Quelle: `src/ComfoBox.Gateway/Api/Models/TokenDtos.cs`.
  */
 
+/** Der Umfang eines Tokens. */
+export type TokenScope = 'read' | 'control' | 'admin';
+
 /** Die Anfrage zur Erzeugung eines API-Tokens. */
 export interface CreateTokenRequest {
   /** Der Anzeigename des Tokens, z. B. `home-assistant`. */
   readonly name: string;
-  /** Darf das Token administrative Aufgaben ausführen? */
-  readonly isAdmin: boolean;
+  /** Der Umfang: nur lesen, regeln oder verwalten. */
+  readonly scope: TokenScope;
+  /**
+   * Die Gültigkeitsdauer in Tagen.
+   *
+   * <p>`null` oder `0` bedeutet: kein Ablaufdatum.</p>
+   */
+  readonly expiresInDays: number | null;
 }
 
 /**
@@ -26,6 +35,10 @@ export interface CreatedTokenDto {
   readonly token: string;
   /** Der Zeitpunkt der Erzeugung. */
   readonly createdAt: string;
+  /** Der Umfang des Tokens. */
+  readonly scope: TokenScope;
+  /** Der Zeitpunkt des Ablaufs (oder `null` für „unbegrenzt"). */
+  readonly expiresAt: string | null;
   /** Darf das Token administrative Aufgaben ausführen? */
   readonly isAdmin: boolean;
 }
@@ -38,6 +51,12 @@ export interface TokenInfoDto {
   readonly name: string;
   /** Der Zeitpunkt der Erzeugung. */
   readonly createdAt: string;
+  /** Der Umfang des Tokens. */
+  readonly scope: TokenScope;
+  /** Der Zeitpunkt des Ablaufs (oder `null` für „unbegrenzt"). */
+  readonly expiresAt: string | null;
+  /** Ist das Token bereits abgelaufen? */
+  readonly expired: boolean;
   /** Darf das Token administrative Aufgaben ausführen? */
   readonly isAdmin: boolean;
 }

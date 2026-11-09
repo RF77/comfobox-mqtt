@@ -10,6 +10,7 @@ import { PasswordModule } from '@openng/optimus-ui/password';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 
 import { SetupStore } from '../../../core/state/setup.store';
+import { I18n } from '../../../core/i18n/i18n';
 import { hintText } from './hints';
 
 /**
@@ -36,8 +37,13 @@ export class MqttStep {
   /** Der Zustand des Assistenten. */
   readonly setup = inject(SetupStore);
 
+  private readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
+
   /** Der Text zum Fehlerhinweis. */
   hintText(hint: string): string {
-    return hintText(hint);
+    return hintText(this.t().setupSteps, hint);
   }
 }

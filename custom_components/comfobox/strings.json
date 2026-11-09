@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "ComfoBox-Gateway verbinden",
-        "description": "Gib die Adresse des Gateways und einen API-Token ein. Den Token findest du in der Web-UI des Gateways unter 'Konfiguration → API-Token'.",
+        "description": "Gib die Adresse des Gateways und einen API-Token ein. Den Token findest du in der Web-UI unter 'Konfiguration → API-Token'. Für Sensoren genügt der Umfang 'Nur lesen'; zum Schreiben von Werten brauchst du 'Lesen und regeln'.",
         "data": {
           "host": "Adresse des Gateways",
           "token": "API-Token",

@@ -9,14 +9,24 @@ namespace ComfoBox.Gateway.Security;
 /// </summary>
 /// <param name="IsAuthenticated">Ist der Aufrufer authentifiziert?</param>
 /// <param name="Name">Der Anzeigename (Token-Name oder Benutzername).</param>
-/// <param name="IsAdmin">Darf der Aufrufer administrative Aufgaben ausführen?</param>
+/// <param name="Scope">Der Umfang der Rechte.</param>
 /// <param name="TokenId">Die Id des verwendeten Tokens (oder <c>null</c>).</param>
-public sealed record ApiIdentity(bool IsAuthenticated, string? Name, bool IsAdmin, string? TokenId)
+public sealed record ApiIdentity(bool IsAuthenticated, string? Name, TokenScope Scope, string? TokenId)
 {
+    /// <summary>
+    /// Darf der Aufrufer administrative Aufgaben ausführen?
+    /// </summary>
+    public bool IsAdmin => IsAuthenticated && Scope == TokenScope.Admin;
+
+    /// <summary>
+    /// Darf der Aufrufer Werte schreiben?
+    /// </summary>
+    public bool CanWrite => IsAuthenticated && Scope >= TokenScope.Control;
+
     /// <summary>
     /// Der anonyme Aufrufer.
     /// </summary>
-    public static ApiIdentity Anonymous { get; } = new(false, null, false, null);
+    public static ApiIdentity Anonymous { get; } = new(false, null, TokenScope.Read, null);
 }
 
 /// <summary>
@@ -130,6 +140,70 @@ public sealed class ApiAccessGuard
     }
 
     /// <summary>
+    /// Ist die Anmeldung erforderlich? (Die <c>config.json</c> hat Vorrang vor
+    /// der Konfiguration - so wirkt die Umschaltung in der Oberfläche sofort.)
+    /// </summary>
+    public bool AuthenticationRequired => _store.IsAuthenticationRequired(_options.RequireAuthentication);
+
+    /// <summary>
+    /// Prüft, ob der Aufrufer Werte schreiben darf.
+    /// </summary>
+    /// <param name="context">Der HTTP-Kontext.</param>
+    /// <returns>
+    /// <c>null</c>, wenn der Zugriff erlaubt ist - sonst die Fehlerantwort
+    /// (<c>401</c> ohne Anmeldung, <c>403</c> bei einem Nur-Lese-Token).
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// Ein Token mit dem Umfang <see cref="TokenScope.Read"/> darf die
+    /// REST-Schnittstelle lesen, aber <b>keinen</b> Wert schreiben. Das gilt
+    /// unabhängig vom Experten-Modus: der Umfang ist die äußere Grenze.
+    /// </para>
+    /// <para>
+    /// Im LAN-Modus (ohne erzwungene Anmeldung) bleibt ein anonymer
+    /// Schreibzugriff erlaubt - das ist der dokumentierte Standardbetrieb.
+    /// </para>
+    /// </remarks>
+    public IResult? RequireWrite(HttpContext context)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var identity = GetIdentity(context);
+
+        if (identity.CanWrite)
+        {
+            return null;
+        }
+
+        if (identity.IsAuthenticated)
+        {
+            // Angemeldet, aber ohne Schreibrecht → 403 (nicht 401: der
+            // Aufrufer soll nicht in eine Anmeldeschleife laufen).
+            return Results.Json(
+                new ApiError
+                {
+                    Error = "read_only_token",
+                    Message = "Dieses Token darf nur lesen. Für Schreibzugriffe ist ein Token mit dem Umfang 'Control' oder 'Admin' nötig.",
+                },
+                statusCode: StatusCodes.Status403Forbidden);
+        }
+
+        if (!AuthenticationRequired)
+        {
+            return null;
+        }
+
+        context.Response.Headers.WWWAuthenticate = "Bearer";
+        return Results.Json(
+            new ApiError
+            {
+                Error = "unauthorized",
+                Message = "Die Anfrage ist nicht authentifiziert. Erwartet wird 'Authorization: Bearer <Token>'.",
+            },
+            statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
     /// Prüft, ob der Aufrufer administrative Rechte hat.
     /// </summary>
     /// <param name="context">Der HTTP-Kontext.</param>
@@ -155,7 +229,7 @@ public sealed class ApiAccessGuard
         }
 
         // LAN-Modus: der Gateway vertraut dem Netz (dokumentierter Betrieb).
-        if (!_options.RequireAuthentication)
+        if (!AuthenticationRequired)
         {
             return null;
         }
@@ -215,7 +289,7 @@ public sealed class ApiAccessGuard
 
             return apiToken is null
                 ? ApiIdentity.Anonymous
-                : new ApiIdentity(true, apiToken.Name, apiToken.IsAdmin, apiToken.Id);
+                : new ApiIdentity(true, apiToken.Name, apiToken.Scope, apiToken.Id);
         }
 
         if (header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
@@ -238,7 +312,7 @@ public sealed class ApiAccessGuard
 
         return userName is null
             ? ApiIdentity.Anonymous
-            : new ApiIdentity(true, userName, true, null);
+            : new ApiIdentity(true, userName, TokenScope.Admin, null);
     }
 
     /// <summary>
@@ -267,7 +341,7 @@ public sealed class ApiAccessGuard
         var password = decoded[(separator + 1)..];
 
         return _store.VerifyAdmin(user, password)
-            ? new ApiIdentity(true, user, true, null)
+            ? new ApiIdentity(true, user, TokenScope.Admin, null)
             : ApiIdentity.Anonymous;
     }
 

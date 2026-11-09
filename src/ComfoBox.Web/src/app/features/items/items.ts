@@ -8,6 +8,7 @@ import { MessageModule } from '@openng/optimus-ui/message';
 import { MessageService } from '@openng/optimus-ui/api';
 
 import { toApiError } from '../../core/api/api-client';
+import { I18n } from '../../core/i18n/i18n';
 import { ItemsStore } from '../../core/state/items.store';
 import type { ItemDto } from '../../core/models/item.model';
 import { ItemValueComponent } from './item-value';
@@ -36,6 +37,12 @@ export class ItemsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly messages = inject(MessageService);
 
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
+
   /** Die Ansicht: Karten oder Liste. */
   readonly view = signal<'cards' | 'list'>('cards');
 
@@ -62,7 +69,7 @@ export class ItemsComponent {
     if (ok) {
       this.messages.add({
         severity: 'success',
-        summary: 'Gespeichert',
+        summary: this.t().common.save,
         detail: event.item.displayName,
         life: 4000,
       });

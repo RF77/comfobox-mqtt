@@ -3,6 +3,7 @@ import {
   Component,
   computed,
   effect,
+  inject,
   input,
   output,
   signal,
@@ -14,6 +15,7 @@ import { SelectModule } from '@openng/optimus-ui/select';
 import { TagModule } from '@openng/optimus-ui/tag';
 
 import type { EnumOption, ItemDto } from '../../core/models/item.model';
+import { I18n } from '../../core/i18n/i18n';
 import { formatRelative } from '../../core/util/format';
 /**
  * Die Bedienzeile eines Items.
@@ -31,15 +33,15 @@ import { formatRelative } from '../../core/util/format';
       <div class="cb-item-head">
         <span class="cb-item-name">{{ item().displayName }}</span>
         @if (item().stale) {
-          <p-tag value="veraltet" severity="warn" />
+          <p-tag [value]="t().item.stale" severity="warn" />
         }
         @if (item().requiresExpertMode) {
-          <p-tag value="Expertenmodus" severity="info" />
+          <p-tag [value]="t().item.expert" severity="info" />
         }
       </div>
 
       <div class="cb-item-value">
-        <span class="cb-item-current">{{ item().valueText ?? '–' }}</span>
+        <span class="cb-item-current">{{ item().valueText ?? t().common.dash }}</span>
         <span class="cb-item-age">{{ age() }}</span>
       </div>
 
@@ -56,12 +58,12 @@ import { formatRelative } from '../../core/util/format';
             [showButtons]="true"
             buttonLayout="horizontal"
             [inputStyle]="{ width: '9rem' }"
-            [attr.aria-label]="'Neuer Wert für ' + item().displayName"
+            [attr.aria-label]="t().item.newValue(item().displayName)"
             [disabled]="saving()"
           />
 
           <p-button
-            label="Speichern"
+            [label]="t().item.save"
             icon="pi pi-check"
             [loading]="saving()"
             [disabled]="!canSave()"
@@ -77,12 +79,12 @@ import { formatRelative } from '../../core/util/format';
             [ngModel]="selectedEnum()"
             (ngModelChange)="selectedEnum.set($event)"
             [disabled]="saving()"
-            [attr.aria-label]="'Neuer Wert für ' + item().displayName"
-            placeholder="Wert wählen"
+            [attr.aria-label]="t().item.newValue(item().displayName)"
+            [placeholder]="t().item.choose"
           />
 
           <p-button
-            label="Speichern"
+            [label]="t().item.save"
             icon="pi pi-check"
             [loading]="saving()"
             [disabled]="!canSave()"
@@ -92,13 +94,13 @@ import { formatRelative } from '../../core/util/format';
       } @else {
         <div class="cb-item-editor">
           <span class="cb-item-readonly">
-            {{ item().writable ? '' : 'Nur lesbar' }}
+            {{ item().writable ? '' : t().item.readonly }}
           </span>
         </div>
       }
 
       @if (item().stateTopic; as topic) {
-        <code class="cb-item-topic" [title]="'MQTT-Topic: ' + topic">{{ topic }}</code>
+        <code class="cb-item-topic" [title]="t().item.topic(topic)">{{ topic }}</code>
       }
     </div>
   `,
@@ -168,6 +170,11 @@ export class ItemValueComponent {
 
   /** Wird ausgelöst, wenn ein Wert geschrieben werden soll. */
   readonly write = output<{ item: ItemDto; value: number | string }>();
+
+  private readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
 
   /** Der aktuelle Zahlenwert (für die Zahleneingabe). */
   readonly numericValue = signal<number | null>(null);

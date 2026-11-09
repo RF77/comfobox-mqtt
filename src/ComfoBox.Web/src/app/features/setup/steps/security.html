@@ -1,12 +1,10 @@
-<p-card header="Web-Zugang">
+<p-card [header]="t().setupSteps.securityCard">
   <p class="cb-hint cb-block">
-    Mit diesem Benutzer melden Sie sich später in der Web-Oberfläche an. Das Passwort wird
-    <b>einmal</b> im Klartext an das Gateway gesendet und dort mit PBKDF2 gehasht - es wird
-    nirgends im Klartext gespeichert.
+    {{ t().setupSteps.securityLead }}
   </p>
 
   <div class="cb-field">
-    <label for="security-user">Benutzername</label>
+    <label for="security-user">{{ t().setupSteps.securityUser }}</label>
     <input
       pInputText
       id="security-user"
@@ -14,11 +12,11 @@
       (ngModelChange)="setup.adminUsername.set($event)"
       autocomplete="username"
     />
-    <span class="cb-hint">Mindestens 3 Zeichen: Buchstaben, Ziffern, Punkt, Unterstrich, Bindestrich.</span>
+    <span class="cb-hint">{{ t().setupSteps.securityUserHint }}</span>
   </div>
 
   <div class="cb-field">
-    <label for="security-password">Passwort</label>
+    <label for="security-password">{{ t().setupSteps.securityPassword }}</label>
     <p-password
       inputId="security-password"
       [ngModel]="setup.adminPassword()"
@@ -30,7 +28,7 @@
 
     <div class="cb-strength" [class]="setup.passwordStrengthClass()">
       <span class="cb-strength-bar"><span class="cb-strength-fill"></span></span>
-      <span>Passwortstärke: {{ setup.passwordStrength() }} von 4</span>
+      <span>{{ t().setupSteps.securityStrength(setup.passwordStrength()) }}</span>
     </div>
 
     @if (setup.passwordHints().length > 0) {
@@ -43,7 +41,7 @@
   </div>
 
   <div class="cb-field">
-    <label for="security-password-repeat">Passwort wiederholen</label>
+    <label for="security-password-repeat">{{ t().setupSteps.securityRepeat }}</label>
     <p-password
       inputId="security-password-repeat"
       [ngModel]="setup.adminPasswordRepeat()"
@@ -56,19 +54,18 @@
       setup.adminPasswordRepeat().length > 0 &&
       setup.adminPasswordRepeat() !== setup.adminPassword()
     ) {
-      <span class="cb-hint">Die beiden Passwörter stimmen noch nicht überein.</span>
+      <span class="cb-hint">{{ t().setupSteps.securityMismatch }}</span>
     }
   </div>
 
   <div class="cb-field">
-    <span class="cb-label">Web-Port</span>
+    <span class="cb-label">{{ t().setupSteps.securityPort }}</span>
     <span class="cb-hint">
-      Vorschlag: {{ setup.suggestedPort() ?? '–' }} (der erste freie Port ab 8081). Der Port wird
-      beim Start des Gateways festgelegt.
+      {{ t().setupSteps.securityPortHint(setup.suggestedPort()?.toString() ?? t().common.dash) }}
     </span>
     <p>
       <a routerLink="/help/erste-schritte" fragment="zugang">
-        Hilfe: Zugang einrichten (ohne Anmeldung)
+        {{ t().setupSteps.securityHelpLink }}
       </a>
     </p>
   </div>

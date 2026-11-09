@@ -8,6 +8,7 @@ using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Mqtt;
 using ComfoBox.Gateway.Protection;
+using ComfoBox.Gateway.Security;
 
 namespace ComfoBox.Gateway.Api;
 
@@ -88,6 +89,7 @@ internal static class ItemsEndpoints
             .WithName("GetItem");
 
         app.MapPut("/api/items/{id}", async (
+                HttpContext context,
                 string id,
                 WriteValueRequest request,
                 IItemCatalog catalog,
@@ -95,8 +97,18 @@ internal static class ItemsEndpoints
                 IValueCache cache,
                 IErrorCollector errors,
                 IWriteCounter counter,
+                ApiAccessGuard guard,
                 CancellationToken cancellationToken) =>
             {
+                // Ein Nur-Lese-Token darf keinen Wert schreiben - der Umfang
+                // des Tokens ist die äußere Grenze (vor jeder Prüfung des
+                // Items).
+                var denied = guard.RequireWrite(context);
+                if (denied is not null)
+                {
+                    return denied;
+                }
+
                 var item = catalog.Find(id);
                 if (item is null)
                 {

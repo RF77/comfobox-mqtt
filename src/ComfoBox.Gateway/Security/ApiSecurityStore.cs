@@ -41,6 +41,9 @@ public sealed class ApiSecurityStore
     private const string AdminUsernameKey = nameof(AdminUsername);
     private const string AdminPasswordHashKey = nameof(AdminPasswordHash);
     private const string SetupCompletedKey = nameof(SetupCompleted);
+    private const string RequireAuthenticationKey = "RequireAuthentication";
+    private const string ScopeKey = "Scope";
+    private const string ExpiresAtKey = "ExpiresAt";
 
     private readonly ConfigStore _config;
     private readonly TimeProvider _timeProvider;
@@ -76,6 +79,41 @@ public sealed class ApiSecurityStore
     public string? AdminPasswordHash => GetString(SectionName, AdminPasswordHashKey);
 
     /// <summary>
+    /// Ist ein Administrator eingerichtet?
+    /// </summary>
+    public bool HasAdmin => !string.IsNullOrEmpty(AdminUsername) && !string.IsNullOrEmpty(AdminPasswordHash);
+
+    /// <summary>
+    /// Die in der <c>config.json</c> gespeicherte Einstellung
+    /// „Anmeldung erforderlich" (oder <c>null</c>, wenn sie nicht gesetzt ist).
+    /// </summary>
+    /// <remarks>
+    /// Die Datei hat Vorrang vor der Umgebungsvariable, damit die Auswahl in
+    /// der Oberfläche sofort und dauerhaft gilt - ohne Neustart.
+    /// </remarks>
+    public bool? RequireAuthenticationOverride
+    {
+        get
+        {
+            var value = ReadSection()[RequireAuthenticationKey];
+
+            return value is null
+                ? null
+                : value.GetValueKind() == System.Text.Json.JsonValueKind.True;
+        }
+    }
+
+    /// <summary>
+    /// Ist die Anmeldung an der Oberfläche und der API erforderlich?
+    /// </summary>
+    /// <param name="fallback">
+    /// Der Wert aus der Konfiguration (<c>Api:RequireAuthentication</c>), wenn
+    /// die <c>config.json</c> nichts vorgibt.
+    /// </param>
+    /// <returns><c>true</c>, wenn jede Anfrage authentifiziert sein muss.</returns>
+    public bool IsAuthenticationRequired(bool fallback) => RequireAuthenticationOverride ?? fallback;
+
+    /// <summary>
     /// Die vorhandenen API-Token (ohne Klartext).
     /// </summary>
     public IReadOnlyList<ApiToken> Tokens
@@ -105,11 +143,17 @@ public sealed class ApiSecurityStore
     /// Erzeugt ein neues API-Token.
     /// </summary>
     /// <param name="name">Der Anzeigename.</param>
-    /// <param name="isAdmin">Darf das Token administrative Aufgaben ausführen?</param>
+    /// <param name="scope">Der Umfang des Tokens.</param>
+    /// <param name="lifetime">
+    /// Die Gültigkeitsdauer (oder <c>null</c> für „unbegrenzt").
+    /// </param>
     /// <returns>
     /// Das Token (ohne Klartext) und der **einmalig** sichtbare Klartext.
     /// </returns>
-    public (ApiToken Token, string Plaintext) CreateToken(string name, bool isAdmin)
+    public (ApiToken Token, string Plaintext) CreateToken(
+        string name,
+        TokenScope scope,
+        TimeSpan? lifetime = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
 
@@ -120,13 +164,16 @@ public sealed class ApiSecurityStore
             .Replace('/', '_')
             .TrimEnd('=');
 
+        var now = _timeProvider.GetUtcNow();
+
         var plaintext = $"{TokenPrefix}{idText}_{secret}";
         var token = new ApiToken(
             idText,
             name,
             PasswordHasher.Hash(plaintext),
-            _timeProvider.GetUtcNow(),
-            isAdmin);
+            now,
+            scope,
+            lifetime is { } duration ? now.Add(duration) : null);
 
         _config.Mutate(config =>
         {
@@ -211,6 +258,21 @@ public sealed class ApiSecurityStore
     }
 
     /// <summary>
+    /// Setzt die Einstellung „Anmeldung erforderlich".
+    /// </summary>
+    /// <param name="required">Der neue Zustand.</param>
+    public void SetRequireAuthentication(bool required)
+    {
+        _config.Mutate(config =>
+        {
+            var section = EnsureSection(config);
+            section[RequireAuthenticationKey] = required;
+        });
+
+        _verified.Clear();
+    }
+
+    /// <summary>
     /// Prüft ein Klartext-Token.
     /// </summary>
     /// <param name="plaintext">Das presented Token.</param>
@@ -232,6 +294,14 @@ public sealed class ApiSecurityStore
 
         var token = FindToken(id);
         if (token is null)
+        {
+            return null;
+        }
+
+        // Ein abgelaufenes Token wirkt sofort nicht mehr - es wird nicht
+        // automatisch gelöscht, damit die Oberfläche es als „abgelaufen"
+        // anzeigen kann.
+        if (token.IsExpired(_timeProvider.GetUtcNow()))
         {
             return null;
         }
@@ -346,24 +416,73 @@ public sealed class ApiSecurityStore
     /// <summary>
     /// Liest ein Token aus einem JSON-Objekt.
     /// </summary>
-    private static ApiToken ReadToken(JsonObject entry) => new(
-        entry["Id"]?.GetValue<string>() ?? string.Empty,
-        entry["Name"]?.GetValue<string>() ?? string.Empty,
-        entry["Hash"]?.GetValue<string>() ?? string.Empty,
-        entry["CreatedAt"]?.GetValue<DateTimeOffset>() ?? DateTimeOffset.MinValue,
-        entry["IsAdmin"]?.GetValue<bool>() ?? false);
+    /// <remarks>
+    /// Ältere Dateien kennen nur <c>IsAdmin</c>. Fehlt <c>Scope</c>, wird der
+    /// Umfang daraus abgeleitet - bestehende Token behalten damit ihre Rechte.
+    /// </remarks>
+    private static ApiToken ReadToken(JsonObject entry)
+    {
+        var scope = ReadScope(entry);
+
+        return new ApiToken(
+            entry["Id"]?.GetValue<string>() ?? string.Empty,
+            entry["Name"]?.GetValue<string>() ?? string.Empty,
+            entry["Hash"]?.GetValue<string>() ?? string.Empty,
+            entry["CreatedAt"]?.GetValue<DateTimeOffset>() ?? DateTimeOffset.MinValue,
+            scope,
+            entry[ExpiresAtKey] is JsonNode expiry ? expiry.GetValue<DateTimeOffset>() : null);
+    }
+
+    /// <summary>
+    /// Liest den Umfang eines Tokens (mit Rückfall auf das alte <c>IsAdmin</c>).
+    /// </summary>
+    private static TokenScope ReadScope(JsonObject entry)
+    {
+        var node = entry[ScopeKey];
+
+        if (node is not null)
+        {
+            // Als Text ("Read"/"Control"/"Admin") **oder** als Zahl.
+            if (node.GetValueKind() == System.Text.Json.JsonValueKind.String
+                && Enum.TryParse<TokenScope>(node.GetValue<string>(), ignoreCase: true, out var named))
+            {
+                return named;
+            }
+
+            if (node.GetValueKind() == System.Text.Json.JsonValueKind.Number
+                && Enum.IsDefined(typeof(TokenScope), node.GetValue<int>()))
+            {
+                return (TokenScope)node.GetValue<int>();
+            }
+        }
+
+        return entry["IsAdmin"]?.GetValue<bool>() == true
+            ? TokenScope.Admin
+            : TokenScope.Control;
+    }
 
     /// <summary>
     /// Schreibt ein Token als JSON-Objekt.
     /// </summary>
-    private static JsonObject WriteToken(ApiToken token) => new()
+    private static JsonObject WriteToken(ApiToken token)
     {
-        ["Id"] = token.Id,
-        ["Name"] = token.Name,
-        ["Hash"] = token.Hash,
-        ["CreatedAt"] = token.CreatedAt,
-        ["IsAdmin"] = token.IsAdmin,
-    };
+        var entry = new JsonObject
+        {
+            ["Id"] = token.Id,
+            ["Name"] = token.Name,
+            ["Hash"] = token.Hash,
+            ["CreatedAt"] = token.CreatedAt,
+            [ScopeKey] = token.Scope.ToString(),
+        };
+
+        // Nur schreiben, wenn gesetzt: eine Datei ohne Ablauf bleibt lesbar.
+        if (token.ExpiresAt is { } expiry)
+        {
+            entry[ExpiresAtKey] = expiry;
+        }
+
+        return entry;
+    }
 
     /// <summary>
     /// Ermittelt die Token-ID aus dem Klartext-Token.

@@ -17,6 +17,7 @@ import { MessageModule } from '@openng/optimus-ui/message';
 import { TagModule } from '@openng/optimus-ui/tag';
 
 import { HelpService } from '../../core/api/help.service';
+import { I18n } from '../../core/i18n/i18n';
 import type { HelpMeta } from '../../core/models/help.model';
 
 /**
@@ -32,6 +33,9 @@ import type { HelpMeta } from '../../core/models/help.model';
 export class HelpPageComponent implements OnInit {
   /** Der Zugriff auf die Hilfe. */
   readonly help = inject(HelpService);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = inject(I18n).t;
 
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);

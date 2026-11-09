@@ -1,21 +1,21 @@
-<p-card header="BACnet-Konfiguration">
+<p-card [header]="t().setupSteps.bacnetCard">
   <div class="cb-field">
-    <label for="bacnet-baudrate">Baudrate</label>
+    <label for="bacnet-baudrate">{{ t().serial.baudrate }}</label>
     <p-select
       inputId="bacnet-baudrate"
-      [options]="baudrates"
+      [options]="baudrates()"
       optionLabel="label"
       optionValue="value"
       [ngModel]="setup.baudrate()"
       (ngModelChange)="setup.baudrate.set($event)"
     />
     <span class="cb-hint">
-      Die ComfoBox muss auf 38400 Baud umgestellt und neu gestartet sein.
+      {{ t().setupSteps.bacnetBaudrateHint }}
     </span>
   </div>
 
   <div class="cb-field">
-    <label for="bacnet-master">Geräte-ID des Controllers</label>
+    <label for="bacnet-master">{{ t().setupSteps.bacnetMasterId }}</label>
     <p-inputnumber
       inputId="bacnet-master"
       [ngModel]="setup.masterId()"
@@ -24,11 +24,11 @@
       [max]="255"
       [useGrouping]="false"
     />
-    <span class="cb-hint">Meist 1. Der Wert muss zur Geräte-ID in der ComfoBox passen.</span>
+    <span class="cb-hint">{{ t().setupSteps.bacnetMasterHint }}</span>
   </div>
 
   <p-button
-    label="Verbindung testen"
+    [label]="t().setupSteps.bacnetTest"
     icon="pi pi-plug"
     [loading]="setup.testingBacnet()"
     [disabled]="!setup.selectedPort()"
@@ -46,12 +46,12 @@
         @if (result.hint === 'no_iam') {
           <p>
             <a routerLink="/help/anschluss" fragment="baudrate">
-              Hilfe: Baudrate prüfen (ohne Anmeldung)
+              {{ t().setupSteps.bacnetHelpLink }}
             </a>
           </p>
         }
       }
-      <p class="cb-hint">Dauer: {{ result.durationMs }} ms</p>
+      <p class="cb-hint">{{ t().common.duration(result.durationMs) }}</p>
     </p-message>
   }
 </p-card>

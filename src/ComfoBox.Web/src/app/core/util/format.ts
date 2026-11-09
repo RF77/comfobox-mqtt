@@ -1,10 +1,24 @@
 /**
  * Die Formatierungshelfer der Oberfläche.
  *
- * <p>Alle Zahlen werden **deutsch** dargestellt (Dezimalkomma). Das betrifft
- * nur die Anzeige - die Payloads an den Server bleiben invariant
+ * <p>Alle Zahlen und Zeitstempel werden im **aktiven** Gebietsschema dargestellt
+ * (Deutsch, Englisch oder Französisch - siehe {@link setFormatLocale}). Das
+ * betrifft nur die Anzeige - die Payloads an den Server bleiben invariant
  * (→ `.github/copilot-instructions.md` §3.2).
  */
+
+/** Das aktive Gebietsschema (wird vom `I18n`-Dienst gesetzt). */
+let activeLocale = 'de-DE';
+
+/** Setzt das Gebietsschema für alle Formatierungen. */
+export function setFormatLocale(locale: string): void {
+  activeLocale = locale;
+}
+
+/** Das aktive Gebietsschema. */
+export function formatLocale(): string {
+  return activeLocale;
+}
 
 /** Formatiert eine Laufzeit in Sekunden als „2 h 14 min". */
 export function formatUptime(seconds: number | null | undefined): string {
@@ -45,7 +59,7 @@ export function formatDateTime(value: string | null | undefined): string {
     return value;
   }
 
-  return date.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
+  return date.toLocaleString(activeLocale, { dateStyle: 'short', timeStyle: 'medium' });
 }
 
 /** Formatiert eine Uhrzeit (deutsch). */
@@ -60,7 +74,7 @@ export function formatTime(value: string | null | undefined): string {
     return value;
   }
 
-  return date.toLocaleTimeString('de-DE', { timeStyle: 'medium' });
+  return date.toLocaleTimeString(activeLocale, { timeStyle: 'medium' });
 }
 
 /** Formatiert eine Zahl (deutsch, mit höchstens zwei Nachkommastellen). */
@@ -69,7 +83,7 @@ export function formatNumber(value: number | null | undefined, digits = 2): stri
     return '–';
   }
 
-  return value.toLocaleString('de-DE', {
+  return value.toLocaleString(activeLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
   });
@@ -84,7 +98,7 @@ export function formatPercent(value: number | null | undefined): string {
   return `${Math.round(value * 100)} %`;
 }
 
-/** Die relative Zeit (deutsch), z. B. „vor 3 min". */
+/** Die relative Zeit (in der aktiven Sprache), z. B. „vor 3 min". */
 export function formatRelative(value: string | null | undefined): string {
   if (!value) {
     return '–';
@@ -98,24 +112,35 @@ export function formatRelative(value: string | null | undefined): string {
 
   const seconds = Math.round((Date.now() - date.getTime()) / 1000);
 
-  if (seconds < 0) {
-    return 'gerade eben';
-  }
+  const [justNow, ago] = relativeWords();
 
   if (seconds < 60) {
-    return 'gerade eben';
+    return justNow;
   }
 
   const minutes = Math.floor(seconds / 60);
   if (minutes < 60) {
-    return `vor ${minutes} min`;
+    return ago(`${minutes} min`);
   }
 
   const hours = Math.floor(minutes / 60);
   if (hours < 24) {
-    return `vor ${hours} h`;
+    return ago(`${hours} h`);
   }
 
   const days = Math.floor(hours / 24);
-  return `vor ${days} d`;
+  return ago(`${days} d`);
+}
+
+/** Die Wörter für die relative Zeit in der aktiven Sprache. */
+function relativeWords(): [justNow: string, ago: (value: string) => string] {
+  if (activeLocale.startsWith('en')) {
+    return ['just now', (value) => `${value} ago`];
+  }
+
+  if (activeLocale.startsWith('fr')) {
+    return ["à l'instant", (value) => `il y a ${value}`];
+  }
+
+  return ['gerade eben', (value) => `vor ${value}`];
 }

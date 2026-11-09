@@ -5,7 +5,7 @@
         icon="pi pi-bars"
         [text]="true"
         [rounded]="true"
-        ariaLabel="Navigation ein- und ausblenden"
+        [ariaLabel]="t().nav.toggleMenu"
         class="cb-menu-button"
         (onClick)="menuOpen.set(!menuOpen())"
       />
@@ -16,8 +16,8 @@
       </a>
     </div>
 
-    <nav class="cb-nav" [class.cb-nav-open]="menuOpen()" aria-label="Hauptnavigation">
-      @for (entry of navigation; track entry.route) {
+    <nav class="cb-nav" [class.cb-nav-open]="menuOpen()" [attr.aria-label]="t().nav.mainNavigation">
+      @for (entry of navigation(); track entry.route) {
         <a
           [routerLink]="entry.route"
           routerLinkActive="cb-nav-active"
@@ -32,12 +32,22 @@
     </nav>
 
     <div class="cb-header-end">
+      <p-select
+        styleClass="cb-language"
+        [options]="languages"
+        optionLabel="label"
+        optionValue="code"
+        [ngModel]="i18n.language()"
+        (ngModelChange)="setLanguage($event)"
+        [ariaLabel]="t().language.label"
+      />
+
       <span
         class="cb-health-dot"
         [class.cb-health-online]="health.healthy()"
         [class.cb-health-degraded]="health.degraded()"
         [class.cb-health-offline]="health.offline() || health.unreachable()"
-        [attr.aria-label]="'Zustand: ' + health.state()"
+        [attr.aria-label]="t().dashboard.status + ': ' + health.state()"
         role="status"
       ></span>
 
@@ -47,7 +57,7 @@
           icon="pi pi-sign-out"
           [text]="true"
           [rounded]="true"
-          ariaLabel="Abmelden"
+          [ariaLabel]="t().nav.logout"
           (onClick)="logout()"
         />
       }

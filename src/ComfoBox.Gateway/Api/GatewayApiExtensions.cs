@@ -151,6 +151,7 @@ public static class GatewayApiExtensions
         app.MapService();
         app.MapReconnect();
         app.MapTokens();
+        app.MapSecurity();
         app.MapAuth();
         app.MapSetup();
         app.MapLogs();

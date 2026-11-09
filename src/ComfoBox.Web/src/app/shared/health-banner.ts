@@ -2,7 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { MessageModule } from '@openng/optimus-ui/message';
 import { RouterLink } from '@angular/router';
 
+import { I18n } from '../core/i18n/i18n';
 import { HealthStore } from '../core/state/health.store';
+import { formatDateTime } from '../core/util/format';
 
 /**
  * Das Health-Banner.
@@ -18,23 +20,20 @@ import { HealthStore } from '../core/state/health.store';
   template: `
     @if (health.unreachable()) {
       <p-message severity="error" styleClass="w-full cb-banner">
-        <p class="font-semibold">Gateway nicht erreichbar</p>
-        <p>
-          Seit {{ unreachableSince() }} kommt keine Antwort vom Gateway. Die Werte unten sind
-          die zuletzt bekannten.
-        </p>
+        <p class="font-semibold">{{ t().health.unreachable }}</p>
+        <p>{{ t().health.unreachableSince(unreachableSince()) }}</p>
         <p class="mt-2">
-          <a routerLink="/help/fehlersuche">Zur Fehlersuche</a>
+          <a routerLink="/help/fehlersuche">{{ t().health.troubleshooting }}</a>
         </p>
       </p-message>
     } @else if (health.degraded()) {
       <p-message severity="warn" styleClass="w-full cb-banner">
-        <p class="font-semibold">Verbindung eingeschränkt</p>
+        <p class="font-semibold">{{ t().health.degraded }}</p>
         <p>{{ health.message() }}</p>
       </p-message>
     } @else if (health.error(); as message) {
       <p-message severity="error" styleClass="w-full cb-banner">
-        <p class="font-semibold">Fehler beim Laden der Daten</p>
+        <p class="font-semibold">{{ t().health.error }}</p>
         <p>{{ message }}</p>
       </p-message>
     }
@@ -50,20 +49,16 @@ export class HealthBannerComponent {
   /** Der Zustand des Gateways. */
   readonly health = inject(HealthStore);
 
+  /** Die Sprache der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte. */
+  readonly t = this.i18n.t;
+
   /** Der Zeitpunkt, seit dem der Gateway nicht erreichbar ist. */
   readonly unreachableSince = computed(() => {
     const value = this.health.unreachableSince();
-    return value ? formatDateTime(value) : 'einigen Momenten';
+
+    return value ? formatDateTime(value) : this.t().health.unreachableMoment;
   });
-}
-
-/** Formatiert einen Zeitstempel (deutsch). */
-function formatDateTime(value: string): string {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' });
 }

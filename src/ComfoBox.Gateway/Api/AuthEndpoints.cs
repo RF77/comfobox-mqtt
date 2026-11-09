@@ -1,5 +1,4 @@
 using ComfoBox.Gateway.Api.Models;
-using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Security;
 
 namespace ComfoBox.Gateway.Api;
@@ -37,7 +36,7 @@ internal static class AuthEndpoints
                 HttpContext context,
                 ApiSessionStore sessions,
                 ApiSecurityStore security,
-                ApiOptions options) =>
+                ApiAccessGuard guard) =>
             {
                 var identity = context.Request.Cookies[CookieName];
                 var userName = sessions.Validate(identity);
@@ -47,7 +46,7 @@ internal static class AuthEndpoints
                     Authenticated = userName is not null,
                     UserName = userName,
                     SetupCompleted = security.SetupCompleted,
-                    RequireAuthentication = options.RequireAuthentication,
+                    RequireAuthentication = guard.AuthenticationRequired,
                     AdminUsername = security.AdminUsername,
                 });
             })
@@ -60,7 +59,7 @@ internal static class AuthEndpoints
                 LoginRequest request,
                 ApiSessionStore sessions,
                 ApiSecurityStore security,
-                ApiOptions options,
+                ApiAccessGuard guard,
                 ILoggerFactory loggerFactory) =>
             {
                 var logger = loggerFactory.CreateLogger("ComfoBox.Gateway.Api");
@@ -86,7 +85,7 @@ internal static class AuthEndpoints
                         Authenticated = false,
                         UserName = null,
                         SetupCompleted = false,
-                        RequireAuthentication = options.RequireAuthentication,
+                        RequireAuthentication = guard.AuthenticationRequired,
                         AdminUsername = null,
                     });
                 }
@@ -130,7 +129,7 @@ internal static class AuthEndpoints
                     Authenticated = true,
                     UserName = request.Username.Trim(),
                     SetupCompleted = true,
-                    RequireAuthentication = options.RequireAuthentication,
+                    RequireAuthentication = guard.AuthenticationRequired,
                     AdminUsername = security.AdminUsername,
                 });
             })

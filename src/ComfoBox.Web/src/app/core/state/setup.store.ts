@@ -3,6 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { toApiError } from '../api/api-client';
 import { HealthService } from '../api/health.service';
 import { SetupService } from '../api/setup.service';
+import { I18n } from '../i18n/i18n';
 import type {
   SerialPortInfo,
   SetupStep,
@@ -20,6 +21,7 @@ import type {
 export class SetupStore {
   private readonly api = inject(SetupService);
   private readonly health = inject(HealthService);
+  private readonly i18n = inject(I18n);
 
   /** Der aktuelle Schritt. */
   readonly step = signal<SetupStep>('welcome');
@@ -133,7 +135,12 @@ export class SetupStore {
   });
 
   /** Die Fehler der Passwortregeln (leer = alles in Ordnung). */
-  readonly passwordHints = computed(() => passwordHints(this.adminPassword()));
+  readonly passwordHints = computed(() =>
+    passwordHints(this.adminPassword(), {
+      minLength: this.i18n.t().setupSteps.passwordMinLength,
+      classes: this.i18n.t().setupSteps.passwordClasses,
+    }),
+  );
 
   /** Setzt den Schritt. */
   goTo(step: SetupStep): void {
@@ -472,12 +479,21 @@ export function scorePassword(password: string): number {
 
 /**
  * Die offenen Passwort-Hinweise (leer = alles in Ordnung).
+ *
+ * <p>Die Texte werden übergeben, damit der Aufrufer sie in der gewählten
+ * Sprache liefern kann.</p>
  */
-export function passwordHints(password: string): readonly string[] {
+export function passwordHints(
+  password: string,
+  texts: { minLength: string; classes: string } = {
+    minLength: 'Mindestens 12 Zeichen.',
+    classes: 'Mindestens 3 von 4 Zeichenklassen (Groß-, Kleinbuchstaben, Ziffern, Symbole).',
+  },
+): readonly string[] {
   const hints: string[] = [];
 
   if (password.length < 12) {
-    hints.push('Mindestens 12 Zeichen.');
+    hints.push(texts.minLength);
   }
 
   let classes = 0;
@@ -499,7 +515,7 @@ export function passwordHints(password: string): readonly string[] {
   }
 
   if (password.length > 0 && classes < 3) {
-    hints.push('Mindestens 3 von 4 Zeichenklassen (Groß-, Kleinbuchstaben, Ziffern, Symbole).');
+    hints.push(texts.classes);
   }
 
   return hints;

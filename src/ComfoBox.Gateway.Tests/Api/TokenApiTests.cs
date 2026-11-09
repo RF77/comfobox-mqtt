@@ -253,6 +253,146 @@ public sealed class TokenApiTests
     }
 
     /// <summary>
+    /// Ein Token wird mit Umfang und Ablaufdatum erzeugt.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Token_Traegt_Umfang_Und_Ablaufdatum()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var created = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.PostAsync(
+                "/api/security/tokens",
+                Json("{\"name\":\"home-assistant\",\"scope\":\"read\",\"expiresInDays\":30}")));
+
+        Assert.Equal("read", created.GetProperty("scope").GetString());
+        Assert.False(created.GetProperty("isAdmin").GetBoolean());
+
+        var expiresAt = created.GetProperty("expiresAt");
+        Assert.Equal(System.Text.Json.JsonValueKind.String, expiresAt.ValueKind);
+
+        var list = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.GetAsync("/api/security/tokens"));
+
+        Assert.Equal("read", list[0].GetProperty("scope").GetString());
+        Assert.False(list[0].GetProperty("expired").GetBoolean());
+    }
+
+    /// <summary>
+    /// Ohne Ablaufdatum bleibt das Token unbegrenzt gültig.
+    /// </summary>
+    [Fact]
+    public async Task Ohne_Dauer_Gibt_Es_Kein_Ablaufdatum()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var created = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.PostAsync(
+                "/api/security/tokens",
+                Json("{\"name\":\"dauerhaft\",\"scope\":\"control\"}")));
+
+        Assert.Equal("control", created.GetProperty("scope").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, created.GetProperty("expiresAt").ValueKind);
+    }
+
+    /// <summary>
+    /// Ein unbekannter Umfang wird abgelehnt.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Unbekannter_Umfang_Wird_Abgelehnt()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PostAsync(
+            "/api/security/tokens",
+            Json("{\"name\":\"root\",\"scope\":\"root\"}"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Ein Nur-Lese-Token darf keine Werte schreiben (403, nicht 401).
+    /// </summary>
+    [Fact]
+    public async Task Ein_Nur_Lese_Token_Darf_Nicht_Schreiben()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync(
+            new Dictionary<string, string?> { ["Api:RequireAuthentication"] = "true" });
+
+        var created = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.PostAsync(
+                "/api/security/tokens",
+                Json("{\"name\":\"nur-lesen\",\"scope\":\"read\"}")));
+
+        var plaintext = created.GetProperty("token").GetString()!;
+
+        fixture.Services.GetRequiredService<ApiSecurityStore>().SetSetupCompleted(true);
+
+        using var request = new HttpRequestMessage(HttpMethod.Put, "/api/items/zone.set_point_normal")
+        {
+            Content = Json("{\"value\":21.5}"),
+        };
+
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", plaintext);
+
+        var response = await fixture.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+
+        var error = await GatewayApiFixture.ReadJsonAsync(response);
+        Assert.Equal("read_only_token", error.GetProperty("error").GetString());
+
+        // Es wurde **nichts** geschrieben - der Zähler blieb unverändert.
+        Assert.Empty(fixture.Bacnet.WrittenObjects);
+    }
+
+    /// <summary>
+    /// Ein abgelaufenes Token authentifiziert nicht mehr.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Abgelaufenes_Token_Authentifiziert_Nicht()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync(
+            new Dictionary<string, string?> { ["Api:RequireAuthentication"] = "true" });
+
+        var store = fixture.Services.GetRequiredService<ApiSecurityStore>();
+
+        // Eine negative Laufzeit ist bereits bei der Erzeugung abgelaufen -
+        // der Test braucht damit keine Wartezeit.
+        var (_, plaintext) = store.CreateToken("abgelaufen", TokenScope.Control, TimeSpan.FromSeconds(-1));
+
+        store.SetSetupCompleted(true);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/api/security/tokens");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", plaintext);
+
+        var response = await fixture.Client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Ein unbekannter Umfangswert in der config.json fällt auf „Control" zurück.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Altes_Token_Ohne_Umfang_Behaelt_Seine_Rechte()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var store = fixture.Services.GetRequiredService<ApiSecurityStore>();
+        store.SetSetupCompleted(true);
+
+        var (token, _) = store.CreateToken("alt", TokenScope.Admin, null);
+
+        // Der Umfang steht als Text in der Datei und wird wieder gelesen.
+        var reloaded = store.FindToken(token.Id);
+
+        Assert.NotNull(reloaded);
+        Assert.Equal(TokenScope.Admin, reloaded!.Scope);
+        Assert.True(reloaded.IsAdmin);
+        Assert.Null(reloaded.ExpiresAt);
+    }
+
+    /// <summary>
     /// Erzeugt einen JSON-Body.
     /// </summary>
     private static StringContent Json(string body) => new(body, Encoding.UTF8, "application/json");

@@ -18,6 +18,7 @@ import { SelectModule } from '@openng/optimus-ui/select';
 import { MessageService } from '@openng/optimus-ui/api';
 
 import { LogStreamService } from '../../../core/api/log-stream.service';
+import { I18n } from '../../../core/i18n/i18n';
 import { LogsStore } from '../../../core/state/logs.store';
 import { LOG_LEVELS, type LogEntryDto } from '../../../core/models/log.model';
 import { formatTime } from '../../../core/util/format';
@@ -49,16 +50,26 @@ export class LogViewerComponent {
   private readonly stream = inject(LogStreamService);
   private readonly messages = inject(MessageService);
 
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
+
   /** Die Auswahl der Level. */
   readonly levelOptions = LOG_LEVELS.map((level) => ({ label: level, value: level }));
 
   /** Die Auswahl der Zeitbereiche. */
-  readonly rangeOptions = [
-    { label: 'Alles', value: 'all' },
-    { label: 'Letzte 5 Minuten', value: '5m' },
-    { label: 'Letzte 15 Minuten', value: '15m' },
-    { label: 'Letzte Stunde', value: '1h' },
-  ];
+  readonly rangeOptions = computed(() => {
+    const logs = this.t().logs;
+
+    return [
+      { label: logs.rangeAll, value: 'all' },
+      { label: logs.range5m, value: '5m' },
+      { label: logs.range15m, value: '15m' },
+      { label: logs.range1h, value: '1h' },
+    ];
+  });
   /** Der Bereich, in dem der Auto-Scroll greift. */
   private readonly viewport = viewChild<ElementRef<HTMLDivElement>>('viewport');
 

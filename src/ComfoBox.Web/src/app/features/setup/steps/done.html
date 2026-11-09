@@ -1,4 +1,4 @@
-<p-card header="Fertig">
+<p-card [header]="t().setupSteps.doneCard">
   <ul class="cb-checklist">
     @for (entry of checklist(); track entry.text) {
       <li>
@@ -13,7 +13,7 @@
   </ul>
 
   <p-button
-    label="Übernehmen und starten"
+    [label]="t().setupSteps.doneApply"
     icon="pi pi-check"
     [disabled]="!setup.isComplete()"
     [loading]="setup.applying()"
@@ -25,10 +25,9 @@
       <p-progressbar mode="indeterminate" />
       <p class="cb-hint">
         @if (setup.restarting()) {
-          Der Gateway startet neu. Das dauert etwa 10 Sekunden – die Seite bleibt offen, bis er
-          wieder antwortet.
+          {{ t().setupSteps.doneRestarting }}
         } @else {
-          Die Konfiguration wird geschrieben …
+          {{ t().setupSteps.doneWriting }}
         }
       </p>
     </div>
@@ -36,14 +35,13 @@
 
   @if (setup.applied()) {
     <p-message severity="success" styleClass="w-full cb-result">
-      <p class="font-semibold">ComfoBox Gateway läuft.</p>
+      <p class="font-semibold">{{ t().setupSteps.doneRunning }}</p>
       <p>
-        Die Werte werden jetzt nach <code>{{ 'ComfoBox' }}</code> publiziert. Home Assistant hat die
-        Entitäten bereits übernommen.
+        {{ t().setupSteps.donePublish('ComfoBox') }}
       </p>
       <p>
         <p-button
-          label="Zur Übersicht"
+          [label]="t().setupSteps.doneDashboard"
           icon="pi pi-arrow-right"
           iconPos="right"
           routerLink="/"
@@ -54,8 +52,7 @@
 
   @if (setup.applied()) {
     <p class="cb-hint cb-block">
-      Der Assistent ist wiederholbar. Nach dem Neustart finden Sie ihn unter
-      <a routerLink="/config">Konfiguration → Erneut einrichten</a>.
+      {{ t().setupSteps.doneRepeatable }}
     </p>
   }
 </p-card>

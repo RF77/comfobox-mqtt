@@ -24,8 +24,8 @@ internal static class ConfigEndpoints
                 BacnetOptions bacnet,
                 MqttOptions mqtt,
                 LoggingOptions logging,
-                ApiOptions api,
                 ApiSecurityStore security,
+                ApiAccessGuard accessGuard,
                 SerialPortSettings serial,
                 ConfigStore store) =>
             {
@@ -85,7 +85,7 @@ internal static class ConfigEndpoints
                     },
                     Api = new ApiConfigDto
                     {
-                        RequireAuthentication = api.RequireAuthentication,
+                        RequireAuthentication = accessGuard.AuthenticationRequired,
                         SetupCompleted = security.SetupCompleted,
                         AdminUsername = security.AdminUsername,
                         TokenCount = security.Tokens.Count,

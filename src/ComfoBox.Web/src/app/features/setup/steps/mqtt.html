@@ -1,12 +1,10 @@
-<p-card header="MQTT-Broker">
+<p-card [header]="t().setupSteps.mqttCard">
   <p class="cb-hint cb-block">
-    Der Broker ist nur nötig, wenn Sie Home Assistant über MQTT anbinden möchten. Für die
-    Web-Oberfläche allein wird keiner benötigt - dann bleibt das Feld „Host" leer und der
-    Schritt wird übersprungen.
+    {{ t().setupSteps.mqttLead }}
   </p>
 
   <div class="cb-field">
-    <label for="mqtt-host">Host</label>
+    <label for="mqtt-host">{{ t().setupSteps.mqttHost }}</label>
     <input
       pInputText
       id="mqtt-host"
@@ -18,7 +16,7 @@
   </div>
 
   <div class="cb-field">
-    <label for="mqtt-port">Port</label>
+    <label for="mqtt-port">{{ t().setupSteps.mqttPort }}</label>
     <p-inputnumber
       inputId="mqtt-port"
       [ngModel]="setup.brokerPort()"
@@ -30,7 +28,7 @@
   </div>
 
   <div class="cb-field">
-    <label for="mqtt-user">Benutzername</label>
+    <label for="mqtt-user">{{ t().setupSteps.mqttUser }}</label>
     <input
       pInputText
       id="mqtt-user"
@@ -41,7 +39,7 @@
   </div>
 
   <div class="cb-field">
-    <label for="mqtt-password">Passwort</label>
+    <label for="mqtt-password">{{ t().setupSteps.mqttPassword }}</label>
     <p-password
       inputId="mqtt-password"
       [ngModel]="setup.brokerPassword()"
@@ -51,8 +49,7 @@
       autocomplete="new-password"
     />
     <span class="cb-hint">
-      Das Passwort wird im Klartext an das Gateway gesendet und dort in der geschützten
-      Konfigurationsdatei (Modus 0600) abgelegt - nicht in Umgebungsvariablen.
+      {{ t().setupSteps.mqttPasswordHint }}
     </span>
   </div>
 
@@ -62,11 +59,11 @@
       [ngModel]="setup.useTls()"
       (ngModelChange)="setup.useTls.set($event)"
     />
-    <label for="mqtt-tls">TLS verwenden</label>
+    <label for="mqtt-tls">{{ t().setupSteps.mqttTls }}</label>
   </div>
 
   <p-button
-    label="Verbindung testen"
+    [label]="t().setupSteps.mqttTest"
     icon="pi pi-plug"
     [loading]="setup.testingMqtt()"
     [disabled]="!setup.brokerHost().trim()"
@@ -84,12 +81,12 @@
         @if (result.hint === 'mqtt_unreachable') {
           <p>
             <a routerLink="/help/mqtt" fragment="broker-einrichten">
-              Hilfe: Broker einrichten (ohne Anmeldung)
+              {{ t().setupSteps.mqttHelpLink }}
             </a>
           </p>
         }
       }
-      <p class="cb-hint">Dauer: {{ result.durationMs }} ms</p>
+      <p class="cb-hint">{{ t().common.duration(result.durationMs) }}</p>
     </p-message>
   }
 </p-card>

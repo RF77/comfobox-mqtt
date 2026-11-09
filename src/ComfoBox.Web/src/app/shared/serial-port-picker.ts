@@ -19,6 +19,7 @@ import { MessageService } from '@openng/optimus-ui/api';
 
 import { toApiError } from '../core/api/api-client';
 import { SerialService } from '../core/api/serial.service';
+import { I18n } from '../core/i18n/i18n';
 import type { SerialPortInfo, TestResultDto } from '../core/models/setup.model';
 
 /**
@@ -57,6 +58,12 @@ export class SerialPortPickerComponent implements OnInit {
   private readonly serial = inject(SerialService);
   private readonly messages = inject(MessageService);
 
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
+
   /** Die gefundenen Ports (roh, ohne den aktuellen). */
   readonly scannedPorts = signal<readonly SerialPortInfo[]>([]);
 
@@ -76,7 +83,7 @@ export class SerialPortPickerComponent implements OnInit {
     }
 
     return [
-      { port: current, description: 'Aktuell eingestellt', stablePath: null },
+      { port: current, description: this.t().serial.currentOption, stablePath: null },
       ...scanned,
     ];
   });

@@ -1,5 +1,11 @@
 # ComfoBox MQTT – Projektdokumentation
 
+> **English user documentation:** [`docs/en/`](en/README.md) — installation on Raspberry Pi,
+> Synology and Docker, Home Assistant, security/API tokens, REST API and troubleshooting.
+>
+> **Status:** the rewrite has **never** been verified against a physical ComfoBox and is
+> **not released**. See [README.md](../README.md).
+
 Diese Dokumentation besteht aus zwei Teilen:
 
 1. **[Ist-Zustand](01-ist-zustand/README.md)** – was der aktuelle Code (Stand 2016, .NET Framework 4.5.2) tatsächlich macht.

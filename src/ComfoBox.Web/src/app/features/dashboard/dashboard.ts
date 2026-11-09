@@ -10,6 +10,7 @@ import { ConfirmationService, MessageService } from '@openng/optimus-ui/api';
 
 import { toApiError } from '../../core/api/api-client';
 import { ServiceService } from '../../core/api/service.service';
+import { I18n } from '../../core/i18n/i18n';
 import { ConfigStore } from '../../core/state/config.store';
 import { HealthStore } from '../../core/state/health.store';
 import { ItemsStore } from '../../core/state/items.store';
@@ -46,6 +47,12 @@ export class DashboardComponent {
 
   /** Die Konfiguration (für die Baudrate der Schnittstelle). */
   readonly config = inject(ConfigStore);
+
+  /** Die Sprache der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte. */
+  readonly t = this.i18n.t;
 
   private readonly service = inject(ServiceService);
   private readonly confirm = inject(ConfirmationService);
@@ -153,16 +160,16 @@ export class DashboardComponent {
 
   /** Startet den Gateway neu (mit Bestätigung). */
   restart(): void {
+    const texts = this.t().dashboard;
+
     this.confirm.confirm({
-      header: 'Gateway neu starten',
-      message:
-        'Der Gateway wird neu gestartet. Für etwa 10 Sekunden sind keine Werte verfügbar. ' +
-        'Die Werte der Heizung werden dabei nicht verändert.',
+      header: texts.restartTitle,
+      message: texts.restartText,
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Neu starten',
-      rejectLabel: 'Abbrechen',
+      acceptLabel: texts.restartAccept,
+      rejectLabel: this.t().common.cancel,
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => void this.run('restart', () => this.service.restart(), 'Der Gateway startet neu …'),
+      accept: () => void this.run('restart', () => this.service.restart(), texts.restartInfo),
     });
   }
 
@@ -171,7 +178,7 @@ export class DashboardComponent {
     void this.run(
       'bacnet',
       () => this.service.reconnectBacnet(),
-      'Der BACnet-Bus wird neu aufgebaut …',
+      this.t().dashboard.reconnectBacnetInfo,
     );
   }
 
@@ -185,7 +192,7 @@ export class DashboardComponent {
     void this.run(
       'mqtt',
       () => this.service.reconnectMqtt(),
-      'Die MQTT-Verbindung wird neu aufgebaut …',
+      this.t().dashboard.reconnectMqttInfo,
     );
   }
 

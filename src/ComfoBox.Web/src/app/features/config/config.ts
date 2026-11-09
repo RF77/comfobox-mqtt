@@ -2,24 +2,27 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { CardModule } from '@openng/optimus-ui/card';
-import { CheckboxModule } from '@openng/optimus-ui/checkbox';
 import { ConfirmDialogModule } from '@openng/optimus-ui/confirmdialog';
 import { InputNumberModule } from '@openng/optimus-ui/inputnumber';
 import { InputTextModule } from '@openng/optimus-ui/inputtext';
 import { MessageModule } from '@openng/optimus-ui/message';
+import { PasswordModule } from '@openng/optimus-ui/password';
+import { SelectModule } from '@openng/optimus-ui/select';
 import { TableModule } from '@openng/optimus-ui/table';
 import { TagModule } from '@openng/optimus-ui/tag';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 import { ConfirmationService, MessageService } from '@openng/optimus-ui/api';
 
 import { toApiError } from '../../core/api/api-client';
+import { SecurityService } from '../../core/api/security.service';
 import { ServiceService } from '../../core/api/service.service';
 import { TokensService } from '../../core/api/tokens.service';
+import { I18n } from '../../core/i18n/i18n';
 import { ConfigStore } from '../../core/state/config.store';
 import { SessionStore } from '../../core/state/session.store';
 import { formatDateTime } from '../../core/util/format';
 import { SerialPortPickerComponent } from '../../shared/serial-port-picker';
-import type { CreatedTokenDto, TokenInfoDto } from '../../core/models/token.model';
+import type { CreatedTokenDto, TokenInfoDto, TokenScope } from '../../core/models/token.model';
 
 /**
  * Die Konfigurationsseite.
@@ -32,12 +35,13 @@ import type { CreatedTokenDto, TokenInfoDto } from '../../core/models/token.mode
   imports: [
     ButtonModule,
     CardModule,
-    CheckboxModule,
     ConfirmDialogModule,
     FormsModule,
     InputNumberModule,
     InputTextModule,
     MessageModule,
+    PasswordModule,
+    SelectModule,
     SerialPortPickerComponent,
     TableModule,
     TagModule,
@@ -56,8 +60,15 @@ export class ConfigComponent {
 
   private readonly service = inject(ServiceService);
   private readonly tokens = inject(TokensService);
+  private readonly security = inject(SecurityService);
   private readonly confirm = inject(ConfirmationService);
   private readonly messages = inject(MessageService);
+
+  /** Die Texte der Oberfläche. */
+  readonly i18n = inject(I18n);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = this.i18n.t;
 
   /** Der Experten-Modus (Entwurf). */
   readonly expertMode = signal(false);
@@ -80,11 +91,57 @@ export class ConfigComponent {
   /** Der Name des neuen Tokens. */
   readonly tokenName = signal('home-assistant');
 
-  /** Soll das Token administrative Rechte haben? */
-  readonly tokenAdmin = signal(false);
+  /** Der Umfang des neuen Tokens. */
+  readonly tokenScope = signal<TokenScope>('control');
+
+  /**
+   * Die Gültigkeitsdauer des neuen Tokens in Tagen.
+   *
+   * <p>`0` bedeutet: kein Ablaufdatum.</p>
+   */
+  readonly tokenDays = signal(0);
+
+  /** Die Auswahl der Gültigkeitsdauern (in Tagen). */
+  readonly tokenDayOptions = [0, 30, 90, 365];
+
+  /** Die Auswahl der Umfänge. */
+  readonly scopeOptions: TokenScope[] = ['read', 'control', 'admin'];
+
+  /** Die Umfänge mit übersetztem Text (für `p-select`). */
+  readonly scopeChoices = computed(() =>
+    this.scopeOptions.map((scope) => ({ value: scope, label: this.scopeText(scope) })),
+  );
+
+  /** Die Gültigkeitsdauern mit übersetztem Text (für `p-select`). */
+  readonly dayChoices = computed(() =>
+    this.tokenDayOptions.map((days) => ({ value: days, label: this.daysText(days) })),
+  );
+
+  /** Muss sich die Oberfläche anmelden? (Entwurf) */
+  readonly requireAuth = signal(false);
+
+  /** Der Benutzername des Administrators (Entwurf). */
+  readonly adminUserName = signal('');
+
+  /** Das aktuelle Passwort (Entwurf). */
+  readonly currentPassword = signal('');
+
+  /** Das neue Passwort (Entwurf). */
+  readonly newPassword = signal('');
+
+  /** Die Wiederholung des neuen Passworts (Entwurf). */
+  readonly repeatPassword = signal('');
+
+  /** Ist ein Administrator eingerichtet? */
+  readonly hasAdmin = signal(false);
 
   /** Wird gerade gespeichert? */
   readonly saving = signal(false);
+
+  /** Die Passwörter stimmen nicht überein. */
+  readonly passwordMismatch = computed(
+    () => this.newPassword().length > 0 && this.newPassword() !== this.repeatPassword(),
+  );
 
   /** Ist der Experten-Modus aktiv (aus der Konfiguration)? */
   readonly expertModeActive = computed(() => this.config.expertMode());
@@ -107,6 +164,23 @@ export class ConfigComponent {
     }
 
     await this.loadTokens();
+    await this.loadSecurity();
+  }
+
+  /** Lädt die Sicherheits-Einstellungen (nur als Administrator möglich). */
+  async loadSecurity(): Promise<void> {
+    try {
+      const settings = await this.security.get();
+
+      this.hasAdmin.set(settings.hasAdmin);
+      this.requireAuth.set(settings.requireAuthentication);
+      this.adminUserName.set(settings.adminUsername ?? '');
+    } catch {
+      // Ohne Administratorrechte gibt es keinen Sicherheitsbereich.
+      this.hasAdmin.set(this.session.adminUserName() !== null);
+      this.requireAuth.set(this.session.authenticationRequired());
+      this.adminUserName.set(this.session.adminUserName() ?? '');
+    }
   }
 
   /** Lädt die Token-Liste. */
@@ -136,8 +210,8 @@ export class ConfigComponent {
     if (ok) {
       this.messages.add({
         severity: 'success',
-        summary: 'Gespeichert',
-        detail: 'Die neuen Werte werden nach einem Neustart wirksam.',
+        summary: this.t().config.saved,
+        detail: this.t().config.savedHint,
         life: 6000,
       });
       return;
@@ -163,13 +237,11 @@ export class ConfigComponent {
     }
 
     this.confirm.confirm({
-      header: 'Experten-Modus aktivieren',
-      message:
-        'Der Experten-Modus erlaubt das Schreiben von sensiblen Parametern der Heizung. ' +
-        'Ein falscher Wert kann zu Fehlfunktionen führen. Fortfahren?',
+      header: this.t().config.expertModeConfirmTitle,
+      message: this.t().config.expertModeConfirmText,
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Experten-Modus aktivieren',
-      rejectLabel: 'Abbrechen',
+      acceptLabel: this.t().config.expertModeConfirmAccept,
+      rejectLabel: this.t().common.cancel,
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => this.expertMode.set(true),
     });
@@ -178,13 +250,11 @@ export class ConfigComponent {
   /** Startet den Gateway neu (mit Bestätigung). */
   restart(): void {
     this.confirm.confirm({
-      header: 'Gateway neu starten',
-      message:
-        'Der Gateway wird neu gestartet. Für etwa 10 Sekunden sind keine Werte verfügbar. ' +
-        'Erst danach werden die geänderten Einstellungen wirksam.',
+      header: this.t().config.restartTitle,
+      message: this.t().config.restartText,
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Neu starten',
-      rejectLabel: 'Abbrechen',
+      acceptLabel: this.t().config.restartAccept,
+      rejectLabel: this.t().common.cancel,
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => void this.runRestart(),
     });
@@ -195,7 +265,8 @@ export class ConfigComponent {
     try {
       const created = await this.tokens.create({
         name: this.tokenName().trim() || 'api-token',
-        isAdmin: this.tokenAdmin(),
+        scope: this.tokenScope(),
+        expiresInDays: this.tokenDays() === 0 ? null : this.tokenDays(),
       });
 
       this.createdToken.set(created);
@@ -203,30 +274,23 @@ export class ConfigComponent {
 
       this.messages.add({
         severity: 'success',
-        summary: 'Token erzeugt',
-        detail: 'Der Klartext ist nur jetzt sichtbar - bitte sofort kopieren.',
+        summary: this.t().config.tokenCreated,
+        detail: this.t().config.tokenCreatedHint,
         life: 10000,
       });
     } catch (error) {
-      const apiError = toApiError(error);
-
-      this.messages.add({
-        severity: 'error',
-        summary: apiError.code,
-        detail: apiError.message,
-        life: 8000,
-      });
+      this.showError(error);
     }
   }
 
   /** Widerruft ein Token (mit Bestätigung). */
   revoke(token: TokenInfoDto): void {
     this.confirm.confirm({
-      header: 'Token widerrufen',
-      message: `Das Token „${token.name}" wird unwiderruflich widerrufen.`,
+      header: this.t().config.tokenRevokeTitle,
+      message: this.t().config.tokenRevokeText(token.name),
       icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Widerrufen',
-      rejectLabel: 'Abbrechen',
+      acceptLabel: this.t().config.tokenRevokeAccept,
+      rejectLabel: this.t().common.cancel,
       acceptButtonStyleClass: 'p-button-danger',
       accept: () => void this.removeToken(token),
     });
@@ -240,19 +304,68 @@ export class ConfigComponent {
 
       this.messages.add({
         severity: 'success',
-        summary: 'Token widerrufen',
+        summary: this.t().config.tokenRevokeDone,
         detail: token.name,
         life: 5000,
       });
     } catch (error) {
-      const apiError = toApiError(error);
+      this.showError(error);
+    }
+  }
+
+  /** Speichert die Anmelde-Pflicht. */
+  async saveSecurity(): Promise<void> {
+    try {
+      await this.security.setRequireAuthentication(this.requireAuth());
+
+      this.session.authenticationRequired.set(this.requireAuth());
 
       this.messages.add({
-        severity: 'error',
-        summary: apiError.code,
-        detail: apiError.message,
+        severity: 'success',
+        summary: this.t().config.settingsSaved,
+        detail: this.requireAuth()
+          ? this.t().config.requireAuthHint
+          : this.t().config.securityHint,
+        life: 6000,
+      });
+    } catch (error) {
+      this.showError(error);
+    }
+  }
+
+  /** Ändert Benutzername und Passwort des Administrators. */
+  async changeAdmin(): Promise<void> {
+    if (this.passwordMismatch()) {
+      this.messages.add({
+        severity: 'warn',
+        summary: this.t().config.changeAdmin,
+        detail: this.t().config.passwordMismatch,
+        life: 6000,
+      });
+      return;
+    }
+
+    try {
+      await this.security.updateAdmin(
+        this.currentPassword() || null,
+        this.adminUserName().trim() || null,
+        this.newPassword() || null,
+      );
+
+      this.session.adminUserName.set(this.adminUserName().trim() || null);
+
+      this.currentPassword.set('');
+      this.newPassword.set('');
+      this.repeatPassword.set('');
+
+      this.messages.add({
+        severity: 'success',
+        summary: this.t().config.changeAdmin,
+        detail: this.t().config.passwordChanged,
         life: 8000,
       });
+    } catch (error) {
+      this.showError(error);
     }
   }
 
@@ -263,24 +376,53 @@ export class ConfigComponent {
 
       this.messages.add({
         severity: 'info',
-        summary: 'Der Gateway startet neu …',
-        detail: 'Die Seite ist gleich nicht mehr erreichbar.',
+        summary: this.t().config.restartInfo,
+        detail: this.t().config.savedHint,
         life: 8000,
       });
     } catch (error) {
-      const apiError = toApiError(error);
-
-      this.messages.add({
-        severity: 'error',
-        summary: apiError.code,
-        detail: apiError.message,
-        life: 8000,
-      });
+      this.showError(error);
     }
+  }
+
+  /** Zeigt einen Fehler der REST-Schnittstelle an. */
+  private showError(error: unknown): void {
+    const apiError = toApiError(error);
+
+    this.messages.add({
+      severity: 'error',
+      summary: apiError.code,
+      detail: apiError.message,
+      life: 8000,
+    });
   }
 
   /** Formatiert einen Zeitstempel. */
   formatDate(value: string): string {
     return formatDateTime(value);
+  }
+
+  /** Formatiert einen Ablaufzeitpunkt (oder den Text für „unbegrenzt"). */
+  formatExpiry(value: string | null): string {
+    return value === null ? this.t().config.tokenNever : formatDateTime(value);
+  }
+
+  /** Der Text eines Umfangs. */
+  scopeText(scope: TokenScope): string {
+    const config = this.t().config;
+
+    switch (scope) {
+      case 'read':
+        return config.tokenScopeRead;
+      case 'admin':
+        return config.tokenScopeAdmin;
+      default:
+        return config.tokenScopeControl;
+    }
+  }
+
+  /** Der Text einer Gültigkeitsdauer. */
+  daysText(days: number): string {
+    return days === 0 ? this.t().config.tokenExpiryNever : this.t().config.tokenExpiryDays(days);
   }
 }

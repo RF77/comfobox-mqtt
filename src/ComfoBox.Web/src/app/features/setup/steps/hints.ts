@@ -1,35 +1,41 @@
+import type { Translations } from '../../../core/i18n/translations';
+
 /**
  * Die **kontextbezogenen** Fehlerhinweise des Assistenten.
  *
  * <p>Ein „Fehler 500" hilft niemandem - hier steht stattdessen, was zu tun
- * ist (→ [datenmodell-und-api §3.4](../../docs/02-modernisierung/datenmodell-und-api.md)).
+ * ist (→ [datenmodell-und-api §3.4](../../docs/02-modernisierung/datenmodell-und-api.md)).</p>
+ *
+ * <p>Die Texte liegen im Wörterbuch (`setupSteps.hint…`) und sind damit in
+ * allen unterstützten Sprachen verfügbar.</p>
  */
 
 /** Der Text zu einem maschinenlesbaren Hinweis. */
-export function hintText(hint: string): string {
+export function hintText(hints: Translations['setupSteps'], hint: string): string {
   switch (hint) {
     case 'serial_port_not_found':
-      return 'Der gewählte Port ist nicht mehr vorhanden. Bitte Adapter neu einstecken oder einen anderen Port wählen.';
+      return hints.hintSerialNotFound;
 
     case 'no_iam':
-      return 'Die ComfoBox antwortet nicht. Prüfen Sie: (1) steht sie auf 38400 Baud und wurde neu gestartet? (2) sind A und B richtig angeschlossen? (3) ist der Adapter an einem anderen Port?';
+      return hints.hintNoIam;
 
     case 'busy':
-      return 'Der Port wird bereits von einem anderen Programm verwendet.';
+      return hints.hintBusy;
 
     case 'permission_denied':
-      return 'Keine Berechtigung auf den Port. Die Gruppe „dialout" fehlt.';
+      return hints.hintPermissionDenied;
 
     case 'mqtt_unreachable':
-      return 'Der Broker ist nicht erreichbar. Prüfen Sie Host, Port und ob der Broker läuft.';
+      return hints.hintMqttUnreachable;
 
     case 'mqtt_auth_failed':
-      return 'Die Anmeldung am Broker ist fehlgeschlagen. Benutzername und Passwort prüfen.';
+      return hints.hintMqttAuthFailed;
 
     case 'mqtt_tls_failed':
-      return 'Die TLS-Verhandlung ist fehlgeschlagen. Zertifikat oder Broker-Konfiguration prüfen.';
+      return hints.hintMqttTlsFailed;
 
     default:
-      return 'Weitere Hinweise finden Sie in der Hilfe.';
+      return hints.hintDefault;
   }
 }
+

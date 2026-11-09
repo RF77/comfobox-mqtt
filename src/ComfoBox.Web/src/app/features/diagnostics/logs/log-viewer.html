@@ -6,20 +6,20 @@
       optionValue="value"
       [ngModel]="logs.filters().levels"
       (ngModelChange)="logs.patchFilters({ levels: $event })"
-      placeholder="Level"
+      [placeholder]="t().logs.level"
       [maxSelectedLabels]="3"
       styleClass="cb-level-filter"
-      aria-label="Level-Filter"
+      [attr.aria-label]="t().logs.levelAria"
     />
 
     <p-select
       [options]="logs.sources()"
       [ngModel]="logs.filters().source"
       (ngModelChange)="logs.patchFilters({ source: $event })"
-      placeholder="Alle Quellen"
+      [placeholder]="t().logs.allSources"
       [showClear]="true"
       styleClass="cb-source-filter"
-      aria-label="Quellen-Filter"
+      [attr.aria-label]="t().logs.sourceAria"
     />
 
     <input
@@ -27,19 +27,19 @@
       type="search"
       [ngModel]="logs.filters().search"
       (ngModelChange)="logs.patchFilters({ search: $event })"
-      placeholder="Textsuche …"
+      [placeholder]="t().logs.search"
       class="cb-search-input"
-      aria-label="Volltextsuche"
+      [attr.aria-label]="t().logs.searchAria"
     />
 
     <p-select
-      [options]="rangeOptions"
+      [options]="rangeOptions()"
       optionLabel="label"
       optionValue="value"
       [ngModel]="logs.filters().range"
       (ngModelChange)="logs.patchFilters({ range: $event })"
       styleClass="cb-range-filter"
-      aria-label="Zeitbereich"
+      [attr.aria-label]="t().logs.rangeAria"
     />
   </div>
 
@@ -51,7 +51,7 @@
       inputId="log-live"
     />
     <label for="log-live">
-      Live
+      {{ t().logs.live }}
       @if (streamState() === 'connected') {
         <span class="cb-live-dot" aria-hidden="true"></span>
       } @else if (streamState() === 'reconnecting') {
@@ -65,34 +65,34 @@
       (ngModelChange)="logs.autoScroll.set($event)"
       inputId="log-autoscroll"
     />
-    <label for="log-autoscroll">Auto-Scroll</label>
+    <label for="log-autoscroll">{{ t().logs.autoScroll }}</label>
 
-    <span class="cb-count">{{ count() }} Einträge</span>
+    <span class="cb-count">{{ t().logs.entries(count()) }}</span>
 
     <p-button
       icon="pi pi-refresh"
       [text]="true"
-      ariaLabel="Protokoll neu laden"
+      [ariaLabel]="t().logs.reloadAria"
       (onClick)="reload()"
     />
 
     <p-button
       icon="pi pi-filter-slash"
-      label="Filter zurücksetzen"
+      [label]="t().logs.reset"
       [text]="true"
       (onClick)="reset()"
     />
 
     <p-button
       icon="pi pi-download"
-      label="Exportieren"
+      [label]="t().logs.export"
       [outlined]="true"
       (onClick)="export()"
     />
 
     <p-button
       icon="pi pi-trash"
-      label="Protokoll leeren"
+      [label]="t().logs.clear"
       severity="danger"
       [outlined]="true"
       (onClick)="clear()"
@@ -107,11 +107,17 @@
 
   @if (streamState() === 'reconnecting') {
     <p-message severity="warn" styleClass="w-full">
-      <p>Die Verbindung zum Protokoll wird wiederhergestellt …</p>
+      <p>{{ t().logs.reconnecting }}</p>
     </p-message>
   }
 
-  <div class="cb-log-viewport" #viewport role="log" aria-live="polite" aria-label="Protokoll">
+  <div
+    class="cb-log-viewport"
+    #viewport
+    role="log"
+    aria-live="polite"
+    [attr.aria-label]="t().logs.aria"
+  >
     @for (entry of logs.visible(); track entry.timestamp + entry.message) {
       <article class="cb-log-entry" [class]="levelClass(entry.level)">
         <header class="cb-log-head">
@@ -145,7 +151,7 @@
         }
       </article>
     } @empty {
-      <p class="cb-log-empty">Keine Einträge vorhanden.</p>
+      <p class="cb-log-empty">{{ t().logs.empty }}</p>
     }
   </div>
 </section>

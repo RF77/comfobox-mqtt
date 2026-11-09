@@ -8,6 +8,7 @@ import { RadioButtonModule } from '@openng/optimus-ui/radiobutton';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 
 import { SetupStore } from '../../../core/state/setup.store';
+import { I18n } from '../../../core/i18n/i18n';
 
 /** Das Intervall der Port-Aktualisierung (Hotplug) in Millisekunden. */
 const PORT_REFRESH_MS = 5000;
@@ -35,6 +36,9 @@ export class SerialStep implements OnInit {
   readonly setup = inject(SetupStore);
 
   private readonly destroyRef = inject(DestroyRef);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = inject(I18n).t;
 
   ngOnInit(): void {
     void this.setup.reloadPorts();

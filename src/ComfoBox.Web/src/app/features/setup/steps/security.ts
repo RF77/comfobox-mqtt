@@ -7,6 +7,7 @@ import { MessageModule } from '@openng/optimus-ui/message';
 import { PasswordModule } from '@openng/optimus-ui/password';
 
 import { SetupStore } from '../../../core/state/setup.store';
+import { I18n } from '../../../core/i18n/i18n';
 
 /**
  * Schritt 4: der Web-Zugang (Administrator und Passwort).
@@ -28,6 +29,9 @@ import { SetupStore } from '../../../core/state/setup.store';
 export class SecurityStep implements OnInit {
   /** Der Zustand des Assistenten. */
   readonly setup = inject(SetupStore);
+
+  /** Die Texte der gewählten Sprache. */
+  readonly t = inject(I18n).t;
 
   ngOnInit(): void {
     void this.setup.loadSuggestedPort();
