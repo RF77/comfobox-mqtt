@@ -18,7 +18,7 @@
 # ═════════════════════════════════════════════════════════════════════════════
 # Stage 1 – Web-Oberfläche bauen (Angular)
 # ═════════════════════════════════════════════════════════════════════════════
-FROM node:22-alpine AS web-build
+FROM node:26-alpine AS web-build
 WORKDIR /app
 
 # package*.json zuerst → der npm-Layer bleibt gültig, wenn nur der Code
