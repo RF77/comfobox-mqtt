@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img">
+  <title>ComfoBox Gateway</title>
+  <defs>
+    <linearGradient id="cbk-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0ea5e9" />
+      <stop offset="1" stop-color="#1d4ed8" />
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="236" height="236" rx="54" fill="url(#cbk-tile)" />
+  <path d="M 174.73 167.21 A 61 61 0 1 1 174.73 88.79" fill="none" stroke="#ffffff" stroke-width="34" />
+  <circle cx="189" cy="128" r="16" fill="#fbbf24" />
+</svg>

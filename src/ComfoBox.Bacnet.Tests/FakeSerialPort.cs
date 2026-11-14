@@ -16,6 +16,14 @@ public sealed class FakeSerialPort : ISerialPort
     private readonly List<byte> _outbound = [];
     private readonly object _sync = new();
 
+    /// <summary>
+    /// Offen-Zustand - bewusst <c>volatile</c>: Der Zustandsautomat läuft auf
+    /// einem eigenen Thread und muss ein <c>Close()</c> aus einem anderen
+    /// Thread zuverlässig sehen (sonst läuft er auf einem längst geschlossenen
+    /// Port weiter).
+    /// </summary>
+    private volatile bool _isOpen = true;
+
     /// <summary>Wird beim Öffnen geworfen (simuliert einen fehlenden Port).</summary>
     public Exception? OpenException { get; set; }
 
@@ -39,7 +47,11 @@ public sealed class FakeSerialPort : ISerialPort
     /// Der Port gilt als **offen**, bis er geschlossen wird - so verhält sich
     /// der Attrapp wie ein echter Port, der schon geöffnet ist.
     /// </remarks>
-    public bool IsOpen { get; private set; } = true;
+    public bool IsOpen
+    {
+        get => _isOpen;
+        private set => _isOpen = value;
+    }
 
     /// <summary>Alle geschriebenen Bytes.</summary>
     public byte[] Written

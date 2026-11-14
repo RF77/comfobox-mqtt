@@ -48,6 +48,20 @@ public sealed class BacnetMstpTransport : IBacnetTransport
     /// </remarks>
     private readonly SemaphoreSlim _reconnectSignal = new(0, 1);
 
+    /// <summary>
+    /// Zählt die angeforderten Neuaufbauten.
+    /// </summary>
+    /// <remarks>
+    /// Das Signal (<see cref="_reconnectSignal"/>) allein genügt nicht: Wird
+    /// ein Neuaufbau angefordert, <b>während</b> der Verbindungs-Thread den
+    /// Port gerade erzeugt und öffnet, läuft <see cref="ClosePort"/> ins Leere
+    /// (es ist noch kein Port gesetzt) - der Zustandsautomat arbeitet danach
+    /// auf einem Port, den niemand mehr schließt, und die Anforderung wäre
+    /// verloren. Der Zähler macht sie deshalb <b>gemerkt</b>: Nach dem Öffnen
+    /// wird geprüft, ob seither ein Neuaufbau kam.
+    /// </remarks>
+    private int _reconnectGeneration;
+
     private CancellationTokenSource? _shutdown;
     private Task? _runner;
     private ISerialPort? _port;
@@ -184,6 +198,12 @@ public sealed class BacnetMstpTransport : IBacnetTransport
     {
         _logger.LogInformation("Ein Neuaufbau der seriellen Schnittstelle wurde angefordert.");
 
+        // Zuerst zählen: Ein Port, der gerade geöffnet wird, erkennt die
+        // Erhöhung direkt nach dem Öffnen und wird sofort wieder verworfen.
+        // Ohne diesen Zähler ginge die Anforderung genau dann verloren, wenn
+        // ClosePort noch keinen Port vorfindet (er wird erst angelegt).
+        Interlocked.Increment(ref _reconnectGeneration);
+
         ClosePort();
 
         // Der Verbindungs-Thread darf den Backoff abbrechen.
@@ -312,6 +332,10 @@ public sealed class BacnetMstpTransport : IBacnetTransport
 
         while (!cancellationToken.IsCancellationRequested)
         {
+            // Der Stand **vor** dem Öffnen: Kommt die Anforderung während des
+            // Öffnens, ist dieser Port bereits veraltet.
+            var generation = Volatile.Read(ref _reconnectGeneration);
+
             try
             {
                 var port = _portFactory.Create();
@@ -324,6 +348,17 @@ public sealed class BacnetMstpTransport : IBacnetTransport
                     _options.Serial.BaudRate);
 
                 backoff = _options.ReconnectDelay;
+
+                if (Volatile.Read(ref _reconnectGeneration) != generation)
+                {
+                    // Die Anforderung kam, während der Port geöffnet wurde -
+                    // ClosePort lief ins Leere. Der Port kann deshalb noch den
+                    // alten Namen tragen: verwerfen und sofort neu öffnen.
+                    _logger.LogInformation(
+                        "Neuaufbau während des Öffnens angefordert - der Port wird sofort ersetzt.");
+
+                    continue;
+                }
 
                 var machine = new MstpStateMachine(
                     port,

@@ -11,6 +11,16 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added
+
+- **Eigenes Markenzeichen und App-Icons.** Browser-Tab, Lesezeichen,
+  Startbildschirm und Kopfzeile zeigen jetzt das ComfoBox-Zeichen – ein weißes
+  „C“ mit bernsteinfarbenem Punkt auf blauem Verlauf – statt des
+  Angular-Logos. Erzeugt wird es aus **einer** Quelle
+  (`tools/icons/comfobox-icon.mjs`): dieselbe Geometrie liefert auch das Icon
+  des Synology-Pakets. Dazu ein Web-App-Manifest, damit sich die Oberfläche
+  mit passendem Icon auf dem Startbildschirm ablegen lässt.
+
 ### Changed
 
 - **Die Seite „Geräte" heißt jetzt „Werte"** (Titel: *Werte und Einstellungen*).
@@ -24,6 +34,11 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Das Icon des Synology-Pakets zeigte Regenbogenstreifen statt des blauen
+  Verlaufs.** Die Kantenglättung im Icon-Erzeuger normierte die aufsummierte
+  Farbe um den Faktor 16 zu hoch; die Werte liefen über 255 hinaus und wurden
+  beim Schreiben in den Puffer modulo 256 abgeschnitten – daraus wurden bunte
+  Bänder. Jetzt wird durch die Anzahl der Abtastpunkte geteilt.
 - **Die Oberfläche erstattete keine Rückmeldung – weder Erfolg noch Fehler.**
   Im Wurzel-Template fehlte `<p-toast>`. Der `MessageService` wird an 34
   Stellen benutzt (Speichern, Schreiben, Token, Portwechsel, Neustart …), seine

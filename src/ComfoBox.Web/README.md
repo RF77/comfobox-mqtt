@@ -36,6 +36,19 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
+## Icons
+
+The favicon, the app icons and the brand mark in the header are **generated**
+from one source – do not edit the image files by hand:
+
+```bash
+node tools/make-icons.mjs        # → public/{logo.svg,favicon.ico,icon-*.png,…}
+```
+
+The geometry lives in [`tools/icons/comfobox-icon.mjs`](../../tools/icons/comfobox-icon.mjs)
+and is shared with the Synology package icon
+(`deploy/synology-spk/tools/make-icon.mjs`).
+
 ## Running unit tests
 
 To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:

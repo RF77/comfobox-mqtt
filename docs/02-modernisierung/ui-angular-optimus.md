@@ -666,6 +666,38 @@ ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["dotnet", "ComfoBox.Gateway.dll"]
 ````
 
+### 11.4 Markenzeichen und Icons
+
+Das Zeichen (abgerundetes Quadrat, weißes **C** mit bernsteinfarbenem Punkt)
+hat **eine** Quelle: [`tools/icons/comfobox-icon.mjs`](../../tools/icons/comfobox-icon.mjs).
+Dort stehen Geometrie, Farben, Rasterung und die PNG-/ICO-Kodierung; die
+Erzeuger sind nur Kommandozeilen darum herum.
+
+````bash
+# Icons der Web-UI (SVG, ICO, PNG, Maskable)
+node src/ComfoBox.Web/tools/make-icons.mjs
+
+# Icons des Synology-Pakets (dieselbe Geometrie)
+node deploy/synology-spk/tools/make-icon.mjs                                  # 256 px
+node deploy/synology-spk/tools/make-icon.mjs --size 64 deploy/synology-spk/src/PACKAGE_ICON_64.png
+````
+
+| Datei | Zweck |
+|---|---|
+| `public/logo.svg` | `<link rel="icon">` **und** Markenzeichen in der Kopfzeile |
+| `public/favicon.ico` | 16/32/48 px für alte Browser |
+| `public/apple-touch-icon.png` | 180 px, randlos (iOS beschneidet selbst) |
+| `public/icon-192/512.png` | Manifest, `purpose: any` |
+| `public/icon-maskable-512.png` | Manifest, `purpose: maskable` |
+
+> **Warum erzeugt und trotzdem eingecheckt?** Das Design ist Quelltext, die
+> Bilder sind Artefakte – ein Build ohne Node-Lauf muss aber dieselben Bytes
+> liefern können. Deshalb liegt beides im Repository, und die Erzeuger sind
+> deterministisch (gleiche Parameter ⇒ gleiche Datei).
+>
+> **Kein Icon-Font, kein `pi-*` im Kopf:** das Markenzeichen ist ein Bild und
+> bleibt damit in jeder Größe scharf und unabhängig vom Farbschema.
+
 ## 12. Ablösung des WPF-DemoClients
 
 | Funktion | DemoClient (WPF) | Neue UI |

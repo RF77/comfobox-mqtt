@@ -178,6 +178,63 @@ public sealed class SerialPortBehaviourTests
     }
 
     [Fact]
+    public async Task Ein_Neuaufbau_Waehrend_Des_Oeffnens_Wird_Nicht_Verschluckt()
+    {
+        // Härtung gegen ein Wettrennen: Die Oberfläche kann den Neuaufbau
+        // genau dann anfordern, wenn der Transport seinen Port gerade erzeugt
+        // und öffnet. ClosePort() findet dann noch keinen Port und läuft ins
+        // Leere - der Zustandsautomat arbeitet anschließend auf einem Port,
+        // den niemand mehr schließt. Die Anforderung darf in diesem Fall
+        // nicht verloren gehen (der Benutzer wartete sonst bis zu 30 s).
+        var factory = new FakeSerialPortFactory();
+        var created = 0;
+        BacnetMstpTransport? transport = null;
+
+        factory.Configure = _ =>
+        {
+            // Der erste Port wird gerade erzeugt, ist aber noch nicht offen:
+            // genau hier kam die Anforderung in der CI an.
+            if (Interlocked.Increment(ref created) == 1)
+            {
+                transport!.RequestReconnect();
+            }
+        };
+
+        transport = new BacnetMstpTransport(
+            factory,
+            new BacnetMstpOptions
+            {
+                ThisStation = 3,
+                ReconnectDelay = TimeSpan.FromSeconds(30),
+                MaxReconnectDelay = TimeSpan.FromSeconds(30),
+            },
+            NullLogger<BacnetMstpTransport>.Instance);
+
+        try
+        {
+            transport.Start();
+
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            while (factory.CreatedCount < 2 && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(10);
+            }
+
+            Assert.True(
+                factory.CreatedCount >= 2,
+                $"Eine Anforderung während des Öffnens darf nicht verloren gehen (erzeugte Ports: {factory.CreatedCount}).");
+
+            Assert.True(
+                factory.Last is { IsOpen: true },
+                "Der zuletzt erzeugte Port muss geöffnet sein.");
+        }
+        finally
+        {
+            await transport.StopAsync();
+        }
+    }
+
+    [Fact]
     public async Task StopAsync_Schliesst_Den_Port_Und_Beendet_Ohne_Hang()
     {
         var factory = new FakeSerialPortFactory();

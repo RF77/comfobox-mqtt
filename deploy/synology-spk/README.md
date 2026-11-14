@@ -38,10 +38,14 @@ Voraussetzung: nur `tar`, `gzip`, `md5sum` – **kein** Docker, **kein** Synolog
 ```bash
 bash tools/check-shell.sh        # Syntax aller Skripte + Test des JSON-Parsers
 node tools/make-icon.mjs         # Icon neu erzeugen (nur nach Designänderungen)
+node tools/make-icon.mjs --size 64 src/PACKAGE_ICON_64.png   # die 64er-Variante
 ```
 
-> Das Icon wird **versioniert** (`src/PACKAGE_ICON.png`). `make-icon.mjs` ist
-> nur der Reproduzierbarkeitsweg – ohne Icon bricht `build-spk.sh` ab.
+> Das Icon wird **versioniert** (`src/PACKAGE_ICON.png` + `src/PACKAGE_ICON_64.png`).
+> `make-icon.mjs` ist nur der Reproduzierbarkeitsweg – ohne Icon bricht
+> `build-spk.sh` ab. Die Geometrie liegt seit 2026-11-14 in
+> `tools/icons/comfobox-icon.mjs` und wird mit Favicon und Kopfzeile der
+> Web-UI geteilt (`node src/ComfoBox.Web/tools/make-icons.mjs`).
 
 ## Installieren
 

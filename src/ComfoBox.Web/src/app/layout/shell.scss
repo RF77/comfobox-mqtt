@@ -50,6 +50,14 @@
   white-space: nowrap;
 }
 
+/* Das Markenzeichen ist ein Bild, kein Icon-Font – es bleibt in jeder
+ * Größe scharf und trägt die Markenfarbe unabhängig vom Theme. */
+.cb-brand-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+}
+
 .cb-nav {
   display: flex;
   gap: 0.25rem;
