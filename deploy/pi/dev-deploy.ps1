@@ -308,6 +308,16 @@ case "$ACTION" in
             exit 2
         fi
 
+        # Laeuft noch etwas anderes auf dem Port? Meist der Container - der
+        # haelt auch den seriellen Port, dann ist der Test ohnehin sinnlos.
+        if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -q ":$PORT "; then
+            echo "FEHLER: auf Port $PORT lauscht bereits ein Prozess." >&2
+            echo "        Meist der Container:" >&2
+            echo "          sudo docker compose -f /opt/comfobox/compose.yaml stop" >&2
+            echo "        Sonst nachsehen mit:  sudo ss -ltnp | grep :$PORT" >&2
+            exit 4
+        fi
+
         stop_app
         sleep 1
 
@@ -325,23 +335,99 @@ case "$ACTION" in
             echo "           Abhilfe: sudo usermod -aG dialout $(id -un); danach neu anmelden."
         fi
 
+        # Den seriellen Adapter gleich setzen. Ohne Angabe kommt der Wert aus
+        # der appsettings.json ("COM3") - auf Linux oeffnet der Transport dann
+        # einen Port, den es nicht gibt, und meldet das als Fehler.
+        SERIAL_DEVICE=""
+        for d in /dev/ttyUSB0 /dev/ttyACM0 /dev/ttyUSB1 /dev/ttyACM1; do
+            if [ -e "$d" ]; then
+                SERIAL_DEVICE="$d"
+                break
+            fi
+        done
+
         export COMFOBOX_Gateway__DataDirectory="$BASE/data"
         export COMFOBOX_Logging__Directory="$BASE/data/logs"
-        export COMFOBOX_BACNET__Baudrate=38400
         export ASPNETCORE_URLS="http://0.0.0.0:$PORT"
         export DOTNET_gcServer=0
 
+        if [ -n "$SERIAL_DEVICE" ]; then
+            export COMFOBOX_Bacnet__Port="$SERIAL_DEVICE"
+            echo "  serieller Port: $SERIAL_DEVICE"
+        else
+            echo "  WARNUNG: kein /dev/ttyUSB* oder /dev/ttyACM* gefunden."
+            echo "           Der Adapter kann im Betrieb gesteckt werden."
+        fi
+
         nohup "$APPDIR/ComfoBox.Gateway" > "$LOGFILE" 2>&1 &
         echo $! > "$PIDFILE"
+        PID=$(cat "$PIDFILE")
 
-        sleep 3
+        # Warten, bis der Port wirklich lauscht.
+        #
+        # Nicht nach 3 Sekunden aufgeben und nicht blind 2 Minuten warten: auf
+        # einem Pi 3 braucht ein selbst-enthaltenes .NET-Programm einige
+        # Sekunden. Entscheidend ist, ob der Prozess **noch lebt** und ob der
+        # Port aufgeht - beides wird hier im Sekundentakt geprueft.
+        i=0
+        LISTENING=0
+        while [ "$i" -lt 60 ]; do
+            if ! kill -0 "$PID" 2>/dev/null; then
+                echo "" >&2
+                echo "  FEHLER: der Prozess ist nach ${i}s beendet worden." >&2
+                echo "  --- Protokoll ($LOGFILE) ---" >&2
+                tail -n 40 "$LOGFILE" >&2 || true
+                exit 3
+            fi
 
-        if kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
-            echo "  gestartet (PID $(cat "$PIDFILE"), Port $PORT)"
+            if command -v ss >/dev/null 2>&1; then
+                if ss -ltn 2>/dev/null | grep -q ":$PORT "; then
+                    LISTENING=1
+                    break
+                fi
+            fi
+
+            i=$((i + 1))
+            if [ $((i % 10)) -eq 0 ]; then
+                echo "  ... laeuft noch (${i}s)"
+            fi
+            sleep 1
+        done
+
+        if [ "$LISTENING" = "1" ]; then
+            echo "  gestartet (PID $PID, Port $PORT, nach ${i}s)"
+
+            # Zusaetzlich lokal pruefen: lauscht heisst nicht, dass der
+            # Gateway auch antwortet. Und "antwortet lokal" heisst nicht,
+            # dass er von aussen erreichbar ist - dazwischen kann eine
+            # Firewall stehen (ufw laesst Docker-Ports durch, eigene
+            # Prozesse nicht).
+            if command -v curl >/dev/null 2>&1; then
+                j=0
+                LOCAL_OK=0
+                while [ "$j" -lt 12 ]; do
+                    if curl -fsS -m 1 "http://localhost:$PORT/api/health" >/dev/null 2>&1; then
+                        LOCAL_OK=1
+                        break
+                    fi
+                    j=$((j + 1))
+                    sleep 1
+                done
+
+                if [ "$LOCAL_OK" = "1" ]; then
+                    echo "  antwortet lokal: http://localhost:$PORT/api/health"
+                else
+                    echo "  WARNUNG: Port offen, aber /api/health antwortet lokal nicht." >&2
+                    echo "  --- Protokoll ($LOGFILE) ---" >&2
+                    tail -n 25 "$LOGFILE" >&2 || true
+                fi
+            fi
         else
-            echo "  FEHLER: der Prozess ist sofort beendet worden. Protokoll:" >&2
-            tail -n 30 "$LOGFILE" >&2 || true
-            exit 3
+            echo "" >&2
+            echo "  FEHLER: der Prozess laeuft (PID $PID), aber Port $PORT lauscht nicht." >&2
+            echo "  --- Protokoll ($LOGFILE) ---" >&2
+            tail -n 40 "$LOGFILE" >&2 || true
+            exit 5
         fi
         ;;
 
@@ -378,9 +464,16 @@ $startCode = Invoke-Ssh "sh ~/$remoteScriptName start $Port"
 
 if ($startCode -ne 0) {
     Write-Host ''
-    Write-Warning "Der Start ist fehlgeschlagen (Exit $startCode)."
-    Write-Host '  Protokoll des Pi:' -ForegroundColor DarkGray
-    $null = Invoke-Ssh 'tail -n 40 ~/comfobox-dev/run.log'
+
+    switch ($startCode) {
+        2 { Write-Warning 'Das Paket fehlt auf dem Pi - bitte ohne -NoBuild erneut starten.' }
+        4 { Write-Warning "Auf Port $Port lauscht bereits ein Prozess - meist der Container. " +
+                          'Abhilfe: sudo docker compose -f /opt/comfobox/compose.yaml stop' }
+        3 { Write-Warning 'Der Prozess ist beim Start beendet worden - das Protokoll steht oben.' }
+        5 { Write-Warning "Der Prozess laeuft, aber Port $Port lauscht nicht - das Protokoll steht oben." }
+        default { Write-Warning "Der Start ist fehlgeschlagen (Exit $startCode)." }
+    }
+
     exit 1
 }
 
@@ -390,7 +483,7 @@ if ($startCode -ne 0) {
 Write-Step 'Auf die Antwort des Gateway warten'
 
 $healthy = $false
-for ($i = 1; $i -le 60; $i++) {
+for ($i = 1; $i -le 45; $i++) {
     try {
         $response = Invoke-RestMethod -Uri "http://${Pi}:${Port}/api/health" -TimeoutSec 3
         $healthy = $true
@@ -398,15 +491,33 @@ for ($i = 1; $i -le 60; $i++) {
         break
     }
     catch {
+        if ($i % 5 -eq 0) {
+            Write-Host "  ... noch keine Antwort ($(($i - 1) * 2) s)" -ForegroundColor DarkGray
+        }
+
         Start-Sleep -Seconds 2
     }
 }
 
 if (-not $healthy) {
-    Write-Warning 'Der Gateway antwortet nicht. Protokoll:'
+    Write-Host ''
+    Write-Warning 'Der Gateway antwortet nicht - hier die Fakten vom Pi:'
+    Write-Host ''
 
-    # Die Ausgabe erscheint direkt auf der Konsole (siehe Invoke-Ssh).
-    $null = Invoke-Ssh 'tail -n 40 ~/comfobox-dev/run.log'
+    # Einzeilig, damit die Argumentübergabe an ssh.exe nichts zerlegt.
+    $null = Invoke-Ssh ("echo '--- Prozess ---'; ps -o pid,etime,rss,cmd -C ComfoBox.Gateway 2>/dev/null || pgrep -a -f comfobox-dev; " +
+        "echo '--- Port $Port ---'; (ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null) | grep ':$Port' || echo 'lauscht NICHT'; " +
+        "echo '--- lokal ---'; curl -s -m 3 -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:$Port/api/health || echo 'keine Antwort'; " +
+        "echo '--- Protokoll ---'; tail -n 25 ~/comfobox-dev/run.log 2>/dev/null || echo 'kein Protokoll'")
+
+    Write-Host ''
+    Write-Host '  Ursachen, die dazu passen:' -ForegroundColor DarkGray
+    Write-Host "    * 'lauscht NICHT'           -> Start haengt oder ist zu langsam; Protokoll ansehen" -ForegroundColor DarkGray
+    Write-Host "    * Prozess fehlt             -> Protokoll zeigt die Ausnahme (z. B. ICU, Rechte)" -ForegroundColor DarkGray
+    Write-Host "    * 'Couldn't find a valid ICU package' -> sudo apt-get install -y libicu" -ForegroundColor DarkGray
+    Write-Host "    * antwortet lokal, aber von hier nicht -> Firewall (ufw)" -ForegroundColor DarkGray
+    Write-Host "      Abhilfe:  sudo ufw allow $Port/tcp   (kurz pruefen: sudo ufw status)" -ForegroundColor DarkGray
+    Write-Host "    * fremder Prozess auf $Port -> der Container haelt den Port noch" -ForegroundColor DarkGray
     exit 1
 }
 

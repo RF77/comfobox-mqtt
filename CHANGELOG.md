@@ -72,6 +72,22 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   abschließenden `0` – der Vergleich `-ne 0` schlug immer zu. Die Ausgabe geht
   jetzt per `Out-Host` an die Konsole, zurück kommt nur der Exit-Code. Schlägt
   der Start wirklich fehl, wird zusätzlich das Protokoll des Pi angezeigt.
+- **`deploy/pi/dev-deploy.ps1` wartete zwei Minuten auf einen Gateway, der
+  nicht lauschte – ohne eine Ursache zu nennen.** Drei Änderungen:
+  - Der Start wartet nicht mehr pauschal 3 s, sondern prüft im Sekundentakt,
+    ob **der Prozess noch lebt** und ob **der Port lauscht** (max. 60 s).
+    Stirbt der Prozess, steht das Protokoll sofort da (Exit 3); lauscht der
+    Port nicht, ebenfalls (Exit 5).
+  - Vor dem Start wird geprüft, ob der Port schon belegt ist – meist hält ihn
+    der Container. Dann bricht das Skript mit dem passenden Befehl ab (Exit 4),
+    statt einen Prozess zu starten, der nicht binden kann.
+  - Der serielle Adapter wird erkannt und als `COMFOBOX_Bacnet__Port` gesetzt.
+    Vorher galt der Wert aus `appsettings.json` (`COM3`) – auf Linux ein Port,
+    den es nicht gibt.
+  - Nach dem Binden prüft das Skript zusätzlich `http://localhost:<port>/api/health`
+    auf dem Pi selbst. Antwortet es dort, aber nicht vom Entwicklungsrechner,
+    ist eine Firewall die Ursache (ufw lässt Docker-Ports durch, eigene
+    Prozesse nicht) – der Hinweis samt Befehl steht dann in der Ausgabe.
 
 ## [1.0.4] – 2026-11-14
 
