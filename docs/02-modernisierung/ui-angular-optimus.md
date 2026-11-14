@@ -540,6 +540,34 @@ export class ItemsStore {
 | `provideZonelessChangeDetection()` | moderne Angular-22-Empfehlung, weniger Overhead |
 | Kein globales State-Framework | 127 Items + Status – Signal-Stores reichen |
 
+### 8.1 Rückmeldungen: genau ein Toaster in der Wurzel
+
+| Regel | Begründung |
+|---|---|
+| **Ein** `<p-toast position="top-right" />` in `app.html` – **nie** in einer Seite | Der `MessageService` ist ein Singleton; zwei Toaster zeigen jede Meldung doppelt |
+| Jede Komponente, die `confirm()` aufruft, rendert `<p-confirmdialog />` | Ohne das Element öffnet sich kein Dialog – der Klick auf den Knopf tut sichtbar nichts |
+| Erfolg **und** Fehler melden | Eine stillschweigend fehlgeschlagene Aktion ist für den Benutzer nicht von „nichts passiert“ zu unterscheiden |
+
+> **Fallstrick (2026-11-14):** `provideOptimus()` und
+> `{ provide: MessageService, useClass: MessageService }` reichen **nicht**. Ohne
+> `<p-toast>` im Template verwirft der Dienst jede Meldung **ohne Fehler** – 34
+> `messages.add(…)`-Aufrufe im ganzen Projekt liefen ins Leere. Folge: „Speichern“
+> wirkte wirkungslos, weil weder „Gespeichert“ noch eine Fehlermeldung erschien.
+> Der Toaster steht deshalb in `app.html` (Wurzel) und nicht in der Shell: Anmeldung,
+> Einrichtung und Hilfe liegen außerhalb der Shell.
+
+### 8.2 Schalter, die sofort speichern
+
+Ein Schalter, dessen Hinweistext „wirkt sofort“ sagt, muss **beim Umschalten**
+speichern – nicht erst beim „Speichern“-Knopf am Seitenende. Sonst bleibt der Wert
+im Entwurf hängen, der Schalter steht sichtbar auf „an“, gespeichert ist aber
+nichts, und beim nächsten Aufruf der Seite ist er wieder aus.
+
+Damit Angular den Schalter bei „Abbrechen“ zurücksetzt, muss der gebundene Wert
+sich **ändern** (`writeValue` wird nur bei einer Änderung aufgerufen): erst den
+Entwurf auf den Zielwert setzen, dann die Rückfrage zeigen und im `reject` wieder
+auf den alten Wert stellen.
+
 ## 9. Theming
 
 | Preset | Einsatz |

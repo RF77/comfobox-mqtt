@@ -149,6 +149,8 @@ export interface Translations {
     readonly expertModeConfirmTitle: string;
     readonly expertModeConfirmText: string;
     readonly expertModeConfirmAccept: string;
+    readonly expertModeSaved: (enabled: boolean) => string;
+    readonly expertModeSavedHint: string;
     readonly bacnetSection: string;
     readonly appliesImmediately: string;
     readonly deviceId: string;

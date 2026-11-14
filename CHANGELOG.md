@@ -16,9 +16,21 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - **Die Seite „Geräte" heißt jetzt „Werte"** (Titel: *Werte und Einstellungen*).
   Es gibt genau ein Gerät – die ComfoBox –, die Seite zeigt deren Werte und
   Einstellungen. „Geräte" legte eine Geräteliste nahe, die es nicht gibt.
+- **Der Schalter „Experten-Modus" speichert sofort.** Bisher blieb er im
+  Entwurf und wurde erst mit dem „Speichern"-Knopf am Seitenende geschrieben –
+  wer ihn nur umlegte, sah „an", gespeichert war aber nichts, und beim nächsten
+  Aufruf der Seite stand er wieder auf „aus". Nach der Rückfrage wird der Wert
+  jetzt direkt geschrieben; „Abbrechen" setzt den Schalter sichtbar zurück.
 
 ### Fixed
 
+- **Die Oberfläche erstattete keine Rückmeldung – weder Erfolg noch Fehler.**
+  Im Wurzel-Template fehlte `<p-toast>`. Der `MessageService` wird an 34
+  Stellen benutzt (Speichern, Schreiben, Token, Portwechsel, Neustart …), seine
+  Meldungen wurden ohne Fehler verworfen. Folge: Ein Klick auf „Speichern"
+  sah aus wie „nichts passiert", und eine **abgelehnte** Aktion war von einer
+  erfolgreichen nicht zu unterscheiden. Der Toaster steht jetzt in
+  `app.html` – genau einmal, weil sonst jede Meldung doppelt erscheint.
 - **Der Experten-Modus blieb wirkungslos, obwohl er als „an" angezeigt wurde.**
   `GET /api/items` berechnete die Schreibbarkeit aus dem beim Start gebundenen
   `GatewayOptions.ExpertMode` – die Werte der Seite „Werte" blieben deshalb

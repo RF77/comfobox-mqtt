@@ -90,6 +90,15 @@ dessen Werte, nicht eine Liste von Geräten.
 > Regelverhalten der Heizung beeinflussen. Aktivieren Sie ihn nur, wenn Sie wissen,
 > was Sie tun. Bei Rückfragen: [Expertenmodus](09-fehlersuche.md#expertenmodus).
 
+Der Schalter **Expertenmodus** auf der Konfigurationsseite speichert **sofort** –
+Sie brauchen danach nicht zusätzlich auf „Speichern“ zu klicken. Weil die
+Freigabe sicherheitsrelevant ist, fragt die Oberfläche vorher noch einmal nach.
+Eine Meldung oben rechts bestätigt das Speichern; erscheint sie nicht, wurde der
+Wert nicht übernommen.
+
+> Die MQTT-Topics der Experten-Parameter entstehen erst nach einem **Neustart** des
+> Gateways. In der Oberfläche sind die Werte sofort schreibbar.
+
 ---
 
 ## Konfiguration
@@ -99,13 +108,19 @@ dessen Werte, nicht eine Liste von Geräten.
 | Allgemein | MQTT-Basis-Topic | Präfix aller Topics |
 | Allgemein | Abfrageintervall | wie oft gelesen wird (Standard 30 s) |
 | Schreibschutz | Limit pro 24 h | wie viele Schreibvorgänge erlaubt sind |
-| Schreibschutz | Expertenmodus | sensible Parameter freigeben |
+| Schreibschutz | Expertenmodus | sensible Parameter freigeben – **speichert sofort** |
 | MQTT | Broker | Adresse, Port, Zugangsdaten |
 | BACnet | **Port, Baudrate** | **wirkt sofort – kein Neustart nötig** |
+| BACnet | Geräte-ID, Item-Timeout | wirkt sofort |
+| BACnet | MSTP-Adresse, Schreibpriorität | erst nach einem Neustart |
 | Diagnose | Neustart, Verbindung neu aufbauen, Protokollstufe | – |
 
 > **Felder mit dem Hinweis „Neustart erforderlich"** werden erst nach einem Neustart
 > wirksam. Sie finden einen Knopf dafür direkt auf der Seite.
+
+> **Jede Aktion meldet sich zurück.** Oben rechts erscheint eine Meldung – grün bei
+> Erfolg, rot mit Begründung bei einem Fehler. Bleibt sie aus, ist die Aktion nicht
+> angekommen.
 
 ### Den seriellen Port wechseln
 

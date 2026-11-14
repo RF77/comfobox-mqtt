@@ -129,11 +129,14 @@ export const EN: Translations = {
     maxWritesHint: 'The counter protects the EEPROM of the heating system. 0 means: no limit.',
     expertMode: 'Expert mode',
     expertModeHint:
-      'Allows writing sensitive parameters. Applies immediately in the web UI; the MQTT topics for these values appear after a restart. Default: off.',
+      'Allows writing sensitive parameters. The switch is saved immediately; the MQTT topics for these values appear after a restart. Default: off.',
     expertModeConfirmTitle: 'Enable expert mode',
     expertModeConfirmText:
       'Expert mode allows writing sensitive heating parameters. A wrong value can cause malfunctions. Continue?',
     expertModeConfirmAccept: 'Enable expert mode',
+    expertModeSaved: (enabled) => (enabled ? 'Expert mode enabled' : 'Expert mode disabled'),
+    expertModeSavedHint:
+      'The value is stored. The MQTT topics for these values appear after a gateway restart.',
     bacnetSection: 'BACnet (serial interface)',
     appliesImmediately: 'applies immediately',
     deviceId: 'Device ID',
@@ -204,7 +207,7 @@ export const EN: Translations = {
     settingsSaved: 'Security saved',
     saved: 'Saved',
     savedHint:
-      'Device ID, item timeout and expert mode apply immediately. MSTP address, write priority and broker after a restart.',
+      'Device ID and item timeout apply immediately. MSTP address, write priority and broker after a restart.',
     diagnostics: 'Diagnostics',
     restart: 'Restart gateway',
     restartTitle: 'Restart gateway',

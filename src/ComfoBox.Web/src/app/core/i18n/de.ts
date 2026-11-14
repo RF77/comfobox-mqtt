@@ -130,11 +130,15 @@ export const DE: Translations = {
     maxWritesHint: 'Der Zähler schützt den EEPROM der Heizung. 0 bedeutet: kein Limit.',
     expertMode: 'Experten-Modus',
     expertModeHint:
-      'Erlaubt das Schreiben sensibler Parameter. Wirkt sofort in der Oberfläche; die MQTT-Topics dieser Werte entstehen nach einem Neustart. Standard: aus.',
+      'Erlaubt das Schreiben sensibler Parameter. Der Schalter wird sofort gespeichert; die MQTT-Topics dieser Werte entstehen nach einem Neustart. Standard: aus.',
     expertModeConfirmTitle: 'Experten-Modus aktivieren',
     expertModeConfirmText:
       'Der Experten-Modus erlaubt das Schreiben von sensiblen Parametern der Heizung. Ein falscher Wert kann zu Fehlfunktionen führen. Fortfahren?',
     expertModeConfirmAccept: 'Experten-Modus aktivieren',
+    expertModeSaved: (enabled) =>
+      enabled ? 'Experten-Modus eingeschaltet' : 'Experten-Modus ausgeschaltet',
+    expertModeSavedHint:
+      'Der Wert ist gespeichert. Die MQTT-Topics dieser Werte entstehen nach einem Neustart des Gateways.',
     bacnetSection: 'BACnet (serielle Schnittstelle)',
     appliesImmediately: 'wirkt sofort',
     deviceId: 'Geräte-ID',
@@ -205,7 +209,7 @@ export const DE: Translations = {
     settingsSaved: 'Sicherheit gespeichert',
     saved: 'Gespeichert',
     savedHint:
-      'Geräte-ID, Item-Timeout und Experten-Modus wirken sofort. MSTP-Adresse, Schreibpriorität und Broker nach einem Neustart.',
+      'Geräte-ID und Item-Timeout wirken sofort. MSTP-Adresse, Schreibpriorität und Broker nach einem Neustart.',
     diagnostics: 'Diagnose',
     restart: 'Gateway neu starten',
     restartTitle: 'Gateway neu starten',

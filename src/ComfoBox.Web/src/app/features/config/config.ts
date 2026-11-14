@@ -251,12 +251,24 @@ export class ConfigComponent {
     });
   }
 
-  /** Schaltet den Experten-Modus um (mit Bestätigung). */
+  /**
+   * Schaltet den Experten-Modus um.
+   *
+   * <p>Der Schalter speichert **sofort** - es gibt keinen zweiten
+   * Speicher-Schritt. Vorher blieb der Wert im Entwurf hängen: der Schalter
+   * stand auf „an“, gespeichert war aber nichts, und beim nächsten Aufruf der
+   * Seite war er wieder aus.</p>
+   */
   toggleExpertMode(): void {
     const next = !this.expertMode();
 
+    // Den Entwurf **sofort** auf den Zielwert setzen. Nur so ändert sich der
+    // gebundene Wert - und nur dann schreibt Angular ihn beim Abbruch der
+    // Rückfrage wieder in den Schalter zurück (sonst bliebe er optisch „an“).
+    this.expertMode.set(next);
+
     if (!next) {
-      this.expertMode.set(false);
+      void this.persistExpertMode(false);
       return;
     }
 
@@ -267,8 +279,48 @@ export class ConfigComponent {
       acceptLabel: this.t().config.expertModeConfirmAccept,
       rejectLabel: this.t().common.cancel,
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => this.expertMode.set(true),
+      accept: () => void this.persistExpertMode(true),
+      reject: () => this.expertMode.set(false),
     });
+  }
+
+  /**
+   * Schreibt den Experten-Modus in die `config.json`.
+   *
+   * @param enabled Der neue Zustand.
+   */
+  private async persistExpertMode(enabled: boolean): Promise<void> {
+    this.saving.set(true);
+
+    try {
+      const ok = await this.config.update({ expertMode: enabled });
+
+      // Immer den Stand **vom Server** übernehmen: der Schalter darf nichts
+      // anzeigen, was nicht gespeichert ist.
+      this.expertMode.set(this.config.expertMode());
+
+      if (ok) {
+        this.messages.add({
+          severity: 'success',
+          summary: this.t().config.expertModeSaved(enabled),
+          detail: this.t().config.expertModeSavedHint,
+          life: 6000,
+        });
+
+        return;
+      }
+
+      const error = toApiError(this.config.error());
+
+      this.messages.add({
+        severity: 'error',
+        summary: error.code,
+        detail: error.message,
+        life: 8000,
+      });
+    } finally {
+      this.saving.set(false);
+    }
   }
 
   /** Startet den Gateway neu (mit Bestätigung). */

@@ -131,11 +131,14 @@ export const FR: Translations = {
     maxWritesHint: "Le compteur protège l'EEPROM du chauffage. 0 signifie : aucune limite.",
     expertMode: 'Mode expert',
     expertModeHint:
-      'Autorise l’écriture de paramètres sensibles. Effet immédiat dans l’interface ; les topics MQTT de ces valeurs apparaissent après un redémarrage. Par défaut : désactivé.',
+      'Autorise l’écriture de paramètres sensibles. L’interrupteur est enregistré immédiatement ; les topics MQTT de ces valeurs apparaissent après un redémarrage. Par défaut : désactivé.',
     expertModeConfirmTitle: 'Activer le mode expert',
     expertModeConfirmText:
       "Le mode expert autorise l'écriture de paramètres sensibles du chauffage. Une valeur erronée peut provoquer des dysfonctionnements. Continuer ?",
     expertModeConfirmAccept: 'Activer le mode expert',
+    expertModeSaved: (enabled) => (enabled ? 'Mode expert activé' : 'Mode expert désactivé'),
+    expertModeSavedHint:
+      'La valeur est enregistrée. Les topics MQTT de ces valeurs apparaissent après un redémarrage de la passerelle.',
     bacnetSection: 'BACnet (interface série)',
     appliesImmediately: 'effet immédiat',
     deviceId: "ID de l'appareil",
@@ -206,7 +209,7 @@ export const FR: Translations = {
     settingsSaved: 'Sécurité enregistrée',
     saved: 'Enregistré',
     savedHint:
-      'L’ID de l’appareil, le délai par élément et le mode expert agissent immédiatement. L’adresse MSTP, la priorité d’écriture et le broker après un redémarrage.',
+      'L’ID de l’appareil et le délai par élément agissent immédiatement. L’adresse MSTP, la priorité d’écriture et le broker après un redémarrage.',
     diagnostics: 'Diagnostic',
     restart: 'Redémarrer la passerelle',
     restartTitle: 'Redémarrer la passerelle',

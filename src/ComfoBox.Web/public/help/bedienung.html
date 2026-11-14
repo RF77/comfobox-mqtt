@@ -213,6 +213,15 @@ wurde der Schreibvorgang abgelehnt (Grund steht in der Meldung).</p>
 Regelverhalten der Heizung beeinflussen. Aktivieren Sie ihn nur, wenn Sie wissen,
 was Sie tun. Bei Rückfragen: <a href="fehlersuche.html#expertenmodus">Expertenmodus</a>.</p>
 </blockquote>
+<p>Der Schalter <strong>Expertenmodus</strong> auf der Konfigurationsseite speichert <strong>sofort</strong> –
+Sie brauchen danach nicht zusätzlich auf „Speichern“ zu klicken. Weil die
+Freigabe sicherheitsrelevant ist, fragt die Oberfläche vorher noch einmal nach.
+Eine Meldung oben rechts bestätigt das Speichern; erscheint sie nicht, wurde der
+Wert nicht übernommen.</p>
+<blockquote>
+<p>Die MQTT-Topics der Experten-Parameter entstehen erst nach einem <strong>Neustart</strong> des
+Gateways. In der Oberfläche sind die Werte sofort schreibbar.</p>
+</blockquote>
 <hr>
 <h2>Konfiguration</h2>
 <table>
@@ -241,7 +250,7 @@ was Sie tun. Bei Rückfragen: <a href="fehlersuche.html#expertenmodus">Expertenm
 <tr>
 <td>Schreibschutz</td>
 <td>Expertenmodus</td>
-<td>sensible Parameter freigeben</td>
+<td>sensible Parameter freigeben – <strong>speichert sofort</strong></td>
 </tr>
 <tr>
 <td>MQTT</td>
@@ -254,6 +263,16 @@ was Sie tun. Bei Rückfragen: <a href="fehlersuche.html#expertenmodus">Expertenm
 <td><strong>wirkt sofort – kein Neustart nötig</strong></td>
 </tr>
 <tr>
+<td>BACnet</td>
+<td>Geräte-ID, Item-Timeout</td>
+<td>wirkt sofort</td>
+</tr>
+<tr>
+<td>BACnet</td>
+<td>MSTP-Adresse, Schreibpriorität</td>
+<td>erst nach einem Neustart</td>
+</tr>
+<tr>
 <td>Diagnose</td>
 <td>Neustart, Verbindung neu aufbauen, Protokollstufe</td>
 <td>–</td>
@@ -262,6 +281,11 @@ was Sie tun. Bei Rückfragen: <a href="fehlersuche.html#expertenmodus">Expertenm
 <blockquote>
 <p><strong>Felder mit dem Hinweis „Neustart erforderlich&quot;</strong> werden erst nach einem Neustart
 wirksam. Sie finden einen Knopf dafür direkt auf der Seite.</p>
+</blockquote>
+<blockquote>
+<p><strong>Jede Aktion meldet sich zurück.</strong> Oben rechts erscheint eine Meldung – grün bei
+Erfolg, rot mit Begründung bei einem Fehler. Bleibt sie aus, ist die Aktion nicht
+angekommen.</p>
 </blockquote>
 <h3>Den seriellen Port wechseln</h3>
 <p>Unter <strong>Konfiguration → BACnet</strong> und auf der <strong>Übersicht</strong> (dort prominent,
