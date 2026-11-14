@@ -248,10 +248,16 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton<MqttStatusPublisher>();
         services.AddSingleton<HomeAssistantBirthHandler>();
 
+        // Die Reihenfolge der Registrierung ist die Reihenfolge der
+        // Ausführung nach jedem Connect. Der Status (Availability) kommt
+        // bewusst **vor** der Discovery: Home Assistant legt die Entitäten
+        // dann mit einem bereits bekannten Health-Status an. Stünde er
+        // danach, warten die Entitäten die 127 Discovery-Nachrichten lang
+        // auf ihre Availability.
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttSubscriber>());
+        services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatusPublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantDiscovery>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatePublisher>());
-        services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatusPublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantBirthHandler>());
 
         if (startBackgroundServices)

@@ -121,12 +121,14 @@ public sealed class GatewayEndToEndTests : IAsyncLifetime, IDisposable
     {
         await StartGatewayAsync();
 
-        // 1) Connected und Version.
+        // 1) Connected und Version. Beide werden nacheinander publiziert -
+        //    auf jede einzeln warten, sonst gewinnt auf einem langsamen
+        //    Runner die Assertion das Rennen (flaky in der CI).
         await WaitForAsync(() => Has("ComfoBox/Connected=1"));
         Assert.True(Has("ComfoBox/Connected=1"), "ComfoBox/Connected=1 wurde nicht publiziert.");
-        Assert.True(
-            Received().Any(m => m.StartsWith("ComfoBox/Version=Ver ", StringComparison.Ordinal)),
-            "ComfoBox/Version wurde nicht publiziert.");
+
+        await WaitForAsync(HasLegacyVersion);
+        Assert.True(HasLegacyVersion(), "ComfoBox/Version wurde nicht publiziert.");
 
         // 2) Der Wert eines Items landet auf seinem Topic.
         var cache = _host!.Services.GetRequiredService<IValueCache>();
@@ -140,6 +142,9 @@ public sealed class GatewayEndToEndTests : IAsyncLifetime, IDisposable
 
         await WaitForAsync(() => Has("ComfoBox/Zone/OperationMode=Normal"));
         Assert.True(Has("ComfoBox/Zone/OperationMode=Normal"), "Der Enum-Wert wurde nicht publiziert.");
+
+        // Der Zahlwert folgt dem Namen als zweite Nachricht.
+        await WaitForAsync(() => Has("ComfoBox/Zone/OperationMode/AsNumber=6"));
         Assert.True(Has("ComfoBox/Zone/OperationMode/AsNumber=6"), "Der Enum-Zahlwert wurde nicht publiziert.");
 
         // 4) Die Discovery für alle 127 Items.
@@ -148,7 +153,14 @@ public sealed class GatewayEndToEndTests : IAsyncLifetime, IDisposable
             Received().Count(m => m.StartsWith("homeassistant/", StringComparison.Ordinal)) >= 127,
             $"Die Discovery wurde nicht für alle Items publiziert. Empfangen: {Received().Count(m => m.StartsWith("homeassistant/", StringComparison.Ordinal))}");
 
+        // Die Geräte-Discovery ist die **letzte** Discovery-Nachricht.
+        await WaitForAsync(() => HasTopic("homeassistant/device/comfobox/config"));
         Assert.True(HasTopic("homeassistant/device/comfobox/config"), "Die Geräte-Discovery fehlt.");
+
+        // Der Health-Status ist die Availability von Home Assistant. Er wird
+        // beim Connect publiziert - die Zustellung ist aber asynchron, der
+        // Discovery-Zähler sagt nichts über sie aus. Deshalb warten.
+        await WaitForAsync(() => Has("ComfoBox/Status/Health=online"));
         Assert.True(Has("ComfoBox/Status/Health=online"), $"Der Health-Status fehlt. Empfangen: {string.Join(", ", Received().Take(40))}");
     }
 
@@ -217,6 +229,9 @@ public sealed class GatewayEndToEndTests : IAsyncLifetime, IDisposable
 
     private bool HasTopic(string topic)
         => Received().Any(m => m.StartsWith(topic + "=", StringComparison.Ordinal));
+
+    private bool HasLegacyVersion()
+        => Received().Any(m => m.StartsWith("ComfoBox/Version=Ver ", StringComparison.Ordinal));
 
     private static async Task WaitForAsync(Func<bool> condition, TimeSpan? timeout = null)
     {
