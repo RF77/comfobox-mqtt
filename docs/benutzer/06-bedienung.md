@@ -18,7 +18,7 @@ Home Assistant).
 | Bereich | Inhalt |
 |---|---|
 | **Dashboard** | Zustand, Verbindungen, die wichtigsten Werte |
-| **Geräte** | alle 127 Werte, lesen und schreiben |
+| **Werte** | alle 127 Werte und Einstellungen, lesen und schreiben |
 | **Konfiguration** | Grundeinstellungen, Broker, Expertenmodus |
 | **Diagnose** | Protokoll, Fehlerhistorie, Verbindungen, Schreibvorgänge |
 | **Hilfe** | diese Anleitung |
@@ -53,9 +53,11 @@ Oben sehen Sie einen farbigen Balken:
 
 ---
 
-## Geräte (Item-Browser)
+## Werte und Einstellungen
 
-Hier sehen Sie **alle** Werte der Anlage, nach Gruppen sortiert.
+Hier sehen Sie **alle** Werte und Einstellungen der Anlage, nach Gruppen
+sortiert. Es gibt genau **ein** Gerät (die ComfoBox) – die Seite zeigt also
+dessen Werte, nicht eine Liste von Geräten.
 
 | Bedienelement | Bedeutung |
 |---|---|

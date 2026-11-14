@@ -53,7 +53,7 @@ export class ItemsComponent {
   readonly visibleCount = computed(() => this.items.visible().length);
 
   constructor() {
-    // Ein Klick auf dem Dashboard („In den Geräten öffnen") kann eine
+    // Ein Klick auf dem Dashboard („Zu den Werten") kann eine
     // Suchanfrage mitbringen.
     const query = this.route.snapshot.queryParamMap.get('q');
 

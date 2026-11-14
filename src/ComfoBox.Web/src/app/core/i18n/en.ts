@@ -22,7 +22,7 @@ export const EN: Translations = {
 
   nav: {
     dashboard: 'Overview',
-    items: 'Devices',
+    items: 'Values',
     config: 'Configuration',
     diagnostics: 'Diagnostics',
     help: 'Help',
@@ -74,7 +74,7 @@ export const EN: Translations = {
     outdoorTemperature: 'Outdoor temperature',
     warmWater: 'Domestic hot water',
     range: (min, max, unit) => `Range ${min} – ${max} ${unit}`.trim(),
-    openInItems: 'Open in devices',
+    openInItems: 'Open values',
     emptyCatalog: 'The item catalogue is empty. Please check the configuration.',
     quickActions: 'Quick actions',
     restart: 'Restart gateway',
@@ -92,7 +92,7 @@ export const EN: Translations = {
   },
 
   items: {
-    title: 'Devices',
+    title: 'Values and settings',
     search: 'Search name, description or topic …',
     searchAria: 'Search items',
     onlyWritable: 'Writable only',
@@ -128,7 +128,8 @@ export const EN: Translations = {
     maxWrites: 'Maximum writes per 24 h',
     maxWritesHint: 'The counter protects the EEPROM of the heating system. 0 means: no limit.',
     expertMode: 'Expert mode',
-    expertModeHint: 'Allows writing sensitive parameters. Default: off.',
+    expertModeHint:
+      'Allows writing sensitive parameters. Applies immediately in the web UI; the MQTT topics for these values appear after a restart. Default: off.',
     expertModeConfirmTitle: 'Enable expert mode',
     expertModeConfirmText:
       'Expert mode allows writing sensitive heating parameters. A wrong value can cause malfunctions. Continue?',

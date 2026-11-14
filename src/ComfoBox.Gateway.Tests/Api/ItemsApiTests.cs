@@ -37,12 +37,63 @@ public sealed class ItemsApiTests
     }
 
     /// <summary>
+    /// Nach dem Einschalten des Experten-Modus sind Experten-Items schreibbar.
+    /// </summary>
+    /// <remarks>
+    /// <b>Regression (2026-11-14):</b> Die Oberfläche zeigte den Experten-Modus
+    /// als „an", die Items blieben aber schreibgeschützt – der Endpunkt las
+    /// <see cref="ComfoBox.Gateway.Configuration.GatewayOptions.ExpertMode"/>,
+    /// also den beim Start gebundenen Wert.
+    /// </remarks>
+    [Fact]
+    public async Task Nach_Dem_Einschalten_Sind_Experten_Items_Schreibbar()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        // Vorher: gesperrt.
+        var before = await GatewayApiFixture.ReadJsonAsync(await fixture.Client.GetAsync("/api/items"));
+        var locked = FindExpertItem(before);
+
+        Assert.False(locked.GetProperty("writable").GetBoolean());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, locked.GetProperty("setTopic").ValueKind);
+
+        // Experten-Modus einschalten (ohne Neustart).
+        var put = await fixture.Client.PutAsync(
+            "/api/config",
+            new StringContent("{\"expertMode\":true}", Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        // Nachher: schreibbar.
+        var after = await GatewayApiFixture.ReadJsonAsync(await fixture.Client.GetAsync("/api/items"));
+        var unlocked = FindExpertItem(after);
+
+        Assert.True(unlocked.GetProperty("writable").GetBoolean());
+        Assert.False(string.IsNullOrEmpty(unlocked.GetProperty("setTopic").GetString()));
+    }
+
+    /// <summary>
+    /// Sucht ein Item, das den Experten-Modus erfordert.
+    /// </summary>
+    private static System.Text.Json.JsonElement FindExpertItem(System.Text.Json.JsonElement items)
+    {
+        foreach (var item in items.EnumerateArray())
+        {
+            if (item.GetProperty("requiresExpertMode").GetBoolean())
+            {
+                return item;
+            }
+        }
+
+        throw new InvalidOperationException("Der Katalog enthält kein Experten-Item.");
+    }
+
+    /// <summary>
     /// Ein einzelnes Item liefert den aktuellen Wert.
     /// </summary>
     [Fact]
     public async Task Ein_Item_Liefert_Den_Gecachten_Wert()
-    {
-        await using var fixture = await GatewayApiFixture.StartAsync();
+    {        await using var fixture = await GatewayApiFixture.StartAsync();
 
         var cache = fixture.Services.GetRequiredService<IValueCache>();
         cache.Update("zone.set_point_normal", new AnalogValue(21.5f, 5f, 30f, "°C"));

@@ -22,7 +22,7 @@ export const FR: Translations = {
 
   nav: {
     dashboard: 'Aperçu',
-    items: 'Appareils',
+    items: 'Valeurs',
     config: 'Configuration',
     diagnostics: 'Diagnostic',
     help: 'Aide',
@@ -74,7 +74,7 @@ export const FR: Translations = {
     outdoorTemperature: 'Température extérieure',
     warmWater: 'Eau chaude sanitaire',
     range: (min, max, unit) => `Plage ${min} – ${max} ${unit}`.trim(),
-    openInItems: 'Ouvrir dans les appareils',
+    openInItems: 'Ouvrir les valeurs',
     emptyCatalog: "Le catalogue d'éléments est vide. Vérifiez la configuration.",
     quickActions: 'Actions rapides',
     restart: 'Redémarrer la passerelle',
@@ -92,7 +92,7 @@ export const FR: Translations = {
   },
 
   items: {
-    title: 'Appareils',
+    title: 'Valeurs et réglages',
     search: 'Rechercher un nom, une description ou un topic …',
     searchAria: 'Rechercher des éléments',
     onlyWritable: 'Écriture uniquement',
@@ -130,7 +130,8 @@ export const FR: Translations = {
     maxWrites: 'Écritures maximales par 24 h',
     maxWritesHint: "Le compteur protège l'EEPROM du chauffage. 0 signifie : aucune limite.",
     expertMode: 'Mode expert',
-    expertModeHint: "Autorise l'écriture de paramètres sensibles. Par défaut : désactivé.",
+    expertModeHint:
+      'Autorise l’écriture de paramètres sensibles. Effet immédiat dans l’interface ; les topics MQTT de ces valeurs apparaissent après un redémarrage. Par défaut : désactivé.',
     expertModeConfirmTitle: 'Activer le mode expert',
     expertModeConfirmText:
       "Le mode expert autorise l'écriture de paramètres sensibles du chauffage. Une valeur erronée peut provoquer des dysfonctionnements. Continuer ?",

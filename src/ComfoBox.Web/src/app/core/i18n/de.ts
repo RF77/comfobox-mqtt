@@ -22,7 +22,7 @@ export const DE: Translations = {
 
   nav: {
     dashboard: 'Übersicht',
-    items: 'Geräte',
+    items: 'Werte',
     config: 'Konfiguration',
     diagnostics: 'Diagnose',
     help: 'Hilfe',
@@ -74,7 +74,7 @@ export const DE: Translations = {
     outdoorTemperature: 'Außentemperatur',
     warmWater: 'Warmwasser',
     range: (min, max, unit) => `Bereich ${min} – ${max} ${unit}`.trim(),
-    openInItems: 'In den Geräten öffnen',
+    openInItems: 'Zu den Werten',
     emptyCatalog: 'Der Item-Katalog ist leer. Bitte die Konfiguration prüfen.',
     quickActions: 'Schnellaktionen',
     restart: 'Gateway neu starten',
@@ -92,7 +92,7 @@ export const DE: Translations = {
   },
 
   items: {
-    title: 'Geräte',
+    title: 'Werte und Einstellungen',
     search: 'Name, Beschreibung oder Topic suchen …',
     searchAria: 'Items durchsuchen',
     onlyWritable: 'Nur schreibbar',
@@ -129,7 +129,8 @@ export const DE: Translations = {
     maxWrites: 'Maximale Schreibvorgänge je 24 h',
     maxWritesHint: 'Der Zähler schützt den EEPROM der Heizung. 0 bedeutet: kein Limit.',
     expertMode: 'Experten-Modus',
-    expertModeHint: 'Erlaubt das Schreiben sensibler Parameter. Standard: aus.',
+    expertModeHint:
+      'Erlaubt das Schreiben sensibler Parameter. Wirkt sofort in der Oberfläche; die MQTT-Topics dieser Werte entstehen nach einem Neustart. Standard: aus.',
     expertModeConfirmTitle: 'Experten-Modus aktivieren',
     expertModeConfirmText:
       'Der Experten-Modus erlaubt das Schreiben von sensiblen Parametern der Heizung. Ein falscher Wert kann zu Fehlfunktionen führen. Fortfahren?',

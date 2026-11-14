@@ -228,6 +228,10 @@ export class ConfigComponent {
     this.saving.set(false);
 
     if (ok) {
+      // Den Stand **vom Server** übernehmen, nicht den Entwurf behalten:
+      // sonst zeigt der Schalter „an", obwohl der Wert nicht ankam.
+      await this.load();
+
       this.messages.add({
         severity: 'success',
         summary: this.t().config.saved,

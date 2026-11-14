@@ -36,10 +36,10 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
-                GatewayOptions options) =>
+                GatewayRuntimeSettings gateway) =>
             {
                 var items = catalog.All
-                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, options.ExpertMode))
+                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode))
                     .ToArray();
 
                 return Results.Ok(items);
@@ -52,10 +52,10 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
-                GatewayOptions options) =>
+                GatewayRuntimeSettings gateway) =>
             {
                 var items = catalog.ByGroup(group)
-                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, options.ExpertMode))
+                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode))
                     .ToArray();
 
                 return Results.Ok(items);
@@ -68,7 +68,7 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
-                GatewayOptions options) =>
+                GatewayRuntimeSettings gateway) =>
             {
                 var item = catalog.Find(id);
                 if (item is null)
@@ -83,7 +83,7 @@ internal static class ItemsEndpoints
                         statusCode: StatusCodes.Status404NotFound);
                 }
 
-                return Results.Ok(ItemDto.From(item, Find(cache, item.Id), topics, options.ExpertMode));
+                return Results.Ok(ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode));
             })
             .WithTags("Items")
             .WithName("GetItem");

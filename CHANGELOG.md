@@ -11,8 +11,19 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Die Seite „Geräte" heißt jetzt „Werte"** (Titel: *Werte und Einstellungen*).
+  Es gibt genau ein Gerät – die ComfoBox –, die Seite zeigt deren Werte und
+  Einstellungen. „Geräte" legte eine Geräteliste nahe, die es nicht gibt.
+
 ### Fixed
 
+- **Der Experten-Modus blieb wirkungslos, obwohl er als „an" angezeigt wurde.**
+  `GET /api/items` berechnete die Schreibbarkeit aus dem beim Start gebundenen
+  `GatewayOptions.ExpertMode` – die Werte der Seite „Werte" blieben deshalb
+  dauerhaft gesperrt. Der Endpunkt liest jetzt `GatewayRuntimeSettings` (wie
+  der Schreibpfad selbst).
 - **Der Experten-Modus ließ sich in der Oberfläche nicht einschalten** – er
   wurde gespeichert, aber nicht zurückgemeldet. `GET /api/config` las die
   **beim Start gebundenen** Options (`IOptions<T>` ändert sich nicht mehr);
@@ -23,6 +34,9 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
     `config.json`, mit den Options nur als Rückfall.
   - Der **Experten-Modus wirkt sofort** (`GatewayRuntimeSettings`): er
     entscheidet bei jedem Schreibvorgang, nicht erst nach einem Neustart.
+  - Die Konfigurationsseite übernimmt nach dem Speichern den Stand **vom
+    Server** – ein Schalter, der nicht angekommen ist, springt sichtbar zurück
+    statt „an" zu bleiben.
   - Geräte-ID, MSTP-Adresse, Item-Timeout und Schreibpriorität sind in der
     Oberfläche **einstellbar** (vorher nur lesend); Geräte-ID und Timeout
     wirken sofort, MSTP-Adresse und Priorität nach einem Neustart.
