@@ -117,7 +117,7 @@ public sealed class SerialPortScanner : ISerialPortScanner
 
         foreach (var name in SerialPort.GetPortNames())
         {
-            names.Add(name);
+            names.Add(NormalizeName(name));
         }
 
         if (OperatingSystem.IsLinux())
@@ -128,7 +128,7 @@ public sealed class SerialPortScanner : ISerialPortScanner
                 {
                     foreach (var path in Directory.EnumerateFileSystemEntries("/dev", pattern))
                     {
-                        names.Add(path);
+                        names.Add(NormalizeName(path));
                     }
                 }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -139,6 +139,25 @@ public sealed class SerialPortScanner : ISerialPortScanner
         }
 
         return names.Select(name => Describe(new SerialPortInfo { Port = name })).ToList();
+    }
+
+    /// <summary>
+    /// Vereinheitlicht den Gerätenamen.
+    /// </summary>
+    /// <remarks>
+    /// Unter Linux liefert <see cref="SerialPort.GetPortNames"/> den Namen
+    /// <b>ohne</b> Verzeichnis (<c>ttyUSB0</c>), die Suche in <c>/dev</c> mit
+    /// (<c>/dev/ttyUSB0</c>). Ohne diese Angleichung stünde derselbe Adapter
+    /// zweimal in der Liste.
+    /// </remarks>
+    private static string NormalizeName(string name)
+    {
+        if (!OperatingSystem.IsLinux())
+        {
+            return name;
+        }
+
+        return name.StartsWith('/') ? name : "/dev/" + name;
     }
 
     /// <summary>

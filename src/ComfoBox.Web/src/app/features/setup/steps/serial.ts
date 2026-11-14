@@ -5,8 +5,10 @@ import { ButtonModule } from '@openng/optimus-ui/button';
 import { CardModule } from '@openng/optimus-ui/card';
 import { MessageModule } from '@openng/optimus-ui/message';
 import { RadioButtonModule } from '@openng/optimus-ui/radiobutton';
+import { TagModule } from '@openng/optimus-ui/tag';
 import { ToggleSwitchModule } from '@openng/optimus-ui/toggleswitch';
 
+import type { SerialPortInfo } from '../../../core/models/setup.model';
 import { SetupStore } from '../../../core/state/setup.store';
 import { I18n } from '../../../core/i18n/i18n';
 
@@ -25,6 +27,7 @@ const PORT_REFRESH_MS = 5000;
     MessageModule,
     RadioButtonModule,
     RouterLink,
+    TagModule,
     ToggleSwitchModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -39,6 +42,35 @@ export class SerialStep implements OnInit {
 
   /** Die Texte der gewählten Sprache. */
   readonly t = inject(I18n).t;
+
+  /**
+   * Die Art des Ports als Text.
+   *
+   * @param port Der Port.
+   * @returns Die Beschriftung.
+   */
+  kindLabel(port: SerialPortInfo): string {
+    switch (port.kind) {
+      case 'usb':
+        return this.t().serial.kindUsb;
+      case 'builtin':
+        return this.t().serial.kindBuiltin;
+      default:
+        return this.t().serial.kindOther;
+    }
+  }
+
+  /**
+   * Die USB-Kennung als Text (oder `null`).
+   *
+   * @param port Der Port.
+   * @returns Die Kennung.
+   */
+  usbIds(port: SerialPortInfo): string | null {
+    return port.vendorId && port.productId
+      ? this.t().serial.usbIds(port.vendorId, port.productId)
+      : null;
+  }
 
   ngOnInit(): void {
     void this.setup.reloadPorts();

@@ -90,9 +90,57 @@ public sealed class SerialDeviceProbeTests : IDisposable
     [Fact]
     public void Ein_Unbekannter_Port_Bleibt_Benennbar()
     {
-        var details = CreateProbe().Describe("/dev/ttyUSB7");
+        var details = CreateProbe().Describe("COM3");
 
-        Assert.Equal("ttyUSB7", details.Label);
+        Assert.Equal("COM3", details.Label);
+        Assert.Equal(SerialDeviceKinds.Other, details.Kind);
+    }
+
+    /// <summary>
+    /// Ein ttyUSB ohne sysfs-Angaben gilt trotzdem als USB-Adapter.
+    /// </summary>
+    /// <remarks>
+    /// Regression: auf dem Pi meldete der Gateway <c>/dev/ttyUSB0</c> als
+    /// „UART auf der Platine", weil <c>sysfs</c> keine Details lieferte. Der
+    /// Name ist auf Linux aber eindeutig - ein <c>ttyUSB*</c> gibt es nur für
+    /// USB-Seriell-Adapter.
+    /// </remarks>
+    [Fact]
+    public void Ein_TtyUsb_Ohne_Sysfs_Gilt_Als_Usb()
+    {
+        var details = CreateProbe().Describe("/dev/ttyUSB0");
+
+        Assert.Equal(SerialDeviceKinds.Usb, details.Kind);
+        Assert.Contains("USB-Seriell", details.Label, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Das USB-Gerät wird über den USB-Bus gefunden, wenn der Symlink fehlt.
+    /// </summary>
+    [Fact]
+    public void Das_Usb_Geraet_Wird_Ueber_Den_Bus_Gefunden()
+    {
+        // /sys/class/tty/ttyUSB0 existiert, 'device' aber nicht - genau der
+        // Fall, in dem der Symlink nicht auflösbar ist.
+        Directory.CreateDirectory(Path.Combine(_root, "sys", "class", "tty", "ttyUSB0"));
+
+        var usbDevice = Path.Combine(_root, "sys", "bus", "usb", "devices", "1-1.2");
+
+        // Im echten sysfs heißt die Schnittstelle '1-1.2:1.0' - der Doppelpunkt
+        // ist unter Windows kein gültiges Zeichen im Verzeichnisnamen, für die
+        // Auswertung aber unerheblich (es zählt nur: eine Ebene tiefer).
+        var iface = Path.Combine(usbDevice, "1-1.2-1.0");
+        Directory.CreateDirectory(Path.Combine(iface, "ttyUSB0"));
+        File.WriteAllText(Path.Combine(usbDevice, "idVendor"), "1a86\n");
+        File.WriteAllText(Path.Combine(usbDevice, "idProduct"), "7523\n");
+        File.WriteAllText(Path.Combine(usbDevice, "product"), "USB2.0-Serial\n");
+
+        var details = CreateProbe().Describe("/dev/ttyUSB0");
+
+        Assert.Equal(SerialDeviceKinds.Usb, details.Kind);
+        Assert.Equal("CH340", details.Chip);
+        Assert.Equal("1a86", details.VendorId);
+        Assert.Contains("1a86:7523", details.Label, StringComparison.Ordinal);
     }
 
     /// <summary>

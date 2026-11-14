@@ -63,6 +63,18 @@
   word-break: break-all;
 }
 
+.cb-port-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.15rem;
+}
+
+.cb-adapter-hint {
+  margin: -0.25rem 0 1rem;
+}
+
 .cb-switch-row {
   display: flex;
   align-items: center;

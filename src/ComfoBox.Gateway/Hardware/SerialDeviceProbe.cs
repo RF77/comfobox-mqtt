@@ -174,55 +174,126 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
         }
 
         var name = ResolvePortName(portName);
+        var stablePath = FindStablePath(portName);
+
+        // Ein Name wie '/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0'
+        // enthält die Herstellerkennung. Das ist die letzte Rückfalllinie,
+        // wenn sysfs nicht weiterhilft.
+        var vidFromName = VendorFromStablePath(stablePath);
 
         // Kein Betriebssystem-Zweig: auf Windows gibt es '/sys/class/tty'
         // nicht, damit fällt die Auswertung von selbst auf den Portnamen
         // zurück. Das macht die Auswertung mit einem nachgebauten sysfs-Baum
         // auf jedem Betriebssystem testbar.
         var ttyDirectory = Path.Combine(_sysRoot, "class", "tty", name);
+
         if (!Directory.Exists(ttyDirectory))
         {
-            return new SerialDeviceDetails { Label = name };
+            // Kein sysfs-Eintrag. Der Name entscheidet, ob es überhaupt ein
+            // USB-Gerät sein kann - 'COM3' oder ein unbekannter Pfad bleibt
+            // ohne Art.
+            return IsUsbSerialName(name) || vidFromName is not null
+                ? UsbWithoutDetails(name, stablePath, vidFromName)
+                : new SerialDeviceDetails { Label = name, StablePath = stablePath };
         }
 
         var devicePath = Path.Combine(ttyDirectory, "device");
-        var driver = ReadLinkName(Path.Combine(devicePath, "driver"));
-        var stablePath = FindStablePath(portName);
+        var driver = ReadLinkName(Path.Combine(devicePath, "driver"))
+                     ?? ReadLinkName(Path.Combine(devicePath, "..", "driver"));
 
-        var usbDirectory = FindUsbDeviceDirectory(devicePath);
+        var usbDirectory = FindUsbDeviceDirectory(devicePath)
+                           ?? FindUsbDeviceByName(name);
 
-        if (usbDirectory is null)
+        // 1. Vollständige Angaben aus sysfs.
+        if (usbDirectory is not null)
         {
-            // Kein USB-Gerät dahinter: der UART der Platine.
+            var vendorId = ReadText(Path.Combine(usbDirectory, "idVendor")) ?? vidFromName;
+            var productId = ReadText(Path.Combine(usbDirectory, "idProduct"));
+            var chip = ChipName(vendorId, productId);
+            var manufacturer = ReadText(Path.Combine(usbDirectory, "manufacturer"));
+            var product = ReadText(Path.Combine(usbDirectory, "product"));
+
             return new SerialDeviceDetails
             {
-                Kind = SerialDeviceKinds.BuiltIn,
+                Kind = SerialDeviceKinds.Usb,
+                Chip = chip,
+                VendorId = vendorId,
+                ProductId = productId,
+                Manufacturer = manufacturer,
+                Product = product,
+                SerialNumber = ReadText(Path.Combine(usbDirectory, "serial")),
                 Driver = driver,
                 StablePath = stablePath,
-                Label = $"{name} · UART auf der Platine",
+                Label = BuildLabel(chip, vendorId, productId, manufacturer, product),
             };
         }
 
-        var vendorId = ReadText(Path.Combine(usbDirectory, "idVendor"));
-        var productId = ReadText(Path.Combine(usbDirectory, "idProduct"));
-        var chip = ChipName(vendorId, productId);
+        // 2. Kein USB-Verzeichnis gefunden, aber der Name verrät den Hersteller.
+        if (vidFromName is not null)
+        {
+            var chip = ChipName(vidFromName, null);
+
+            return new SerialDeviceDetails
+            {
+                Kind = SerialDeviceKinds.Usb,
+                Chip = chip,
+                VendorId = vidFromName,
+                Driver = driver,
+                StablePath = stablePath,
+                Label = BuildLabel(chip, vidFromName, null, null, null),
+            };
+        }
+
+        // 3. Ein ttyUSB*/ttyACM* ist auf Linux **immer** ein USB-Gerät - auch
+        //    wenn die Details fehlen. Ein ttyAMA0/ttyS0 ist der UART der
+        //    Platine.
+        if (IsUsbSerialName(name))
+        {
+            return UsbWithoutDetails(name, stablePath, null) with { Driver = driver };
+        }
+
+        return new SerialDeviceDetails
+        {
+            Kind = SerialDeviceKinds.BuiltIn,
+            Driver = driver,
+            StablePath = stablePath,
+            Label = $"{name} · UART auf der Platine",
+        };
+    }
+
+    /// <summary>
+    /// Ein USB-Seriell-Gerät ohne weitere Angaben.
+    /// </summary>
+    /// <remarks>
+    /// Auf Linux heißt ein USB-Adapter immer <c>ttyUSB…</c> oder
+    /// <c>ttyACM…</c>; der Name allein ist damit ein sicherer Hinweis. Fehlen
+    /// die Details aus <c>sysfs</c>, wird das gesagt - aber die Art stimmt.
+    /// </remarks>
+    private static SerialDeviceDetails UsbWithoutDetails(
+        string name,
+        string? stablePath,
+        string? vendorId)
+    {
+        var chip = ChipName(vendorId, null);
 
         return new SerialDeviceDetails
         {
             Kind = SerialDeviceKinds.Usb,
             Chip = chip,
             VendorId = vendorId,
-            ProductId = productId,
-            Manufacturer = ReadText(Path.Combine(usbDirectory, "manufacturer")),
-            Product = ReadText(Path.Combine(usbDirectory, "product")),
-            SerialNumber = ReadText(Path.Combine(usbDirectory, "serial")),
-            Driver = driver,
             StablePath = stablePath,
-            Label = BuildLabel(chip, vendorId, productId,
-                ReadText(Path.Combine(usbDirectory, "manufacturer")),
-                ReadText(Path.Combine(usbDirectory, "product"))),
+            Label = chip is not null
+                ? BuildLabel(chip, vendorId, null, null, null)
+                : $"{name} · USB-Seriell",
         };
     }
+
+    /// <summary>
+    /// Ist der Name ein USB-Seriell-Gerät?
+    /// </summary>
+    private static bool IsUsbSerialName(string name) =>
+        name.StartsWith("ttyUSB", StringComparison.Ordinal)
+        || name.StartsWith("ttyACM", StringComparison.Ordinal);
 
     /// <inheritdoc />
     public SerialPortAccess DescribeAccess(string portName)
@@ -296,9 +367,10 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
     /// </summary>
     private static string? FindUsbDeviceDirectory(string devicePath)
     {
-        var directory = ResolveDirectory(devicePath);
+        var directory = ResolveDirectory(devicePath)
+                        ?? (Directory.Exists(devicePath) ? devicePath : null);
 
-        for (var level = 0; level < 5 && directory is not null; level++)
+        for (var level = 0; level < 8 && directory is not null; level++)
         {
             if (File.Exists(Path.Combine(directory, "idVendor")))
             {
@@ -309,6 +381,92 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Sucht das USB-Gerät über den Gerätenamen im USB-Bus-Verzeichnis.
+    /// </summary>
+    /// <remarks>
+    /// <c>/sys/bus/usb/devices/1-1.2/</c> ist das Gerät;
+    /// <c>1-1.2:1.0/ttyUSB0</c> ist die Schnittstelle. Der Name des
+    /// TTY-Geräts steht also ein oder zwei Ebenen tiefer. Dieser Weg ist der
+    /// Rückfall, wenn der Symlink <c>/sys/class/tty/…/device</c> einmal nicht
+    /// auflösbar ist.
+    /// </remarks>
+    private string? FindUsbDeviceByName(string ttyName)
+    {
+        var devicesRoot = Path.Combine(_sysRoot, "bus", "usb", "devices");
+
+        try
+        {
+            if (!Directory.Exists(devicesRoot))
+            {
+                return null;
+            }
+
+            foreach (var device in Directory.EnumerateDirectories(devicesRoot))
+            {
+                if (!File.Exists(Path.Combine(device, "idVendor")))
+                {
+                    continue;
+                }
+
+                if (Directory.Exists(Path.Combine(device, ttyName)))
+                {
+                    return device;
+                }
+
+                foreach (var child in Directory.EnumerateDirectories(device))
+                {
+                    if (Directory.Exists(Path.Combine(child, ttyName)))
+                    {
+                        return device;
+                    }
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Kein Zugriff auf den USB-Baum - dann bleibt es bei den
+            // Angaben, die der Name hergibt.
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Liest die Herstellerkennung aus einem <c>by-id</c>-Namen.
+    /// </summary>
+    /// <remarks>
+    /// <c>/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0</c> beginnt nach
+    /// <c>usb-</c> mit der vierstelligen VID. Bei Adaptern ohne VID im Namen
+    /// (z. B. FTDI) bleibt es bei <c>null</c>.
+    /// </remarks>
+    private static string? VendorFromStablePath(string? stablePath)
+    {
+        if (string.IsNullOrWhiteSpace(stablePath))
+        {
+            return null;
+        }
+
+        var name = Path.GetFileName(stablePath);
+
+        if (!name.StartsWith("usb-", StringComparison.Ordinal) || name.Length < 9)
+        {
+            return null;
+        }
+
+        var rest = name[4..];
+
+        // Die VID steht immer am Anfang und ist genau vier Zeichen lang.
+        if (rest[4] != '_')
+        {
+            return null;
+        }
+
+        var vendorId = rest[..4];
+
+        return vendorId.All(Uri.IsHexDigit) ? vendorId.ToLowerInvariant() : null;
     }
 
     /// <summary>
@@ -427,11 +585,28 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
     /// <summary>
     /// Ordnet einer USB-Kennung einen Chipsatz zu.
     /// </summary>
+    /// <remarks>
+    /// Ohne Produktkennung bleibt die Herstellerfamilie
+    /// (<c>1a86</c> → <c>CH34x</c>): sie ist immer noch aussagekräftig genug,
+    /// um den Adapter von einem Platinen-UART zu unterscheiden.
+    /// </remarks>
     private static string? ChipName(string? vendorId, string? productId)
     {
-        if (string.IsNullOrWhiteSpace(vendorId) || string.IsNullOrWhiteSpace(productId))
+        if (string.IsNullOrWhiteSpace(vendorId))
         {
             return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(productId))
+        {
+            return vendorId.ToLowerInvariant() switch
+            {
+                "1a86" => "CH34x (WCH)",
+                "0403" => "FTDI",
+                "10c4" => "CP210x (Silicon Labs)",
+                "067b" => "PL2303 (Prolific)",
+                _ => null,
+            };
         }
 
         var key = $"{vendorId.ToLowerInvariant()}:{productId.ToLowerInvariant()}";

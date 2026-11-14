@@ -11,6 +11,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`/dev/ttyUSB0` wurde als „UART auf der Platine" angezeigt.** Die
+  Erkennung stufte einen Adapter als Platinen-Anschluss ein, sobald der
+  `sysfs`-Symlink `/sys/class/tty/…/device` nicht auflösbar war – obwohl der
+  stabile Pfad daneben (`/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0`)
+  den CH340 eindeutig benannte. Die Erkennung hat jetzt vier Stufen:
+  1. `sysfs` über `/sys/class/tty/<name>/device` (Symlink-Kette, bis 8 Ebenen),
+  2. Rückfall über `/sys/bus/usb/devices/*` (Schnittstellen-Verzeichnis mit dem
+     TTY-Namen),
+  3. Herstellerkennung aus dem `by-id`-Namen (`usb-<VID>_…`),
+  4. der Name selbst: `ttyUSB*`/`ttyACM*` ist auf Linux **immer** ein
+     USB-Adapter, `ttyAMA*`/`ttyS*` der Platinen-UART.
+  Ohne Produktkennung nennt die Oberfläche die Herstellerfamilie
+  (`1a86` → `CH34x (WCH)`, `0403` → `FTDI`, `10c4` → `CP210x`).
+- **Derselbe Adapter erschien doppelt.** `SerialPort.GetPortNames()` liefert
+  unter Linux `ttyUSB0` (ohne Verzeichnis), die Suche in `/dev` dagegen
+  `/dev/ttyUSB0`. Die Namen werden jetzt vereinheitlicht.
+
+### Changed
+
+- **Der Assistent zeigt zu jedem Port dieselben Angaben wie die
+  Konfigurationsseite**: Chipsatz (`CH340`), Art (`USB-Adapter` /
+  `UART auf der Platine`), USB-Kennung und Treiber. Bisher stand dort nur die
+  Gerätedatei – der Adapter war nicht zu erkennen.
+
 ### Added
 
 - **Die Port-Auswahl nennt jetzt, was am Port hängt.** Bisher standen dort nur
@@ -18,11 +44,12 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   ist, musste man raten. Das Gateway liest die Angaben aus `sysfs`
   (`/sys/class/tty/…`, `idVendor`/`idProduct`, Hersteller, Produkt,
   Seriennummer, Treiber, `/dev/serial/by-id`) und zeigt sie an:
+
   | Anzeige | Bedeutung |
   |---|---|
   | `CH340 · USB-Seriell (1a86:7523)` | der Adapter |
   | `ttyAMA0 · UART auf der Platine` | der serielle Anschluss des Pi selbst |
-  
+
   Bekannte Kennungen werden benannt (CH340/CH341, FT232R/FT231X/FT2232,
   CP2102/CP2105, PL2303), unbekannte USB-Geräte mit Hersteller und Produkt.
   USB-Ports stehen in der Liste oben.

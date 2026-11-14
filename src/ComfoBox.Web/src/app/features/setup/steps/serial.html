@@ -51,7 +51,25 @@
           <span class="cb-port-description" [id]="'port-label-' + port.port">
             {{ port.description ?? port.port }}
           </span>
+
+          <span class="cb-port-badges">
+            <p-tag
+              [value]="kindLabel(port)"
+              [severity]="port.kind === 'usb' ? 'info' : 'secondary'"
+            />
+            @if (port.chip) {
+              <p-tag [value]="port.chip" severity="success" />
+            }
+          </span>
+
           <code class="cb-port-path">{{ port.port }}</code>
+
+          @if (usbIds(port); as ids) {
+            <span class="cb-port-stable">{{ ids }}</span>
+          }
+          @if (port.driver) {
+            <span class="cb-port-stable">{{ t().serial.driver(port.driver) }}</span>
+          }
           @if (port.stablePath) {
             <span class="cb-port-stable">{{ t().setupSteps.serialStable(port.stablePath) }}</span>
           }
@@ -59,6 +77,10 @@
       </div>
     }
   </div>
+
+  <p class="cb-adapter-hint cb-hint">
+    {{ t().serial.adapterHint }}
+  </p>
 
   <div class="cb-switch-row">
     <p-toggleswitch
