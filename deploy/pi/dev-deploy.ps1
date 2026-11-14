@@ -204,7 +204,7 @@ if (-not $NoBuild) {
             --self-contained true `
             --output $publishDir `
             --nologo `
-            -p:Version=1.0.4-dev
+            -p:Version=1.1.0-dev
 
         if ($LASTEXITCODE -ne 0) {
             throw 'dotnet publish ist fehlgeschlagen.'

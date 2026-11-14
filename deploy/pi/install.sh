@@ -27,7 +27,7 @@ IMAGE_NAME="ghcr.io/rf77/comfobox-gateway"
 
 # Vorgabe-Version. Wird überschrieben, sobald GitHub erreichbar ist oder
 # --version übergeben wurde. Bei einem Release mitziehen.
-DEFAULT_VERSION="1.0.4"
+DEFAULT_VERSION="1.1.0"
 
 TARGET_DIR="/opt/comfobox"
 CONTAINER="comfobox-gateway"

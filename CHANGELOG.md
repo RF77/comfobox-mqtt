@@ -11,6 +11,8 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.1.0] – 2026-11-15
+
 ### Added
 
 - **Eigenes Markenzeichen und App-Icons.** Browser-Tab, Lesezeichen,
@@ -148,6 +150,11 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - **Derselbe Adapter erschien doppelt.** `SerialPort.GetPortNames()` liefert
   unter Linux `ttyUSB0` (ohne Verzeichnis), die Suche in `/dev` dagegen
   `/dev/ttyUSB0`. Die Namen werden jetzt vereinheitlicht.
+- **Ein Portwechsel konnte verloren gehen, wenn er genau während des Öffnens
+  angefordert wurde.** `ClosePort` fand dann noch keinen Port vor, die
+  Anforderung lief ins Leere und der Zustandsautomat arbeitete auf einem
+  bereits veralteten Port weiter. Der Transport merkt sich die Anforderung
+  jetzt über einen Zähler und verwirft den gerade geöffneten Port sofort.
 
 ### Changed
 
@@ -707,7 +714,6 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Die **Version** des Gateways steht in `src/Directory.Build.props` und
   stimmt jetzt mit dem Release-Tag überein (`ComfoBox/Version` trägt
   `Ver 1.0.1`).
-## [Unreleased]
 
 ### Added
 - **Release `v1.0.0`** – das Synology-Paket (.spk) und die Paketquelle
@@ -1243,5 +1249,10 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 ### Changed
 - Legacy-Bestand von `src/` nach `src_old/` verschoben (Archiv, wird nicht gebaut)
 
-[Unreleased]: https://github.com/example/comfobox-mqtt/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/example/comfobox-mqtt/releases/tag/v0.1.0
+[Unreleased]: https://github.com/RF77/comfobox-mqtt/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.1.0
+[1.0.4]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.4
+[1.0.3]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.3
+[1.0.2]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.2
+[1.0.1]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.1
+[0.1.0]: https://github.com/RF77/comfobox-mqtt/releases/tag/v0.1.0
