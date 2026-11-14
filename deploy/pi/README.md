@@ -13,6 +13,7 @@ Anleitung für Anwender: [`docs/benutzer/07b-raspberry-pi.md`](../../docs/benutz
 | Datei | Zweck |
 |---|---|
 | `install.sh` | Das gesamte Installationsprogramm. Erzeugt `/opt/comfobox/compose.yaml` und startet den Container. |
+| `serial-port-check.sh` | Diagnose am Pi: findet den Adapter, zeigt die Hub-Kette, prüft Treiber, Rechte und Öffnen und misst die Stabilität. |
 
 ## Was das Skript bewusst *nicht* tut
 
@@ -36,13 +37,45 @@ Anleitung für Anwender: [`docs/benutzer/07b-raspberry-pi.md`](../../docs/benutz
 | `restart: unless-stopped` + `systemctl enable docker` | Zusammen ergibt das den Autostart. `unless-stopped` (statt `always`) heißt: wer den Container absichtlich stoppt, behält das nach einem Neustart. |
 | Version über die GitHub-API, Fallback im Skript | Ein Pi ohne Internet soll trotzdem eine Chance haben. Der eingebettete Wert ist der Stand beim Schreiben – **bei jedem Release mitziehen**. |
 
+## Seriellen Port prüfen
+
+`serial-port-check.sh` ist das Pi-Gegenstück zu
+`deploy/synology-spk/tools/usb-serial-check.sh`. Es schreibt **nichts** auf den
+Bus und ändert keine Konfiguration.
+
+````bash
+curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/serial-port-check.sh -o /tmp/serial-port-check.sh
+
+sudo sh /tmp/serial-port-check.sh                       # vollständiger Lauf
+sudo sh /tmp/serial-port-check.sh --free-port --read 5  # Container kurz stoppen, Busdaten mitlesen
+sh /tmp/serial-port-check.sh --list                     # nur auflisten (ohne root)
+````
+
+Es zeigt dieselben Beweise wie die DS923-Untersuchung: VID/PID des Chips,
+die **Hub-Kette** (dort waren es zwei Hubs), den gebundenen Treiber, Rechte und
+Group, das Öffnen mit 38400 8N1, N Öffnen/Schließen-Runden, optional Busdaten
+und die dmesg-Differenz während des Laufs. Am Ende steht genau eine Ursache
+mit dem nächsten Schritt.
+
+> **Der eingebaute Hub des Pi zählt nicht als Zwischenhub.** Ein Pi 3 hat einen
+> fest eingebauten LAN9514/LAN7515 (`0424:9514`), an dem Ethernet und die
+> USB-Buchsen hängen. Der Adapter erscheint deshalb als `1-1.2` – also „1
+> Zwischenhub“, obwohl er direkt an der Buchse steckt. Das Skript erkennt diese
+> Kennungen und meldet nur **fremde** Hubs als Fehlerquelle (`davon N extern`).
+
+> Der Gateway hält den Port, solange er läuft. Dann meldet der Test `EBUSY` –
+das ist **kein** Fehler. Nur `--free-port` schafft einen freien Port und startet
+den Container am Ende wieder (auch bei Abbruch).
+
 ## Prüfen
 
 Auf einem Linux-Rechner (nicht nötig auf dem Pi):
 
 ````bash
 sh -n deploy/pi/install.sh                      # Syntax
+sh -n deploy/pi/serial-port-check.sh            # Syntax
 sh deploy/pi/install.sh --help                  # Hilfe
+sh deploy/pi/serial-port-check.sh --list        # Trockenlauf ohne root
 dashboard=…                                     # Trockenlauf mit gefaktem docker siehe unten
 ````
 

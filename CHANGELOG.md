@@ -9,7 +9,64 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 > einzigen erfolgreichen Zugriff auf eine echte ComfoBox – siehe
 > [README.md](README.md).
 
-## [Unreleased]
+## [1.0.4] – 2026-11-14
+
+### Fixed
+
+- **Der serielle Port wäre im Container nie zu öffnen gewesen.** Der Mount
+  `/dev:/dev` macht die Gerätedatei nur **sichtbar**; ob `open()` gelingt,
+  entscheidet die Device-Cgroup des Containers – und dort erlaubt Docker
+  standardmäßig kein USB-Seriell. `/dev/ttyUSB0` wäre mit Modus `0666`
+  erschienen und hätte trotzdem `EPERM` geliefert. Die Compose-Datei setzt
+  jetzt:
+  ```yaml
+  device_cgroup_rules:
+    - "c 188:* rwm"   # ttyUSB*
+    - "c 166:* rwm"   # ttyACM*
+  ```
+  Die Werte überleben den Roundtrip des DSM-Workers (er entfernt die
+  Anführungszeichen, aus `"c 188:* rwm"` wird weiterhin ein String – anders
+  als bei `"20"`, siehe 1.0.3).
+- **Das Image meldete die falsche Version.** `ghcr.io/…:1.0.3` antwortete auf
+  `/api/status` und `ComfoBox/Version` mit `1.0.1`: die Version kam aus
+  `src/Directory.Build.props`, das Image wurde aber über den Release-Tag
+  gebaut. Der Wert geht jetzt als `--build-arg VERSION` in
+  `dotnet publish /p:Version` und ins OCI-Label
+  (`org.opencontainers.image.version`). `Directory.Build.props` ist auf
+  `1.0.4` nachgezogen.
+- Das HA-Add-on verwies mit `image:` noch auf `:1.0.1`, bei `version: 1.0.3`.
+  Jetzt einheitlich.
+- Ein ungenutzter `KeyValuePipe`-Import in der Diagnose-Komponente erzeugte
+  bei jedem Build eine Warnung (`NG8113`).
+- Die Sprachwahl war als `readonly`-Array typisiert; `p-select` akzeptiert das
+  nicht und der Angular-Build brach mit `TS4104` ab.
+
+### Changed
+
+- Die Konfigurationsseite ist vollständig übersetzt und enthält jetzt die
+  Bereiche *Sicherheit* und *API-Token*; die frühere Checkbox
+  „Administrative Rechte" ist durch die Umfangsauswahl ersetzt.
+- Der Home-Assistant-Config-Flow nennt den passenden Umfang: `read` genügt für
+  Sensoren, `control` ist zum Schreiben nötig.
+- Der Diagnose-Tab *BACnet-Bus* übersetzt die Ereignisarten (Token
+  übernommen/benutzt/weitergegeben …).
+- **`tools/usb-serial-check.sh` korrigiert** – die erste Ausgabe führte an
+  zwei Stellen in die Irre:
+  - Abschnitt 2 las den Treiber über *alle* Unterverzeichnisse des
+    USB-Geräts. Dadurch stand bei jedem Gerät `power -> Treiber: driver`
+    (der Name des Symlinks selbst), und ein **nicht** gebundenes Interface
+    meldete „Treiber: driver" statt „KEIN Treiber gebunden". Jetzt werden nur
+    die Interface-Verzeichnisse (`*:*.*`) geprüft.
+  - Der Befund empfahl bei fehlender Gerätedatei pauschal
+    `modprobe ch341` und einen FTDI-Adapter. Auf einer DS923+ fehlt aber
+    **jedes** USB-Seriell-Modul, auch `ftdi_sio` – der Ratschlag war dort
+    falsch. Der Befund unterscheidet jetzt „Modul vorhanden, nicht geladen"
+    von „Kernel hat gar keinen Treiber" und nennt für den zweiten Fall die
+    realen Wege.
+  - Neu: Erkennung fehlerhafter Enumerationsversuche (`error -32`/`-71`,
+    „unable to enumerate", „attempt power cycle"), Anzahl der Zwischen-Hubs
+    vor dem Adapter, Prüfung von `modules.builtin` und der Nachweis, ob die
+    Device-Cgroup `c 188:` erlaubt.
 
 ### Added
 
@@ -50,82 +107,6 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   ([`src_old/`](src_old/)) – inklusive der Klarstellung, dass diese Version
   **nicht freigegeben** ist, weil noch nie eine echte ComfoBox geantwortet
   hat.
-
-### Changed
-
-- Die Konfigurationsseite ist vollständig übersetzt und enthält jetzt die
-  Bereiche *Sicherheit* und *API-Token*; die frühere Checkbox
-  „Administrative Rechte" ist durch die Umfangsauswahl ersetzt.
-- Der Home-Assistant-Config-Flow nennt den passenden Umfang: `read` genügt für
-  Sensoren, `control` ist zum Schreiben nötig.
-- Der Diagnose-Tab *BACnet-Bus* übersetzt die Ereignisarten (Token
-  übernommen/benutzt/weitergegeben …).
-
-### Fixed
-
-- Ein ungenutzter `KeyValuePipe`-Import in der Diagnose-Komponente erzeugte
-  bei jedem Build eine Warnung (`NG8113`).
-- Die Sprachwahl war als `readonly`-Array typisiert; `p-select` akzeptiert das
-  nicht und der Angular-Build brach mit `TS4104` ab.
-
-### Notes
-
-- **Die Meldungen der REST-API bleiben deutsch.** Der stabile Fehlercode
-  (`error`) ist sprachneutral und für Programme gedacht; nur die Oberfläche
-  ist übersetzt.
-- Die Hilfe-Seiten in der Anwendung (`/help`) bleiben deutsch – sie sind die
-  deutsche Benutzerdokumentation (`docs/benutzer/`).
-
-## [1.0.4] – 2026-11-08
-
-### Fixed
-
-- **Der serielle Port wäre im Container nie zu öffnen gewesen.** Der Mount
-  `/dev:/dev` macht die Gerätedatei nur **sichtbar**; ob `open()` gelingt,
-  entscheidet die Device-Cgroup des Containers – und dort erlaubt Docker
-  standardmäßig kein USB-Seriell. `/dev/ttyUSB0` wäre mit Modus `0666`
-  erschienen und hätte trotzdem `EPERM` geliefert. Die Compose-Datei setzt
-  jetzt:
-  ```yaml
-  device_cgroup_rules:
-    - "c 188:* rwm"   # ttyUSB*
-    - "c 166:* rwm"   # ttyACM*
-  ```
-  Die Werte überleben den Roundtrip des DSM-Workers (er entfernt die
-  Anführungszeichen, aus `"c 188:* rwm"` wird weiterhin ein String – anders
-  als bei `"20"`, siehe 1.0.3).
-- **Das Image meldete die falsche Version.** `ghcr.io/…:1.0.3` antwortete auf
-  `/api/status` und `ComfoBox/Version` mit `1.0.1`: die Version kam aus
-  `src/Directory.Build.props`, das Image wurde aber über den Release-Tag
-  gebaut. Der Wert geht jetzt als `--build-arg VERSION` in
-  `dotnet publish /p:Version` und ins OCI-Label
-  (`org.opencontainers.image.version`). `Directory.Build.props` ist auf
-  `1.0.4` nachgezogen.
-- Das HA-Add-on verwies mit `image:` noch auf `:1.0.1`, bei `version: 1.0.3`.
-  Jetzt einheitlich.
-
-### Changed
-
-- **`tools/usb-serial-check.sh` korrigiert** – die erste Ausgabe führte an
-  zwei Stellen in die Irre:
-  - Abschnitt 2 las den Treiber über *alle* Unterverzeichnisse des
-    USB-Geräts. Dadurch stand bei jedem Gerät `power -> Treiber: driver`
-    (der Name des Symlinks selbst), und ein **nicht** gebundenes Interface
-    meldete „Treiber: driver" statt „KEIN Treiber gebunden". Jetzt werden nur
-    die Interface-Verzeichnisse (`*:*.*`) geprüft.
-  - Der Befund empfahl bei fehlender Gerätedatei pauschal
-    `modprobe ch341` und einen FTDI-Adapter. Auf einer DS923+ fehlt aber
-    **jedes** USB-Seriell-Modul, auch `ftdi_sio` – der Ratschlag war dort
-    falsch. Der Befund unterscheidet jetzt „Modul vorhanden, nicht geladen"
-    von „Kernel hat gar keinen Treiber" und nennt für den zweiten Fall die
-    realen Wege.
-  - Neu: Erkennung fehlerhafter Enumerationsversuche (`error -32`/`-71`,
-    „unable to enumerate", „attempt power cycle"), Anzahl der Zwischen-Hubs
-    vor dem Adapter, Prüfung von `modules.builtin` und der Nachweis, ob die
-    Device-Cgroup `c 188:` erlaubt.
-
-### Added
-
 - **Installation auf einem Raspberry Pi in einem Befehl.**
   ```bash
   curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/install.sh | sudo sh
@@ -144,6 +125,23 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   `sudo sh install.sh --offline comfobox-gateway-arm64.tar.gz`.
 - **Neue Benutzerseite [`docs/benutzer/07b-raspberry-pi.md`](docs/benutzer/07b-raspberry-pi.md)** –
   Voraussetzungen, der Befehl, Assistent, HACS-Integration, Betrieb, Fehlersuche.
+- **`deploy/pi/serial-port-check.sh` – Diagnose des seriellen Anschlusses auf
+  dem Pi.** Findet CH340/FTDI-Adapter, zeigt die **Hub-Kette** (der eingebaute
+  LAN9514 des Pi zählt nicht als Zwischenhub), den gebundenen Treiber, Rechte
+  und `dialout`, die Sicht des Containers (Device-Cgroup, `group_add`) und
+  öffnet den Port mit **38400 8N1**. Auf Wunsch liest es Busdaten mit und
+  zeigt die `dmesg`-Differenz während des Laufs; am Ende steht genau eine
+  Ursache mit dem nächsten Schritt. Es schreibt **nicht** auf den Bus.
+  `--free-port` stoppt den Container für den Test und startet ihn danach
+  wieder; `--list` läuft ohne root.
+
+### Notes
+
+- **Die Meldungen der REST-API bleiben deutsch.** Der stabile Fehlercode
+  (`error`) ist sprachneutral und für Programme gedacht; nur die Oberfläche
+  ist übersetzt.
+- Die Hilfe-Seiten in der Anwendung (`/help`) bleiben deutsch – sie sind die
+  deutsche Benutzerdokumentation (`docs/benutzer/`).
 
 ## [1.0.3] – 2026-11-08
 
