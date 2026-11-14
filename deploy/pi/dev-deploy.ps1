@@ -327,6 +327,12 @@ case "$ACTION" in
         rm -f "$ARCHIVE"
         chmod +x "$APPDIR/ComfoBox.Gateway" 2>/dev/null || true
 
+        # Ohne appsettings.json fehlen die Vorgaben - der Gateway bricht dann
+        # mit "Mqtt:Brokers muss mindestens einen Broker ... enthalten" ab.
+        if [ ! -f "$APPDIR/appsettings.json" ]; then
+            echo "  WARNUNG: $APPDIR/appsettings.json fehlt - die Vorgaben kommen nicht an."
+        fi
+
         if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx dialout; then
             echo "  Gruppe dialout: vorhanden"
         else
@@ -358,6 +364,14 @@ case "$ACTION" in
             echo "  WARNUNG: kein /dev/ttyUSB* oder /dev/ttyACM* gefunden."
             echo "           Der Adapter kann im Betrieb gesteckt werden."
         fi
+
+        # **In das App-Verzeichnis wechseln.** ASP.NET nimmt das aktuelle
+        # Arbeitsverzeichnis als Content-Root. Ohne diesen Wechsel ist das
+        # $HOME: appsettings.json wird nicht gefunden (die Broker-Liste bleibt
+        # leer -> "Mqtt:Brokers muss mindestens einen Broker ... enthalten",
+        # der Prozess bricht ab) und wwwroot fehlt ("WebRootPath was not
+        # found: /home/pi/wwwroot").
+        cd "$APPDIR" || exit 6
 
         nohup "$APPDIR/ComfoBox.Gateway" > "$LOGFILE" 2>&1 &
         echo $! > "$PIDFILE"
@@ -515,6 +529,7 @@ if (-not $healthy) {
     Write-Host "    * 'lauscht NICHT'           -> Start haengt oder ist zu langsam; Protokoll ansehen" -ForegroundColor DarkGray
     Write-Host "    * Prozess fehlt             -> Protokoll zeigt die Ausnahme (z. B. ICU, Rechte)" -ForegroundColor DarkGray
     Write-Host "    * 'Couldn't find a valid ICU package' -> sudo apt-get install -y libicu" -ForegroundColor DarkGray
+    Write-Host "    * 'Mqtt:Brokers muss mindestens einen Broker' -> appsettings.json nicht gefunden (Arbeitsverzeichnis)" -ForegroundColor DarkGray
     Write-Host "    * antwortet lokal, aber von hier nicht -> Firewall (ufw)" -ForegroundColor DarkGray
     Write-Host "      Abhilfe:  sudo ufw allow $Port/tcp   (kurz pruefen: sudo ufw status)" -ForegroundColor DarkGray
     Write-Host "    * fremder Prozess auf $Port -> der Container haelt den Port noch" -ForegroundColor DarkGray

@@ -88,6 +88,15 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
     auf dem Pi selbst. Antwortet es dort, aber nicht vom Entwicklungsrechner,
     ist eine Firewall die Ursache (ufw lässt Docker-Ports durch, eigene
     Prozesse nicht) – der Hinweis samt Befehl steht dann in der Ausgabe.
+- **`deploy/pi/dev-deploy.ps1` startete den Gateway im Home-Verzeichnis.**
+  ASP.NET nimmt das aktuelle Arbeitsverzeichnis als Content-Root. Dadurch
+  wurde `appsettings.json` nicht gefunden, die Broker-Liste blieb leer und der
+  Start brach mit
+  `OptionsValidationException: Mqtt:Brokers muss mindestens einen Broker mit Host und Port enthalten`
+  ab; zusätzlich meldete der StaticFile-Middleware
+  `WebRootPath was not found: /home/pi/wwwroot`. Das Startskript wechselt jetzt
+  vor dem Start in das App-Verzeichnis (und warnt, wenn dort keine
+  `appsettings.json` liegt).
 
 ## [1.0.4] – 2026-11-14
 
