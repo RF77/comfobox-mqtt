@@ -68,6 +68,24 @@ public sealed class BacnetOptions
     public int Retries { get; init; } = 3;
 
     /// <summary>
+    /// Die Priorität, mit der Werte geschrieben werden.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>0</c> = keine Priorität senden (Vorgabe, entspricht dem Altbestand).
+    /// <c>1</c>…<c>16</c> = Priorität mitschicken (<c>1</c> ist die höchste).
+    /// </para>
+    /// <para>
+    /// Die ComfoBox legt ihre Stellwerte in priorisierten Analog-Values ab.
+    /// Antwortet sie auf einen Schreibvorgang mit <c>write-access-denied</c>,
+    /// verlangt sie eine Priorität - dann hier z. B. <c>8</c> eintragen
+    /// (die übliche Stufe für Bedienereingriffe).
+    /// </para>
+    /// </remarks>
+    [Range(0, 16)]
+    public int WritePriority { get; init; }
+
+    /// <summary>
     /// Läuft der Gateway ohne echte ComfoBox?
     /// </summary>
     /// <remarks>

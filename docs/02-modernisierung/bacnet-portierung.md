@@ -93,6 +93,32 @@ Der MSTP-Thread läuft mit `ThreadPriority.Highest` (Befund A23). In .NET wird d
 
 Entfällt mit dem UDP-Transport (4.3).
 
+### 4.7 **Nicht** übernehmen: `WriteProperty` ohne `ExpectingReply`
+
+Der Altbestand setzt beim Schreiben das NPDU-Bit `ExpectingReply` **nicht**
+(Befund A27). Das ist kein Stilunterschied, sondern ein Fehler mit Folge:
+
+````
+BacnetMstpTransport:  frameType = (npduControl & ExpectingReply) != 0
+                                   ? FRAME_TYPE_BACNET_DATA_EXPECTING_REPLY
+                                   : FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY
+````
+
+Der Transport leitet den MS/TP-Frame-Typ aus dem Bit ab. Ohne das Bit geht der
+Request als `DATA_NOT_EXPECTING_REPLY` auf den Bus – und die Gegenstelle **darf
+darauf nicht antworten** (ASHRAE 135, MS/TP). Der Client wartet also auf ein
+`SimpleACK`, das nie kommen darf; Lesen funktioniert, weil
+`BeginReadPropertyRequest` das Bit setzt.
+
+**Regel:** Jede bestätigte Dienstanfrage (`Confirmed-Request`) setzt
+`ExpectingReply`. Der Altbestand ist bei diesem Punkt **nicht** die Referenz –
+er lief nie gegen eine echte ComfoBox. Abgesichert durch
+`MstpFrameTypeTests` (Client- und Transport-Ebene).
+
+> **Merksatz:** „1:1 portieren" gilt für Kodierung und Verhalten, **nicht** für
+> offensichtliche Fehler. Ein Byte-Vergleich mit dem Legacy hätte diesen Fehler
+> sogar festgeschrieben.
+
 ## 5. Der Serial-Port: Crash-Sicherheit
 
 **Befund A8 (P0):** Bei einem Serial-Fehler läuft `while (m_port != null)` endlos weiter →

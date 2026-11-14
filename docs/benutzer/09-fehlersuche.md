@@ -321,9 +321,31 @@ sudo fuser -v /dev/ttyUSB0
 | `value_out_of_range` | Wert außerhalb Min/Max | gültigen Bereich aus der Entität nehmen |
 | `read_only` | Wert ist nicht schreibbar | – |
 | `invalid_type` | falscher Typ (Text für eine Zahl) | Zahl mit **Punkt** senden |
+| `timeout` / *„Keine Antwort von 1"* | die ComfoBox antwortet nicht auf den Schreibbefehl | siehe unten |
+| `write_denied` | die ComfoBox verlangt eine Priorität | `Bacnet:WritePriority` auf `8` setzen |
 
 > **Zahlenformat:** `22.5` ist richtig, `22,5` wird abgelehnt – auch auf einem
 > deutschen System.
+
+### Schreiben läuft in die Zeitüberschreitung
+
+Antwortet die ComfoBox auf **Lesezugriffe** (die Werte aktualisieren sich),
+aber auf **keinen** Schreibvorgang, liegt es fast nie an der Verkabelung.
+
+1. **Protokoll ansehen** (Diagnose → Protokoll). Steht dort
+   `WriteProperty (…) timed out` und davor *keine* BACnet-Fehlermeldung, hat
+   die ComfoBox den Auftrag nie bestätigt.
+2. **Priorität setzen.** Manche Stellwerte lassen sich nur mit einer Priorität
+   schreiben. In der `config.json` (bzw. über die Umgebungsvariable
+   `COMFOBOX_Bacnet__WritePriority`) `8` eintragen und den Gateway neu starten.
+   Meldet die ComfoBox `write-access-denied`, ist das die Ursache – der
+   Gateway schreibt diesen Hinweis dann selbst ins Protokoll.
+3. **Bus beobachten.** Unter Diagnose → *BACnet-Bus* lässt sich der Verkehr
+   mitlesen: Kommt nach dem Schreibbefehl überhaupt ein Frame der ComfoBox
+   zurück? Wenn nicht, ist der Auftrag auf dem Bus nicht angekommen.
+
+> Ein Schreibvorgang zählt nur bei Erfolg gegen das Tageslimit. Ein
+> fehlgeschlagener Versuch verbraucht keinen Eintrag.
 
 ---
 
@@ -335,6 +357,7 @@ sudo fuser -v /dev/ttyUSB0
 | Synology | `synopkg restart ComfoBoxGateway` |
 | HA-Add-on | Add-on neu starten |
 | Home Assistant | `comfobox.restart` |
+| Testlauf ohne Container (`dev-deploy.ps1`) | der Startskript-Supervisor startet nach `restart.requested` selbst neu |
 
 > Bleibt es bei `offline`, prüfen Sie, ob der Broker erreichbar ist. Fehlt der
 > Broker, kann sich der Gateway nicht sauber abmelden.

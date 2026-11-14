@@ -483,10 +483,40 @@ Wert. Ein alter Sollwert, der noch angezeigt wird, ist gefährlicher.</p>
 <td>falscher Typ (Text für eine Zahl)</td>
 <td>Zahl mit <strong>Punkt</strong> senden</td>
 </tr>
+<tr>
+<td><code>timeout</code> / <em>„Keine Antwort von 1&quot;</em></td>
+<td>die ComfoBox antwortet nicht auf den Schreibbefehl</td>
+<td>siehe unten</td>
+</tr>
+<tr>
+<td><code>write_denied</code></td>
+<td>die ComfoBox verlangt eine Priorität</td>
+<td><code>Bacnet:WritePriority</code> auf <code>8</code> setzen</td>
+</tr>
 </tbody></table>
 <blockquote>
 <p><strong>Zahlenformat:</strong> <code>22.5</code> ist richtig, <code>22,5</code> wird abgelehnt – auch auf einem
 deutschen System.</p>
+</blockquote>
+<h3>Schreiben läuft in die Zeitüberschreitung</h3>
+<p>Antwortet die ComfoBox auf <strong>Lesezugriffe</strong> (die Werte aktualisieren sich),
+aber auf <strong>keinen</strong> Schreibvorgang, liegt es fast nie an der Verkabelung.</p>
+<ol>
+<li><strong>Protokoll ansehen</strong> (Diagnose → Protokoll). Steht dort
+<code>WriteProperty (…) timed out</code> und davor <em>keine</em> BACnet-Fehlermeldung, hat
+die ComfoBox den Auftrag nie bestätigt.</li>
+<li><strong>Priorität setzen.</strong> Manche Stellwerte lassen sich nur mit einer Priorität
+schreiben. In der <code>config.json</code> (bzw. über die Umgebungsvariable
+<code>COMFOBOX_Bacnet__WritePriority</code>) <code>8</code> eintragen und den Gateway neu starten.
+Meldet die ComfoBox <code>write-access-denied</code>, ist das die Ursache – der
+Gateway schreibt diesen Hinweis dann selbst ins Protokoll.</li>
+<li><strong>Bus beobachten.</strong> Unter Diagnose → <em>BACnet-Bus</em> lässt sich der Verkehr
+mitlesen: Kommt nach dem Schreibbefehl überhaupt ein Frame der ComfoBox
+zurück? Wenn nicht, ist der Auftrag auf dem Bus nicht angekommen.</li>
+</ol>
+<blockquote>
+<p>Ein Schreibvorgang zählt nur bei Erfolg gegen das Tageslimit. Ein
+fehlgeschlagener Versuch verbraucht keinen Eintrag.</p>
 </blockquote>
 <hr>
 <h2>Der Neustart schlägt fehl</h2>
@@ -512,6 +542,10 @@ deutschen System.</p>
 <tr>
 <td>Home Assistant</td>
 <td><code>comfobox.restart</code></td>
+</tr>
+<tr>
+<td>Testlauf ohne Container (<code>dev-deploy.ps1</code>)</td>
+<td>der Startskript-Supervisor startet nach <code>restart.requested</code> selbst neu</td>
 </tr>
 </tbody></table>
 <blockquote>

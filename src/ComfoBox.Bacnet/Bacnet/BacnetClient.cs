@@ -272,12 +272,22 @@ public sealed class BacnetClient : IBacnetClient
 
         var b = GetEncodeBuffer();
 
-        // Achtung: das Legacy setzte hier kein "ExpectingReply" - das wird
-        // bewusst unverändert übernommen, damit die Bytes auf dem Bus identisch
-        // bleiben.
+        // Das "ExpectingReply"-Bit ist **nicht** optional: der MS/TP-Transport
+        // leitet daraus den Frame-Typ ab (siehe BacnetMstpTransport.SendAsync).
+        // Ohne das Bit geht der Request als
+        // FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY auf den Bus - und die
+        // Gegenstelle darf darauf **nicht** antworten. Genau das war der
+        // Fehler: Lesen funktionierte (ReadProperty setzte das Bit), Schreiben
+        // lief immer in die Zeitüberschreitung, obwohl der Request korrekt
+        // ankam.
+        //
+        // Das Legacy ließ das Bit beim Schreiben weg (BACnetClient.cs:1332).
+        // Diese Abweichung wird bewusst **nicht** übernommen: sie ist ein
+        // Fehler, der nie auffallen konnte, weil der Altbestand nie gegen eine
+        // echte ComfoBox lief.
         NPDU.Encode(
             b,
-            BacnetNpduControls.PriorityNormalMessage,
+            BacnetNpduControls.PriorityNormalMessage | BacnetNpduControls.ExpectingReply,
             address.RoutedSource,
             null,
             DefaultHopCount,

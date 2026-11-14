@@ -175,6 +175,7 @@ public static class GatewayServiceCollectionExtensions
             {
                 Timeout = options.ItemTimeoutMs,
                 Retries = options.Retries,
+                WritePriority = (uint)options.WritePriority,
             };
 
             return client;

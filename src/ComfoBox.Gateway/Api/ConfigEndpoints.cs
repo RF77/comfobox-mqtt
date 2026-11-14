@@ -53,6 +53,7 @@ internal static class ConfigEndpoints
                         MaxMaster = bacnet.MaxMaster,
                         ItemTimeoutMs = bacnet.ItemTimeoutMs,
                         Retries = bacnet.Retries,
+                        WritePriority = bacnet.WritePriority,
                     },
                     Mqtt = new MqttConfigDto
                     {

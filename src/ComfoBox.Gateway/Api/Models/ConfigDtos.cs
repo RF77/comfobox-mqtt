@@ -127,6 +127,11 @@ public sealed record BacnetConfigDto
     /// Die Anzahl der Versuche je Anfrage.
     /// </summary>
     public required int Retries { get; init; }
+
+    /// <summary>
+    /// Die Priorität, mit der Werte geschrieben werden (<c>0</c> = keine).
+    /// </summary>
+    public required int WritePriority { get; init; }
 }
 
 /// <summary>

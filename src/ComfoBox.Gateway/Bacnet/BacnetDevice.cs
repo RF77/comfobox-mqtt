@@ -241,6 +241,24 @@ public sealed class BacnetDevice : IDisposable
             MarkFailed("timeout");
             return WriteOutcome.BusError;
         }
+        catch (BacnetDeviceErrorException ex) when (ex.ErrorCode == BacnetErrorCodes.ERROR_CODE_WRITE_ACCESS_DENIED)
+        {
+            // Befund A22: nur erfolgreiche Schreibvorgänge zählen.
+            _writeCounter.Release();
+
+            // write-access-denied heißt fast immer: die Gegenstelle ist ein
+            // **priorisierter** Analog-Value und verlangt eine Priorität.
+            // Ohne diesen Hinweis bleibt nur "Schreiben geht nicht".
+            const string Hint =
+                "Die ComfoBox hat den Schreibvorgang abgelehnt (write-access-denied). "
+                + "Meist verlangt sie eine Priorität - in der config.json "
+                + "'Bacnet:WritePriority' auf 8 setzen und den Gateway neu starten.";
+
+            _logger.LogError(ex, "Schreibvorgang {Item} wurde abgelehnt. {Hint}", item.Id, Hint);
+            _errors.Report("Bacnet", "write_denied", $"WriteProperty ({item.TopicPath}): {Hint}", ex);
+            MarkFailed("write_denied");
+            return WriteOutcome.BusError;
+        }
         catch (BacnetException ex)
         {
             // Befund A22: nur erfolgreiche Schreibvorgänge zählen.

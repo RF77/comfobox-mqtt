@@ -13,6 +13,19 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Schreibvorgänge liefen immer in die Zeitüberschreitung, Lesen funktionierte.**
+  Ursache war kein BACnet-Fehler, sondern der **MS/TP-Frame-Typ**: Der
+  Transport leitet ihn aus dem NPDU-Bit `ExpectingReply` ab. Der Schreibpfad
+  setzte das Bit nicht (vom Altbestand übernommen, Befund **A27**) – der
+  Request ging als `FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY` auf den Bus,
+  und die Gegenstelle **darf** darauf nicht antworten. Genau das war zu sehen:
+  6712 Token-Übernahmen, 409 gelesene Werte, aber kein einziges `SimpleACK`.
+  `WritePropertyAsync` setzt das Bit jetzt wie jeder andere bestätigte Dienst.
+  Zwei Ergänzungen dazu:
+  - **`Bacnet:WritePriority`** (0…16, Vorgabe 0 = keine). Antwortet die ComfoBox
+    mit `write-access-denied`, verlangt sie eine Priorität – dann `8` setzen.
+    Ablehnungen dieses Codes nennen den Hinweis jetzt direkt im Protokoll.
+  - Der Wert steht auch in `GET /api/config` (`bacnet.writePriority`).
 - **Nach „Übernehmen und starten" kam der Gateway nicht zurück, wenn er als
   normales Programm läuft** (Testlauf per `dev-deploy.ps1`, ohne Docker). Der
   Neustart ist bewusst *in-process*: `ServiceControl` beendet den Host
