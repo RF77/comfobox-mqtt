@@ -324,9 +324,11 @@ jobs:
           set -euo pipefail
           IMAGE="${REGISTRY}/rf77/comfobox-gateway:${VERSION}"
 
+          # `first // ""` statt `| head -n 1`: bei `set -o pipefail` ist ein
+          # `head`, das die Pipe frueh schliesst, ein SIGPIPE (Exit 141) -
+          # jq bekommt dann beim Schreiben EPIPE, und der Schritt bricht ab.
           ARM_DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' \
-            | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' \
-            | head -n 1)
+            | jq -r '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest] | first // ""')
           echo "arm64-Manifest: ${ARM_DIGEST}"
           if [ -z "${ARM_DIGEST}" ]; then
             echo "::error::In ${IMAGE} steckt kein linux/arm64-Image."
@@ -344,7 +346,12 @@ jobs:
           ls -lh comfobox-gateway-arm64.tar.gz
 
           # Beweis, dass im Archiv nur EIN Manifest steht und das Tag stimmt.
-          tar -xzOf comfobox-gateway-arm64.tar.gz manifest.json | head -c 400; echo
+          # Erst in eine Datei entpacken, DANN anzeigen - `tar … | head -c`
+          # waere wieder ein SIGPIPE unter pipefail.
+          mkdir -p /tmp/saveinspect
+          tar -xzf comfobox-gateway-arm64.tar.gz -C /tmp/saveinspect manifest.json
+          head -c 400 /tmp/saveinspect/manifest.json
+          echo
 
       - name: Create release
         uses: softprops/action-gh-release@v2
