@@ -68,6 +68,8 @@ public sealed class MqttSubscriberTests : IDisposable
             _counter,
             bacnet,
             gateway,
+            new BacnetRuntimeSettings(bacnet.Value.DeviceId, bacnet.Value.ItemTimeoutMs),
+            new GatewayRuntimeSettings(expertMode),
             NullLogger<BacnetDevice>.Instance);
 
         return new MqttSubscriber(
@@ -198,6 +200,8 @@ public sealed class MqttSubscriberTests : IDisposable
             counter,
             bacnet,
             gateway,
+            new BacnetRuntimeSettings(bacnet.Value.DeviceId, bacnet.Value.ItemTimeoutMs),
+            new GatewayRuntimeSettings(expertMode: false),
             NullLogger<BacnetDevice>.Instance);
 
         var subscriber = new MqttSubscriber(

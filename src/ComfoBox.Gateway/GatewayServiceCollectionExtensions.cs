@@ -111,6 +111,23 @@ public static class GatewayServiceCollectionExtensions
 
             return new SerialPortSettings(options.Port, options.Baudrate);
         });
+
+        // Geräte-ID und Zeitfenster je Item - ebenfalls zur Laufzeit änderbar.
+        // Der BacnetDevice liest sie bei jedem Zugriff, damit eine korrigierte
+        // Geräte-ID sofort wirkt und kein Neustart nötig ist.
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<BacnetOptions>>().Value;
+
+            return new BacnetRuntimeSettings(options.DeviceId, options.ItemTimeoutMs);
+        });
+
+        // Der Experten-Modus: er entscheidet bei jedem Schreibvorgang, ob ein
+        // sensibles Item geschrieben werden darf. Deshalb Laufzeit-Wert und
+        // nicht der beim Start gebundene Options-Wert - sonst wirkt das
+        // Umschalten in der Oberfläche erst nach einem Neustart.
+        services.AddSingleton(sp =>
+            new GatewayRuntimeSettings(sp.GetRequiredService<IOptions<GatewayOptions>>().Value.ExpertMode));
         services.AddSingleton<IValueCache>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<GatewayOptions>>().Value;

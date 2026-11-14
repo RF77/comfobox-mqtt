@@ -138,8 +138,17 @@ export const FR: Translations = {
     bacnetSection: 'BACnet (interface série)',
     appliesImmediately: 'effet immédiat',
     deviceId: "ID de l'appareil",
+    deviceIdHint:
+      'L’instance BACnet de la ComfoBox. Généralement 1 – la valeur doit correspondre à l’ID dans la ComfoBox. Effet immédiat.',
     mstpAddress: 'Adresse MSTP',
+    mstpAddressHint:
+      'L’adresse MAC de cette passerelle sur le bus MS/TP (par défaut 3). Effet après un redémarrage – à n’attribuer qu’une fois par bus.',
     itemTimeout: "Délai d'attente par élément",
+    itemTimeoutHint:
+      'Fenêtre par lecture ou écriture en millisecondes (100–60000). Effet immédiat ; à augmenter en cas de dépassement.',
+    writePriority: 'Priorité d’écriture',
+    writePriorityHint:
+      '0 = sans priorité (par défaut). Si la ComfoBox en exige une (write-access-denied), utiliser 8. Effet après un redémarrage.',
     mqttSection: 'MQTT (fichier de configuration uniquement)',
     restartRequired: 'Redémarrage nécessaire',
     discovery: 'Découverte',
@@ -195,7 +204,8 @@ export const FR: Translations = {
     passwordChanged: 'Identifiants modifiés - veuillez vous reconnecter.',
     settingsSaved: 'Sécurité enregistrée',
     saved: 'Enregistré',
-    savedHint: 'Les nouvelles valeurs prennent effet après un redémarrage.',
+    savedHint:
+      'L’ID de l’appareil, le délai par élément et le mode expert agissent immédiatement. L’adresse MSTP, la priorité d’écriture et le broker après un redémarrage.',
     diagnostics: 'Diagnostic',
     restart: 'Redémarrer la passerelle',
     restartTitle: 'Redémarrer la passerelle',

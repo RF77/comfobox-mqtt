@@ -499,11 +499,19 @@ internal sealed class MstpStateMachine
         {
             try
             {
+                // **Beide** Daten-Frame-Typen gelten als Antwort. Die Norm
+                // verlangt für eine Antwort zwar "keine Antwort erwartet",
+                // die ComfoBox hat in der Praxis aber auch schon mit
+                // "EXPECTING_REPLY" geantwortet. Der Legacy-Code akzeptierte
+                // nur NOT_EXPECTING - eine Antwort mit dem anderen Typ wurde
+                // dort stillschweigend verworfen, und die Anfrage lief in die
+                // Zeitüberschreitung.
                 if (destinationAddress == _thisStation &&
                     (frameType == BacnetMstpFrameTypes.FRAME_TYPE_TEST_RESPONSE ||
-                     frameType == BacnetMstpFrameTypes.FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY))
+                     frameType == BacnetMstpFrameTypes.FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY ||
+                     frameType == BacnetMstpFrameTypes.FRAME_TYPE_BACNET_DATA_EXPECTING_REPLY))
                 {
-                    if (frameType == BacnetMstpFrameTypes.FRAME_TYPE_BACNET_DATA_NOT_EXPECTING_REPLY)
+                    if (frameType != BacnetMstpFrameTypes.FRAME_TYPE_TEST_RESPONSE)
                     {
                         DeliverFrame(sourceAddress, messageLength);
                     }

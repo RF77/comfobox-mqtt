@@ -82,6 +82,18 @@ export class ConfigComponent {
   /** Das Retain-Verhalten (Entwurf). */
   readonly useRetain = signal(true);
 
+  /** Die Geräte-ID der ComfoBox (Entwurf). */
+  readonly deviceId = signal(1);
+
+  /** Die MS/TP-Adresse dieses Knotens (Entwurf). */
+  readonly thisStation = signal(3);
+
+  /** Das Zeitfenster je Item in Millisekunden (Entwurf). */
+  readonly itemTimeout = signal(3000);
+
+  /** Die Priorität beim Schreiben (Entwurf). */
+  readonly writePriority = signal(0);
+
   /** Die API-Token. */
   readonly tokenList = signal<TokenInfoDto[]>([]);
 
@@ -161,6 +173,10 @@ export class ConfigComponent {
       this.pollInterval.set(loaded.gateway.pollIntervalSeconds);
       this.maxWrites.set(loaded.gateway.maxWritesPer24h);
       this.useRetain.set(loaded.mqtt.useMqttRetain);
+      this.deviceId.set(loaded.bacnet.deviceId);
+      this.thisStation.set(loaded.bacnet.thisStation);
+      this.itemTimeout.set(loaded.bacnet.itemTimeoutMs);
+      this.writePriority.set(loaded.bacnet.writePriority ?? 0);
     }
 
     await this.loadTokens();
@@ -203,6 +219,10 @@ export class ConfigComponent {
       pollIntervalSeconds: this.pollInterval(),
       maxWritesPer24h: this.maxWrites(),
       useMqttRetain: this.useRetain(),
+      deviceId: this.deviceId(),
+      itemTimeoutMs: this.itemTimeout(),
+      thisStation: this.thisStation(),
+      writePriority: this.writePriority(),
     });
 
     this.saving.set(false);

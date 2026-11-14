@@ -65,6 +65,8 @@ public sealed class BacnetDeviceTests : IDisposable
             counter ?? _counter,
             bacnet,
             gateway,
+            new BacnetRuntimeSettings(bacnet.Value.DeviceId, bacnet.Value.ItemTimeoutMs),
+            new GatewayRuntimeSettings(expertMode),
             NullLogger<BacnetDevice>.Instance);
     }
 

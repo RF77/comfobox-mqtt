@@ -160,24 +160,62 @@
     </div>
   </p-card>
 
-  <!-- BACnet / MQTT: nur Konfigurationsdatei -->
+  <!-- BACnet: Port/Baudrate sofort, Adressen teils nach Neustart -->
   @if (config.config(); as cfg) {
     <p-card [header]="t().config.bacnetSection" styleClass="cb-card">
       <p-tag [value]="t().config.appliesImmediately" severity="success" />
 
-      <div class="cb-readonly-grid">
-        <div>
-          <span class="cb-label">{{ t().config.deviceId }}</span>
-          <span class="cb-value">{{ cfg.bacnet.deviceId }}</span>
-        </div>
-        <div>
-          <span class="cb-label">{{ t().config.mstpAddress }}</span>
-          <span class="cb-value">{{ cfg.bacnet.thisStation }}</span>
-        </div>
-        <div>
-          <span class="cb-label">{{ t().config.itemTimeout }}</span>
-          <span class="cb-value">{{ cfg.bacnet.itemTimeoutMs }} ms</span>
-        </div>
+      <div class="cb-field">
+        <label for="config-device-id">{{ t().config.deviceId }}</label>
+        <p-inputnumber
+          inputId="config-device-id"
+          [ngModel]="deviceId()"
+          (ngModelChange)="deviceId.set($event ?? 1)"
+          [min]="0"
+          [max]="254"
+          [useGrouping]="false"
+        />
+        <span class="cb-hint">{{ t().config.deviceIdHint }}</span>
+      </div>
+
+      <div class="cb-field">
+        <label for="config-this-station">{{ t().config.mstpAddress }}</label>
+        <p-inputnumber
+          inputId="config-this-station"
+          [ngModel]="thisStation()"
+          (ngModelChange)="thisStation.set($event ?? 3)"
+          [min]="0"
+          [max]="254"
+          [useGrouping]="false"
+        />
+        <span class="cb-hint">{{ t().config.mstpAddressHint }}</span>
+      </div>
+
+      <div class="cb-field">
+        <label for="config-item-timeout">{{ t().config.itemTimeout }}</label>
+        <p-inputnumber
+          inputId="config-item-timeout"
+          [ngModel]="itemTimeout()"
+          (ngModelChange)="itemTimeout.set($event ?? 3000)"
+          [min]="100"
+          [max]="60000"
+          [step]="100"
+          [useGrouping]="false"
+        />
+        <span class="cb-hint">{{ t().config.itemTimeoutHint }}</span>
+      </div>
+
+      <div class="cb-field">
+        <label for="config-write-priority">{{ t().config.writePriority }}</label>
+        <p-inputnumber
+          inputId="config-write-priority"
+          [ngModel]="writePriority()"
+          (ngModelChange)="writePriority.set($event ?? 0)"
+          [min]="0"
+          [max]="16"
+          [useGrouping]="false"
+        />
+        <span class="cb-hint">{{ t().config.writePriorityHint }}</span>
       </div>
 
       <app-serial-port-picker

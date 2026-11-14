@@ -63,9 +63,8 @@ public sealed class BacnetDevice : IDisposable
     private readonly IWriteCounter _writeCounter;
     private readonly ILogger<BacnetDevice> _logger;
     private readonly SemaphoreSlim _busLock = new(1, 1);
-    private readonly BacnetAddress _deviceAddress;
-    private readonly TimeSpan _itemTimeout;
-    private readonly bool _expertModeEnabled;
+    private readonly BacnetRuntimeSettings _runtime;
+    private readonly GatewayRuntimeSettings _gateway;
 
     /// <summary>
     /// Erzeugt das Gerät.
@@ -76,6 +75,8 @@ public sealed class BacnetDevice : IDisposable
     /// <param name="writeCounter">Der Schreibzähler.</param>
     /// <param name="bacnetOptions">Die BACnet-Einstellungen.</param>
     /// <param name="gatewayOptions">Die Grundeinstellungen.</param>
+    /// <param name="runtime">Die zur Laufzeit änderbaren BACnet-Parameter.</param>
+    /// <param name="gatewayRuntime">Der zur Laufzeit umschaltbare Experten-Modus.</param>
     /// <param name="logger">Logger.</param>
     public BacnetDevice(
         IBacnetClient client,
@@ -84,6 +85,8 @@ public sealed class BacnetDevice : IDisposable
         IWriteCounter writeCounter,
         IOptions<BacnetOptions> bacnetOptions,
         IOptions<GatewayOptions> gatewayOptions,
+        BacnetRuntimeSettings runtime,
+        GatewayRuntimeSettings gatewayRuntime,
         ILogger<BacnetDevice> logger)
     {
         ArgumentNullException.ThrowIfNull(client);
@@ -92,19 +95,29 @@ public sealed class BacnetDevice : IDisposable
         ArgumentNullException.ThrowIfNull(writeCounter);
         ArgumentNullException.ThrowIfNull(bacnetOptions);
         ArgumentNullException.ThrowIfNull(gatewayOptions);
+        ArgumentNullException.ThrowIfNull(runtime);
+        ArgumentNullException.ThrowIfNull(gatewayRuntime);
         ArgumentNullException.ThrowIfNull(logger);
 
         _client = client;
         _cache = cache;
         _errors = errors;
         _writeCounter = writeCounter;
+        _runtime = runtime;
+        _gateway = gatewayRuntime;
         _logger = logger;
-
-        var bacnet = bacnetOptions.Value;
-        _itemTimeout = TimeSpan.FromMilliseconds(bacnet.ItemTimeoutMs);
-        _expertModeEnabled = gatewayOptions.Value.ExpertMode;
-        _deviceAddress = new BacnetAddress(BacnetAddressTypes.MSTP, 0, [(byte)bacnet.DeviceId]);
     }
+
+    /// <summary>
+    /// Die Adresse der ComfoBox - **bei jedem Zugriff neu** aus den
+    /// Laufzeit-Einstellungen gelesen (eine geänderte Geräte-ID wirkt sofort).
+    /// </summary>
+    private BacnetAddress DeviceAddress => _runtime.DeviceAddress;
+
+    /// <summary>
+    /// Das Zeitfenster je Item (ebenfalls zur Laufzeit änderbar).
+    /// </summary>
+    private TimeSpan ItemTimeout => _runtime.ItemTimeout;
 
     /// <summary>
     /// Ist die ComfoBox erreichbar?
@@ -164,7 +177,7 @@ public sealed class BacnetDevice : IDisposable
             return WriteOutcome.ReadOnly;
         }
 
-        if (item.RequiresExpertMode && !_expertModeEnabled)
+        if (item.RequiresExpertMode && !_gateway.ExpertMode)
         {
             _logger.LogWarning("Schreibvorgang für {Item} abgelehnt: Expert-Modus ist nicht aktiv.", item.Id);
             return WriteOutcome.ExpertModeRequired;
@@ -211,7 +224,7 @@ public sealed class BacnetDevice : IDisposable
             var payload = new BacnetValue((float)value);
 
             await _client.WritePropertyAsync(
-                _deviceAddress,
+                DeviceAddress,
                 objectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 [payload],
@@ -289,7 +302,7 @@ public sealed class BacnetDevice : IDisposable
     private async Task<bool> ReadItemAsync(ItemDefinition item, CancellationToken cancellationToken)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(_itemTimeout);
+        timeout.CancelAfter(ItemTimeout);
 
         var acquired = false;
         try
@@ -300,7 +313,7 @@ public sealed class BacnetDevice : IDisposable
             var objectId = new BacnetObjectId(BacnetObjectTypes.OBJECT_ANALOG_VALUE, (uint)item.BacnetObjectId);
 
             var values = await _client.ReadPropertyAsync(
-                _deviceAddress,
+                DeviceAddress,
                 objectId,
                 BacnetPropertyIds.PROP_PRESENT_VALUE,
                 ASN1.BACNET_ARRAY_ALL,
@@ -342,11 +355,11 @@ public sealed class BacnetDevice : IDisposable
             _logger.LogWarning(
                 "ReadProperty {Item} hat das Zeitfenster von {TimeoutMs} ms überschritten.",
                 item.Id,
-                _itemTimeout.TotalMilliseconds);
+                ItemTimeout.TotalMilliseconds);
             _errors.Report(
                 "Bacnet",
                 "timeout",
-                $"ReadProperty ({item.TopicPath}) timed out after {_itemTimeout.TotalMilliseconds:0} ms",
+                $"ReadProperty ({item.TopicPath}) timed out after {ItemTimeout.TotalMilliseconds:0} ms",
                 null,
                 "warning");
             MarkFailed("timeout");
@@ -358,11 +371,11 @@ public sealed class BacnetDevice : IDisposable
             _logger.LogWarning(
                 "ReadProperty {Item} hat das Zeitfenster von {TimeoutMs} ms überschritten.",
                 item.Id,
-                _itemTimeout.TotalMilliseconds);
+                ItemTimeout.TotalMilliseconds);
             _errors.Report(
                 "Bacnet",
                 "timeout",
-                $"ReadProperty ({item.TopicPath}) timed out after {_itemTimeout.TotalMilliseconds:0} ms",
+                $"ReadProperty ({item.TopicPath}) timed out after {ItemTimeout.TotalMilliseconds:0} ms",
                 ex,
                 "warning");
             MarkFailed("timeout");

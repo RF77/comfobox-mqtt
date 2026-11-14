@@ -85,6 +85,81 @@ public sealed class ConfigApiTests
     }
 
     /// <summary>
+    /// Ein geänderter Wert wird beim nächsten Lesen auch **zurückgemeldet**.
+    /// </summary>
+    /// <remarks>
+    /// <b>Regression (2026-11-14):</b> Der Experten-Modus ließ sich in der
+    /// Oberfläche nicht einschalten - er wurde gespeichert, aber
+    /// <c>GET /api/config</c> antwortete weiter mit dem Stand vom Start
+    /// (<c>IOptions&lt;T&gt;</c> wird nur einmal gebunden). Die Oberfläche lädt
+    /// nach dem Speichern neu und zeigte wieder „aus".
+    /// </remarks>
+    [Fact]
+    public async Task Ein_Gespeicherter_Wert_Wird_Zurueckgemeldet()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var put = await fixture.Client.PutAsync(
+            "/api/config",
+            Json("{\"expertMode\":true,\"pollIntervalSeconds\":30,\"maxWritesPer24h\":42,"
+                 + "\"deviceId\":7,\"itemTimeoutMs\":5000,\"thisStation\":9,\"writePriority\":8}"));
+
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        var config = await GatewayApiFixture.ReadJsonAsync(await fixture.Client.GetAsync("/api/config"));
+
+        var gateway = config.GetProperty("gateway");
+        Assert.True(gateway.GetProperty("expertMode").GetBoolean());
+        Assert.Equal(30, gateway.GetProperty("pollIntervalSeconds").GetInt32());
+        Assert.Equal(42, gateway.GetProperty("maxWritesPer24h").GetInt32());
+
+        var bacnet = config.GetProperty("bacnet");
+        Assert.Equal(7, bacnet.GetProperty("deviceId").GetInt32());
+        Assert.Equal(5000, bacnet.GetProperty("itemTimeoutMs").GetInt32());
+        Assert.Equal(9, bacnet.GetProperty("thisStation").GetInt32());
+        Assert.Equal(8, bacnet.GetProperty("writePriority").GetInt32());
+    }
+
+    /// <summary>
+    /// Der Experten-Modus wirkt sofort - ohne Neustart.
+    /// </summary>
+    /// <remarks>
+    /// Er entscheidet bei jedem Schreibvorgang. Wird er nur in der Datei
+    /// gespeichert, lehnt der Gateway sensible Werte bis zum nächsten Start
+    /// weiter ab.
+    /// </remarks>
+    [Fact]
+    public async Task Der_Experten_Modus_Wirkt_Sofort()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var runtime = fixture.Services.GetRequiredService<GatewayRuntimeSettings>();
+        Assert.False(runtime.ExpertMode);
+
+        var put = await fixture.Client.PutAsync("/api/config", Json("{\"expertMode\":true}"));
+        Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+
+        Assert.True(runtime.ExpertMode);
+    }
+
+    /// <summary>
+    /// Eine unsinnige Geräte-ID wird abgelehnt.
+    /// </summary>
+    [Theory]
+    [InlineData("{\"deviceId\":300}")]
+    [InlineData("{\"itemTimeoutMs\":5}")]
+    [InlineData("{\"thisStation\":300}")]
+    [InlineData("{\"writePriority\":20}")]
+    public async Task Ein_Unsinniger_Bacnet_Wert_Wird_Abgelehnt(string body)
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PutAsync("/api/config", Json(body));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
     /// Ohne Authentifizierung (LAN-Modus) darf die Konfiguration geändert werden.
     /// </summary>
     [Fact]

@@ -56,6 +56,8 @@ export interface BacnetConfigDto {
   readonly itemTimeoutMs: number;
   /** Die Anzahl der Versuche je Anfrage. */
   readonly retries: number;
+  /** Die Priorität beim Schreiben (0 = keine). */
+  readonly writePriority: number;
 }
 
 /** Der Abschnitt „Mqtt". */
@@ -130,4 +132,12 @@ export interface ConfigUpdateRequest {
   readonly maxWritesPer24h?: number;
   /** Werden die Item-Werte retained publiziert? */
   readonly useMqttRetain?: boolean;
+  /** Die Geräte-Instanz der ComfoBox (wirkt sofort). */
+  readonly deviceId?: number;
+  /** Das Zeitfenster je Item in Millisekunden (wirkt sofort). */
+  readonly itemTimeoutMs?: number;
+  /** Die MS/TP-Adresse dieses Knotens (Neustart nötig). */
+  readonly thisStation?: number;
+  /** Die Priorität beim Schreiben (0 = keine; Neustart nötig). */
+  readonly writePriority?: number;
 }

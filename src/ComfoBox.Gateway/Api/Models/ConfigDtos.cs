@@ -292,6 +292,39 @@ public sealed class ConfigUpdateRequest
     /// Werden die Item-Werte retained publiziert?
     /// </summary>
     public bool? UseMqttRetain { get; set; }
+
+    /// <summary>
+    /// Die Geräte-Instanz der ComfoBox am Bus.
+    /// </summary>
+    /// <remarks>
+    /// Wirkt **sofort** - der Gateway adressiert die ComfoBox beim nächsten
+    /// Zugriff mit der neuen ID. Ein Neustart ist nicht nötig.
+    /// </remarks>
+    public int? DeviceId { get; set; }
+
+    /// <summary>
+    /// Das Zeitfenster je Item in Millisekunden.
+    /// </summary>
+    /// <remarks>Wirkt **sofort**.</remarks>
+    public int? ItemTimeoutMs { get; set; }
+
+    /// <summary>
+    /// Die MS/TP-Adresse dieses Knotens.
+    /// </summary>
+    /// <remarks>
+    /// Wirkt erst nach einem **Neustart**: die Adresse wird beim Aufbau des
+    /// MS/TP-Zustandsautomaten gesetzt. Sie wird hier nur gespeichert.
+    /// </remarks>
+    public int? ThisStation { get; set; }
+
+    /// <summary>
+    /// Die Priorität, mit der Werte geschrieben werden (<c>null</c> = unverändert).
+    /// </summary>
+    /// <remarks>
+    /// <c>0</c> = keine Priorität, <c>1</c>…<c>16</c> = Priorität mitschicken.
+    /// Wirkt nach einem **Neustart** (der Client wird beim Start erzeugt).
+    /// </remarks>
+    public int? WritePriority { get; set; }
 }
 
 /// <summary>

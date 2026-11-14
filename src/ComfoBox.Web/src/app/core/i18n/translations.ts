@@ -152,8 +152,13 @@ export interface Translations {
     readonly bacnetSection: string;
     readonly appliesImmediately: string;
     readonly deviceId: string;
+    readonly deviceIdHint: string;
     readonly mstpAddress: string;
+    readonly mstpAddressHint: string;
     readonly itemTimeout: string;
+    readonly itemTimeoutHint: string;
+    readonly writePriority: string;
+    readonly writePriorityHint: string;
     readonly mqttSection: string;
     readonly restartRequired: string;
     readonly discovery: string;

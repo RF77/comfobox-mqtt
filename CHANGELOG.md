@@ -13,6 +13,19 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Der Experten-Modus ließ sich in der Oberfläche nicht einschalten** – er
+  wurde gespeichert, aber nicht zurückgemeldet. `GET /api/config` las die
+  **beim Start gebundenen** Options (`IOptions<T>` ändert sich nicht mehr);
+  die Oberfläche lädt nach dem Speichern neu und zeigte deshalb wieder „aus".
+  Drei Korrekturen:
+  - Die änderbaren Werte (`ExpertMode`, `PollIntervalSeconds`,
+    `MaxWritesPer24h`, `ThisStation`, `WritePriority`) kommen jetzt aus der
+    `config.json`, mit den Options nur als Rückfall.
+  - Der **Experten-Modus wirkt sofort** (`GatewayRuntimeSettings`): er
+    entscheidet bei jedem Schreibvorgang, nicht erst nach einem Neustart.
+  - Geräte-ID, MSTP-Adresse, Item-Timeout und Schreibpriorität sind in der
+    Oberfläche **einstellbar** (vorher nur lesend); Geräte-ID und Timeout
+    wirken sofort, MSTP-Adresse und Priorität nach einem Neustart.
 - **Schreibvorgänge liefen immer in die Zeitüberschreitung, Lesen funktionierte.**
   Ursache war kein BACnet-Fehler, sondern der **MS/TP-Frame-Typ**: Der
   Transport leitet ihn aus dem NPDU-Bit `ExpectingReply` ab. Der Schreibpfad
@@ -21,11 +34,12 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   und die Gegenstelle **darf** darauf nicht antworten. Genau das war zu sehen:
   6712 Token-Übernahmen, 409 gelesene Werte, aber kein einziges `SimpleACK`.
   `WritePropertyAsync` setzt das Bit jetzt wie jeder andere bestätigte Dienst.
-  Zwei Ergänzungen dazu:
+  Zusätzlich akzeptiert der MS/TP-Zustandsautomat **beide** Daten-Frame-Typen
+  als Antwort (der Altbestand verwarf eine Antwort mit `EXPECTING_REPLY`
+  stillschweigend).
   - **`Bacnet:WritePriority`** (0…16, Vorgabe 0 = keine). Antwortet die ComfoBox
     mit `write-access-denied`, verlangt sie eine Priorität – dann `8` setzen.
     Ablehnungen dieses Codes nennen den Hinweis jetzt direkt im Protokoll.
-  - Der Wert steht auch in `GET /api/config` (`bacnet.writePriority`).
 - **Nach „Übernehmen und starten" kam der Gateway nicht zurück, wenn er als
   normales Programm läuft** (Testlauf per `dev-deploy.ps1`, ohne Docker). Der
   Neustart ist bewusst *in-process*: `ServiceControl` beendet den Host

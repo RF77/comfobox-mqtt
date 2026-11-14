@@ -614,14 +614,27 @@ appsettings.json (im Image)        ← Defaults
 | Aktion | Wirkung |
 |---|---|
 | `PUT /api/config` | persistiert die geänderten Werte nach `config.json` (Modus 0600) |
-| Teile der Konfiguration | **nur** zur Laufzeit änderbar: `ExpertMode`, `PollIntervalSeconds`, `MaxNumberOfWritesPer24h`, `UseMqttRetain` |
+| **sofort** wirksam | `ExpertMode`, `Bacnet:DeviceId`, `Bacnet:ItemTimeoutMs` |
+| nach **Neustart** wirksam | `PollIntervalSeconds`, `MaxWritesPer24h`, `UseMqttRetain`, `Bacnet:ThisStation`, `Bacnet:WritePriority`, `Mqtt:Brokers` |
 | `PUT /api/config/bacnet` | **wirkt sofort**: `Bacnet:Port` und `Bacnet:Baudrate` werden übernommen, die Konfiguration wird geschrieben und der BACnet-Stack baut die Verbindung **ohne Neustart** neu auf |
-| **Nicht** änderbar zur Laufzeit | `Mqtt:Brokers` → erfordert einen Neustart (Button in der UI) |
 
 > **Umsetzung (Phase 4):** `PUT /api/config` schreibt die Werte in die
 > `config.json`; sie werden beim nächsten Start wirksam (die Options sind
 > unveränderliche Schnappschüsse). Der Neustart wird in der Oberfläche
 > angeboten.
+>
+> **⚠️ Fallstrick (2026-11-14, in der Praxis aufgetreten):** `GET /api/config`
+> darf die änderbaren Werte **nicht** aus `IOptions<T>` lesen. Die Options sind
+> der Stand vom Start – die Oberfläche lädt nach dem Speichern neu und zeigt
+> dann wieder den alten Wert; der Benutzer sieht „nicht gespeichert". Die
+> Endpunkte lesen die Felder deshalb aus der `config.json` (Options nur als
+> Rückfall), die Laufzeit-Werte halten `GatewayRuntimeSettings` (Experten-Modus)
+> und `BacnetRuntimeSettings` (Geräte-ID, Item-Timeout).
+>
+> **`MqttTopicMap` bleibt eine Ausnahme:** sie wird mit `ExpertMode` gebaut –
+> die MQTT-Topics sensibler Items entstehen deshalb erst nach einem Neustart.
+> Der Schreibweg der Oberfläche (`/api/items/…`) und MQTT-Werte auf bereits
+> vorhandenen Topics funktionieren sofort.
 >
 > **Umsetzung (Phase 5, serielle Schnittstelle):** Der serielle Port ist die
 > **einzige** Einstellung, die ohne Neustart umgestellt werden kann. Grund:

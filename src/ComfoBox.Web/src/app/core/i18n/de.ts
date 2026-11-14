@@ -137,8 +137,17 @@ export const DE: Translations = {
     bacnetSection: 'BACnet (serielle Schnittstelle)',
     appliesImmediately: 'wirkt sofort',
     deviceId: 'Geräte-ID',
+    deviceIdHint:
+      'Die BACnet-Geräteinstanz der ComfoBox. Meist 1 – der Wert muss zur Geräte-ID in der ComfoBox passen. Wirkt sofort.',
     mstpAddress: 'MSTP-Adresse',
+    mstpAddressHint:
+      'Die MAC-Adresse dieses Gateways am MS/TP-Bus (Vorgabe 3). Wirksam nach einem Neustart – und je Bus nur einmal vergeben.',
     itemTimeout: 'Item-Timeout',
+    itemTimeoutHint:
+      'Zeitfenster je Lese- oder Schreibzugriff in Millisekunden (100–60000). Wirkt sofort; bei Zeitüberschreitungen erhöhen.',
+    writePriority: 'Schreibpriorität',
+    writePriorityHint:
+      '0 = ohne Priorität (Vorgabe). Verlangt die ComfoBox eine Priorität (write-access-denied), 8 eintragen. Wirksam nach einem Neustart.',
     mqttSection: 'MQTT (nur Konfigurationsdatei)',
     restartRequired: 'Neustart erforderlich',
     discovery: 'Discovery',
@@ -194,7 +203,8 @@ export const DE: Translations = {
     passwordChanged: 'Zugangsdaten geändert - bitte neu anmelden.',
     settingsSaved: 'Sicherheit gespeichert',
     saved: 'Gespeichert',
-    savedHint: 'Die neuen Werte werden nach einem Neustart wirksam.',
+    savedHint:
+      'Geräte-ID, Item-Timeout und Experten-Modus wirken sofort. MSTP-Adresse, Schreibpriorität und Broker nach einem Neustart.',
     diagnostics: 'Diagnose',
     restart: 'Gateway neu starten',
     restartTitle: 'Gateway neu starten',
