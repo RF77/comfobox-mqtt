@@ -9,6 +9,52 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 > einzigen erfolgreichen Zugriff auf eine echte ComfoBox – siehe
 > [README.md](README.md).
 
+## [Unreleased]
+
+### Added
+
+- **Die Port-Auswahl nennt jetzt, was am Port hängt.** Bisher standen dort nur
+  Gerätedateien (`/dev/ttyUSB0`, `/dev/ttyAMA0`) – welcher davon der Adapter
+  ist, musste man raten. Das Gateway liest die Angaben aus `sysfs`
+  (`/sys/class/tty/…`, `idVendor`/`idProduct`, Hersteller, Produkt,
+  Seriennummer, Treiber, `/dev/serial/by-id`) und zeigt sie an:
+  | Anzeige | Bedeutung |
+  |---|---|
+  | `CH340 · USB-Seriell (1a86:7523)` | der Adapter |
+  | `ttyAMA0 · UART auf der Platine` | der serielle Anschluss des Pi selbst |
+  
+  Bekannte Kennungen werden benannt (CH340/CH341, FT232R/FT231X/FT2232,
+  CP2102/CP2105, PL2303), unbekannte USB-Geräte mit Hersteller und Produkt.
+  USB-Ports stehen in der Liste oben.
+- **Die Fehlermeldung bei fehlender Berechtigung nennt die Fakten.**
+  `POST /api/config/bacnet/test` liefert jetzt `details` mit Modus der
+  Gerätedatei (`crw-rw---- · Modus 0660`), Benutzerkennung und Gruppen des
+  laufenden Prozesses – und daraus abgeleitet **die** Ursache:
+  fehlt die Gruppe 20 (`dialout`), ist es `group_add`; ist sie vorhanden,
+  blockiert die Device-Cgroup (`device_cgroup_rules`). Beide Meldungen nennen
+  den konkreten nächsten Schritt.
+- **`deploy/pi/dev-deploy.ps1` – Testlauf auf dem Pi in einem Befehl.**
+  Veröffentlicht den Gateway für `linux-arm64` (self-contained), kopiert ihn
+  per SSH, beendet den alten Prozess und startet den neuen. Kein
+  arm64-Container-Build, kein Registry-Pull. Der Prozess läuft als der
+  SSH-Benutzer – ist der in `dialout`, funktioniert der serielle Port ohne
+  jede Container-Gruppe. Optionen: `-Pi`, `-User`, `-Port`, `-SkipWeb`,
+  `-NoBuild`, `-Logs`, `-Stop`.
+
+### Changed
+
+- **`deploy/pi/install.sh` ermittelt die Gruppen-GID, statt 20 zu raten.**
+  `getent group dialout` und die Gruppe der vorhandenen Gerätedatei werden
+  gelesen und in `group_add` geschrieben; `--group <GID>` überschreibt sie.
+  Damit scheitert der Zugriff auch dann nicht, wenn `dialout` auf dem System
+  eine andere Kennung hat.
+
+### Fixed
+
+- Die Auswertung der Gruppen in `install.sh` brach bei fehlendem `getent`
+  **und** fehlender `/etc/group` mit Exit 2 ab (`set -e`). Beide Abfragen sind
+  jetzt fehlertolerant und fallen auf 20 zurück.
+
 ## [1.0.4] – 2026-11-14
 
 ### Fixed

@@ -100,6 +100,47 @@ public sealed record SerialPortInfo
     /// Der Pfad aus <c>ports.json</c> des Supervisors (oder <c>null</c>).
     /// </summary>
     public string? StablePath { get; init; }
+
+    /// <summary>
+    /// Die Art des Ports: <c>usb</c> (Adapter), <c>builtin</c> (UART auf der
+    /// Platine) oder <c>other</c>.
+    /// </summary>
+    public string? Kind { get; init; }
+
+    /// <summary>
+    /// Der erkannte Chipsatz, z. B. <c>CH340</c> (oder <c>null</c>).
+    /// </summary>
+    public string? Chip { get; init; }
+
+    /// <summary>
+    /// Die USB-Herstellerkennung, z. B. <c>1a86</c> (oder <c>null</c>).
+    /// </summary>
+    public string? VendorId { get; init; }
+
+    /// <summary>
+    /// Die USB-Produktkennung, z. B. <c>7523</c> (oder <c>null</c>).
+    /// </summary>
+    public string? ProductId { get; init; }
+
+    /// <summary>
+    /// Der Hersteller aus dem USB-Deskriptor (oder <c>null</c>).
+    /// </summary>
+    public string? Manufacturer { get; init; }
+
+    /// <summary>
+    /// Das Produkt aus dem USB-Deskriptor (oder <c>null</c>).
+    /// </summary>
+    public string? Product { get; init; }
+
+    /// <summary>
+    /// Die Seriennummer des Adapters (oder <c>null</c>).
+    /// </summary>
+    public string? SerialNumber { get; init; }
+
+    /// <summary>
+    /// Der gebundene Kernel-Treiber, z. B. <c>ch341-uart</c> (oder <c>null</c>).
+    /// </summary>
+    public string? Driver { get; init; }
 }
 
 /// <summary>
@@ -126,6 +167,12 @@ public sealed record TestResultDto
     /// Die Dauer des Tests in Millisekunden.
     /// </summary>
     public required long DurationMs { get; init; }
+
+    /// <summary>
+    /// Einzelheiten zum Ergebnis - vor allem bei einem Fehler die
+    /// überprüfbaren Fakten (Modus der Gerätedatei, Gruppen des Prozesses).
+    /// </summary>
+    public IReadOnlyList<string>? Details { get; init; }
 }
 
 /// <summary>

@@ -4,6 +4,7 @@ using ComfoBox.Bacnet;
 using ComfoBox.Gateway.Api.Models;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Health;
+using ComfoBox.Gateway.Hardware;
 
 namespace ComfoBox.Gateway.Bacnet;
 
@@ -39,6 +40,7 @@ public sealed class BacnetSerialManager
     private readonly IBacnetClient _client;
     private readonly BacnetDevice _device;
     private readonly IHealthReporter _health;
+    private readonly ISerialDeviceProbe _probe;
     private readonly ILogger<BacnetSerialManager> _logger;
 
     /// <summary>
@@ -49,6 +51,7 @@ public sealed class BacnetSerialManager
     /// <param name="client">Der BACnet-Client (für den Neuaufbau).</param>
     /// <param name="device">Das BACnet-Gerät (für den Zustand).</param>
     /// <param name="health">Der Health-Reporter.</param>
+    /// <param name="probe">Die Geräte-Erkennung (für die Fehlerdiagnose).</param>
     /// <param name="logger">Logger.</param>
     public BacnetSerialManager(
         ConfigStore config,
@@ -56,6 +59,7 @@ public sealed class BacnetSerialManager
         IBacnetClient client,
         BacnetDevice device,
         IHealthReporter health,
+        ISerialDeviceProbe probe,
         ILogger<BacnetSerialManager> logger)
     {
         ArgumentNullException.ThrowIfNull(config);
@@ -63,6 +67,7 @@ public sealed class BacnetSerialManager
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(device);
         ArgumentNullException.ThrowIfNull(health);
+        ArgumentNullException.ThrowIfNull(probe);
         ArgumentNullException.ThrowIfNull(logger);
 
         _config = config;
@@ -70,6 +75,7 @@ public sealed class BacnetSerialManager
         _client = client;
         _device = device;
         _health = health;
+        _probe = probe;
         _logger = logger;
     }
 
@@ -126,15 +132,22 @@ public sealed class BacnetSerialManager
         var probe = ProbeSerialPort(port, baudrate);
         if (probe is not null)
         {
-            return Result(
-                false,
-                probe == "permission_denied"
-                    ? $"Keine Berechtigung für den Port '{port}' (Gruppe 'dialout' prüfen)."
-                    : probe == "busy"
-                        ? $"Der Port '{port}' wird von einem anderen Prozess gehalten."
-                        : $"Der Port '{port}' wurde nicht gefunden.",
-                probe,
-                stopwatch);
+            return probe switch
+            {
+                "permission_denied" => Result(
+                    false,
+                    SerialAccessMessages.PermissionDenied(port),
+                    probe,
+                    stopwatch,
+                    SerialAccessMessages.PermissionDeniedDetails(port, _probe.DescribeAccess(port))),
+                "busy" => Result(
+                    false,
+                    $"Der Port '{port}' wird von einem anderen Prozess gehalten.",
+                    probe,
+                    stopwatch,
+                    SerialAccessMessages.BusyDetails(port)),
+                _ => Result(false, $"Der Port '{port}' wurde nicht gefunden.", probe, stopwatch),
+            };
         }
 
         return Result(
@@ -274,11 +287,17 @@ public sealed class BacnetSerialManager
     /// <summary>
     /// Erzeugt das Ergebnis eines Tests.
     /// </summary>
-    private static TestResultDto Result(bool ok, string message, string? hint, Stopwatch stopwatch) => new()
+    private static TestResultDto Result(
+        bool ok,
+        string message,
+        string? hint,
+        Stopwatch stopwatch,
+        IReadOnlyList<string>? details = null) => new()
     {
         Ok = ok,
         Message = message,
         Hint = hint,
         DurationMs = stopwatch.ElapsedMilliseconds,
+        Details = details,
     };
 }

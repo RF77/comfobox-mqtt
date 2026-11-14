@@ -154,11 +154,51 @@ Gateway ohne Zutun wieder da. Der 24-h-Schreibzähler liegt im Volume
 |---|---|---|
 | `Dieses System ist 32-Bit` | 32-Bit-Raspberry-Pi-OS | 64-Bit-System installieren (`getconf LONG_BIT` → 64) |
 | Kein Port im Assistenten | Adapter nicht erkannt | `ls -l /dev/ttyUSB*` prüfen; Adapter direkt anstecken, kein Hub |
-| Port da, aber „Permission denied" | Gruppe fehlt | `sudo docker compose down && sudo docker compose up -d` – die Compose-Datei enthält die Gruppe `dialout` bereits |
+| Port da, aber „Keine Berechtigung“ | Container hat die Gruppe der Gerätedatei nicht | Ein-Zeilen-Befehl erneut ausführen (er ermittelt die GID jetzt selbst); die Oberfläche nennt Modus und Gruppen des Prozesses |
 | `no_iam` im Protokoll | ComfoBox auf 76800 Baud | auf 38400 umstellen und die Anlage **neu starten** |
 | Oberfläche nach 2 Minuten nicht erreichbar | Pi 3 ist langsam, oder Port belegt | `sudo docker compose logs gateway`; `ss -ltnp \| grep 8099` |
 | Container startet nach Neustart nicht | Docker-Dienst nicht aktiviert | `sudo systemctl enable --now docker` |
 | Entitäten in HA „nicht verfügbar" | falsche Adresse oder Token | `curl -s http://<IP>:8099/api/health` vom HA-Rechner testen |
+
+### Welcher Port ist der Adapter?
+
+Die Oberfläche nennt zu jedem Port, was dahintersteckt – Chipsatz,
+USB-Kennung und Treiber:
+
+| Anzeige | Bedeutung |
+|---|---|
+| `CH340 · USB-Seriell (1a86:7523)` | **Das ist der Adapter** – diesen wählen |
+| `ttyAMA0 · UART auf der Platine` | der serielle Anschluss des Pi selbst – nicht verwenden |
+
+Die Zeile `USB 1a86:7523` ist die Kennung des Chips. Ein Adapter mit einem
+anderen Chip (FTDI `0403:6001`, CP2102 `10c4:ea60`) wird genauso benannt.
+
+### „Keine Berechtigung“ auf dem Port
+
+Das Gateway läuft im Container als eigener Benutzer. Der Port gehört auf
+Raspberry Pi OS `root:dialout` mit Modus `0660` – ohne die Gruppe `dialout`
+geht er nicht auf. Der Ein-Zeilen-Befehl ermittelt die Gruppenkennung (GID)
+des Pi und trägt sie ein; ein erneuter Aufruf genügt:
+
+````bash
+curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/install.sh | sudo sh
+````
+
+Die Oberfläche zeigt beim Testen jetzt die Fakten dazu:
+
+| Zeile | Bedeutung |
+|---|---|
+| `Gerätedatei: /dev/ttyUSB0 · crw-rw---- · Modus 0660` | so darf die Datei aussehen |
+| `Gateway-Prozess: uid 1001 · Gruppen 0, 20, 1001` | hier muss die Gruppe der Datei dabei sein |
+| `Ursache: … fehlt die Gruppe …` | Lösung: `group_add` – erledigt `install.sh` |
+| `Ursache: … blockiert die Device-Cgroup …` | Lösung: `device_cgroup_rules` – steht in der Compose-Datei |
+
+Bleibt es dabei, nennt das Diagnoseskript die Ursache:
+
+````bash
+curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/serial-port-check.sh -o /tmp/serial-port-check.sh
+sudo sh /tmp/serial-port-check.sh --free-port --read 5
+````
 
 ### Adapter wird nicht erkannt
 

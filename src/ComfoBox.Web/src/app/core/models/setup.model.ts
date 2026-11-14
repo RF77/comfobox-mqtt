@@ -46,6 +46,22 @@ export interface SerialPortInfo {
   readonly description: string | null;
   /** Der stabile Pfad aus `ports.json` des Supervisors (oder `null`). */
   readonly stablePath: string | null;
+  /** Die Art: `usb` (Adapter), `builtin` (UART auf der Platine) oder `other`. */
+  readonly kind: string | null;
+  /** Der erkannte Chipsatz, z. B. `CH340`. */
+  readonly chip: string | null;
+  /** Die USB-Herstellerkennung, z. B. `1a86`. */
+  readonly vendorId: string | null;
+  /** Die USB-Produktkennung, z. B. `7523`. */
+  readonly productId: string | null;
+  /** Der Hersteller aus dem USB-Deskriptor. */
+  readonly manufacturer: string | null;
+  /** Das Produkt aus dem USB-Deskriptor. */
+  readonly product: string | null;
+  /** Die Seriennummer des Adapters. */
+  readonly serialNumber: string | null;
+  /** Der gebundene Kernel-Treiber, z. B. `ch341-uart`. */
+  readonly driver: string | null;
 }
 
 /** Das Ergebnis eines Verbindungstests. */
@@ -58,6 +74,8 @@ export interface TestResultDto {
   readonly hint: string | null;
   /** Die Dauer des Tests in Millisekunden. */
   readonly durationMs: number;
+  /** Einzelheiten - bei einem Fehler die überprüfbaren Fakten. */
+  readonly details: readonly string[] | null;
 }
 
 /** Die Anfrage für den BACnet-Verbindungstest. */

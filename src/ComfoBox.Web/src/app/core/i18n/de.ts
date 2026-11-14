@@ -336,6 +336,15 @@ export const DE: Translations = {
     test: 'Verbindung testen',
     apply: 'Übernehmen',
     appliesImmediately: 'Wirkt sofort - der Gateway startet nicht neu.',
+    kindUsb: 'USB-Adapter',
+    kindBuiltin: 'UART auf der Platine',
+    kindOther: 'Serieller Port',
+    usbIds: (vendorId, productId) => `USB ${vendorId}:${productId}`,
+    driver: (value) => `Treiber: ${value}`,
+    serialNumber: (value) => `Seriennummer: ${value}`,
+    detailsTitle: 'Zum Prüfen',
+    adapterHint:
+      'Der ComfoBox-Adapter ist ein USB-Gerät (meist CH340). Der UART auf der Platine ist der falsche Anschluss.',
   },
 
   setupSteps: {

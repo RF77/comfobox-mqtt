@@ -60,6 +60,7 @@ public static class GatewayApiExtensions
         services.AddSingleton(sp => sp.GetRequiredService<IOptions<ApiOptions>>().Value);
         services.AddSingleton(sp => new ConfigStore(dataDirectory, sp.GetRequiredService<TimeProvider>()));
         services.AddSingleton<ApiSecurityStore>();
+        services.AddSingleton<ISerialDeviceProbe>(_ => new SerialDeviceProbe());
         services.AddSingleton<ISerialPortScanner, SerialPortScanner>();
         services.AddSingleton<BacnetSerialManager>();
         services.AddSingleton(sp => new ApiSessionStore(

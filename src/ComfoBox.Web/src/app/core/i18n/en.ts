@@ -335,6 +335,15 @@ export const EN: Translations = {
     test: 'Test connection',
     apply: 'Apply',
     appliesImmediately: 'Takes effect immediately - the gateway does not restart.',
+    kindUsb: 'USB adapter',
+    kindBuiltin: 'On-board UART',
+    kindOther: 'Serial port',
+    usbIds: (vendorId, productId) => `USB ${vendorId}:${productId}`,
+    driver: (value) => `Driver: ${value}`,
+    serialNumber: (value) => `Serial number: ${value}`,
+    detailsTitle: 'What to check',
+    adapterHint:
+      'The ComfoBox adapter is a USB device (usually a CH340). The on-board UART is the wrong port.',
   },
 
   setupSteps: {

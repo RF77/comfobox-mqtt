@@ -83,10 +83,61 @@ export class SerialPortPickerComponent implements OnInit {
     }
 
     return [
-      { port: current, description: this.t().serial.currentOption, stablePath: null },
+      this.unknownPort(current),
       ...scanned,
     ];
   });
+
+  /**
+   * Ein Platzhalter für den eingestellten Port, den das System nicht kennt.
+   *
+   * @param port Der Portname.
+   * @returns Der Eintrag für die Auswahl.
+   */
+  private unknownPort(port: string): SerialPortInfo {
+    return {
+      port,
+      description: this.t().serial.currentOption,
+      stablePath: null,
+      kind: null,
+      chip: null,
+      vendorId: null,
+      productId: null,
+      manufacturer: null,
+      product: null,
+      serialNumber: null,
+      driver: null,
+    };
+  }
+
+  /**
+   * Die Art des Ports als Text.
+   *
+   * @param port Der Port.
+   * @returns Die Beschriftung.
+   */
+  kindLabel(port: SerialPortInfo): string {
+    switch (port.kind) {
+      case 'usb':
+        return this.t().serial.kindUsb;
+      case 'builtin':
+        return this.t().serial.kindBuiltin;
+      default:
+        return this.t().serial.kindOther;
+    }
+  }
+
+  /**
+   * Die USB-Kennung als Text (oder `null`).
+   *
+   * @param port Der Port.
+   * @returns Die Kennung.
+   */
+  usbIds(port: SerialPortInfo): string | null {
+    return port.vendorId && port.productId
+      ? this.t().serial.usbIds(port.vendorId, port.productId)
+      : null;
+  }
 
   /** Der gewählte Port. */
   readonly selected = signal<string | null>(null);

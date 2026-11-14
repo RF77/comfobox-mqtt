@@ -1,0 +1,3 @@
+# Artefakte des Schnell-Deploys (deploy/pi/dev-deploy.ps1).
+# Sie werden auf dem Entwicklungsrechner erzeugt und per SSH kopiert.
+.artifacts/

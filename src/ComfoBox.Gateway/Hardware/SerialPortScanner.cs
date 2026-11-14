@@ -51,19 +51,26 @@ public sealed class SerialPortScanner : ISerialPortScanner
     public const string PortsFileName = "ports.json";
 
     private readonly ConfigStore _config;
+    private readonly ISerialDeviceProbe _probe;
     private readonly ILogger<SerialPortScanner> _logger;
 
     /// <summary>
     /// Erzeugt den Scanner.
     /// </summary>
     /// <param name="config">Die Konfiguration (für das Datenverzeichnis).</param>
+    /// <param name="probe">Die Geräte-Erkennung (Chipsatz, Rechte).</param>
     /// <param name="logger">Logger.</param>
-    public SerialPortScanner(ConfigStore config, ILogger<SerialPortScanner> logger)
+    public SerialPortScanner(
+        ConfigStore config,
+        ISerialDeviceProbe probe,
+        ILogger<SerialPortScanner> logger)
     {
         ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(probe);
         ArgumentNullException.ThrowIfNull(logger);
 
         _config = config;
+        _probe = probe;
         _logger = logger;
     }
 
@@ -77,15 +84,15 @@ public sealed class SerialPortScanner : ISerialPortScanner
             var fromFile = ReadPortsFile(portsFile);
             if (fromFile.Count > 0)
             {
-                return fromFile;
+                return fromFile.Select(Describe).ToList();
             }
         }
 
         try
         {
-            return SerialPort.GetPortNames()
-                .OrderBy(name => name, StringComparer.Ordinal)
-                .Select(name => new SerialPortInfo { Port = name, Description = name })
+            return Collect()
+                .OrderBy(info => KindOrder(info.Kind))
+                .ThenBy(info => info.Port, StringComparer.Ordinal)
                 .ToArray();
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
@@ -94,6 +101,79 @@ public sealed class SerialPortScanner : ISerialPortScanner
             return [];
         }
     }
+
+    /// <summary>
+    /// Sammelt die Portnamen des Betriebssystems.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="SerialPort.GetPortNames"/> ist die verlässliche Quelle.
+    /// Zusätzlich werden die USB-Geräte eingesammelt: so erscheint ein Adapter
+    /// auch dann, wenn das Betriebssystem ihn (noch) nicht in seiner Liste
+    /// führt - und die Oberfläche kann ihn wenigstens benennen.
+    /// </remarks>
+    private List<SerialPortInfo> Collect()
+    {
+        var names = new SortedSet<string>(StringComparer.Ordinal);
+
+        foreach (var name in SerialPort.GetPortNames())
+        {
+            names.Add(name);
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            foreach (var pattern in new[] { "ttyUSB*", "ttyACM*" })
+            {
+                try
+                {
+                    foreach (var path in Directory.EnumerateFileSystemEntries("/dev", pattern))
+                    {
+                        names.Add(path);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // Kein /dev Zugriff - die Liste des Betriebssystems bleibt.
+                }
+            }
+        }
+
+        return names.Select(name => Describe(new SerialPortInfo { Port = name })).ToList();
+    }
+
+    /// <summary>
+    /// Ergänzt einen Port um die Angaben aus <c>sysfs</c>.
+    /// </summary>
+    private SerialPortInfo Describe(SerialPortInfo port)
+    {
+        var device = _probe.Describe(port.Port);
+
+        return port with
+        {
+            // Die Beschreibung des Supervisors (ports.json) hat Vorrang - sie
+            // kommt von der Plattform und ist dort schon lesbar.
+            Description = string.IsNullOrWhiteSpace(port.Description) ? device.Label : port.Description,
+            StablePath = port.StablePath ?? device.StablePath,
+            Kind = device.Kind,
+            Chip = device.Chip,
+            VendorId = device.VendorId,
+            ProductId = device.ProductId,
+            Manufacturer = device.Manufacturer,
+            Product = device.Product,
+            SerialNumber = device.SerialNumber,
+            Driver = device.Driver,
+        };
+    }
+
+    /// <summary>
+    /// Die Sortierreihenfolge der Port-Arten: Adapter zuerst.
+    /// </summary>
+    private static int KindOrder(string? kind) => kind switch
+    {
+        SerialDeviceKinds.Usb => 0,
+        SerialDeviceKinds.BuiltIn => 1,
+        _ => 2,
+    };
 
     /// <summary>
     /// Liest die Port-Liste des Supervisors.

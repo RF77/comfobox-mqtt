@@ -342,6 +342,14 @@ export interface Translations {
     readonly test: string;
     readonly apply: string;
     readonly appliesImmediately: string;
+    readonly kindUsb: string;
+    readonly kindBuiltin: string;
+    readonly kindOther: string;
+    readonly usbIds: (vendorId: string, productId: string) => string;
+    readonly driver: (value: string) => string;
+    readonly serialNumber: (value: string) => string;
+    readonly detailsTitle: string;
+    readonly adapterHint: string;
   };
 
   readonly setupSteps: {

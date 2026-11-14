@@ -40,7 +40,28 @@
             <span class="cb-port-description" [id]="'serial-label-' + groupName + '-' + port.port">
               {{ port.description ?? port.port }}
             </span>
+
+            <span class="cb-port-badges">
+              <p-tag
+                [value]="kindLabel(port)"
+                [severity]="port.kind === 'usb' ? 'info' : 'secondary'"
+              />
+              @if (port.chip) {
+                <p-tag [value]="port.chip" severity="success" />
+              }
+            </span>
+
             <code class="cb-port-path">{{ port.port }}</code>
+
+            @if (usbIds(port); as ids) {
+              <span class="cb-port-stable">{{ ids }}</span>
+            }
+            @if (port.driver) {
+              <span class="cb-port-stable">{{ t().serial.driver(port.driver) }}</span>
+            }
+            @if (port.serialNumber) {
+              <span class="cb-port-stable">{{ t().serial.serialNumber(port.serialNumber) }}</span>
+            }
             @if (port.stablePath) {
               <span class="cb-port-stable">{{ t().serial.stable(port.stablePath) }}</span>
             }
@@ -52,6 +73,10 @@
         </div>
       }
     </div>
+
+    <p class="cb-hint cb-adapter-hint">
+      {{ t().serial.adapterHint }}
+    </p>
   }
 
   <div class="cb-field">
@@ -96,6 +121,15 @@
     <p-message [severity]="res.ok ? 'success' : 'error'" styleClass="w-full cb-result">
       <p>{{ res.message }}</p>
       <p class="cb-hint">{{ t().common.duration(res.durationMs) }}</p>
+
+      @if (res.details?.length) {
+        <p class="cb-details-title">{{ t().serial.detailsTitle }}</p>
+        <ul class="cb-details">
+          @for (detail of res.details; track detail) {
+            <li>{{ detail }}</li>
+          }
+        </ul>
+      }
     </p-message>
   }
 </div>

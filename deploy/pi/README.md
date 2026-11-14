@@ -14,6 +14,47 @@ Anleitung für Anwender: [`docs/benutzer/07b-raspberry-pi.md`](../../docs/benutz
 |---|---|
 | `install.sh` | Das gesamte Installationsprogramm. Erzeugt `/opt/comfobox/compose.yaml` und startet den Container. |
 | `serial-port-check.sh` | Diagnose am Pi: findet den Adapter, zeigt die Hub-Kette, prüft Treiber, Rechte und Öffnen und misst die Stabilität. |
+| `dev-deploy.ps1` | Schneller Testlauf **ohne Docker**: veröffentlicht für `linux-arm64`, kopiert per SSH und startet den Gateway als normalen Prozess. |
+
+## Schneller Testlauf ohne Docker
+
+Für die Entwicklung ist der Containerweg zu langsam (arm64-Build unter QEMU,
+Image-Push, Pull auf dem Pi). `dev-deploy.ps1` überspringt das:
+
+````powershell
+pwsh -File deploy/pi/dev-deploy.ps1 -Pi 192.168.1.50
+````
+
+Was passiert:
+
+1. `npm run build` in `src/ComfoBox.Web` (überspringbar mit `-SkipWeb`),
+2. `dotnet publish -r linux-arm64 --self-contained`,
+3. `tar.gz` packen und per `scp` nach `~/comfobox-dev` kopieren,
+4. alten Prozess beenden, neuen starten, auf `/api/health` warten.
+
+| Option | Wirkung |
+|---|---|
+| `-Pi <adresse>` | Ziel (Pflicht) |
+| `-User pi` | SSH-Benutzer |
+| `-Port 8099` | Port der Oberfläche |
+| `-SkipWeb` | Oberfläche nicht neu bauen (API bleibt aktuell) |
+| `-NoBuild` | letzten Stand erneut kopieren |
+| `-Logs` | Protokoll des laufenden Prozesses |
+| `-Stop` | Prozess beenden |
+
+> **Warum das auch für die Rechte-Frage nützlich ist:** der Prozess läuft als
+> der SSH-Benutzer. Ist der in `dialout`, geht der serielle Port **ohne** jede
+> Container-Gruppe auf. Damit lässt sich prüfen, ob CH340 und ComfoBox
+> überhaupt sprechen – bevor die Container-Konfiguration stimmt.
+>
+> Der Gateway läuft dabei unter `~/comfobox-dev` mit eigenem `data`-Verzeichnis.
+> Er teilt sich die Konfiguration **nicht** mit dem Container; ein laufender
+> Container hält den seriellen Port. Vor dem Test also
+> `sudo docker compose -f /opt/comfobox/compose.yaml stop`.
+
+> Der Publish für eine bestimmte Plattform ergänzt die `packages.lock.json`
+> um plattformspezifische Einträge. Das Skript sichert die Dateien vorher und
+> schreibt sie hinterher byteweise zurück – der Arbeitsbaum bleibt sauber.
 
 ## Was das Skript bewusst *nicht* tut
 
@@ -31,7 +72,7 @@ Anleitung für Anwender: [`docs/benutzer/07b-raspberry-pi.md`](../../docs/benutz
 | Entscheidung | Grund |
 |---|---|
 | `/dev:/dev` + `device_cgroup_rules` statt `devices:` | Mit `devices:` schlägt `compose up` fehl, wenn der Adapter beim Booten **nicht** steckt. Der Mount ist unabhängig davon, und die Cgroup-Regeln (`c 188:*`, `c 166:*`) erlauben das Öffnen. |
-| zusätzlich `group_add: ["20"]` | `/dev/ttyUSB0` gehört `root:dialout` mit Modus `0660`. Der Container läuft als uid 1001 – ohne Gruppe käme `EACCES` beim Öffnen. GID 20 ist auf Debian und Raspberry Pi OS `dialout`. |
+| `group_add` mit **ermittelter** GID | `/dev/ttyUSB0` gehört `root:dialout` mit Modus `0660`. Der Container läuft als uid 1001 – ohne die Gruppe käme `EACCES` beim Öffnen. Die GID wird beim Installieren gelesen (`getent group dialout`, zusätzlich die Gruppe der vorhandenen Gerätedatei) statt auf 20 geraten; `--group` überschreibt sie. |
 | `DOTNET_gcServer=0` | Der Server-GC legt mehrere Heaps an. Auf einem Pi 3 mit 1 GB Speicher ist das die falsche Wahl. |
 | `start_period: 60s` | .NET startet auf einem Pi 3 deutlich langsamer als auf einem Server – mit 25 s würde der Healthcheck zu früh greifen. |
 | `restart: unless-stopped` + `systemctl enable docker` | Zusammen ergibt das den Autostart. `unless-stopped` (statt `always`) heißt: wer den Container absichtlich stoppt, behält das nach einem Neustart. |

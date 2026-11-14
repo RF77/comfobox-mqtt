@@ -53,6 +53,7 @@ public sealed class SetupService
     private readonly BacnetOptions _bacnetOptions;
     private readonly MqttOptions _mqttOptions;
     private readonly ISerialPortScanner _scanner;
+    private readonly ISerialDeviceProbe _probe;
     private readonly ILogger<SetupService> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
@@ -65,6 +66,7 @@ public sealed class SetupService
     /// <param name="bacnetOptions">Die BACnet-Einstellungen.</param>
     /// <param name="mqttOptions">Die MQTT-Einstellungen.</param>
     /// <param name="scanner">Die Suche nach den seriellen Ports.</param>
+    /// <param name="probe">Die Geräte-Erkennung (für die Fehlerdiagnose).</param>
     /// <param name="logger">Logger.</param>
     /// <param name="loggerFactory">Die Logger-Fabrik (für den BACnet-Stack).</param>
     public SetupService(
@@ -74,6 +76,7 @@ public sealed class SetupService
         BacnetOptions bacnetOptions,
         MqttOptions mqttOptions,
         ISerialPortScanner scanner,
+        ISerialDeviceProbe probe,
         ILogger<SetupService> logger,
         ILoggerFactory loggerFactory)
     {
@@ -83,6 +86,7 @@ public sealed class SetupService
         ArgumentNullException.ThrowIfNull(bacnetOptions);
         ArgumentNullException.ThrowIfNull(mqttOptions);
         ArgumentNullException.ThrowIfNull(scanner);
+        ArgumentNullException.ThrowIfNull(probe);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
@@ -92,6 +96,7 @@ public sealed class SetupService
         _bacnetOptions = bacnetOptions;
         _mqttOptions = mqttOptions;
         _scanner = scanner;
+        _probe = probe;
         _logger = logger;
         _loggerFactory = loggerFactory;
     }
@@ -161,15 +166,22 @@ public sealed class SetupService
         var probe = ProbeSerialPort(port, baudrate);
         if (probe is not null)
         {
-            return Result(
-                false,
-                probe == "permission_denied"
-                    ? $"Keine Berechtigung für den Port '{port}' (Gruppe 'dialout' prüfen)."
-                    : probe == "busy"
-                        ? $"Der Port '{port}' wird von einem anderen Prozess gehalten."
-                        : $"Der Port '{port}' wurde nicht gefunden.",
-                probe,
-                stopwatch);
+            return probe switch
+            {
+                "permission_denied" => Result(
+                    false,
+                    SerialAccessMessages.PermissionDenied(port),
+                    probe,
+                    stopwatch,
+                    SerialAccessMessages.PermissionDeniedDetails(port, _probe.DescribeAccess(port))),
+                "busy" => Result(
+                    false,
+                    $"Der Port '{port}' wird von einem anderen Prozess gehalten.",
+                    probe,
+                    stopwatch,
+                    SerialAccessMessages.BusyDetails(port)),
+                _ => Result(false, $"Der Port '{port}' wurde nicht gefunden.", probe, stopwatch),
+            };
         }
 
         var timeout = TimeSpan.FromSeconds(_apiOptions.BacnetTestTimeoutSeconds);
@@ -813,11 +825,17 @@ public sealed class SetupService
     /// <summary>
     /// Erzeugt das Ergebnis eines Tests.
     /// </summary>
-    private static TestResultDto Result(bool ok, string message, string? hint, Stopwatch stopwatch) => new()
+    private static TestResultDto Result(
+        bool ok,
+        string message,
+        string? hint,
+        Stopwatch stopwatch,
+        IReadOnlyList<string>? details = null) => new()
     {
         Ok = ok,
         Message = message,
         Hint = hint,
         DurationMs = stopwatch.ElapsedMilliseconds,
+        Details = details,
     };
 }

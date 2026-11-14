@@ -232,9 +232,9 @@ wieder bei null.</p>
 <td><code>ls -l /dev/ttyUSB*</code> prüfen; Adapter direkt anstecken, kein Hub</td>
 </tr>
 <tr>
-<td>Port da, aber „Permission denied&quot;</td>
-<td>Gruppe fehlt</td>
-<td><code>sudo docker compose down &amp;&amp; sudo docker compose up -d</code> – die Compose-Datei enthält die Gruppe <code>dialout</code> bereits</td>
+<td>Port da, aber „Keine Berechtigung“</td>
+<td>Container hat die Gruppe der Gerätedatei nicht</td>
+<td>Ein-Zeilen-Befehl erneut ausführen (er ermittelt die GID jetzt selbst); die Oberfläche nennt Modus und Gruppen des Prozesses</td>
 </tr>
 <tr>
 <td><code>no_iam</code> im Protokoll</td>
@@ -257,6 +257,63 @@ wieder bei null.</p>
 <td><code>curl -s http://&lt;IP&gt;:8099/api/health</code> vom HA-Rechner testen</td>
 </tr>
 </tbody></table>
+<h3 id="welcher-port-ist-der-adapter">Welcher Port ist der Adapter?</h3>
+<p>Die Oberfläche nennt zu jedem Port, was dahintersteckt – Chipsatz,
+USB-Kennung und Treiber:</p>
+<table>
+<thead>
+<tr>
+<th>Anzeige</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>CH340 · USB-Seriell (1a86:7523)</code></td>
+<td><strong>Das ist der Adapter</strong> – diesen wählen</td>
+</tr>
+<tr>
+<td><code>ttyAMA0 · UART auf der Platine</code></td>
+<td>der serielle Anschluss des Pi selbst – nicht verwenden</td>
+</tr>
+</tbody></table>
+<p>Die Zeile <code>USB 1a86:7523</code> ist die Kennung des Chips. Ein Adapter mit einem
+anderen Chip (FTDI <code>0403:6001</code>, CP2102 <code>10c4:ea60</code>) wird genauso benannt.</p>
+<h3 id="keine-berechtigung-auf-dem-port">„Keine Berechtigung“ auf dem Port</h3>
+<p>Das Gateway läuft im Container als eigener Benutzer. Der Port gehört auf
+Raspberry Pi OS <code>root:dialout</code> mit Modus <code>0660</code> – ohne die Gruppe <code>dialout</code>
+geht er nicht auf. Der Ein-Zeilen-Befehl ermittelt die Gruppenkennung (GID)
+des Pi und trägt sie ein; ein erneuter Aufruf genügt:</p>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/install.sh | sudo sh
+</code></pre>
+<p>Die Oberfläche zeigt beim Testen jetzt die Fakten dazu:</p>
+<table>
+<thead>
+<tr>
+<th>Zeile</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Gerätedatei: /dev/ttyUSB0 · crw-rw---- · Modus 0660</code></td>
+<td>so darf die Datei aussehen</td>
+</tr>
+<tr>
+<td><code>Gateway-Prozess: uid 1001 · Gruppen 0, 20, 1001</code></td>
+<td>hier muss die Gruppe der Datei dabei sein</td>
+</tr>
+<tr>
+<td><code>Ursache: … fehlt die Gruppe …</code></td>
+<td>Lösung: <code>group_add</code> – erledigt <code>install.sh</code></td>
+</tr>
+<tr>
+<td><code>Ursache: … blockiert die Device-Cgroup …</code></td>
+<td>Lösung: <code>device_cgroup_rules</code> – steht in der Compose-Datei</td>
+</tr>
+</tbody></table>
+<p>Bleibt es dabei, nennt das Diagnoseskript die Ursache:</p>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/RF77/comfobox-mqtt/master/deploy/pi/serial-port-check.sh -o /tmp/serial-port-check.sh
+sudo sh /tmp/serial-port-check.sh --free-port --read 5
+</code></pre>
 <h3 id="adapter-wird-nicht-erkannt">Adapter wird nicht erkannt</h3>
 <p>Der Kernel von Raspberry Pi OS bringt die Treiber für CH340, FTDI, CP210x und
 PL2303 mit – hier ist das kein Thema wie auf einem NAS. Bleibt der Port

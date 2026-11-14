@@ -337,6 +337,15 @@ export const FR: Translations = {
     test: 'Tester la connexion',
     apply: 'Appliquer',
     appliesImmediately: 'Effet immédiat - la passerelle ne redémarre pas.',
+    kindUsb: 'Adaptateur USB',
+    kindBuiltin: 'UART de la carte',
+    kindOther: 'Port série',
+    usbIds: (vendorId, productId) => `USB ${vendorId}:${productId}`,
+    driver: (value) => `Pilote : ${value}`,
+    serialNumber: (value) => `Numéro de série : ${value}`,
+    detailsTitle: 'À vérifier',
+    adapterHint:
+      "L'adaptateur ComfoBox est un périphérique USB (le plus souvent un CH340). L'UART de la carte n'est pas le bon port.",
   },
 
   setupSteps: {

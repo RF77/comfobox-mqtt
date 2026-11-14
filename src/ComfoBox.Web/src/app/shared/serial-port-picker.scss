@@ -88,3 +88,27 @@
 .cb-result {
   display: block;
 }
+
+.cb-port-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.15rem;
+}
+
+.cb-adapter-hint {
+  margin: -0.5rem 0 1rem;
+}
+
+.cb-details-title {
+  margin: 0.6rem 0 0.2rem;
+  font-weight: 600;
+}
+
+.cb-details {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}

@@ -12,6 +12,7 @@
 #   --version X.Y.Z   Image-Version (Vorgabe: neuestes GitHub-Release)
 #   --port N          Port der Web-Oberfläche auf dem Pi (Vorgabe: 8099)
 #   --offline DATEI   Image aus einer .tar.gz laden statt aus der Registry
+#   --group GID       GID für den seriellen Zugriff (Vorgabe: dialout des Systems)
 #   --uninstall       Container und Compose-Datei entfernen (Daten bleiben)
 #   --help            Hilfe anzeigen
 #
@@ -35,6 +36,7 @@ VOLUME="comfobox-data"
 WEB_PORT="8099"
 VERSION=""
 OFFLINE=""
+SERIAL_GROUP=""
 UNINSTALL=0
 
 # ---------------------------------------------------------------------------
@@ -62,6 +64,7 @@ Optionen (bei "| sh" so uebergeben: ... | sudo sh -s -- --port 8099):
   --version X.Y.Z   Image-Version (Vorgabe: neuestes GitHub-Release)
   --port N          Port der Web-Oberflaeche auf dem Pi (Vorgabe: 8099)
   --offline DATEI   Image aus einer .tar.gz laden statt aus der Registry
+  --group GID       GID fuer den seriellen Zugriff (Vorgabe: dialout des Systems)
   --uninstall       Container und Compose-Datei entfernen (Daten bleiben)
   --help            Diese Hilfe anzeigen
 
@@ -76,6 +79,7 @@ while [ $# -gt 0 ]; do
         --version)   [ -n "${2:-}" ] || die "--version braucht eine Angabe"; VERSION="$2"; shift 2 ;;
         --port)      [ -n "${2:-}" ] || die "--port braucht eine Zahl"; WEB_PORT="$2"; shift 2 ;;
         --offline)   [ -n "${2:-}" ] || die "--offline braucht eine Datei"; OFFLINE="$2"; shift 2 ;;
+        --group)     [ -n "${2:-}" ] || die "--group braucht eine GID"; SERIAL_GROUP="$2"; shift 2 ;;
         --uninstall) UNINSTALL=1; shift ;;
         --help|-h)   usage; exit 0 ;;
         *)           die "Unbekannte Option '$1' (--help zeigt die Möglichkeiten)" ;;
@@ -230,6 +234,47 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5b. Gruppen fuer den seriellen Zugriff
+# ---------------------------------------------------------------------------
+step "Gruppen fuer den seriellen Zugriff"
+
+# Ein USB-Seriell-Knoten gehoert root:dialout mit Modus 0660 - der Container
+# laeuft als uid 1001 und braucht deshalb die Gruppe der GERAETEDATEI.
+#
+# Die GID wird hier ERMITTELT statt geraten: 'dialout' ist auf Raspberry Pi OS
+# und Debian die 20, kann aber abweichen. Zusaetzlich wird die Gruppe der
+# tatsaechlich vorhandenen Geraetedatei gelesen - sie ist der zweite
+# Kandidat. Beides landet in 'group_add' der Compose-Datei.
+DIALOUT_GID="${SERIAL_GROUP:-}"
+if [ -z "$DIALOUT_GID" ]; then
+    DIALOUT_GID=$(getent group dialout 2>/dev/null | cut -d: -f3 || true)
+fi
+if [ -z "$DIALOUT_GID" ]; then
+    DIALOUT_GID=$(awk -F: '$1=="dialout" {print $3}' /etc/group 2>/dev/null || true)
+fi
+[ -n "$DIALOUT_GID" ] || DIALOUT_GID=20
+
+DEV_GID=""
+for d in /dev/ttyUSB0 /dev/ttyACM0; do
+    if [ -e "$d" ]; then
+        DEV_GID=$(stat -c '%g' "$d" 2>/dev/null || true)
+        [ -n "$DEV_GID" ] && break
+    fi
+done
+
+# Die Zeilen fuer den group_add-Block (Einrueckung wie in der Compose-Datei).
+GROUP_LINES="      - \"${DIALOUT_GID}\""
+if [ -n "$DEV_GID" ] && [ "$DEV_GID" != "$DIALOUT_GID" ]; then
+    GROUP_LINES="${GROUP_LINES}
+      - \"${DEV_GID}\""
+    info "dialout: ${DIALOUT_GID} · Geraetedatei: ${DEV_GID}"
+elif [ -n "$DEV_GID" ]; then
+    info "dialout: ${DIALOUT_GID} (entspricht der Geraetedatei)"
+else
+    info "dialout: ${DIALOUT_GID} (kein Adapter gesteckt - Abgleich spaeter)"
+fi
+
+# ---------------------------------------------------------------------------
 # 6. Compose-Datei schreiben
 # ---------------------------------------------------------------------------
 step "Konfiguration anlegen"
@@ -279,11 +324,12 @@ services:
       - "c 188:* rwm"
       - "c 166:* rwm"
 
-    # /dev/ttyUSB0 gehört root:dialout mit Modus 0660. Der Container läuft
-    # als uid 1001 und braucht deshalb die Gruppe dialout (GID 20 auf Debian
-    # und Raspberry Pi OS).
+    # /dev/ttyUSB0 gehoert root:dialout mit Modus 0660. Der Container laeuft
+    # als uid 1001 und braucht deshalb die Gruppe der Geraetedatei. Die GID
+    # wurde oben auf diesem System ermittelt (dialout und die Gruppe der
+    # vorhandenen Geraetedatei).
     group_add:
-      - "20"
+${GROUP_LINES}
 
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/api/health"]
