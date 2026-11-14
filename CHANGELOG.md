@@ -13,6 +13,20 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Ein zweiter Start brach ab, obwohl der Gateway aus dem ersten Lauf noch
+  lief** (`FEHLER: Port 8099 ist von einem anderen Prozess belegt`). Die
+  Portprüfung lief **vor** dem Beenden. Jetzt wird zuerst die eigene Instanz
+  beendet (PID aus `app.pid`, zusätzlich `pkill -f …/ComfoBox.Gateway`) und
+  erst danach geprüft, ob der Port frei ist. Das Skript ist damit
+  **wiederholbar**: ein zweiter Aufruf ist ein Update, kein Abbruch.
+  Zwei Ergänzungen dazu:
+  - Die PID aus `app.pid` wird gegen `/proc/<pid>/cmdline` geprüft, bevor sie
+    beendet wird. Nach einem Neustart kann dieselbe PID an ein fremdes
+    Programm vergeben sein – das darf nicht abgeschossen werden.
+  - Die Portabfrage kennt `ss` **und** `netstat` und meldet nur dann einen
+    fremden Prozess, wenn nach dem Stoppen wirklich noch etwas lauscht.
+    Die Daten (`config.json`, 24-h-Schreibzähler, Protokolle) bleiben in
+    `~/comfobox-dev/data` erhalten.
 - **`/dev/ttyUSB0` wurde als „UART auf der Platine" angezeigt.** Die
   Erkennung stufte einen Adapter als Platinen-Anschluss ein, sobald der
   `sysfs`-Symlink `/sys/class/tty/…/device` nicht auflösbar war – obwohl der

@@ -31,8 +31,16 @@ Was passiert:
 2. `dotnet publish -r linux-arm64 --self-contained`,
 3. `tar.gz` packen, daneben ein **Startskript** erzeugen, beides in **einem**
    `scp` nach `~` kopieren,
-4. per `ssh` das Startskript ausführen: alter Prozess beenden, entpacken,
-   starten, auf `/api/health` warten.
+4. per `ssh` das Startskript ausführen: **die laufende Instanz beenden**,
+   entpacken, starten, auf `/api/health` warten.
+
+> **Das Skript ist wiederholbar.** Ein zweiter Aufruf ist ein Update: die
+> laufende Instanz wird zuerst beendet (PID aus `~/comfobox-dev/app.pid`,
+> zusätzlich `pkill -f …/ComfoBox.Gateway`), erst danach wird geprüft, ob der
+> Port frei ist. Die Daten bleiben – `config.json`, der 24-h-Schreibzähler und
+> die Protokolle liegen in `~/comfobox-dev/data` und werden nicht angefasst.
+> Nur wenn ein **fremder** Prozess den Port hält (meist der Container) bricht
+> das Skript mit Exit 4 ab.
 
 Es sind genau **zwei** Verbindungen – also zwei Passwortabfragen. Mit
 hinterlegtem Schlüssel entfällt auch das:

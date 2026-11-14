@@ -268,7 +268,7 @@ ACTION="${1:-start}"
 stop_app() {
     if [ -f "$PIDFILE" ]; then
         PID=$(cat "$PIDFILE" 2>/dev/null || true)
-        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && is_our_process "$PID"; then
             kill "$PID" 2>/dev/null || true
             i=0
             while [ "$i" -lt 10 ] && kill -0 "$PID" 2>/dev/null; do
@@ -283,6 +283,39 @@ stop_app() {
 
     # Ein Prozess aus einem frueheren Lauf ohne PID-Datei.
     pkill -f "$APPDIR/ComfoBox.Gateway" 2>/dev/null || true
+}
+
+# Gehoert die PID wirklich zu unserem Gateway?
+#
+# Nach einem Neustart des Pi kann die PID aus app.pid an ein voellig anderes
+# Programm vergeben sein - das darf nicht abgeschossen werden.
+is_our_process() {
+    _cmdline="/proc/$1/cmdline"
+
+    if [ -r "$_cmdline" ]; then
+        tr '\0' ' ' < "$_cmdline" 2>/dev/null | grep -q "comfobox-dev/app/ComfoBox.Gateway"
+        return $?
+    fi
+
+    # Ohne /proc (z. B. macOS) bleibt nur die Annahme, dass die PID stimmt.
+    return 0
+}
+
+# Lauscht jemand auf dem Port?
+port_busy() {
+    if command -v ss >/dev/null 2>&1; then
+        ss -ltn 2>/dev/null | grep -q ":$1 "
+        return $?
+    fi
+
+    if command -v netstat >/dev/null 2>&1; then
+        netstat -ltn 2>/dev/null | grep -q ":$1 "
+        return $?
+    fi
+
+    # Ohne Werkzeug laesst sich nichts feststellen - dann wird einfach
+    # gestartet und der Start selbst meldet, wenn der Port nicht aufgeht.
+    return 1
 }
 
 case "$ACTION" in
@@ -308,18 +341,31 @@ case "$ACTION" in
             exit 2
         fi
 
-        # Laeuft noch etwas anderes auf dem Port? Meist der Container - der
-        # haelt auch den seriellen Port, dann ist der Test ohnehin sinnlos.
-        if command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -q ":$PORT "; then
-            echo "FEHLER: auf Port $PORT lauscht bereits ein Prozess." >&2
+        # 1. Die **eigene** Instanz beenden.
+        #
+        # Das Skript ist wiederholbar: ein zweiter Aufruf ist ein Update, kein
+        # Abbruch. Deshalb wird zuerst gestoppt und erst danach geprueft, ob
+        # der Port frei ist. (Vorher lief die Pruefung zuerst - ein laufender
+        # Gateway blockierte damit seinen eigenen Neustart.)
+        stop_app
+
+        # Dem Prozess einen Moment geben, bis der Port wirklich frei ist.
+        i=0
+        while [ "$i" -lt 10 ] && port_busy "$PORT"; do
+            i=$((i + 1))
+            sleep 1
+        done
+
+        # 2. Ist der Port danach noch belegt, ist es ein **fremder** Prozess -
+        #    meist der Container. Der haelt auch den seriellen Port, dann ist
+        #    der Test ohnehin sinnlos.
+        if port_busy "$PORT"; then
+            echo "FEHLER: Port $PORT ist von einem anderen Prozess belegt." >&2
             echo "        Meist der Container:" >&2
             echo "          sudo docker compose -f /opt/comfobox/compose.yaml stop" >&2
             echo "        Sonst nachsehen mit:  sudo ss -ltnp | grep :$PORT" >&2
             exit 4
         fi
-
-        stop_app
-        sleep 1
 
         rm -rf "$APPDIR"
         mkdir -p "$APPDIR" "$BASE/data/logs"
@@ -394,11 +440,9 @@ case "$ACTION" in
                 exit 3
             fi
 
-            if command -v ss >/dev/null 2>&1; then
-                if ss -ltn 2>/dev/null | grep -q ":$PORT "; then
-                    LISTENING=1
-                    break
-                fi
+            if port_busy "$PORT"; then
+                LISTENING=1
+                break
             fi
 
             i=$((i + 1))
