@@ -65,6 +65,13 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Das Startskript beendet den alten Prozess, entpackt, prüft die
   `dialout`-Gruppe und meldet einen sofort beendeten Prozess samt Protokoll.
   Es lässt sich von Hand benutzen: `sh ~/comfobox-dev-start.sh start|stop|logs`.
+- **`deploy/pi/dev-deploy.ps1` meldete „Start fehlgeschlagen", obwohl der
+  Gateway lief.** Die Hilfsfunktion für die SSH-Aufrufe gab die Ausgabe von
+  `ssh` **und** den Exit-Code zurück. `$code` war damit ein Array aus den
+  Zeilen des Pi (`Gruppe dialout: vorhanden`, `gestartet (PID …)`) und der
+  abschließenden `0` – der Vergleich `-ne 0` schlug immer zu. Die Ausgabe geht
+  jetzt per `Out-Host` an die Konsole, zurück kommt nur der Exit-Code. Schlägt
+  der Start wirklich fehl, wird zusätzlich das Protokoll des Pi angezeigt.
 
 ## [1.0.4] – 2026-11-14
 

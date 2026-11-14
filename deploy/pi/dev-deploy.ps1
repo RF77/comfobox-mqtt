@@ -107,7 +107,15 @@ function Invoke-Ssh {
         [string]$Command
     )
 
-    & ssh @sshArgs $remote $Command
+    # `| Out-Host` leitet die Ausgabe an die Konsole weiter, **ohne** sie in
+    # den Ausgabestrom zu schreiben.
+    #
+    # Ohne das landet jede Zeile, die ssh auf stdout schreibt, im Rückgabewert:
+    # `$code = Invoke-Ssh '...'` wäre dann ein Array aus Textzeilen **und** dem
+    # Exit-Code. Der Vergleich `$code -ne 0` ist damit immer wahr - der Lauf
+    # bricht ab, obwohl der Start geklappt hat (die Meldung enthielt den Text
+    # von ssh und die 0 am Ende).
+    & ssh @sshArgs $remote $Command | Out-Host
 
     return $LASTEXITCODE
 }
@@ -369,7 +377,11 @@ Write-Step 'Auf dem Pi entpacken und starten'
 $startCode = Invoke-Ssh "sh ~/$remoteScriptName start $Port"
 
 if ($startCode -ne 0) {
-    throw "Der Start ist fehlgeschlagen (Exit $startCode). Das Protokoll steht oben."
+    Write-Host ''
+    Write-Warning "Der Start ist fehlgeschlagen (Exit $startCode)."
+    Write-Host '  Protokoll des Pi:' -ForegroundColor DarkGray
+    $null = Invoke-Ssh 'tail -n 40 ~/comfobox-dev/run.log'
+    exit 1
 }
 
 # ---------------------------------------------------------------------------
@@ -392,7 +404,9 @@ for ($i = 1; $i -le 60; $i++) {
 
 if (-not $healthy) {
     Write-Warning 'Der Gateway antwortet nicht. Protokoll:'
-    Invoke-Ssh 'tail -n 40 ~/comfobox-dev/run.log' | Out-Null
+
+    # Die Ausgabe erscheint direkt auf der Konsole (siehe Invoke-Ssh).
+    $null = Invoke-Ssh 'tail -n 40 ~/comfobox-dev/run.log'
     exit 1
 }
 
