@@ -41,8 +41,10 @@
       styleClass="w-full cb-result"
     >
       <p>{{ result.message }}</p>
-      @if (!result.ok && result.hint) {
-        <p>{{ hintText(result.hint) }}</p>
+      @if (!result.ok) {
+        @if (hintText(result.hint); as hintLine) {
+          <p>{{ hintLine }}</p>
+        }
         @if (result.hint === 'no_iam') {
           <p>
             <a routerLink="/help/anschluss" fragment="baudrate">
@@ -52,6 +54,20 @@
         }
       }
       <p class="cb-hint">{{ t().common.duration(result.durationMs) }}</p>
+
+      <!--
+        Die überprüfbaren Fakten (Rechte der Gerätedatei, Gruppen des
+        Prozesses, gefundene Ursache). Ohne sie bleibt bei „Keine
+        Berechtigung" nur Raten - und der falsche nächste Schritt.
+      -->
+      @if (result.details?.length) {
+        <p class="cb-details-title">{{ t().serial.detailsTitle }}</p>
+        <ul class="cb-details">
+          @for (detail of result.details; track detail) {
+            <li>{{ detail }}</li>
+          }
+        </ul>
+      }
     </p-message>
   }
 </p-card>

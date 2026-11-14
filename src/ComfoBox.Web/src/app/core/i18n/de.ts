@@ -443,7 +443,8 @@ export const DE: Translations = {
     hintNoIam:
       'Die ComfoBox antwortet nicht. Prüfen Sie: (1) steht sie auf 38400 Baud und wurde neu gestartet? (2) sind A und B richtig angeschlossen? (3) ist der Adapter an einem anderen Port?',
     hintBusy: 'Der Port wird bereits von einem anderen Programm verwendet.',
-    hintPermissionDenied: 'Keine Berechtigung auf den Port. Die Gruppe „dialout" fehlt.',
+    hintPermissionDenied:
+      'Dem Gateway fehlt das Recht, die Gerätedatei zu öffnen. Die Prüf-Angaben darunter nennen die Ursache.',
     hintMqttUnreachable:
       'Der Broker ist nicht erreichbar. Prüfen Sie Host, Port und ob der Broker läuft.',
     hintMqttAuthFailed:

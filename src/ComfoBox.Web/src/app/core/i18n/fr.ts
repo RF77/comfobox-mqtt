@@ -444,7 +444,8 @@ export const FR: Translations = {
     hintNoIam:
       "La ComfoBox ne répond pas. Vérifiez : (1) est-elle réglée sur 38400 bauds et redémarrée ? (2) A et B sont-ils correctement câblés ? (3) l’adaptateur est-il sur un autre port ?",
     hintBusy: "Le port est déjà utilisé par un autre programme.",
-    hintPermissionDenied: 'Aucune autorisation sur le port. Le groupe « dialout » est manquant.',
+    hintPermissionDenied:
+      'La passerelle n’a pas le droit d’ouvrir le fichier de périphérique. Les détails ci-dessous en donnent la cause.',
     hintMqttUnreachable:
       "Le broker n’est pas joignable. Vérifiez l’hôte, le port et que le broker fonctionne.",
     hintMqttAuthFailed:

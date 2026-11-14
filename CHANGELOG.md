@@ -13,6 +13,43 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Fixed
 
+- **Nach „Übernehmen und starten" kam der Gateway nicht zurück, wenn er als
+  normales Programm läuft** (Testlauf per `dev-deploy.ps1`, ohne Docker). Der
+  Neustart ist bewusst *in-process*: `ServiceControl` beendet den Host
+  kontrolliert und schreibt `data/restart.requested` – im Container startet
+  ihn danach `restart: unless-stopped`, beim Direktstart niemand. Die
+  Oberfläche wartete 90 s auf `/api/health` und lief in die Zeitüberschreitung.
+  Jetzt läuft der Gateway unter einem **Supervisor** (dasselbe Startskript,
+  Aktion `run-loop`):
+  - Marker vorhanden ⇒ neu starten (Neustart über die Oberfläche);
+  - Exit 0 ohne Marker ⇒ regulär beendet, kein Neustart;
+  - Absturz ⇒ Neustart mit Backoff 2/4/6/8 s, nach fünf Fehlstarts in Folge
+    gibt der Supervisor auf (Exit 7), damit eine Fehlkonfiguration das
+    Protokoll nicht flutet;
+  - `stop` legt `supervisor.stop` an, beendet den Supervisor (der nimmt sein
+    Kind mit) und räumt `app.pid`/`app.child.pid` ab.
+  Ergänzend erkennt das Startskript eine vorhandene `config.json` und setzt
+  die Port-Vorgabe aus der Erkennung nur noch beim **ersten** Start – sonst
+  hätte die Umgebungsvariable den im Assistenten gewählten Port überstimmt.
+- **Der BACnet-Test im Assistenten meldete „Keine Berechtigung … die Gruppe
+  `dialout` fehlt", obwohl die Rechte stimmten.** Der Gateway hält seinen
+  Port selbst; ein zweiter Öffnungsversuch scheitert – und .NET meldet das
+  unter Linux mit derselben `UnauthorizedAccessException` wie fehlende
+  Rechte. Der Assistent prüft jetzt zuerst, ob der gewählte Port der
+  **aktive** ist, und meldet dann den Zustand der laufenden Verbindung
+  (`BacnetSerialManager.Test`), statt den Port ein zweites Mal zu öffnen.
+  Dazu drei Korrekturen an der Diagnose:
+  - Die Ursache wird aus den Fakten abgeleitet: liegt die Gruppe der
+    Gerätedatei vor, kann sie nicht schuld sein – dann hält ein anderer
+    Prozess den Port (Hinweis `busy` statt `permission_denied`).
+  - Der Lösungssatz richtet sich nach dem Fundort: auf dem Host
+    `usermod -aG <gruppe> <benutzer>`, im Container `group_add`.
+  - Die Gruppe kommt aus `/run/udev` (Gerätenummer → `U:`/`G:`), nicht mehr
+    aus der Annahme „dialout ist 20".
+- **Die Prüf-Angaben des Gateways wurden im Assistenten nicht angezeigt.**
+  `TestResultDto.details` war im Modell vorhanden, die Schritte 2 und 3 haben
+  es aber ignoriert – sichtbar blieb der pauschale Hinweis. Beide Schritte
+  zeigen die Liste jetzt (wie die Port-Auswahl auf der Konfigurationsseite).
 - **Ein zweiter Start brach ab, obwohl der Gateway aus dem ersten Lauf noch
   lief** (`FEHLER: Port 8099 ist von einem anderen Prozess belegt`). Die
   Portprüfung lief **vor** dem Beenden. Jetzt wird zuerst die eigene Instanz

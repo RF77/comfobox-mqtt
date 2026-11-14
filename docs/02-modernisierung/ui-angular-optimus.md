@@ -219,7 +219,18 @@ kein linearer Formular-Wizard, sondern ein Seitenschritt mit Vor/Zurück und per
 | `serial_port_not_found` | „Der gewählte Port ist nicht mehr vorhanden. Bitte Adapter neu einstecken oder einen anderen Port wählen." |
 | `no_iam` | „Die ComfoBox antwortet nicht. Prüfen Sie: (1) steht sie auf 38400 Baud und wurde neu gestartet? (2) sind A und B richtig angeschlossen? (3) ist der Adapter an einem anderen Port?" |
 | `busy` | „Der Port wird bereits von einem anderen Programm verwendet." |
-| `permission_denied` | „Keine Berechtigung auf den Port. Die Gruppe *dialout* fehlt." |
+| `permission_denied` | „Dem Gateway fehlt das Recht, die Gerätedatei zu öffnen. Die Prüf-Angaben darunter nennen die Ursache." |
+
+> **`details` sind Pflicht, nicht Beiwerk.** Bei einem Zugriffsfehler liefert das
+> Gateway die überprüfbaren Fakten mit (Modus der Gerätedatei, Besitzer und
+> Gruppe aus `/run/udev`, Benutzer und Gruppen des Prozesses, daraus abgeleitete
+> Ursache und Lösung). Der Assistent zeigt sie als Liste unter der Meldung –
+> ohne sie bleibt bei „Keine Berechtigung" nur Raten.
+>
+> Liegt die Gruppe der Gerätedatei vor, kann sie nicht die Ursache sein: unter
+> Linux meldet .NET dieselbe Ausnahme, wenn ein anderer Prozess den Port bereits
+> exklusiv geöffnet hat. In dem Fall lautet der Hinweis `busy`, nicht
+> `permission_denied`.
 
 ### 3.5 Schritt 3 – MQTT
 

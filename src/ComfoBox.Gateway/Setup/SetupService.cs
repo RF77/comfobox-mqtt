@@ -8,6 +8,7 @@ using System.Text.Json.Nodes;
 using ComfoBox.Bacnet;
 using ComfoBox.Bacnet.Serial;
 using ComfoBox.Gateway.Api.Models;
+using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Security;
@@ -54,6 +55,7 @@ public sealed class SetupService
     private readonly MqttOptions _mqttOptions;
     private readonly ISerialPortScanner _scanner;
     private readonly ISerialDeviceProbe _probe;
+    private readonly BacnetSerialManager _serial;
     private readonly ILogger<SetupService> _logger;
     private readonly ILoggerFactory _loggerFactory;
 
@@ -67,6 +69,7 @@ public sealed class SetupService
     /// <param name="mqttOptions">Die MQTT-Einstellungen.</param>
     /// <param name="scanner">Die Suche nach den seriellen Ports.</param>
     /// <param name="probe">Die Geräte-Erkennung (für die Fehlerdiagnose).</param>
+    /// <param name="serial">Die Verwaltung der laufenden seriellen Schnittstelle.</param>
     /// <param name="logger">Logger.</param>
     /// <param name="loggerFactory">Die Logger-Fabrik (für den BACnet-Stack).</param>
     public SetupService(
@@ -77,6 +80,7 @@ public sealed class SetupService
         MqttOptions mqttOptions,
         ISerialPortScanner scanner,
         ISerialDeviceProbe probe,
+        BacnetSerialManager serial,
         ILogger<SetupService> logger,
         ILoggerFactory loggerFactory)
     {
@@ -87,6 +91,7 @@ public sealed class SetupService
         ArgumentNullException.ThrowIfNull(mqttOptions);
         ArgumentNullException.ThrowIfNull(scanner);
         ArgumentNullException.ThrowIfNull(probe);
+        ArgumentNullException.ThrowIfNull(serial);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(loggerFactory);
 
@@ -97,6 +102,7 @@ public sealed class SetupService
         _mqttOptions = mqttOptions;
         _scanner = scanner;
         _probe = probe;
+        _serial = serial;
         _logger = logger;
         _loggerFactory = loggerFactory;
     }
@@ -163,17 +169,33 @@ public sealed class SetupService
             return Result(false, "Es wurde kein serielle Port angegeben.", "serial_port_not_found", stopwatch);
         }
 
+        // Der laufende Gateway hält den konfigurierten Port selbst. Ein
+        // zweiter Öffnungsversuch kann nur scheitern - und .NET meldet das
+        // unter Linux wie fehlende Rechte. Deshalb wird für den aktiven Port
+        // der **aktuelle Zustand** gemeldet (dieselbe Logik wie auf der
+        // Konfigurationsseite).
+        if (_serial.IsActivePort(port))
+        {
+            return _serial.Test(port, baudrate);
+        }
+
         var probe = ProbeSerialPort(port, baudrate);
         if (probe is not null)
         {
-            return probe switch
+            if (probe == "permission_denied")
             {
-                "permission_denied" => Result(
+                var access = _probe.DescribeAccess(port);
+
+                return Result(
                     false,
                     SerialAccessMessages.PermissionDenied(port),
-                    probe,
+                    SerialAccessMessages.DeniedHint(access),
                     stopwatch,
-                    SerialAccessMessages.PermissionDeniedDetails(port, _probe.DescribeAccess(port))),
+                    SerialAccessMessages.PermissionDeniedDetails(port, access));
+            }
+
+            return probe switch
+            {
                 "busy" => Result(
                     false,
                     $"Der Port '{port}' wird von einem anderen Prozess gehalten.",

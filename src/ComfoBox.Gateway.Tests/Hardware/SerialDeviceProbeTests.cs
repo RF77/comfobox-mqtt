@@ -158,14 +158,45 @@ public sealed class SerialDeviceProbeTests : IDisposable
         Assert.True(access.Exists);
         Assert.Equal(1001, access.Uid);
         Assert.Equal([0, 20, 1001], access.ProcessGroups);
-        Assert.True(access.HasDialoutGroup);
+        Assert.True(access.HasRequiredGroup);
     }
 
     /// <summary>
-    /// Fehlt die Gruppe, sagt die Meldung „group_add".
+    /// Die Gruppe der Gerätedatei kommt aus den udev-Daten.
+    /// </summary>
+    /// <remarks>
+    /// Ohne diese Angabe müsste die Diagnose <c>dialout</c> raten. Mit ihr
+    /// nennt sie die Gruppe, die wirklich fehlt - auch wenn sie auf dem
+    /// System anders heißt oder eine andere GID hat.
+    /// </remarks>
+    [Fact]
+    public void Die_Gruppe_Der_Geraetedatei_Kommt_Aus_Udev()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "sys", "class", "tty", "ttyUSB0"));
+        File.WriteAllText(
+            Path.Combine(_root, "sys", "class", "tty", "ttyUSB0", "uevent"),
+            "MAJOR=188\nMINOR=0\nDEVNAME=ttyUSB0\n");
+
+        Directory.CreateDirectory(Path.Combine(_root, "run-udev", "data"));
+        File.WriteAllText(Path.Combine(_root, "run-udev", "data", "c188:0"), "U:0\nG:20\n");
+        File.WriteAllText(Path.Combine(_root, "etc-group"), "root:x:0:\ndialout:x:20:pi\n");
+
+        var port = Path.Combine(_root, "ttyUSB0");
+        File.WriteAllText(port, string.Empty);
+
+        var access = CreateProbe("Uid:\t1000\t1000\t1000\t1000\nGroups:\t0 1000\n").DescribeAccess(port);
+
+        Assert.Equal(0, access.DeviceUid);
+        Assert.Equal(20, access.DeviceGid);
+        Assert.Equal("dialout", access.DeviceGroupName);
+        Assert.False(access.HasRequiredGroup);
+    }
+
+    /// <summary>
+    /// Fehlt die Gruppe im Container, nennt die Meldung „group_add".
     /// </summary>
     [Fact]
-    public void Ohne_Dialout_Nennt_Die_Meldung_Die_Gruppe()
+    public void Ohne_Dialout_Im_Container_Nennt_Die_Meldung_Group_Add()
     {
         var access = new SerialPortAccess
         {
@@ -174,6 +205,7 @@ public sealed class SerialDeviceProbeTests : IDisposable
             ModeText = "crw-rw----",
             Uid = 1001,
             ProcessGroups = [0, 1001],
+            IsContainer = true,
         };
 
         var details = SerialAccessMessages.PermissionDeniedDetails("/dev/ttyUSB0", access);
@@ -183,24 +215,79 @@ public sealed class SerialDeviceProbeTests : IDisposable
     }
 
     /// <summary>
-    /// Ist die Gruppe vorhanden, bleibt die Device-Cgroup als Ursache.
+    /// Auf dem Host hilft kein <c>group_add</c>, sondern <c>usermod</c>.
     /// </summary>
+    /// <remarks>
+    /// Regression: der Assistent schlug im Entwicklungsbetrieb (Gateway
+    /// läuft als SSH-Benutzer) eine Compose-Datei vor, die es dort gar nicht
+    /// gibt.
+    /// </remarks>
     [Fact]
-    public void Mit_Dialout_Nennt_Die_Meldung_Die_Device_Cgroup()
+    public void Ohne_Dialout_Auf_Dem_Host_Nennt_Die_Meldung_Usermod()
     {
         var access = new SerialPortAccess
         {
             Exists = true,
             Mode = "0660",
             ModeText = "crw-rw----",
-            Uid = 1001,
-            ProcessGroups = [0, 20, 1001],
+            Uid = 1000,
+            ProcessUser = "pi",
+            ProcessGroups = [0, 1000],
+            IsContainer = false,
         };
 
         var details = SerialAccessMessages.PermissionDeniedDetails("/dev/ttyUSB0", access);
 
-        Assert.Contains(details, line => line.Contains("device_cgroup_rules", StringComparison.Ordinal));
+        Assert.Contains(details, line => line.Contains("usermod -aG dialout pi", StringComparison.Ordinal));
         Assert.DoesNotContain(details, line => line.Contains("group_add", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Sind die Rechte vorhanden, hält ein anderer Prozess den Port.
+    /// </summary>
+    /// <remarks>
+    /// Regression: der laufende Gateway hält seinen Port selbst; ein zweiter
+    /// Öffnungsversuch scheitert unter Linux mit derselben Ausnahme wie
+    /// fehlende Rechte. Die Meldung behauptete dann „dialout fehlt" - und
+    /// schickte den Benutzer in die falsche Richtung.
+    /// </remarks>
+    [Fact]
+    public void Mit_Dialout_Nennt_Die_Meldung_Den_Anderen_Halter()
+    {
+        var access = new SerialPortAccess
+        {
+            Exists = true,
+            Mode = "0660",
+            ModeText = "crw-rw----",
+            Uid = 1000,
+            ProcessGroups = [0, 20, 1000],
+            IsContainer = true,
+        };
+
+        var details = SerialAccessMessages.PermissionDeniedDetails("/dev/ttyUSB0", access);
+
+        Assert.Contains(details, line => line.Contains("anderen Halter", StringComparison.Ordinal));
+        Assert.DoesNotContain(details, line => line.Contains("group_add", StringComparison.Ordinal));
+        Assert.DoesNotContain(details, line => line.Contains("device_cgroup_rules", StringComparison.Ordinal));
+
+        // Und der Fehlercode passt dazu: es ist kein Rechteproblem.
+        Assert.Equal("busy", SerialAccessMessages.DeniedHint(access));
+    }
+
+    /// <summary>
+    /// Ohne die Gruppe bleibt es beim Rechteproblem.
+    /// </summary>
+    [Fact]
+    public void Ohne_Gruppe_Meldet_Der_Fehlercode_Permission_Denied()
+    {
+        var access = new SerialPortAccess
+        {
+            Exists = true,
+            Uid = 1000,
+            ProcessGroups = [0, 1000],
+        };
+
+        Assert.Equal("permission_denied", SerialAccessMessages.DeniedHint(access));
     }
 
     /// <summary>
@@ -213,7 +300,30 @@ public sealed class SerialDeviceProbeTests : IDisposable
 
         var details = SerialAccessMessages.PermissionDeniedDetails("/dev/ttyUSB0", access);
 
-        Assert.Contains(details, line => line.Contains("gibt es in diesem Container nicht", StringComparison.Ordinal));
+        Assert.Contains(details, line => line.Contains("gibt es hier nicht", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Die Fakten enthalten keine Ursachen-Deutung.
+    /// </summary>
+    [Fact]
+    public void Die_Fakten_Deuten_Nichts()
+    {
+        var access = new SerialPortAccess
+        {
+            Exists = true,
+            Mode = "0660",
+            ModeText = "crw-rw----",
+            Uid = 1000,
+            ProcessGroups = [0, 1000],
+        };
+
+        var facts = SerialAccessMessages.AccessFacts("/dev/ttyUSB0", access);
+
+        Assert.Equal(2, facts.Count);
+        Assert.Contains(facts, line => line.Contains("crw-rw----", StringComparison.Ordinal));
+        Assert.Contains(facts, line => line.Contains("Gruppe 20 fehlt", StringComparison.Ordinal));
+        Assert.DoesNotContain(facts, line => line.Contains("Ursache", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -244,6 +354,12 @@ public sealed class SerialDeviceProbeTests : IDisposable
     /// <summary>
     /// Erzeugt die Sonde mit den Wurzeln des Testverzeichnisses.
     /// </summary>
+    /// <remarks>
+    /// Auch <c>/run/udev</c> und <c>/etc/group</c> liegen im Testverzeichnis.
+    /// Damit hängt das Ergebnis nicht davon ab, auf welchem Rechner der Test
+    /// läuft - ein echter <c>dialout</c>-Eintrag würde die Erwartungen sonst
+    /// verfälschen.
+    /// </remarks>
     private SerialDeviceProbe CreateProbe(string? procStatus = null)
     {
         Directory.CreateDirectory(_root);
@@ -254,6 +370,8 @@ public sealed class SerialDeviceProbeTests : IDisposable
         return new SerialDeviceProbe(
             Path.Combine(_root, "sys"),
             Path.Combine(_root, "dev"),
-            statusPath);
+            statusPath,
+            Path.Combine(_root, "run-udev"),
+            Path.Combine(_root, "etc-group"));
     }
 }

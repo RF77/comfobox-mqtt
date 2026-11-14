@@ -44,8 +44,8 @@ export class BacnetStep {
     { label: '76800', value: 76800 },
   ]);
 
-  /** Der Text zum Fehlerhinweis. */
-  hintText(hint: string): string {
+  /** Der Text zum Fehlerhinweis (leer, wenn es keinen gibt). */
+  hintText(hint: string | null): string {
     return hintText(this.t().setupSteps, hint);
   }
 }

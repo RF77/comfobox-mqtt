@@ -11,8 +11,16 @@ import type { Translations } from '../../../core/i18n/translations';
  */
 
 /** Der Text zu einem maschinenlesbaren Hinweis. */
-export function hintText(hints: Translations['setupSteps'], hint: string): string {
+/*
+ * Ein `null`-Hinweis (erfolgreicher Test) und `not_connected` liefern einen
+ * leeren Text: die Meldung des Gateways sagt in beiden Fällen schon alles.
+ */
+export function hintText(hints: Translations['setupSteps'], hint: string | null): string {
   switch (hint) {
+    case null:
+    case 'not_connected':
+      return '';
+
     case 'serial_port_not_found':
       return hints.hintSerialNotFound;
 

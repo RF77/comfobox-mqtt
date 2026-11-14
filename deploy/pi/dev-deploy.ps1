@@ -256,19 +256,41 @@ $startScript = @'
 #   sh ~/comfobox-dev-start.sh start [PORT]
 #   sh ~/comfobox-dev-start.sh stop
 #   sh ~/comfobox-dev-start.sh logs [ZEILEN]
+#
+# Der Gateway laeuft unter einem **Supervisor** (dieses Skript selbst).
+# Ohne ihn ueberlebt ein Neustart nicht: ServiceControl beendet den Host
+# kontrolliert und schreibt nur die Marker-Datei restart.requested - im
+# Container startet ihn die Restart-Policy neu, beim Direktstart niemand.
 set -e
 
 BASE="$HOME/comfobox-dev"
 APPDIR="$BASE/app"
+DATA="$BASE/data"
 ARCHIVE="$HOME/comfobox-dev.tar.gz"
 PIDFILE="$BASE/app.pid"
+CHILDFILE="$BASE/app.child.pid"
+STOPFILE="$BASE/supervisor.stop"
 LOGFILE="$BASE/run.log"
 ACTION="${1:-start}"
+CHILD=""
+
+# Der eigene Pfad, **bevor** in das App-Verzeichnis gewechselt wird: der
+# Supervisor wird als `sh "$SELF" run-loop` neu gestartet und ein relativer
+# Pfad waere ab dem Wechsel nach "$APPDIR" nicht mehr aufloesbar.
+case "$0" in
+    /*) SELF="$0" ;;
+    *)  SELF="$(pwd)/$0" ;;
+esac
 
 stop_app() {
+    # 1. Dem Supervisor sagen, dass er **nicht** neu starten soll. Ohne das
+    #    startet er den Gateway nach dem Beenden sofort wieder - der
+    #    Prozess waere nicht zu stoppen.
+    : > "$STOPFILE" 2>/dev/null || true
+
     if [ -f "$PIDFILE" ]; then
         PID=$(cat "$PIDFILE" 2>/dev/null || true)
-        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && is_our_process "$PID"; then
+        if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null && is_our_supervisor "$PID"; then
             kill "$PID" 2>/dev/null || true
             i=0
             while [ "$i" -lt 10 ] && kill -0 "$PID" 2>/dev/null; do
@@ -276,13 +298,43 @@ stop_app() {
                 i=$((i + 1))
             done
             kill -0 "$PID" 2>/dev/null && kill -9 "$PID" 2>/dev/null || true
-            echo "  vorheriger Prozess beendet (PID $PID)"
+            echo "  Supervisor beendet (PID $PID)"
         fi
         rm -f "$PIDFILE"
     fi
 
+    # 2. Das Kind direkt - falls der Supervisor nicht mehr laeuft oder die
+    #    PID in app.pid nicht mehr stimmt.
+    if [ -f "$CHILDFILE" ]; then
+        CHILD_PID=$(cat "$CHILDFILE" 2>/dev/null || true)
+        if [ -n "$CHILD_PID" ] && kill -0 "$CHILD_PID" 2>/dev/null && is_our_process "$CHILD_PID"; then
+            kill "$CHILD_PID" 2>/dev/null || true
+            echo "  Gateway beendet (PID $CHILD_PID)"
+        fi
+        rm -f "$CHILDFILE"
+    fi
+
     # Ein Prozess aus einem frueheren Lauf ohne PID-Datei.
-    pkill -f "$APPDIR/ComfoBox.Gateway" 2>/dev/null || true
+    kill_matching
+    rm -f "$STOPFILE"
+}
+
+# Beendet jeden Prozess, der auf "$APPDIR/ComfoBox.Gateway" laeuft.
+#
+# `pkill` gehoert zu procps und fehlt auf sehr kleinen Systemen. Der
+# Rueckfall liest /proc direkt - das geht auf jedem Linux.
+kill_matching() {
+    if command -v pkill >/dev/null 2>&1; then
+        pkill -f "$APPDIR/ComfoBox.Gateway" 2>/dev/null || true
+        return 0
+    fi
+
+    for _p in /proc/[0-9]*; do
+        [ -d "$_p" ] || continue
+        if tr '\0' ' ' < "$_p/cmdline" 2>/dev/null | grep -q "$APPDIR/ComfoBox.Gateway"; then
+            kill "${_p#/proc/}" 2>/dev/null || true
+        fi
+    done
 }
 
 # Gehoert die PID wirklich zu unserem Gateway?
@@ -298,6 +350,18 @@ is_our_process() {
     fi
 
     # Ohne /proc (z. B. macOS) bleibt nur die Annahme, dass die PID stimmt.
+    return 0
+}
+
+# Ist das der Supervisor dieses Skripts?
+is_our_supervisor() {
+    _cmdline="/proc/$1/cmdline"
+
+    if [ -r "$_cmdline" ]; then
+        tr '\0' ' ' < "$_cmdline" 2>/dev/null | grep -q "comfobox-dev-start.sh"
+        return $?
+    fi
+
     return 0
 }
 
@@ -322,6 +386,77 @@ case "$ACTION" in
     stop)
         stop_app
         echo "gestoppt"
+        ;;
+
+    run-loop)
+        # Der Supervisor. Laeuft als eigener Prozess, damit er den Gateway
+        # nach einem angeforderten Neustart wieder starten kann.
+        rm -f "$STOPFILE"
+        FAILS=0
+
+        on_signal() {
+            echo "  Supervisor: Signal empfangen - Gateway wird beendet."
+            : > "$STOPFILE" 2>/dev/null || true
+            if [ -n "$CHILD" ]; then
+                kill "$CHILD" 2>/dev/null || true
+                wait "$CHILD" 2>/dev/null || true
+            fi
+            rm -f "$CHILDFILE" "$STOPFILE"
+            exit 0
+        }
+
+        trap on_signal TERM INT HUP
+
+        while :; do
+            if [ -f "$STOPFILE" ]; then
+                break
+            fi
+
+            "$APPDIR/ComfoBox.Gateway" &
+            CHILD=$!
+            echo "$CHILD" > "$CHILDFILE"
+
+            CODE=0
+            wait "$CHILD" || CODE=$?
+
+            rm -f "$CHILDFILE"
+            CHILD=""
+
+            # Ein angeforderter Neustart steht als Marker im Datenverzeichnis:
+            # ServiceControl schreibt ihn, bevor der Host stoppt. Das ist das
+            # Gegenstueck zur Restart-Policy im Container.
+            if [ -f "$DATA/restart.requested" ]; then
+                rm -f "$DATA/restart.requested"
+                echo "  Supervisor: Neustart angefordert - Gateway startet neu."
+                FAILS=0
+                continue
+            fi
+
+            if [ -f "$STOPFILE" ]; then
+                break
+            fi
+
+            if [ "$CODE" = "0" ]; then
+                echo "  Supervisor: Gateway regulaer beendet - kein Neustart."
+                break
+            fi
+
+            # Ein echter Absturz. Ohne Bremse wuerde eine Fehlkonfiguration
+            # (z. B. ungueltige Mqtt:Brokers) das Protokoll in Sekunden
+            # fluten - nach fuenf Versuchen gibt der Supervisor auf.
+            FAILS=$((FAILS + 1))
+            if [ "$FAILS" -ge 5 ]; then
+                echo "  FEHLER: $FAILS Fehlstarts in Folge - der Supervisor gibt auf." >&2
+                exit 7
+            fi
+
+            WAIT=$((FAILS * 2))
+            echo "  Supervisor: Gateway mit Exit $CODE beendet - Neustart in ${WAIT}s."
+            sleep "$WAIT"
+        done
+
+        rm -f "$CHILDFILE" "$STOPFILE"
+        echo "  Supervisor beendet."
         ;;
 
     logs)
@@ -368,7 +503,7 @@ case "$ACTION" in
         fi
 
         rm -rf "$APPDIR"
-        mkdir -p "$APPDIR" "$BASE/data/logs"
+        mkdir -p "$APPDIR" "$DATA/logs"
         tar -xzf "$ARCHIVE" -C "$APPDIR"
         rm -f "$ARCHIVE"
         chmod +x "$APPDIR/ComfoBox.Gateway" 2>/dev/null || true
@@ -398,14 +533,21 @@ case "$ACTION" in
             fi
         done
 
-        export COMFOBOX_Gateway__DataDirectory="$BASE/data"
-        export COMFOBOX_Logging__Directory="$BASE/data/logs"
+        export COMFOBOX_Gateway__DataDirectory="$DATA"
+        export COMFOBOX_Logging__Directory="$DATA/logs"
         export ASPNETCORE_URLS="http://0.0.0.0:$PORT"
         export DOTNET_gcServer=0
 
-        if [ -n "$SERIAL_DEVICE" ]; then
+        # **Nach der Einrichtung gilt die config.json.** Die Praezedenz ist
+        # Umgebung -> config.json -> options.json (aufsteigend); eine
+        # Umgebungsvariable wuerde den im Assistenten gewaehlten Port also
+        # ueberstimmen. Die Erkennung ist deshalb nur beim **ersten** Start
+        # aktiv (solange es keine config.json gibt).
+        if [ -f "$DATA/config.json" ]; then
+            echo "  Konfiguration: $DATA/config.json (Port und Baudrate von dort)"
+        elif [ -n "$SERIAL_DEVICE" ]; then
             export COMFOBOX_Bacnet__Port="$SERIAL_DEVICE"
-            echo "  serieller Port: $SERIAL_DEVICE"
+            echo "  serieller Port: $SERIAL_DEVICE (erkannt, erster Start)"
         else
             echo "  WARNUNG: kein /dev/ttyUSB* oder /dev/ttyACM* gefunden."
             echo "           Der Adapter kann im Betrieb gesteckt werden."
@@ -419,7 +561,14 @@ case "$ACTION" in
         # found: /home/pi/wwwroot").
         cd "$APPDIR" || exit 6
 
-        nohup "$APPDIR/ComfoBox.Gateway" > "$LOGFILE" 2>&1 &
+        # Der Gateway laeuft unter dem Supervisor (dieses Skript, Aktion
+        # "run-loop"). Nur so ueberlebt ein Neustart, der ueber die API
+        # angefordert wird (Assistent "Uebernehmen und starten" oder
+        # POST /api/service/restart): der Host beendet sich kontrolliert und
+        # schreibt restart.requested - im Container startet ihn die
+        # Restart-Policy neu, beim Direktstart niemand.
+        : > "$LOGFILE"
+        nohup sh "$SELF" run-loop >> "$LOGFILE" 2>&1 &
         echo $! > "$PIDFILE"
         PID=$(cat "$PIDFILE")
 
@@ -453,7 +602,8 @@ case "$ACTION" in
         done
 
         if [ "$LISTENING" = "1" ]; then
-            echo "  gestartet (PID $PID, Port $PORT, nach ${i}s)"
+            echo "  gestartet (Supervisor PID $PID, Port $PORT, nach ${i}s)"
+            echo "  ein Neustart ueber die Web-Oberflaeche wird automatisch ausgefuehrt"
 
             # Zusaetzlich lokal pruefen: lauscht heisst nicht, dass der
             # Gateway auch antwortet. Und "antwortet lokal" heisst nicht,

@@ -339,10 +339,23 @@ nötig.</p>
 <td>HA-Add-on</td>
 <td>der Supervisor mappt den Port mit passenden Rechten</td>
 </tr>
+<tr>
+<td>Raspberry Pi, Start ohne Container</td>
+<td><code>sudo usermod -aG dialout &lt;benutzer&gt;</code>, danach <strong>neu anmelden</strong></td>
+</tr>
 </tbody></table>
 <blockquote>
 <p>Auf DSM hat die Gruppe <code>dialout</code> üblicherweise die <strong>GID 20</strong>. Im Zweifel die
 numerische GID eintragen.</p>
+</blockquote>
+<blockquote>
+<p><strong>„Access denied&quot; heißt nicht automatisch „keine Rechte&quot;.</strong> Unter Linux meldet
+.NET dieselbe Meldung, wenn der Port <strong>bereits geöffnet</strong> ist – das ist der
+Normalfall, wenn das Gateway läuft und ein zweiter Test ihn öffnen will.
+Der Assistent prüft das selbst: er nennt unter der Meldung die Fakten (Modus,
+Besitzer und Gruppe der Gerätedatei, Gruppen des Prozesses) und die daraus
+abgeleitete Ursache. Steht dort „die Rechte sind vorhanden&quot;, ist <strong>ein anderer
+Prozess</strong> der Halter – siehe <em>Device or resource busy</em>.</p>
 </blockquote>
 <hr>
 <h2 id="device-or-resource-busy">Device or resource busy</h2>

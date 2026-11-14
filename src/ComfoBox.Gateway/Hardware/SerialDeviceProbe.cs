@@ -84,8 +84,32 @@ public sealed record SerialPortAccess
     /// <summary>Die Benutzerkennung des Prozesses (oder <c>null</c>).</summary>
     public int? Uid { get; init; }
 
+    /// <summary>Der Benutzername des Prozesses, z. B. <c>pi</c> (oder <c>null</c>).</summary>
+    public string? ProcessUser { get; init; }
+
     /// <summary>Die Gruppen des Prozesses (ergänzende Gruppen eingeschlossen).</summary>
     public IReadOnlyList<int> ProcessGroups { get; init; } = [];
+
+    /// <summary>Die Benutzerkennung des Besitzers der Gerätedatei (oder <c>null</c>).</summary>
+    public int? DeviceUid { get; init; }
+
+    /// <summary>Die Gruppenkennung des Besitzers der Gerätedatei (oder <c>null</c>).</summary>
+    /// <remarks>
+    /// Der Wert kommt aus <c>/run/udev/data</c>. Fehlt er (typisch im
+    /// Container, wo <c>/run/udev</c> nicht eingebunden ist), gilt
+    /// <see cref="DialoutGid"/> als Annahme.
+    /// </remarks>
+    public int? DeviceGid { get; init; }
+
+    /// <summary>Der Gruppenname der Gerätedatei, z. B. <c>dialout</c> (oder <c>null</c>).</summary>
+    public string? DeviceGroupName { get; init; }
+
+    /// <summary>Läuft der Gateway in einem Container?</summary>
+    /// <remarks>
+    /// Davon hängt die Lösung ab: im Container entscheidet <c>group_add</c>,
+    /// auf dem Host die Gruppenzugehörigkeit des Benutzers.
+    /// </remarks>
+    public bool IsContainer { get; init; }
 
     /// <summary>
     /// Der bekannte GID-Bereich des seriellen Zugriffs (<c>dialout</c> ist auf
@@ -93,8 +117,16 @@ public sealed record SerialPortAccess
     /// </summary>
     public const int DialoutGid = 20;
 
-    /// <summary>Läuft der Prozess in der Gruppe <c>dialout</c>?</summary>
-    public bool HasDialoutGroup => ProcessGroups.Contains(DialoutGid);
+    /// <summary>
+    /// Die Gruppe, die den Zugriff entscheidet - die des Geräts, sonst <c>dialout</c>.
+    /// </summary>
+    public int RequiredGid => DeviceGid ?? DialoutGid;
+
+    /// <summary>Der Name der entscheidenden Gruppe.</summary>
+    public string RequiredGroupName => DeviceGroupName ?? "dialout";
+
+    /// <summary>Läuft der Prozess in der Gruppe der Gerätedatei?</summary>
+    public bool HasRequiredGroup => ProcessGroups.Contains(RequiredGid);
 }
 
 /// <summary>
@@ -139,12 +171,14 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
     private readonly string _sysRoot;
     private readonly string _devRoot;
     private readonly string _procStatusPath;
+    private readonly string _udevRoot;
+    private readonly string _etcGroupPath;
 
     /// <summary>
     /// Erzeugt die Sonde für das laufende System.
     /// </summary>
     public SerialDeviceProbe()
-        : this("/sys", "/dev", "/proc/self/status")
+        : this("/sys", "/dev", "/proc/self/status", "/run/udev", "/etc/group")
     {
     }
 
@@ -155,14 +189,36 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
     /// <param name="devRoot">Das Verzeichnis von <c>/dev</c>.</param>
     /// <param name="procStatusPath">Der Pfad zu <c>/proc/self/status</c>.</param>
     public SerialDeviceProbe(string sysRoot, string devRoot, string procStatusPath)
+        : this(sysRoot, devRoot, procStatusPath, "/run/udev", "/etc/group")
+    {
+    }
+
+    /// <summary>
+    /// Erzeugt die Sonde mit austauschbaren Wurzeln (für Tests).
+    /// </summary>
+    /// <param name="sysRoot">Das Verzeichnis von <c>sysfs</c>.</param>
+    /// <param name="devRoot">Das Verzeichnis von <c>/dev</c>.</param>
+    /// <param name="procStatusPath">Der Pfad zu <c>/proc/self/status</c>.</param>
+    /// <param name="udevRoot">Das Verzeichnis von <c>/run/udev</c>.</param>
+    /// <param name="etcGroupPath">Der Pfad zu <c>/etc/group</c>.</param>
+    public SerialDeviceProbe(
+        string sysRoot,
+        string devRoot,
+        string procStatusPath,
+        string udevRoot,
+        string etcGroupPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sysRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(devRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(procStatusPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(udevRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(etcGroupPath);
 
         _sysRoot = sysRoot;
         _devRoot = devRoot;
         _procStatusPath = procStatusPath;
+        _udevRoot = udevRoot;
+        _etcGroupPath = etcGroupPath;
     }
 
     /// <inheritdoc />
@@ -325,15 +381,187 @@ public sealed class SerialDeviceProbe : ISerialDeviceProbe
 
         var (uid, groups) = ReadProcessIdentity();
 
+        // Der Besitzer der Gerätedatei steht in den udev-Daten. Erst damit ist
+        // die Diagnose eindeutig: sie nennt die Gruppe, die tatsächlich
+        // fehlt - und nicht pauschal 'dialout'.
+        var (deviceUid, deviceGid) = ReadDeviceOwner(ResolvePortName(portName));
+
         return new SerialPortAccess
         {
             Exists = true,
             Mode = mode is null ? null : FormatMode(mode.Value),
             ModeText = mode is null ? null : FormatModeText(mode.Value),
             Uid = uid,
+            ProcessUser = ReadProcessUser(),
             ProcessGroups = groups,
+            DeviceUid = deviceUid,
+            DeviceGid = deviceGid,
+            DeviceGroupName = deviceGid is null ? null : ReadGroupName(deviceGid.Value),
+            IsContainer = DetectContainer(),
         };
     }
+
+    /// <summary>
+    /// Liest Besitzer und Gruppe einer Gerätedatei.
+    /// </summary>
+    /// <param name="name">Der Gerätename, z. B. <c>ttyUSB0</c>.</param>
+    /// <returns>Die Kennungen - oder zwei Mal <c>null</c>.</returns>
+    /// <remarks>
+    /// <para>
+    /// Der Weg führt über <c>sysfs</c> zur Gerätenummer
+    /// (<c>MAJOR</c>/<c>MINOR</c>) und von dort nach
+    /// <c>/run/udev/data/c&lt;major&gt;:&lt;minor&gt;</c>. Dort stehen in den
+    /// Zeilen <c>U:</c> und <c>G:</c> die Kennungen, die udev beim Anstecken
+    /// gesetzt hat.
+    /// </para>
+    /// <para>
+    /// Im Container fehlt <c>/run/udev</c> meist - dann bleibt es bei
+    /// <c>null</c> und die Diagnose nimmt <c>dialout</c> an.
+    /// </para>
+    /// </remarks>
+    private (int? Uid, int? Gid) ReadDeviceOwner(string name)
+    {
+        try
+        {
+            var uevent = Path.Combine(_sysRoot, "class", "tty", name, "uevent");
+
+            if (!File.Exists(uevent))
+            {
+                return (null, null);
+            }
+
+            int? major = null;
+            int? minor = null;
+
+            foreach (var line in File.ReadLines(uevent))
+            {
+                if (line.StartsWith("MAJOR=", StringComparison.Ordinal))
+                {
+                    major = ParseNumber(line[6..]);
+                }
+                else if (line.StartsWith("MINOR=", StringComparison.Ordinal))
+                {
+                    minor = ParseNumber(line[6..]);
+                }
+            }
+
+            if (major is null || minor is null)
+            {
+                return (null, null);
+            }
+
+            var data = Path.Combine(
+                _udevRoot,
+                "data",
+                "c" + major.Value.ToString(CultureInfo.InvariantCulture)
+                    + ":" + minor.Value.ToString(CultureInfo.InvariantCulture));
+
+            if (!File.Exists(data))
+            {
+                return (null, null);
+            }
+
+            int? uid = null;
+            int? gid = null;
+
+            foreach (var line in File.ReadLines(data))
+            {
+                if (line.StartsWith("U:", StringComparison.Ordinal))
+                {
+                    uid = ParseNumber(line[2..]);
+                }
+                else if (line.StartsWith("G:", StringComparison.Ordinal))
+                {
+                    gid = ParseNumber(line[2..]);
+                }
+            }
+
+            return (uid, gid);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return (null, null);
+        }
+    }
+
+    /// <summary>
+    /// Sucht den Namen einer Gruppe in <c>/etc/group</c>.
+    /// </summary>
+    /// <param name="gid">Die Gruppenkennung.</param>
+    /// <returns>Der Name (oder <c>null</c>).</returns>
+    private string? ReadGroupName(int gid)
+    {
+        try
+        {
+            if (!File.Exists(_etcGroupPath))
+            {
+                return null;
+            }
+
+            foreach (var line in File.ReadLines(_etcGroupPath))
+            {
+                // „dialout:x:20:pi,norbert"
+                var parts = line.Split(':');
+
+                if (parts.Length >= 3 && ParseNumber(parts[2]) == gid)
+                {
+                    return parts[0];
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Ohne /etc/group bleibt der Name offen - die GID genügt.
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Der Benutzername des laufenden Prozesses.
+    /// </summary>
+    /// <returns>Der Name (oder <c>null</c>).</returns>
+    private static string? ReadProcessUser()
+    {
+        try
+        {
+            var name = Environment.UserName;
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or PlatformNotSupportedException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Läuft der Prozess in einem Container?
+    /// </summary>
+    /// <returns><c>true</c>, wenn eine Container-Markierung gefunden wurde.</returns>
+    /// <remarks>
+    /// Docker legt <c>/.dockerenv</c> an, Podman <c>/run/.containerenv</c>.
+    /// Beides ist ein Hinweis, keine Zusage - für die Wahl des richtigen
+    /// Lösungssatzes genügt er.
+    /// </remarks>
+    private static bool DetectContainer()
+    {
+        try
+        {
+            return File.Exists("/.dockerenv") || File.Exists("/run/.containerenv");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Liest eine Zahl kultur-invariant.
+    /// </summary>
+    private static int? ParseNumber(string text) =>
+        int.TryParse(text.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
 
     /// <summary>
     /// Ermittelt den Gerätenamen - auch aus einem <c>by-id</c>-Pfad.

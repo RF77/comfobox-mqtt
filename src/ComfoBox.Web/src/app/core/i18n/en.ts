@@ -441,7 +441,8 @@ export const EN: Translations = {
     hintNoIam:
       'The ComfoBox does not answer. Check: (1) is it set to 38400 baud and has it been restarted? (2) are A and B wired correctly? (3) is the adapter on a different port?',
     hintBusy: 'The port is already in use by another program.',
-    hintPermissionDenied: 'No permission on the port. The "dialout" group is missing.',
+    hintPermissionDenied:
+      'The gateway is not allowed to open the device file. The details below name the cause.',
     hintMqttUnreachable: 'The broker is not reachable. Check host, port and that the broker is running.',
     hintMqttAuthFailed: 'Sign-in to the broker failed. Check the user name and password.',
     hintMqttTlsFailed: 'The TLS handshake failed. Check the certificate or the broker configuration.',

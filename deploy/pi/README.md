@@ -42,6 +42,39 @@ Was passiert:
 > Nur wenn ein **fremder** Prozess den Port hält (meist der Container) bricht
 > das Skript mit Exit 4 ab.
 
+### Neustart über die Oberfläche funktioniert auch hier
+
+Im Container startet `restart: unless-stopped` den Gateway nach einem
+angeforderten Neustart neu. Beim Direktstart gibt es diesen Supervisor nicht –
+deshalb läuft der Gateway unter einem **kleinen Supervisor** (dasselbe Skript,
+Aktion `run-loop`):
+
+````
+Supervisor  ──startet──▶  ComfoBox.Gateway
+     ▲                          │
+     └── restart.requested ◀────┘   (ServiceControl, vor dem Beenden)
+````
+
+- **Neustart** (Assistent *Übernehmen und starten*, `POST /api/service/restart`):
+  der Host beendet sich kontrolliert, der Supervisor sieht die Marker-Datei
+  `data/restart.requested`, löscht sie und startet neu. Die Oberfläche wartet
+  bis zu 90 s auf `/api/health` – das passt.
+- **Reguläres Ende** (Exit 0 ohne Marker): kein Neustart.
+- **Absturz**: Neustart mit Backoff 2/4/6/8 s; nach **fünf** Fehlstarts in Folge
+  gibt der Supervisor auf (Exit 7) und das Protokoll nennt den Grund – sonst
+  würde eine Fehlkonfiguration das Log in Sekunden fluten.
+- **`stop`** legt `supervisor.stop` an, beendet den Supervisor (der nimmt sein
+  Kind mit) und räumt `app.pid`/`app.child.pid` ab. Ohne diese Datei würde der
+  Loop den Gateway sofort wieder starten.
+
+Die Port-Vorgabe aus der Erkennung gilt nur beim **ersten** Start (solange es
+keine `config.json` gibt). Danach gilt die Konfiguration – sonst würde die
+Umgebungsvariable den im Assistenten gewählten Port überstimmen
+(Präzedenz: Umgebung → `config.json`).
+
+> Ein Reboot des Pi startet den Testlauf **nicht** von selbst. Für den Dauerbetrieb
+> ist `install.sh` (Docker + `systemctl enable docker`) der vorgesehene Weg.
+
 Es sind genau **zwei** Verbindungen – also zwei Passwortabfragen. Mit
 hinterlegtem Schlüssel entfällt auch das:
 

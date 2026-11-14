@@ -265,9 +265,18 @@ wieder entfernt.
 | Docker | `group_add: ["dialout"]` in der Compose-Datei |
 | Synology | die USB-Regel des Pakets setzt die Rechte (siehe `99-comfobox-serial.rules`) |
 | HA-Add-on | der Supervisor mappt den Port mit passenden Rechten |
+| Raspberry Pi, Start ohne Container | `sudo usermod -aG dialout <benutzer>`, danach **neu anmelden** |
 
 > Auf DSM hat die Gruppe `dialout` üblicherweise die **GID 20**. Im Zweifel die
 > numerische GID eintragen.
+
+> **„Access denied" heißt nicht automatisch „keine Rechte".** Unter Linux meldet
+> .NET dieselbe Meldung, wenn der Port **bereits geöffnet** ist – das ist der
+> Normalfall, wenn das Gateway läuft und ein zweiter Test ihn öffnen will.
+> Der Assistent prüft das selbst: er nennt unter der Meldung die Fakten (Modus,
+> Besitzer und Gruppe der Gerätedatei, Gruppen des Prozesses) und die daraus
+> abgeleitete Ursache. Steht dort „die Rechte sind vorhanden", ist **ein anderer
+> Prozess** der Halter – siehe *Device or resource busy*.
 
 ---
 

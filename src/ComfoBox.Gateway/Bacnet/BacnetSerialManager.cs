@@ -90,6 +90,21 @@ public sealed class BacnetSerialManager
     public int BaudRate => _settings.BaudRate;
 
     /// <summary>
+    /// Ist das der Port, den der Gateway gerade selbst benutzt?
+    /// </summary>
+    /// <param name="port">Der zu prüfende Port (oder <c>null</c>).</param>
+    /// <returns><c>true</c>, wenn der Port der aktive ist.</returns>
+    /// <remarks>
+    /// Ein zweiter Öffnungsversuch auf den **eigenen** Port kann nur
+    /// scheitern - und .NET meldet das unter Linux als
+    /// <c>UnauthorizedAccessException</c>, also wie fehlende Rechte. Deshalb
+    /// wird der aktive Port gar nicht erst geöffnet.
+    /// </remarks>
+    public bool IsActivePort(string? port) =>
+        !string.IsNullOrWhiteSpace(port)
+        && string.Equals(port, _settings.PortName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Prüft einen Port, ohne die Einstellung zu ändern.
     /// </summary>
     /// <param name="port">Der zu prüfende Port (oder <c>null</c>).</param>
@@ -124,7 +139,7 @@ public sealed class BacnetSerialManager
                 stopwatch);
         }
 
-        if (string.Equals(port, _settings.PortName, StringComparison.OrdinalIgnoreCase))
+        if (IsActivePort(port))
         {
             return CurrentState(port, stopwatch);
         }
@@ -132,14 +147,20 @@ public sealed class BacnetSerialManager
         var probe = ProbeSerialPort(port, baudrate);
         if (probe is not null)
         {
-            return probe switch
+            if (probe == "permission_denied")
             {
-                "permission_denied" => Result(
+                var access = _probe.DescribeAccess(port);
+
+                return Result(
                     false,
                     SerialAccessMessages.PermissionDenied(port),
-                    probe,
+                    SerialAccessMessages.DeniedHint(access),
                     stopwatch,
-                    SerialAccessMessages.PermissionDeniedDetails(port, _probe.DescribeAccess(port))),
+                    SerialAccessMessages.PermissionDeniedDetails(port, access));
+            }
+
+            return probe switch
+            {
                 "busy" => Result(
                     false,
                     $"Der Port '{port}' wird von einem anderen Prozess gehalten.",
@@ -215,7 +236,14 @@ public sealed class BacnetSerialManager
             return Result(true, $"Die ComfoBox antwortet auf '{port}'.", null, stopwatch);
         }
 
-        return Result(false, DescribeError(), "not_connected", stopwatch);
+        // Antwortet die ComfoBox nicht, sind die Rechte-Fakten trotzdem
+        // nützlich: sie zeigen, ob der Port überhaupt geöffnet werden durfte.
+        return Result(
+            false,
+            DescribeError(),
+            "not_connected",
+            stopwatch,
+            SerialAccessMessages.AccessFacts(port, _probe.DescribeAccess(port)));
     }
 
     /// <summary>

@@ -395,19 +395,34 @@ Details zum Installationsfluss: [Synology-Paketcenter](../03-deployment/synology
   "ok": false,
   "message": "Die ComfoBox antwortet nicht.",
   "hint": "no_iam",
-  "durationMs": 30012
+  "durationMs": 30012,
+  "details": null
 }
 ````
 
 | `hint` | Bedeutung |
 |---|---|
 | `serial_port_not_found` | Der Port existiert nicht (mehr) |
-| `permission_denied` | Keine Berechtigung (Gruppe `dialout`) |
+| `permission_denied` | Die Gruppe der Gerätedatei fehlt (Host: `usermod -aG`, Container: `group_add`) |
 | `busy` | Port wird von einem anderen Prozess gehalten |
 | `no_iam` | Kein `IAm` innerhalb des Timeouts |
+| `not_connected` | Der **aktive** Port antwortet nicht (siehe unten) |
 | `mqtt_unreachable` | Broker nicht erreichbar |
 | `mqtt_auth_failed` | Anmeldedaten falsch |
 | `mqtt_tls_failed` | TLS-Verhandlung fehlgeschlagen |
+
+**`details`** enthält bei einem Zugriffsfehler die überprüfbaren Fakten als
+Textzeilen (Modus, Besitzer und Gruppe der Gerätedatei aus `/run/udev`,
+Benutzer und Gruppen des Prozesses) sowie die daraus abgeleitete Ursache und
+Lösung. Fehlt die Gruppe, entscheidet der Fundort über den Lösungssatz:
+Host → `usermod -aG <gruppe> <benutzer>`, Container → `group_add`.
+
+**Der aktive Port wird nicht geöffnet.** Hält der Gateway den Port selbst
+(`Bacnet.Port`), kann ein zweiter Öffnungsversuch nur scheitern – und .NET
+meldet das unter Linux wie fehlende Rechte. Der Test liefert deshalb den
+**aktuellen Zustand** der laufenden Verbindung (`ok`, `no_iam` → nicht
+verbunden) samt Rechte-Fakten, statt den Port ein zweites Mal zu öffnen. Die
+Konfigurationsseite (`POST /api/config/bacnet/test`) verhält sich gleich.
 
 #### Schreiben der Konfiguration
 

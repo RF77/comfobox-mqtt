@@ -76,8 +76,10 @@
       styleClass="w-full cb-result"
     >
       <p>{{ result.message }}</p>
-      @if (!result.ok && result.hint) {
-        <p>{{ hintText(result.hint) }}</p>
+      @if (!result.ok) {
+        @if (hintText(result.hint); as hintLine) {
+          <p>{{ hintLine }}</p>
+        }
         @if (result.hint === 'mqtt_unreachable') {
           <p>
             <a routerLink="/help/mqtt" fragment="broker-einrichten">
@@ -87,6 +89,15 @@
         }
       }
       <p class="cb-hint">{{ t().common.duration(result.durationMs) }}</p>
+
+      @if (result.details?.length) {
+        <p class="cb-details-title">{{ t().serial.detailsTitle }}</p>
+        <ul class="cb-details">
+          @for (detail of result.details; track detail) {
+            <li>{{ detail }}</li>
+          }
+        </ul>
+      }
     </p-message>
   }
 </p-card>
