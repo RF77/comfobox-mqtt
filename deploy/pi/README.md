@@ -29,13 +29,38 @@ Was passiert:
 
 1. `npm run build` in `src/ComfoBox.Web` (überspringbar mit `-SkipWeb`),
 2. `dotnet publish -r linux-arm64 --self-contained`,
-3. `tar.gz` packen und per `scp` nach `~/comfobox-dev` kopieren,
-4. alten Prozess beenden, neuen starten, auf `/api/health` warten.
+3. `tar.gz` packen, daneben ein **Startskript** erzeugen, beides in **einem**
+   `scp` nach `~` kopieren,
+4. per `ssh` das Startskript ausführen: alter Prozess beenden, entpacken,
+   starten, auf `/api/health` warten.
+
+Es sind genau **zwei** Verbindungen – also zwei Passwortabfragen. Mit
+hinterlegtem Schlüssel entfällt auch das:
+
+````bash
+ssh-copy-id -p 22 pi@<adresse>
+````
+
+> **Warum ein Skript und kein SSH-Kommando?** PowerShell übergibt Argumente an
+> `ssh.exe` nach den Windows-Regeln und schützt eingebettete
+> Anführungszeichen nicht. Ein mehrzeiliges Kommando kommt dadurch verstümmelt
+> an – der Aufruf endet ohne jede Ausgabe mit `Exit -1`. Das Skript liegt
+> deshalb als Datei daneben und lässt sich auf dem Pi ansehen:
+> `cat ~/comfobox-dev-start.sh`.
+
+Das Skript kann auch von Hand benutzt werden:
+
+````bash
+sh ~/comfobox-dev-start.sh start 8099
+sh ~/comfobox-dev-start.sh logs 200
+sh ~/comfobox-dev-start.sh stop
+````
 
 | Option | Wirkung |
 |---|---|
 | `-Pi <adresse>` | Ziel (Pflicht) |
 | `-User pi` | SSH-Benutzer |
+| `-SshPort 22` | SSH-Port |
 | `-Port 8099` | Port der Oberfläche |
 | `-SkipWeb` | Oberfläche nicht neu bauen (API bleibt aktuell) |
 | `-NoBuild` | letzten Stand erneut kopieren |

@@ -54,6 +54,17 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 - Die Auswertung der Gruppen in `install.sh` brach bei fehlendem `getent`
   **und** fehlender `/etc/group` mit Exit 2 ab (`set -e`). Beide Abfragen sind
   jetzt fehlertolerant und fallen auf 20 zurück.
+- **`deploy/pi/dev-deploy.ps1` brach beim Start mit `Exit -1` ab – ohne jede
+  Ausgabe.** Ursache: der Ablauf wurde als **mehrzeiliges SSH-Kommando**
+  übergeben. PowerShell reicht Argumente an `ssh.exe` nach den Windows-Regeln
+  weiter und schützt eingebettete Anführungszeichen nicht; das Skript kam
+  verstümmelt an. Jetzt liegt es als Datei daneben (`.artifacts/comfobox-dev-start.sh`),
+  wird mit dem Paket in **einem** `scp` kopiert und per
+  `ssh … sh ~/comfobox-dev-start.sh start <port>` gestartet. Damit sind es
+  genau zwei Verbindungen (zwei Passwortabfragen statt vier).
+  Das Startskript beendet den alten Prozess, entpackt, prüft die
+  `dialout`-Gruppe und meldet einen sofort beendeten Prozess samt Protokoll.
+  Es lässt sich von Hand benutzen: `sh ~/comfobox-dev-start.sh start|stop|logs`.
 
 ## [1.0.4] – 2026-11-14
 
