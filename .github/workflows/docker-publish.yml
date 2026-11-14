@@ -305,18 +305,46 @@ jobs:
       # Firewall, oder GHCR nicht erreichbar) ist ein Release-Asset der
       # einzige Weg. Der Installer lädt es mit --offline.
       #
-      # `docker pull --platform` funktioniert auf dem amd64-Runner ohne QEMU:
-      # das Image wird nur gespeichert, nicht ausgeführt. `docker save` behält
-      # die Architektur im Manifest – auf dem Pi erkennt Docker sie wieder.
+      # ⚠️ **Nicht** `docker pull --platform linux/arm64 <tag>` + `docker save`:
+      # dabei legt Docker den **Manifest-List**-Eintrag (amd64 **und** arm64)
+      # lokal ab, lädt aber nur die arm64-Blobs. `docker save` will die Liste
+      # vollständig schreiben und scheitert an den fehlenden amd64-Blobs:
+      #   NotFound: content digest sha256:…: not found
+      # Genau das war der Fehler im Lauf 43581348595 (Release v1.0.4) – die
+      # Registry-Prüfung danach war grün, nur der Export brach ab.
+      #
+      # Der Umweg über den **Plattform-Digest** liefert eine
+      # Einzel-Plattform-Referenz; die lässt sich speichern. Das lokale Tag
+      # bleibt der Registry-Name, damit `docker load` auf dem Pi genau das
+      # Image ergibt, das die Compose-Datei erwartet.
       - name: Image als Release-Asset exportieren (arm64)
         env:
           VERSION: ${{ needs.publish.outputs.version }}
         run: |
           set -euo pipefail
           IMAGE="${REGISTRY}/rf77/comfobox-gateway:${VERSION}"
-          docker pull --platform linux/arm64 "$IMAGE"
+
+          ARM_DIGEST=$(docker buildx imagetools inspect "$IMAGE" --format '{{json .Manifest}}' \
+            | jq -r '.manifests[] | select(.platform.os == "linux" and .platform.architecture == "arm64") | .digest' \
+            | head -n 1)
+          echo "arm64-Manifest: ${ARM_DIGEST}"
+          if [ -z "${ARM_DIGEST}" ]; then
+            echo "::error::In ${IMAGE} steckt kein linux/arm64-Image."
+            exit 1
+          fi
+
+          docker pull --platform linux/arm64 "${REGISTRY}/rf77/comfobox-gateway@${ARM_DIGEST}"
+          # Das Tag MUSS der Compose-Datei entsprechen (ghcr.io/…:<version>),
+          # sonst findet `docker compose up` das geladene Image nicht.
+          docker tag "${REGISTRY}/rf77/comfobox-gateway@${ARM_DIGEST}" "$IMAGE"
+
+          echo "--- Kontrolle ---"
+          docker image inspect "$IMAGE" --format '{{.Os}}/{{.Architecture}}'
           docker save "$IMAGE" | gzip -9 > comfobox-gateway-arm64.tar.gz
           ls -lh comfobox-gateway-arm64.tar.gz
+
+          # Beweis, dass im Archiv nur EIN Manifest steht und das Tag stimmt.
+          tar -xzOf comfobox-gateway-arm64.tar.gz manifest.json | head -c 400; echo
 
       - name: Create release
         uses: softprops/action-gh-release@v2
