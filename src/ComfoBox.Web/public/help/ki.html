@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KI-Assistenten – ComfoBox Gateway</title>
+  <meta name="description" content="ComfoBox-Werte für KI-Assistenten über Home-Assistant-MCP oder die REST-API bereitstellen">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="07b-raspberry-pi.html">Raspberry Pi</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="08b-synology-test.html">Synology testen</a></li>
+        <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>KI-Assistenten</h1>
+        <p class="description">ComfoBox-Werte für KI-Assistenten über Home-Assistant-MCP oder die REST-API bereitstellen</p>
+        <div class="tags"><span class="tag">ki</span><span class="tag">mcp</span><span class="tag">home-assistant</span><span class="tag">api</span></div>
+      </header>
+
+      <article class="prose">
+<h1>KI-Assistenten</h1>
+<p>Sie können einem KI-Assistenten (z. B. über den <strong>MCP-Server</strong> von Home
+Assistant) Zugriff auf die ComfoBox geben. Der Assistent liest dann dieselben
+Werte, die Sie in der Oberfläche sehen – und kann – wenn Sie es erlauben –
+Sollwerte schreiben.</p>
+<blockquote>
+<p><strong>Die KI ist nur ein weiterer Client.</strong> Sie benutzt dieselben Regeln wie die
+Web-Oberfläche: Min/Max, erlaubte Auswahlwerte und der 24-h-Schreibschutz
+gelten unverändert.</p>
+</blockquote>
+<hr>
+<h2>Zwei Wege</h2>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Was die KI sieht</th>
+<th>Voraussetzung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Home-Assistant-MCP</strong></td>
+<td>die Entitäten und Dienste der HACS-Integration</td>
+<td>HA-MCP-Server ist eingerichtet</td>
+</tr>
+<tr>
+<td><strong>REST-API</strong></td>
+<td>den vollständigen Item-Katalog mit Grenzen</td>
+<td>API-Token mit passendem Umfang</td>
+</tr>
+</tbody></table>
+<p>Beide Wege führen zum <strong>selben</strong> Gateway. Für reine Leseaufgaben ist MCP
+einfacher; für präzise Schreibaufgaben mit Grenzwerten ist die REST-API
+geeigneter.</p>
+<hr>
+<h2>Über Home-Assistant-MCP</h2>
+<p>Die HACS-Integration legt ein Gerät <strong>ComfoBox ELESTA</strong> an. Der MCP-Server von
+Home Assistant stellt dessen Entitäten dem Assistenten zur Verfügung.</p>
+<h3>Welche Entitäten gibt es?</h3>
+<table>
+<thead>
+<tr>
+<th>Werttyp</th>
+<th>Entität</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zahl, nicht schreibbar</td>
+<td>Sensor</td>
+</tr>
+<tr>
+<td>Zahl, schreibbar</td>
+<td>Number</td>
+</tr>
+<tr>
+<td>Auswahl, schreibbar</td>
+<td>Select</td>
+</tr>
+<tr>
+<td>0/1-Wert, schreibbar</td>
+<td>Schalter</td>
+</tr>
+<tr>
+<td>Verbindungszustände</td>
+<td>Binary Sensor</td>
+</tr>
+</tbody></table>
+<h3>Wie heißen die Entitäten?</h3>
+<p>Die Entitäts-ID wird aus dem Geräte- und dem Wertnamen gebildet, zum Beispiel:</p>
+<pre><code class="language-text">number.comfobox_elesta_raumsollwert_normal
+sensor.comfobox_elesta_aussentemperatur
+select.comfobox_elesta_betriebsart
+</code></pre>
+<blockquote>
+<p><strong>Verlassen Sie sich nicht auf geratene IDs.</strong> Die <strong>exakten</strong> IDs und die
+erlaubten Werte stehen in Home Assistant unter <em>Einstellungen → Geräte &amp;
+Dienste → ComfoBox ELESTA</em>. Ein Assistent sollte die IDs von dort übernehmen,
+nicht aus dem Namen ableiten.</p>
+</blockquote>
+<h3>Dienste</h3>
+<table>
+<thead>
+<tr>
+<th>Dienst</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>comfobox.set_value</code></td>
+<td>Wert schreiben (<code>entity_id</code> + <code>value</code>)</td>
+</tr>
+<tr>
+<td><code>comfobox.read_all</code></td>
+<td>alle Werte sofort neu lesen</td>
+</tr>
+<tr>
+<td><code>comfobox.restart</code></td>
+<td>Gateway neu starten</td>
+</tr>
+</tbody></table>
+<p>Ein Schreibauftrag sieht zum Beispiel so aus:</p>
+<pre><code class="language-yaml">service: comfobox.set_value
+target:
+  entity_id: number.comfobox_elesta_raumsollwert_normal
+data:
+  value: 21.5
+</code></pre>
+<blockquote>
+<p><strong>Auswahlwerte</strong> (Select) werden mit dem <strong>exakten</strong> Namen geschrieben, z. B.
+<code>Automatic</code> – nicht mit einer Zahl und nicht übersetzt.</p>
+</blockquote>
+<hr>
+<h2>Über die REST-API</h2>
+<p>Die REST-API eignet sich, wenn der Assistent direkt HTTP sprechen kann. Sie
+liefert zu jedem Wert die Grenzen und die erlaubten Auswahlwerte mit:</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>id</code></td>
+<td>stabiler Schlüssel für Schreibvorgänge</td>
+</tr>
+<tr>
+<td><code>value</code></td>
+<td>der aktuelle Wert (Zahl)</td>
+</tr>
+<tr>
+<td><code>unit</code></td>
+<td>die Einheit</td>
+</tr>
+<tr>
+<td><code>min</code> / <code>max</code></td>
+<td>der erlaubte Bereich</td>
+</tr>
+<tr>
+<td><code>writable</code></td>
+<td>darf dieser Wert geschrieben werden?</td>
+</tr>
+<tr>
+<td><code>enumValues</code></td>
+<td>die erlaubten Auswahlwerte</td>
+</tr>
+<tr>
+<td><code>stale</code></td>
+<td>ist der Wert veraltet?</td>
+</tr>
+</tbody></table>
+<p>Ein Überblick über alle Endpunkte steht unter <a href="api.html">API</a>.</p>
+<hr>
+<h2>Was Sie dem Assistenten sagen sollten</h2>
+<p>Geben Sie dem Assistenten diese Regeln mit – sie verhindern die typischen
+Fehler:</p>
+<ol>
+<li><strong>Erst lesen, dann schreiben.</strong> Der aktuelle Wert und die Grenzen kommen aus
+dem Gateway (<code>GET /api/items</code> bzw. die Entität).</li>
+<li><strong>Nur Werte innerhalb von <code>min</code>/<code>max</code></strong> vorschlagen. Keine geratenen Grenzen.</li>
+<li><strong>Auswahlwerte exakt</strong> so schreiben, wie sie in <code>enumValues</code> stehen.</li>
+<li><strong>Nicht im Sekundentakt schreiben.</strong> Jeder Schreibvorgang zählt auf das
+24-h-Limit (Standard 200).</li>
+<li><strong>Experten-Werte nicht ohne ausdrückliche Freigabe</strong> schreiben.</li>
+<li><strong><code>stale = true</code></strong> bedeutet: der Wert ist veraltet – nicht darauf regeln.</li>
+</ol>
+<hr>
+<h2>Sicherheit</h2>
+<table>
+<thead>
+<tr>
+<th>Empfehlung</th>
+<th>Begründung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Nur lesen</strong> als Standard</td>
+<td>ein Lese-Token kann keinen Sollwert verändern</td>
+</tr>
+<tr>
+<td>Eigener Token für die KI</td>
+<td>jederzeit widerrufbar, ohne andere Programme zu stören</td>
+</tr>
+<tr>
+<td><strong>MQTT abschalten</strong>, wenn Sie nur MCP/REST nutzen</td>
+<td>weniger offene Schnittstellen</td>
+</tr>
+<tr>
+<td>Kein Zugriff aus dem Internet</td>
+<td>das Gateway gehört ins Heimnetz</td>
+</tr>
+</tbody></table>
+<h3>MQTT abschalten</h3>
+<p>Wenn Sie die HACS-Integration oder die REST-API nutzen, brauchen Sie keinen
+MQTT-Broker. Schalten Sie MQTT ab:</p>
+<ul>
+<li><strong>Web-Oberfläche:</strong> <em>Konfiguration → MQTT</em> → <strong>MQTT aktiviert</strong> aus →
+<em>Speichern</em> → <strong>neu starten</strong></li>
+<li><strong>HA-Add-on:</strong> Feld <strong>Broker-Host</strong> leer lassen</li>
+<li><strong>Docker / Synology:</strong> <code>COMFOBOX_Mqtt__Enabled=false</code></li>
+</ul>
+<p>Danach gibt es keine MQTT-Verbindung, keine veröffentlichten Topics und keine
+Schreibbefehle über MQTT. Die REST-API und die HA-Integration funktionieren
+unverändert. Details: <a href="mqtt.html#mqtt-abschalten">MQTT</a>.</p>
+<hr>
+<h2>Wenn etwas nicht geht</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Ursache</th>
+<th>Lösung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Der Assistent findet keine ComfoBox-Entitäten</td>
+<td>die HACS-Integration ist nicht eingerichtet</td>
+<td><a href="home-assistant.html">Home Assistant</a></td>
+</tr>
+<tr>
+<td>„Entität nicht verfügbar&quot;</td>
+<td>Gateway aus oder Werte veraltet</td>
+<td>Gateway prüfen, <code>stale</code> beachten</td>
+</tr>
+<tr>
+<td>Schreiben wird abgelehnt</td>
+<td>Wert außerhalb <code>min</code>/<code>max</code>, falscher Auswahlname oder Limit erreicht</td>
+<td>Grenzen aus dem Gateway übernehmen</td>
+</tr>
+<tr>
+<td>Schreiben wird immer abgelehnt</td>
+<td>Token hat nur den Umfang <strong>Nur lesen</strong></td>
+<td>Token mit <strong>Lesen und regeln</strong> erzeugen</td>
+</tr>
+<tr>
+<td>Der Assistent schreibt zu oft</td>
+<td>Automatisierung ohne Begrenzung</td>
+<td>Schreibvorgänge bündeln</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>Nächster Schritt</h2>
+<table>
+<thead>
+<tr>
+<th>Sie möchten …</th>
+<th>Lesen Sie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>die Integration einrichten</td>
+<td><a href="home-assistant.html">Home Assistant</a></td>
+</tr>
+<tr>
+<td>die Schnittstelle direkt ansprechen</td>
+<td><a href="api.html">API</a></td>
+</tr>
+<tr>
+<td>den Schreibschutz verstehen</td>
+<td><a href="bedienung.html">Bedienung</a></td>
+</tr>
+</tbody></table>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="api.html">&larr; API</a>
+          <span></span>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.1</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

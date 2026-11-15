@@ -30,7 +30,10 @@ namespace ComfoBox.Gateway.Configuration;
 /// <b>Leere Werte werden ignoriert:</b> Der Supervisor schreibt **alle**
 /// Optionen - auch die, die der Nutzer nicht angefasst hat (mit dem
 /// Standardwert). Ein leerer Broker-Host würde einen Broker ohne Host erzeugen
-/// und der Gateway würde wegen <c>ValidateOnStart</c> nicht starten.
+/// und der Gateway würde wegen <c>ValidateOnStart</c> nicht starten. Ein leeres
+/// Broker-Feld **ohne** vorhandenen Broker schaltet MQTT deshalb bewusst ab
+/// (<c>Mqtt:Enabled=false</c>) - das entspricht der Dokumentation des Add-ons
+/// („ohne Broker läuft das Gateway ohne MQTT").
 /// </para>
 /// </remarks>
 public sealed class AddOnOptionsProvider : ConfigurationProvider
@@ -148,10 +151,26 @@ public sealed class AddOnOptionsProvider : ConfigurationProvider
         // Die Broker-Optionen werden nur übernommen, wenn ein Broker
         // benannt ist - sonst entstünde ein Broker ohne Host und der
         // Gateway würde nicht starten (ValidateOnStart).
+        //
+        // Ein **leeres** Broker-Feld heißt „ohne MQTT": die Dokumentation
+        // des Add-ons verspricht genau das, und der Image-Standardbroker
+        // (localhost) darf dann nicht aktiv werden.
         // ---------------------------------------------------------------
         var brokerHost = ReadString(options, "broker_host");
+        var brokerOptionPresent = options.TryGetProperty("broker_host", out var brokerElement)
+            && brokerElement.ValueKind == JsonValueKind.String;
+        var existingBroker = lookup("Mqtt:Brokers:0:Host");
+
         var hasBroker = !string.IsNullOrWhiteSpace(brokerHost)
-            || !string.IsNullOrWhiteSpace(lookup("Mqtt:Brokers:0:Host"));
+            || !string.IsNullOrWhiteSpace(existingBroker);
+
+        // Ein leeres Broker-Feld schaltet MQTT ab - **außer** es gibt bereits
+        // einen Broker aus der config.json. Dessen Einstellungen sollen durch
+        // ein leeres Formularfeld nicht verschwinden.
+        if (brokerOptionPresent || !string.IsNullOrWhiteSpace(existingBroker))
+        {
+            target["Mqtt:Enabled"] = hasBroker ? "true" : "false";
+        }
 
         if (hasBroker)
         {

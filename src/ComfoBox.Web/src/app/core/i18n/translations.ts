@@ -162,6 +162,8 @@ export interface Translations {
     readonly writePriority: string;
     readonly writePriorityHint: string;
     readonly mqttSection: string;
+    readonly mqttEnabled: string;
+    readonly mqttEnabledHint: string;
     readonly restartRequired: string;
     readonly discovery: string;
     readonly discoveryPrefix: string;

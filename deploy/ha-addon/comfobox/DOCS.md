@@ -52,7 +52,7 @@ diese Zeile wäre der Port im Container unsichtbar, obwohl er im Dropdown steht.
 |---|---|
 | **HA-eigener Mosquitto** | `broker_host: core-mosquitto`, `broker_port: 1883` |
 | **Externer Broker** | `broker_host: <IP>`, `broker_port: 1883`, Username/Passwort |
-| **Kein Broker** | `broker_host: ""` → das Gateway läuft ohne MQTT; die Werte sind nur über die HA-Integration erreichbar |
+| **Kein Broker** | `broker_host: ""` → das Gateway läuft ohne MQTT (`Mqtt:Enabled=false`); die Werte sind nur über die HA-Integration erreichbar |
 
 ## Verbindung aus Home Assistant
 

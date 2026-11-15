@@ -82,6 +82,9 @@ export class ConfigComponent {
   /** Das Retain-Verhalten (Entwurf). */
   readonly useRetain = signal(true);
 
+  /** Ist die MQTT-Anbindung aktiviert? (Entwurf; wirkt nach einem Neustart) */
+  readonly mqttEnabled = signal(true);
+
   /** Die Geräte-ID der ComfoBox (Entwurf). */
   readonly deviceId = signal(1);
 
@@ -173,6 +176,7 @@ export class ConfigComponent {
       this.pollInterval.set(loaded.gateway.pollIntervalSeconds);
       this.maxWrites.set(loaded.gateway.maxWritesPer24h);
       this.useRetain.set(loaded.mqtt.useMqttRetain);
+      this.mqttEnabled.set(loaded.mqtt.enabled);
       this.deviceId.set(loaded.bacnet.deviceId);
       this.thisStation.set(loaded.bacnet.thisStation);
       this.itemTimeout.set(loaded.bacnet.itemTimeoutMs);
@@ -219,6 +223,7 @@ export class ConfigComponent {
       pollIntervalSeconds: this.pollInterval(),
       maxWritesPer24h: this.maxWrites(),
       useMqttRetain: this.useRetain(),
+      mqttEnabled: this.mqttEnabled(),
       deviceId: this.deviceId(),
       itemTimeoutMs: this.itemTimeout(),
       thisStation: this.thisStation(),

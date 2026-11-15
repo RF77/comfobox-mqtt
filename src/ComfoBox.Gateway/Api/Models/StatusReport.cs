@@ -76,6 +76,17 @@ public sealed record BacnetStatusDto
 public sealed record MqttStatusDto
 {
     /// <summary>
+    /// Ist die MQTT-Anbindung überhaupt aktiviert?
+    /// </summary>
+    /// <remarks>
+    /// Bei <c>false</c> (Konfiguration <c>Mqtt:Enabled=false</c>) wird kein
+    /// Broker verbunden - <see cref="Connected"/> ist dann ebenfalls
+    /// <c>false</c>. Die Home-Assistant-Integration über REST/SSE ist davon
+    /// nicht betroffen.
+    /// </remarks>
+    public required bool Enabled { get; init; }
+
+    /// <summary>
     /// Ist mindestens ein Broker verbunden?
     /// </summary>
     public required bool Connected { get; init; }

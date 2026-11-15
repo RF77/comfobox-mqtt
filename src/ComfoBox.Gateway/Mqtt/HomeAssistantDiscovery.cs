@@ -101,7 +101,12 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             }
         }
 
-        await PublishAsync(client, DeviceTopic, BuildDevicePayload(), cancellationToken).ConfigureAwait(false);
+        // Die Gerätekarte entsteht aus den Entitäten: **jede** Payload trägt
+        // den `device`-Block. Eine eigene Geräte-Discovery braucht Home
+        // Assistant 2024.11+ mit `components` oder `child_devices`; ohne diese
+        // Felder meldet die MQTT-Integration eine Warnung. Deshalb wird die
+        // Altlast mit einer **leeren** Payload entfernt (retained löschen).
+        await ClearAsync(client, DeviceTopic, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Home-Assistant-Discovery publiziert: {Count} Komponenten.", count);
     }
@@ -109,6 +114,13 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// <summary>
     /// Das Discovery-Topic des Geräts.
     /// </summary>
+    /// <remarks>
+    /// Das Topic wird **geleert**, nicht beschrieben: die Entitäten bringen
+    /// den <c>device</c>-Block selbst mit, eine eigene Geräte-Discovery wäre
+    /// ein Duplikat. Ältere Gateway-Versionen haben hier eine Payload ohne
+    /// <c>components</c>/<c>child_devices</c> hinterlassen - die MQTT-Integration
+    /// beanstandet das. Eine leere retained Payload entfernt sie.
+    /// </remarks>
     public string DeviceTopic => $"{_options.DiscoveryPrefix}/device/{DeviceIdentifier}/config";
 
     /// <summary>
@@ -147,10 +159,16 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// </summary>
     /// <param name="item">Das Item.</param>
     /// <returns>Die Id, z. B. <c>comfobox_zone_set_point_normal</c>.</returns>
+    /// <remarks>
+    /// Die Id wird über <see cref="DiscoveryId.Slug"/> **ASCII-tauglich**
+    /// gemacht: Umlaute in Item-Ids würden sonst im Discovery-Topic landen -
+    /// dort sind sie unzulässig. Der Topic-Vertrag (State-Topics) bleibt
+    /// unverändert.
+    /// </remarks>
     public string UniqueId(ItemDefinition item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        return $"{DeviceIdentifier}_{item.Id.Replace('.', '_')}";
+        return $"{DeviceIdentifier}_{DiscoveryId.Slug(item.Id)}";
     }
 
     /// <summary>
@@ -229,28 +247,6 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
 
         return payload;
     }
-
-    /// <summary>
-    /// Die Discovery-Payload des Geräts.
-    /// </summary>
-    /// <returns>Die Payload.</returns>
-    public IReadOnlyDictionary<string, object?> BuildDevicePayload()
-        => new Dictionary<string, object?>(StringComparer.Ordinal)
-        {
-            ["dev"] = new Dictionary<string, object?>(StringComparer.Ordinal)
-            {
-                ["ids"] = new[] { DeviceIdentifier },
-                ["name"] = "ComfoBox",
-                ["mf"] = Manufacturer,
-                ["mdl"] = Model,
-                ["sw"] = MqttVersion.Current,
-            },
-            ["o"] = new Dictionary<string, object?>(StringComparer.Ordinal)
-            {
-                ["name"] = OriginName,
-                ["sw"] = MqttVersion.Current,
-            },
-        };
 
     /// <summary>
     /// Die Discovery-Payloads der Status-Entitäten.
@@ -390,6 +386,25 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
         await client.PublishAsync(message, cancellationToken).ConfigureAwait(false);
 
         return true;
+    }
+
+    /// <summary>
+    /// Entfernt ein retained Topic (leere Payload).
+    /// </summary>
+    /// <param name="client">Der Client.</param>
+    /// <param name="topic">Das Topic.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der den Publish abschließt.</returns>
+    private static async Task ClearAsync(IMqttClient client, string topic, CancellationToken cancellationToken)
+    {
+        var message = new MqttApplicationMessageBuilder()
+            .WithTopic(topic)
+            .WithPayload([])
+            .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+            .WithRetainFlag(true)
+            .Build();
+
+        await client.PublishAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

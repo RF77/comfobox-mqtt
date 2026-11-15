@@ -16,7 +16,7 @@ import { TagModule } from '@openng/optimus-ui/tag';
 
 import type { EnumOption, ItemDto } from '../../core/models/item.model';
 import { I18n } from '../../core/i18n/i18n';
-import { formatRelative } from '../../core/util/format';
+import { formatNumber, formatRelative } from '../../core/util/format';
 /**
  * Die Bedienzeile eines Items.
  *
@@ -41,7 +41,7 @@ import { formatRelative } from '../../core/util/format';
       </div>
 
       <div class="cb-item-value">
-        <span class="cb-item-current">{{ item().valueText ?? t().common.dash }}</span>
+        <span class="cb-item-current">{{ display() ?? t().common.dash }}</span>
         <span class="cb-item-age">{{ age() }}</span>
       </div>
 
@@ -193,6 +193,25 @@ export class ItemValueComponent {
 
   /** Das Alter des Werts (als Text). */
   readonly age = computed(() => formatRelative(this.item().lastUpdated));
+
+  /**
+   * Die Anzeige des aktuellen Werts.
+   *
+   * <p>Analogwerte werden **im Browser** formatiert, damit die Anzeige nicht
+   * zwischen der ersten Ladung (Server-`valueText`) und den SSE-Updates
+   * springt. Tausendertrennzeichen ist der Apostroph (siehe `formatNumber`).</p>
+   */
+  readonly display = computed<string | null>(() => {
+    const item = this.item();
+
+    if (item.kind === 'analog' && item.value !== null) {
+      const formatted = formatNumber(item.value);
+
+      return item.unit ? `${formatted} ${item.unit}` : formatted;
+    }
+
+    return item.valueText;
+  });
 
   constructor() {
     // Der Wert wird aus dem Serverwert übernommen - **nicht** optimistisch

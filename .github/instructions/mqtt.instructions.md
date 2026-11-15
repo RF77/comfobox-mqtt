@@ -16,6 +16,11 @@ applyTo: ["src/ComfoBox.Gateway/Mqtt/**/*.cs", "src_old/ComfoBoxMqtt/**/*.cs", "
 > Es gibt **nie** zwei gleichzeitige Master auf dem MS/TP-Bus.
 > → [ADR-009](../../docs/05-entscheidungen/adr-009-ha-integration-ohne-mqtt.md)
 
+> **MQTT ist optional:** `Mqtt:Enabled=false` schaltet die **gesamte** MQTT-Anbindung ab
+> (keine Verbindung, keine Discovery, keine Publishes, keine `/Set`-Topics). Der REST-/SSE-Weg
+> bleibt unverändert. Der Standard ist `true` – bestehende Installationen dürfen sich nicht
+> ändern. Die Dienste werden **beim Start** registriert; die Änderung braucht einen Neustart.
+
 **Für die Integration gilt zusätzlich:**
 
 | Regel | Begründung |

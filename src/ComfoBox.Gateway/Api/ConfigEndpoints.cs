@@ -65,6 +65,7 @@ internal static class ConfigEndpoints
                     },
                     Mqtt = new MqttConfigDto
                     {
+                        Enabled = Persisted(store, MqttOptions.SectionName, "Enabled", mqtt.Enabled),
                         ClientId = mqtt.ClientId,
                         KeepAliveSeconds = mqtt.KeepAliveSeconds,
                         DiscoveryPrefix = mqtt.DiscoveryPrefix,
@@ -252,6 +253,13 @@ internal static class ConfigEndpoints
                         var mqtt = ConfigStore.EnsureSection(config, MqttOptions.SectionName);
                         mqtt["UseMqttRetain"] = request.UseMqttRetain.Value;
                         changed.Add("UseMqttRetain");
+                    }
+
+                    if (request.MqttEnabled is not null)
+                    {
+                        var mqtt = ConfigStore.EnsureSection(config, MqttOptions.SectionName);
+                        mqtt["Enabled"] = request.MqttEnabled.Value;
+                        changed.Add("Enabled");
                     }
                 });
 

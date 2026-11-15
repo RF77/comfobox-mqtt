@@ -10,7 +10,17 @@ Two independent ways to get entities. Pick **one**.
 | Setup | nothing to install | install via HACS, enter host + token |
 | Works with the gateway behind NAT | no | yes (needs the port reachable) |
 
-Running both at the same time duplicates every entity. Disable one.
+Running both at the same time creates two entity sets for the same data. Pick one.
+
+If you pick **B**, also switch MQTT off — no broker needed, smaller attack surface:
+
+```json
+{ "Mqtt": { "Enabled": false } }
+```
+
+or **Configuration → MQTT → MQTT enabled** off (takes effect after a restart). With MQTT off the
+gateway still serves REST/SSE and the HA integration as before; see
+[AI assistants](ai-integration.md#choose-the-safest-configuration).
 
 ---
 

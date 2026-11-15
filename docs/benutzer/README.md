@@ -27,6 +27,7 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 | [Monitoring](08-monitoring.md) | Health überwachen, Alarmierung, **Backup und Wiederherstellung** |
 | [Fehlersuche](09-fehlersuche.md) | Symptom, Ursache und Lösung |
 | [API](10-api.md) | Schnittstelle für eigene Automatisierungen |
+| [KI-Assistenten](11-ki.md) | Werte für KI/MCP bereitstellen – inkl. Sicherheitsregeln |
 
 ## Was Sie zuerst brauchen
 

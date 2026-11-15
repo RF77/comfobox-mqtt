@@ -98,6 +98,7 @@ class GatewayStatus:
     version: str
     bacnet_connected: bool
     mqtt_connected: bool
+    mqtt_enabled: bool | None
     write_count: int | None
     write_limit: int | None
 
@@ -105,11 +106,14 @@ class GatewayStatus:
     def from_dict(cls, data: dict[str, Any]) -> GatewayStatus:
         """Baut den Status aus einem API-Dict."""
         writes = data.get("writes") or {}
+        mqtt = data.get("mqtt") or {}
         return cls(
             device_id=data.get("deviceId", "comfobox"),
             version=data.get("version", "unknown"),
             bacnet_connected=bool((data.get("bacnet") or {}).get("connected", False)),
-            mqtt_connected=bool((data.get("mqtt") or {}).get("connected", False)),
+            mqtt_connected=bool(mqtt.get("connected", False)),
+            # Aeltere Gateways kennen das Feld nicht - `None` heisst "unbekannt".
+            mqtt_enabled=mqtt.get("enabled"),
             write_count=writes.get("count"),
             write_limit=writes.get("limit"),
         )

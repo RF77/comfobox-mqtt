@@ -42,6 +42,11 @@ Dieses Dokument ist die **verbindliche Zusicherung**. Jede Abweichung ist ein Fe
 > Es gibt keine Kollision mit bestehenden Item-Topics, da es kein Item mit der Gruppe
 > `Status` oder `Command` gibt.
 
+> **MQTT ist optional:** `Mqtt:Enabled=false` schaltet die gesamte MQTT-Anbindung ab
+> (keine Verbindung, keine Topics, keine Discovery, keine Schreibbefehle). Der
+> Topic-Vertrag bleibt unverändert – er beschreibt den **eingeschalteten** Zustand.
+> Der Standard ist `true`; bestehende HA-Setups ändern sich nicht.
+
 ### 1.3 Nicht mehr vorhanden
 
 | Topic | Grund |

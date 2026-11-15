@@ -26,6 +26,7 @@ an expected outcome at this stage — see [Troubleshooting](troubleshooting.md) 
 | Home Assistant entities | [Home Assistant](home-assistant.md) |
 | Protect the UI, create a token | [Security and tokens](security.md) |
 | Script against the gateway | [REST API](rest-api.md) |
+| Let an AI assistant use the values | [AI assistants (MCP/REST)](ai-integration.md) |
 | Nothing works | [Troubleshooting](troubleshooting.md) |
 | How it is built | [Architecture](architecture.md) |
 

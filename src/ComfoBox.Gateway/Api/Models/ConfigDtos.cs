@@ -140,6 +140,11 @@ public sealed record BacnetConfigDto
 public sealed record MqttConfigDto
 {
     /// <summary>
+    /// Ist die MQTT-Anbindung aktiviert? (<c>false</c> = reiner REST-Betrieb)
+    /// </summary>
+    public required bool Enabled { get; init; }
+
+    /// <summary>
     /// Die Client-ID am Broker.
     /// </summary>
     public required string ClientId { get; init; }
@@ -292,6 +297,16 @@ public sealed class ConfigUpdateRequest
     /// Werden die Item-Werte retained publiziert?
     /// </summary>
     public bool? UseMqttRetain { get; set; }
+
+    /// <summary>
+    /// Soll die MQTT-Anbindung aktiv sein?
+    /// </summary>
+    /// <remarks>
+    /// Wirkt erst nach einem **Neustart**: die MQTT-Dienste werden beim Start
+    /// registriert. <c>false</c> ist der sichere Betrieb ohne Broker - die
+    /// REST-API und die Oberfläche bleiben erreichbar.
+    /// </remarks>
+    public bool? MqttEnabled { get; set; }
 
     /// <summary>
     /// Die Geräte-Instanz der ComfoBox am Bus.

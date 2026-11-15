@@ -50,6 +50,7 @@ Common codes:
 | `value_out_of_range` | 422 | value outside `min`/`max` |
 | `expert_mode_required` | 403 | item needs the expert mode |
 | `write_limit_reached` | 429 | 24 h write counter exhausted |
+| `mqtt_disabled` | 409 | an MQTT action was requested while `Mqtt:Enabled=false` |
 | `item_not_found` | 404 | unknown item id |
 | `token_not_found` | 404 | unknown token id |
 
@@ -65,6 +66,11 @@ Common codes:
 ```bash
 curl -s http://host:8099/api/status | jq
 ```
+
+`mqtt.enabled` tells you whether MQTT is switched on at all. If it is `false`, `mqtt.connected`
+is always `false` and `mqtt.broker` is empty — this is a configuration choice, not a fault.
+The REST API, SSE and the HA integration are unaffected. See
+[AI assistants](ai-integration.md#choose-the-safest-configuration) for the recommended setup.
 
 ### Items
 
@@ -88,6 +94,12 @@ curl -X PUT -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json
      -d '{"value": "Automatic"}' http://host:8099/api/items/zone.operation_mode
 ```
 
+An item carries everything a client needs: `id`, `kind` (`analog`/`enum`/`date`), `value`
+(number), `unit`, `min`, `max`, `writable`, `requiresExpertMode`, `enumValues`,
+`stale`, `lastUpdated` and the MQTT topics `stateTopic`/`setTopic`. Use `value`, never
+`valueText` (display text). See [AI assistants](ai-integration.md#rest-contract) for the full
+field description.
+
 Writing is protected by the **24 h write counter**. When the limit is reached the API answers
 `429 write_limit_reached`; nothing is written. The counter is persistent and cannot be bypassed —
 not by the UI, not by MQTT, not by the REST API.
@@ -99,8 +111,9 @@ not by the UI, not by MQTT, not by the REST API.
 | `GET` | `/config` | `admin` | current configuration (secrets masked) |
 | `PUT` | `/config` | `admin` | change runtime values |
 
-Runtime-changeable: `expertMode`, `pollIntervalSeconds`, `maxWritesPer24h`, `useMqttRetain`.
-Everything else needs a restart.
+Runtime-changeable: `expertMode`, `pollIntervalSeconds`, `maxWritesPer24h`, `useMqttRetain`,
+`mqttEnabled` (the last one takes effect after a restart). Everything else needs a restart.
+`GET /api/config` reports `mqtt.enabled` and the broker list without passwords.
 
 ### Tokens
 
@@ -166,7 +179,7 @@ curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: applicati
 |---|---|---|---|
 | `POST` | `/service/restart` | `admin` | restart the gateway |
 | `POST` | `/service/bacnet/reconnect` | `admin` | rebuild the BACnet connection |
-| `POST` | `/service/mqtt/reconnect` | `admin` | rebuild the MQTT connection |
+| `POST` | `/service/mqtt/reconnect` | `admin` | rebuild the MQTT connection (`409 mqtt_disabled` when MQTT is off) |
 
 ### Serial port
 

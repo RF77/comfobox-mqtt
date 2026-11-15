@@ -436,9 +436,16 @@ public sealed class SetupService
             bacnet["Port"] = request.Port;
             bacnet["Baudrate"] = request.Baudrate;
 
-            if (!string.IsNullOrWhiteSpace(request.BrokerHost))
+            // Ohne Broker läuft der Gateway bewusst **ohne** MQTT (die
+            // Home-Assistant-Integration spricht REST/SSE). Das muss in der
+            // Konfiguration stehen - sonst bliebe der Standardbroker aus dem
+            // Image aktiv und der Gateway versuchte eine Verbindung.
+            var mqtt = ConfigStore.EnsureSection(config, MqttOptions.SectionName);
+            var hasBroker = !string.IsNullOrWhiteSpace(request.BrokerHost);
+            mqtt["Enabled"] = hasBroker;
+
+            if (hasBroker)
             {
-                var mqtt = ConfigStore.EnsureSection(config, MqttOptions.SectionName);
                 mqtt["Brokers"] = new JsonArray
                 {
                     new JsonObject

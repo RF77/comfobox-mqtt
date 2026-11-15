@@ -85,6 +85,19 @@ public sealed class OptionsValidationTests
     }
 
     [Fact]
+    public void Ohne_Broker_Ist_Die_Konfiguration_Gueltig_Wenn_Mqtt_Deaktiviert_Ist()
+    {
+        // Reiner REST-Betrieb (Home-Assistant-Integration ohne Broker):
+        // MQTT ist aus, also braucht es auch keinen Broker.
+        var ohneBroker = new MqttOptions { Enabled = false, Brokers = [] };
+
+        Assert.True(MqttOptions.IsConfigurationValid(ohneBroker));
+
+        // Bleibt MQTT aktiv, ist ein Broker Pflicht.
+        Assert.False(MqttOptions.IsConfigurationValid(new MqttOptions { Brokers = [] }));
+    }
+
+    [Fact]
     public void Die_Ringpuffer_Kapazitaet_Ist_Begrenzt()
     {
         // DataAnnotations validieren verschachtelte Objekte nicht - der

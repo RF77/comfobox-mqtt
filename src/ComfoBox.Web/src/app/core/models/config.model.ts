@@ -62,6 +62,8 @@ export interface BacnetConfigDto {
 
 /** Der Abschnitt „Mqtt". */
 export interface MqttConfigDto {
+  /** Ist die MQTT-Anbindung aktiviert? (`false` = reiner REST-Betrieb). */
+  readonly enabled: boolean;
   /** Die Client-ID am Broker. */
   readonly clientId: string;
   /** Das Keep-Alive in Sekunden. */
@@ -132,6 +134,13 @@ export interface ConfigUpdateRequest {
   readonly maxWritesPer24h?: number;
   /** Werden die Item-Werte retained publiziert? */
   readonly useMqttRetain?: boolean;
+  /**
+   * Soll die MQTT-Anbindung aktiv sein?
+   *
+   * <p>Wirkt erst nach einem Neustart – die MQTT-Dienste werden beim Start
+   * registriert.</p>
+   */
+  readonly mqttEnabled?: boolean;
   /** Die Geräte-Instanz der ComfoBox (wirkt sofort). */
   readonly deviceId?: number;
   /** Das Zeitfenster je Item in Millisekunden (wirkt sofort). */

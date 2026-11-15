@@ -241,12 +241,68 @@ verfügbar. Die Heizung arbeitet in dieser Zeit mit ihrem letzten Sollwert weite
 </blockquote>
 <hr>
 <h2 id="zwei-wege-gleichzeitig">Zwei Wege gleichzeitig?</h2>
-<p>Ja – das ist unproblematisch. Beide greifen <strong>nur lesend</strong> auf dieselben Daten zu
-(die MQTT-Variante publiziert nur). Es entsteht kein Konflikt.</p>
+<p>Ja – das ist unproblematisch. Beide Wege greifen auf <strong>dasselbe</strong> Gateway zu:
+Die MQTT-Variante liest und schreibt über MQTT-Topics, die HACS-Integration über
+die REST-Schnittstelle. Schreibvorgänge laufen in beiden Fällen durch denselben
+Schreibschutz (24-h-Zähler, Min/Max, Experten-Modus).</p>
 <blockquote>
-<p><strong>Anders wäre es nur, wenn das Gateway selbst noch auf den Bus schreibt</strong> – das
-ist genau der Fall, in dem der Schreibzähler zählt. Beide Wege zusammen erzeugen
-also <strong>keine</strong> doppelten Schreibvorgänge.</p>
+<p><strong>Empfehlung:</strong> Nutzen Sie <strong>einen</strong> Weg. Wer die HACS-Integration verwendet,
+schaltet MQTT ab – das verkleinert die Angriffsfläche und es entstehen keine
+doppelten Entitäten.</p>
+</blockquote>
+<h3 id="mqtt-abschalten">MQTT abschalten</h3>
+<table>
+<thead>
+<tr>
+<th>Zugang</th>
+<th>So schalten Sie ab</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Web-Oberfläche</strong></td>
+<td><em>Konfiguration → MQTT</em> → <strong>MQTT aktiviert</strong> aus → <em>Speichern</em> → <strong>neu starten</strong></td>
+</tr>
+<tr>
+<td><strong>HA-Add-on</strong></td>
+<td>Feld <strong>Broker-Host</strong> leer lassen</td>
+</tr>
+<tr>
+<td><strong>Docker / Synology</strong></td>
+<td><code>COMFOBOX_Mqtt__Enabled=false</code> in der Compose-Datei</td>
+</tr>
+</tbody></table>
+<p>Was dann gilt:</p>
+<table>
+<thead>
+<tr>
+<th>Bereich</th>
+<th>Wirkung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MQTT-Verbindung</td>
+<td>wird <strong>nicht</strong> aufgebaut</td>
+</tr>
+<tr>
+<td>Topics und Discovery</td>
+<td>werden <strong>nicht</strong> veröffentlicht</td>
+</tr>
+<tr>
+<td>Schreiben über MQTT</td>
+<td>wird <strong>nicht</strong> angenommen</td>
+</tr>
+<tr>
+<td>REST-API, Web-Oberfläche, HACS-Integration</td>
+<td><strong>unverändert</strong></td>
+</tr>
+<tr>
+<td>Schreibschutz</td>
+<td><strong>unverändert</strong> (der Zähler bleibt im Gateway)</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>Nach dem Umschalten ist ein <strong>Neustart</strong> nötig. Der Status meldet danach
+<code>mqtt.enabled: false</code> – das ist kein Fehler, sondern die gewünschte Einstellung.</p>
 </blockquote>
 <hr>
 <h2 id="nächster-schritt">Nächster Schritt</h2>

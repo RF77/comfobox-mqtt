@@ -24,16 +24,35 @@ internal static class StatusEndpoints
         // Zustand „degraded". Der Docker-Healthcheck wertet den Inhalt aus.
         app.MapGet("/api/health", (
                 IHealthReporter health,
-                RuntimeInfo runtime) =>
+                RuntimeInfo runtime,
+                MqttOptions mqtt) =>
             {
+                var checks = health.Components.Values
+                    .OrderBy(component => component.Name, StringComparer.Ordinal)
+                    .Select(HealthCheckDto.From)
+                    .ToList();
+
+                // Ohne MQTT gibt es keine MQTT-Komponente - der Gateway ist
+                // trotzdem gesund. Der Eintrag macht sichtbar, dass das Fehlen
+                // eine bewusste Einstellung ist und kein Ausfall.
+                if (!mqtt.Enabled)
+                {
+                    checks.Add(new HealthCheckDto
+                    {
+                        Name = "Mqtt",
+                        State = "online",
+                        Message = "MQTT ist deaktiviert (Mqtt:Enabled=false).",
+                        ChangedAt = runtime.StartedAt,
+                    });
+
+                    checks = [.. checks.OrderBy(check => check.Name, StringComparer.Ordinal)];
+                }
+
                 var report = new HealthReport
                 {
                     State = StateOf(health.Current),
                     Message = health.Message,
-                    Checks = health.Components.Values
-                        .OrderBy(component => component.Name, StringComparer.Ordinal)
-                        .Select(HealthCheckDto.From)
-                        .ToArray(),
+                    Checks = [.. checks],
                     Version = MqttVersion.Current,
                     UptimeSeconds = runtime.UptimeSeconds,
                     StartedAt = runtime.StartedAt,
@@ -74,11 +93,14 @@ internal static class StatusEndpoints
                     },
                     Mqtt = new MqttStatusDto
                     {
+                        Enabled = mqtt.Enabled,
                         Connected = clients.IsConnected,
-                        Broker = string.Join(
-                            ",",
-                            mqtt.Brokers.Select(broker => broker.Host)
-                                .Where(host => !string.IsNullOrWhiteSpace(host))),
+                        Broker = mqtt.Enabled
+                            ? string.Join(
+                                ",",
+                                mqtt.Brokers.Select(broker => broker.Host)
+                                    .Where(host => !string.IsNullOrWhiteSpace(host)))
+                            : string.Empty,
                     },
                     Writes = new WriteStatusDto
                     {

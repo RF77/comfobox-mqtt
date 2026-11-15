@@ -139,18 +139,23 @@ auf den ansonsten offenen Endpunkten. Ohne Header bleibt alles erreichbar
 <p>Antwort (gekürzt):</p>
 <pre><code class="language-json">[
   {
-    &quot;id&quot;: &quot;zone_setpoint_normal&quot;,
+    &quot;id&quot;: &quot;zone.set_point_normal&quot;,
     &quot;group&quot;: &quot;Zone&quot;,
     &quot;name&quot;: &quot;SetPointNormal&quot;,
-    &quot;description&quot;: &quot;Raumsollwert Normal&quot;,
-    &quot;valueType&quot;: &quot;float&quot;,
-    &quot;unit&quot;: &quot;°C&quot;,
-    &quot;isReadOnly&quot;: false,
-    &quot;min&quot;: 5,
-    &quot;max&quot;: 35,
+    &quot;displayName&quot;: &quot;Raumsollwert normal&quot;,
+    &quot;kind&quot;: &quot;analog&quot;,
     &quot;value&quot;: 21.5,
-    &quot;lastUpdated&quot;: &quot;2026-10-31T10:22:41Z&quot;,
-    &quot;isStale&quot;: false
+    &quot;valueText&quot;: &quot;21,5 °C&quot;,
+    &quot;unit&quot;: &quot;°C&quot;,
+    &quot;min&quot;: 5,
+    &quot;max&quot;: 30,
+    &quot;writable&quot;: true,
+    &quot;requiresExpertMode&quot;: false,
+    &quot;stateTopic&quot;: &quot;ComfoBox/Zone/SetPointNormal&quot;,
+    &quot;setTopic&quot;: &quot;ComfoBox/Zone/SetPointNormal/Set&quot;,
+    &quot;lastUpdated&quot;: &quot;2026-11-15T10:22:41+00:00&quot;,
+    &quot;stale&quot;: false,
+    &quot;enumValues&quot;: {}
   }
 ]
 </code></pre>
@@ -166,28 +171,40 @@ auf den ansonsten offenen Endpunkten. Ohne Header bleibt alles erreichbar
 <td>stabiler Schlüssel – für Schreibvorgänge verwenden</td>
 </tr>
 <tr>
-<td><code>valueType</code></td>
-<td><code>float</code>, <code>enum</code> oder <code>bool</code></td>
+<td><code>kind</code></td>
+<td><code>analog</code>, <code>enum</code> oder <code>date</code></td>
 </tr>
 <tr>
 <td><code>min</code> / <code>max</code></td>
 <td>gültiger Bereich (bei <code>null</code>: kein Limit)</td>
 </tr>
 <tr>
-<td><code>isReadOnly</code></td>
-<td><code>true</code> = nur lesbar</td>
+<td><code>writable</code></td>
+<td><code>true</code> = schreibbar (Experten-Modus berücksichtigt)</td>
+</tr>
+<tr>
+<td><code>requiresExpertMode</code></td>
+<td><code>true</code> = erfordert den Experten-Modus</td>
 </tr>
 <tr>
 <td><code>enumValues</code></td>
-<td>erlaubte Namen (bei <code>valueType = enum</code>)</td>
+<td>erlaubte Namen als <code>{ &quot;Zahl&quot;: &quot;Name&quot; }</code> (bei <code>kind = enum</code>)</td>
 </tr>
 <tr>
 <td><code>value</code></td>
-<td>aktueller Wert (<code>null</code> = noch nie gelesen)</td>
+<td>aktueller Wert (<code>null</code> = noch nie gelesen) – <strong>maschinenlesbar</strong></td>
 </tr>
 <tr>
-<td><code>isStale</code></td>
+<td><code>valueText</code></td>
+<td>Anzeigetext (nur für Menschen – nicht auswerten)</td>
+</tr>
+<tr>
+<td><code>stale</code></td>
 <td><code>true</code> = der Wert ist älter als drei Abfragezyklen</td>
+</tr>
+<tr>
+<td><code>stateTopic</code> / <code>setTopic</code></td>
+<td>die MQTT-Adressen des Werts (auch bei abgeschaltetem MQTT)</td>
 </tr>
 </tbody></table>
 <blockquote>
@@ -199,7 +216,7 @@ Dezimaltrennzeichen – unabhängig von den Einstellungen des Systems.</p>
 <pre><code class="language-bash">curl -X PUT -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
   -H &quot;Content-Type: application/json&quot; \
   -d &#39;{&quot;value&quot;: 22.5}&#39; \
-  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+  http://192.168.1.20:8081/api/items/zone.set_point_normal
 </code></pre>
 <table>
 <thead>
@@ -284,7 +301,7 @@ sollten das mit einer Wartezeit tun, damit kein Ansturm entsteht.</p>
   &quot;version&quot;: &quot;1.0.0&quot;,
   &quot;uptimeSeconds&quot;: 4523,
   &quot;bacnet&quot;: { &quot;connected&quot;: true, &quot;port&quot;: &quot;/dev/ttyUSB0&quot;, &quot;lastError&quot;: null },
-  &quot;mqtt&quot;:   { &quot;connected&quot;: false, &quot;broker&quot;: &quot;core-mosquitto&quot; },
+  &quot;mqtt&quot;:   { &quot;enabled&quot;: false, &quot;connected&quot;: false, &quot;broker&quot;: &quot;&quot; },
   &quot;writes&quot;: { &quot;count&quot;: 17, &quot;limit&quot;: 200, &quot;resetsAt&quot;: &quot;2026-11-01T00:00:00Z&quot; }
 }
 </code></pre>
@@ -298,6 +315,10 @@ sollten das mit einer Wartezeit tun, damit kein Ansturm entsteht.</p>
 <tbody><tr>
 <td><code>bacnet.connected</code></td>
 <td>antwortet die Heizung?</td>
+</tr>
+<tr>
+<td><code>mqtt.enabled</code></td>
+<td>ist MQTT überhaupt eingeschaltet?</td>
 </tr>
 <tr>
 <td><code>mqtt.connected</code></td>
@@ -324,7 +345,7 @@ curl -s -X PUT \
   -H &quot;Authorization: Bearer MEIN-TOKEN&quot; \
   -H &quot;Content-Type: application/json&quot; \
   -d &#39;{&quot;value&quot;: 21.5}&#39; \
-  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+  http://192.168.1.20:8081/api/items/zone.set_point_normal
 </code></pre>
 <blockquote>
 <p><strong>Beachten Sie das Tageslimit.</strong> Ein Cronjob, der stündlich schreibt, erreicht
@@ -356,5 +377,74 @@ das Limit (200) nach gut acht Tagen. Lesen ist unbegrenzt, Schreiben nicht.</p>
 <td>widerrufene Tokens wirken sofort</td>
 </tr>
 </tbody></table>
+<hr>
+<h2 id="ki-assistenten-home-assistant-mcp">KI-Assistenten (Home-Assistant-MCP)</h2>
+<p>Die ComfoBox-Werte lassen sich auch einem KI-Assistenten zugänglich machen.
+Es gibt zwei Wege:</p>
+<table>
+<thead>
+<tr>
+<th>Weg</th>
+<th>Was die KI sieht</th>
+<th>Voraussetzung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Home-Assistant-MCP</strong></td>
+<td>die HA-Entitäten und Dienste</td>
+<td>HA-MCP-Server ist eingerichtet</td>
+</tr>
+<tr>
+<td><strong>REST-API</strong></td>
+<td>den vollständigen Item-Katalog</td>
+<td>API-Token mit passendem Umfang</td>
+</tr>
+</tbody></table>
+<h3 id="über-home-assistant-mcp">Über Home-Assistant-MCP</h3>
+<p>Die KI sieht die Entitäten der <strong>HACS-Integration</strong>: Sensoren, Number-, Select-
+und Schalter-Entitäten des Geräts <strong>ComfoBox ELESTA</strong>. Die Entitäts-IDs leiten
+sich aus Geräte- und Wertnamen ab, z. B.
+<code>number.comfobox_elesta_raumsollwert_normal</code>. Die <strong>genauen</strong> IDs und die
+erlaubten Werte stehen in Home Assistant unter <em>Einstellungen → Geräte &amp;
+Dienste → ComfoBox ELESTA</em>.</p>
+<table>
+<thead>
+<tr>
+<th>Was die KI tun soll</th>
+<th>Wie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Werte lesen</td>
+<td>Entitätszustand lesen (Sensor, Number, Select)</td>
+</tr>
+<tr>
+<td>Zahlenwert schreiben</td>
+<td>Dienst <code>comfobox.set_value</code> mit <code>entity_id</code> und <code>value</code></td>
+</tr>
+<tr>
+<td>Auswahlwert schreiben</td>
+<td>Dienst <code>comfobox.set_value</code> mit dem <strong>exakten</strong> Enum-Namen</td>
+</tr>
+<tr>
+<td>Neu lesen / Neustart</td>
+<td><code>comfobox.read_all</code> bzw. <code>comfobox.restart</code></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Die KI darf keine Grenzen erfinden.</strong> Min/Max und die erlaubten Enum-Namen
+kommen aus dem Gateway. Ein Wert außerhalb des Bereichs wird abgelehnt – es
+wird <strong>nichts</strong> geschrieben.</p>
+</blockquote>
+<h3 id="über-die-rest-api">Über die REST-API</h3>
+<p>Für KI-Werkzeuge, die direkt HTTP sprechen, ist die API der präzisere Weg:
+<code>GET /api/items</code> liefert alle Werte <strong>mit</strong> <code>min</code>, <code>max</code>, <code>enumValues</code> und
+<code>writable</code>. Ein Überblick über Entitäten, Felder und Sicherheitsregeln steht in
+der Hilfeseite <a href="/help/ki">KI-Assistenten</a>.</p>
+<blockquote>
+<p><strong>Empfehlung:</strong> Für lesende KI-Aufgaben einen Token mit dem Umfang
+<strong>Nur lesen</strong> verwenden. Für schreibende Aufgaben einen eigenen Token mit
+<strong>Lesen und regeln</strong> – er lässt sich jederzeit widerrufen.</p>
+</blockquote>
 
       </article>

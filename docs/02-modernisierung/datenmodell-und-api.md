@@ -235,7 +235,7 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 | `PUT` | `/api/config/bacnet` | **Schnittstelle umstellen – wirkt sofort** | `204` |
 | `POST` | `/api/service/restart` | **Service neu starten** | `202` |
 | `POST` | `/api/service/reconnect/bacnet` | BACnet neu verbinden | `202` |
-| `POST` | `/api/service/reconnect/mqtt` | MQTT neu verbinden | `202` |
+| `POST` | `/api/service/reconnect/mqtt` | MQTT neu verbinden (`409 mqtt_disabled`, wenn MQTT aus ist) | `202` |
 | `GET` | `/api/diagnostics/errors` | Letzte Fehler (Ringpuffer) | `ErrorEntry[]` |
 | `GET` | `/api/diagnostics/logs` | **Log-Einträge** (Ringpuffer, gefiltert) | `LogEntryDto[]` |
 | `GET` | `/api/diagnostics/logs/stream` | **Live-Log-Tail** per SSE | `text/event-stream` |
@@ -615,7 +615,7 @@ appsettings.json (im Image)        ← Defaults
 |---|---|
 | `PUT /api/config` | persistiert die geänderten Werte nach `config.json` (Modus 0600) |
 | **sofort** wirksam | `ExpertMode`, `Bacnet:DeviceId`, `Bacnet:ItemTimeoutMs` |
-| nach **Neustart** wirksam | `PollIntervalSeconds`, `MaxWritesPer24h`, `UseMqttRetain`, `Bacnet:ThisStation`, `Bacnet:WritePriority`, `Mqtt:Brokers` |
+| nach **Neustart** wirksam | `PollIntervalSeconds`, `MaxWritesPer24h`, `UseMqttRetain`, `Mqtt:Enabled`, `Bacnet:ThisStation`, `Bacnet:WritePriority`, `Mqtt:Brokers` |
 | `PUT /api/config/bacnet` | **wirkt sofort**: `Bacnet:Port` und `Bacnet:Baudrate` werden übernommen, die Konfiguration wird geschrieben und der BACnet-Stack baut die Verbindung **ohne Neustart** neu auf |
 
 > **Umsetzung (Phase 4):** `PUT /api/config` schreibt die Werte in die

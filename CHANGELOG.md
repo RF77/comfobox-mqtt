@@ -11,6 +11,48 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added
+
+- **Diagnose für Werte außerhalb der Katalog-Grenzen.** Liefert die ComfoBox
+  einen Wert, der nicht zu `Min`/`Max` des Katalogs passt, protokolliert das
+  Gateway das **einmal je Item** (mit BACnet-Objekt-Id und Bereich) – statt dass
+  die Meldung nur im Home-Assistant-Protokoll auftaucht.
+- **Hinweis auf doppelt belegte BACnet-Objekte** beim Start des Pollings
+  (im Katalog teilen sich `KühlraumsollAbstStandby` und `RestartDelay`
+  Objekt 864 – beide Topics zeigen deshalb denselben Rohwert).
+- **MQTT lässt sich vollständig abschalten** (`Mqtt:Enabled=false`). Wer Home
+  Assistant über die HACS-Integration (REST/SSE) nutzt, braucht keinen Broker:
+  Das Gateway baut dann keine Verbindung auf, veröffentlicht keine Topics,
+  sendet keine Discovery und nimmt **keine** MQTT-Schreibbefehle an. REST-API,
+  Oberfläche und Schreibschutz bleiben unverändert. Schaltbar über
+  `config.json`/`COMFOBOX_Mqtt__Enabled`, den Schalter **Konfiguration → MQTT**
+  (wirkt nach einem Neustart) und das Add-on (leeres `broker_host`-Feld = ohne
+  MQTT). `GET /api/status` meldet den Zustand als `mqtt.enabled`.
+- **`docs/en/ai-integration.md`** und die Hilfeseite **KI-Assistenten**: der
+  Vertrag für KI-/MCP-Nutzung – REST-Endpunkte, Item-Felder, Entitäts-IDs und
+  Grenzen beim Schreiben.
+
+### Changed
+
+- **Tausendertrennzeichen in der Seite „Werte" ist jetzt der Apostroph**
+  (`1'234,5` statt `1.234,5`). Der Punkt war als Tausendertrennzeichen bei
+  technischen Werten leicht mit dem Dezimaltrennzeichen zu verwechseln. Die
+  Anzeige wird im Browser formatiert und springt nicht mehr zwischen der ersten
+  Ladung (Server-Text) und den Live-Updates.
+- **Ein `Mqtt`-Reconnect ohne MQTT antwortet mit `409 mqtt_disabled`** statt
+  still nichts zu tun.
+- **Home-Assistant-Discovery-Kennungen sind jetzt ASCII.** Item-Ids mit Umlauten
+  (`config.energy_comsumer.zone.gebäudeträgheit`) landeten unverändert in den
+  Discovery-Topics und `unique_id`s – dort sind sie unzulässig, die MQTT-Integration
+  meldete „Discovery topic contains invalid characters". Umlaute werden jetzt
+  transliteriert (`ä` → `ae`, `ß` → `ss`). Die **Werte-Topics bleiben unverändert**.
+  ⚠️ Für die acht betroffenen Werte legt Home Assistant **neue** Entitäten an; die
+  alten (mit Umlaut) müssen einmal gelöscht werden.
+- **Die Geräte-Discovery-Payload wird nicht mehr veröffentlicht.** Ihr fehlten
+  `components`/`child_devices` (Warnung der MQTT-Integration); die Entitäten
+  bringen den `device`-Block ohnehin selbst mit. Das retained Topic wird jetzt
+  mit einer leeren Nachricht **entfernt**.
+
 ## [1.1.0] – 2026-11-15
 
 ### Added

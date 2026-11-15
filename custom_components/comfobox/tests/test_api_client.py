@@ -52,7 +52,7 @@ async def test_get_status_liest_den_status(client):
                 "deviceId": "comfobox1",
                 "version": "1.0.0",
                 "bacnet": {"connected": True},
-                "mqtt": {"connected": False},
+                "mqtt": {"connected": False, "enabled": False},
                 "writes": {"count": 17, "limit": 200},
             },
         )
@@ -63,6 +63,7 @@ async def test_get_status_liest_den_status(client):
     assert status.version == "1.0.0"
     assert status.bacnet_connected is True
     assert status.mqtt_connected is False
+    assert status.mqtt_enabled is False
     assert status.write_count == 17
     assert status.write_limit == 200
 

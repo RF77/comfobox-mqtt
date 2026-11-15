@@ -297,6 +297,108 @@ sudo fuser -v /dev/ttyUSB0
 
 ---
 
+## Home Assistant: Meldungen der MQTT-Integration
+
+Die MQTT-Integration von Home Assistant schreibt beim Anlegen der Entitäten
+einige Warnungen. **Keine** davon bedeutet, dass die Heizung defekt ist. Die
+folgende Tabelle ordnet jede Meldung ein.
+
+### „Value … is outside of the range"
+
+**Symptom:** Im Protokoll von Home Assistant steht zum Beispiel
+
+````text
+Value 10 for number.comfobox_wiedereinschaltverzogerung is outside of the range 20.0 - 60.0
+````
+
+**Ursache:** Das Gateway liest einen Rohwert, der nicht zu den Grenzen passt, die
+es selbst als gültigen Bereich meldet. Drei Fälle sind bekannt – **alle drei sind
+harmlos**, aber unterschiedlich erklärbar:
+
+| Entität | Wert | Was dahinter steckt |
+|---|---|---|
+| **Wiedereinschaltverzögerung** (`RestartDelay`) | 10 statt 20–60 | Dieses Item und **KühlraumsollAbstStandby** lesen dasselbe BACnet-Objekt **864** (Altbestand). Der Rohwert 10 passt zum Standby-Absenkwert (0–10 K), nicht zur Wiedereinschaltverzögerung. |
+| **WW-Entladeschutz** (`Entladeschutz`) | 3 statt 0–1 | Die Gerätedokumentation kennt nur 0 und 1; die Firmware der ComfoBox liefert auch 3. Die Katalog-Grenze ist zu eng. |
+| **HeatingHysteresis** (`Comfofond`) | 0 statt 2–20 | 0 heißt: Die Comfofond-Heizung ist nicht eingerichtet – dann ist die Hysterese unbenutzt und steht auf 0. |
+
+**Was das für Sie bedeutet:**
+
+| Aspekt | Wirkung |
+|---|---|
+| Anzeige | Der Wert wird **korrekt** angezeigt (10, 3, 0) |
+| Regeln / Automatisierungen | funktionieren |
+| **Schreiben** dieser drei Werte | wird **abgelehnt** (`value_out_of_range`), solange der Wert außerhalb liegt |
+| Heizung | **kein** Fehler – das sind Ist-Werte der Anlage |
+
+**Was Sie tun können:**
+
+1. **Nichts** – die Meldung ist dann nur ein Hinweis. Sie erscheint einmalig.
+2. Im Gateway-Protokoll (Diagnose → **Protokoll**) steht dieselbe Information als
+   Warnung mit Item-Id, BACnet-Objekt-Id und Bereich. Das ist die verlässlichere
+   Quelle als das HA-Protokoll.
+3. Wenn Sie einen dieser Werte **schreiben** müssen: erst prüfen, ob der Wert
+   wirklich zu diesem Item gehört – bei `RestartDelay` ist das wegen der
+   Doppelbelegung von Objekt 864 unsicher.
+
+> **Warum meldet das Gateway es nicht als Fehler?** Der Wert ist die Wahrheit
+> des Geräts. Das Gateway übernimmt ihn unverändert; es korrigiert **nie** einen
+> gelesenen Wert. Es protokolliert den Widerspruch einmal pro Item.
+
+### „Discovery topic … contains invalid characters"
+
+**Symptom:** Meldungen zu Themen mit Umlauten, z. B.
+`…kühl…`, `…überh…`, `…gebäudeträgheit`.
+
+**Ursache:** Die Topic-Namen der ComfoBox enthalten Umlaute. Sie sind Teil des
+MQTT-Vertrags und dürfen **nicht** geändert werden. Die Discovery-Kennungen von
+Home Assistant erlauben aber nur Buchstaben, Ziffern, `-` und `_`.
+
+**Lösung:** Das Gateway schreibt Umlaute in Discovery-Kennungen seit dem letzten
+Update als `ae`, `oe`, `ue`, `ss` (aus `Gebäudeträgheit` wird
+`gebaeudetraegheit`). Die **Werte-Topics bleiben unverändert**.
+
+> **Einmalige Nacharbeit nach dem Update:** Für die betroffenen Werte legt Home
+> Assistant **neue** Entitäten an. Die alten (mit Umlaut) bleiben als
+> „nicht verfügbar" stehen und können unter *Einstellungen → Geräte & Dienste →
+> Entitäten* gelöscht werden.
+
+### „… contains neither `components` nor `child_devices`"
+
+**Symptom:** Warnung zu `homeassistant/device/comfobox/config`.
+
+**Ursache:** Eine frühere Version hat zusätzlich eine eigene Geräte-Discovery
+veröffentlicht. Home Assistant erwartet dort eine Liste von Komponenten.
+
+**Lösung:** Diese Nachricht wird nicht mehr erzeugt; das Topic wird beim
+Verbindungsaufbau mit einer leeren Nachricht **entfernt**. Die Gerätekarte
+entsteht aus den Entitäten und bleibt vollständig.
+
+### „Duplicate unique_id found"
+
+**Symptom:** Zwei Entitäten streiten um dieselbe Kennung, z. B.
+`sensor.wasser_messung_last_min`.
+
+**Ursache:** Meist stammt die doppelte Kennung **nicht** von diesem Gateway,
+sondern von
+
+* einer zweiten Gateway-Instanz mit derselben Kennung (`Mqtt:DiscoveryIdentifier`),
+* einer YAML-Definition in `configuration.yaml`, die denselben Wert anlegt,
+* einer anderen Integration mit gleichem Namen.
+
+**Prüfung:** In Home Assistant die Entität öffnen → **Einstellungen** →
+*Entitäts-Id* und der Abschnitt **Verwandte Meldungen** nennen die Quelle. Bei
+MQTT zeigt das Zahnrad-Symbol das Discovery-Topic.
+
+**Lösung:**
+
+| Ursache | Lösung |
+|---|---|
+| zweite Gateway-Instanz | `Gateway:DeviceId` **und** `Mqtt:DiscoveryIdentifier` unterscheiden; einmal neu starten |
+| alte retained Discovery | Topic mit leerer Nachricht löschen, z. B.<br>`mosquitto_pub -r -n -t homeassistant/sensor/<kennung>/config` |
+| YAML-Entität | den Eintrag in `configuration.yaml` entfernen |
+
+---
+
 ## Home Assistant: Entitäten bleiben unavailable
 
 | Ursache | Prüfung | Lösung |

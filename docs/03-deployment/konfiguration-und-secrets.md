@@ -60,6 +60,7 @@ für den Produktivbetrieb.
 | `COMFOBOX_Bacnet__Port` | Bacnet | Port | `/dev/ttyUSB0` |
 | `COMFOBOX_Bacnet__Baudrate` | Bacnet | Baudrate | `38400` |
 | `COMFOBOX_Bacnet__MasterId` | Bacnet | MasterId | `1` |
+| `COMFOBOX_Mqtt__Enabled` | Mqtt | Enabled | `true` |
 | `COMFOBOX_Mqtt__Brokers__0__Host` | Mqtt | Brokers[0].Host | `192.168.1.10` |
 | `COMFOBOX_Mqtt__Brokers__0__Port` | Mqtt | Brokers[0].Port | `1883` |
 | `COMFOBOX_Mqtt__Brokers__0__Username` | Mqtt | Brokers[0].Username | `comfobox` |
@@ -105,6 +106,7 @@ für den Produktivbetrieb.
     "ReconnectDelaySeconds": 5
   },
   "Mqtt": {
+    "Enabled": true,
     "EnableDiscovery": true,
     "DiscoveryPrefix": "homeassistant",
     "EmbedBroker": false,
@@ -244,6 +246,7 @@ curl -s http://localhost:8081/api/health
 | `Gateway:UseMqttRetain` | ✅ | `PUT /api/config` |
 | `Bacnet:Port` | ❌ | Neustart nötig |
 | `Bacnet:Baudrate` | ❌ | Neustart nötig |
+| `Mqtt:Enabled` | ❌ | Neustart nötig (die MQTT-Dienste werden beim Start registriert) |
 | `Mqtt:Brokers` | ❌ | Neustart nötig |
 | `Mqtt:EnableDiscovery` | ✅ | `PUT /api/config` → Discovery wird neu gesendet |
 | `Gateway:RestartEnabled` | ❌ | Neustart nötig |

@@ -228,6 +228,16 @@
     <p-card [header]="t().config.mqttSection" styleClass="cb-card">
       <p-tag [value]="t().config.restartRequired" severity="warn" />
 
+      <div class="cb-field">
+        <label for="config-mqtt-enabled">{{ t().config.mqttEnabled }}</label>
+        <p-toggleswitch
+          inputId="config-mqtt-enabled"
+          [ngModel]="mqttEnabled()"
+          (ngModelChange)="mqttEnabled.set($event)"
+        />
+        <span class="cb-hint">{{ t().config.mqttEnabledHint }}</span>
+      </div>
+
       <div class="cb-readonly-grid">
         <div>
           <span class="cb-label">{{ t().config.discovery }}</span>

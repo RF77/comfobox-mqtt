@@ -66,8 +66,9 @@ public static class GatewayServiceCollectionExtensions
             .Bind(configuration.GetSection(MqttOptions.SectionName))
             .ValidateDataAnnotations()
             .Validate(
-                o => MqttOptions.HasValidBroker(o),
-                "Mqtt:Brokers muss mindestens einen Broker mit Host und Port enthalten.")
+                o => MqttOptions.IsConfigurationValid(o),
+                "Mqtt:Brokers muss mindestens einen Broker mit Host und Port enthalten, "
+                + "solange Mqtt:Enabled true ist.")
             .ValidateOnStart();
 
         services.AddOptions<LoggingOptions>()
@@ -220,7 +221,18 @@ public static class GatewayServiceCollectionExtensions
 
         // -------------------------------------------------------------------
         // MQTT (Phase 3): Verbindungen, Publisher, Subscriber, Discovery, Status.
+        //
+        // MQTT lässt sich vollständig abschalten (Mqtt:Enabled=false) - der
+        // übliche Betrieb mit der Home-Assistant-Integration über REST/SSE
+        // braucht keinen Broker. Dann starten **keine** MQTT-Hintergrunddienste:
+        // kein Verbindungsversuch, keine Discovery, keine Werte-Publishes und
+        // keine Schreib-Topics. Die Dienste bleiben registriert, damit der
+        // Reconnect-Endpunkt weiterhin eine klare Antwort geben kann.
         // -------------------------------------------------------------------
+        var mqttEnabled = configuration
+            .GetSection(MqttOptions.SectionName)
+            .GetValue("Enabled", true);
+
         services.AddSingleton(sp =>
         {
             var gateway = sp.GetRequiredService<IOptions<GatewayOptions>>().Value;
@@ -260,7 +272,7 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatePublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantBirthHandler>());
 
-        if (startBackgroundServices)
+        if (startBackgroundServices && mqttEnabled)
         {
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatePublisher>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatusPublisher>());

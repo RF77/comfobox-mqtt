@@ -37,6 +37,7 @@ public sealed class AddOnOptionsProviderTests
         Assert.Equal("/dev/serial/by-id/usb-Prolific-if00-port0", target["Bacnet:Port"]);
         Assert.Equal("57600", target["Bacnet:Baudrate"]);
         Assert.Equal("ComfoBox2", target["Gateway:BaseTopic"]);
+        Assert.Equal("true", target["Mqtt:Enabled"]);
         Assert.Equal("broker.local", target["Mqtt:Brokers:0:Host"]);
         Assert.Equal("8883", target["Mqtt:Brokers:0:Port"]);
         Assert.Equal("comfobox", target["Mqtt:Brokers:0:Username"]);
@@ -90,6 +91,9 @@ public sealed class AddOnOptionsProviderTests
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:Username"));
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:Password"));
         Assert.False(target.ContainsKey("Logging:Level"));
+
+        // Ohne Broker und ohne vorhandenen Broker ist MQTT bewusst aus.
+        Assert.Equal("false", target["Mqtt:Enabled"]);
     }
 
     /// <summary>
@@ -116,6 +120,10 @@ public sealed class AddOnOptionsProviderTests
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:Host"));
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:Port"));
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:UseTls"));
+
+        // Ohne Broker ist MQTT aus - sonst liefe der Gateway gegen den
+        // Standardbroker aus dem Image (localhost).
+        Assert.Equal("false", target["Mqtt:Enabled"]);
 
         // Die Discovery ist keine Broker-Option - sie bleibt erhalten.
         Assert.Equal("true", target["Mqtt:EnableDiscovery"]);
@@ -144,6 +152,7 @@ public sealed class AddOnOptionsProviderTests
             key => key == "Mqtt:Brokers:0:Host" ? "broker.local" : null);
 
         Assert.False(target.ContainsKey("Mqtt:Brokers:0:Host"));
+        Assert.Equal("true", target["Mqtt:Enabled"]);
         Assert.Equal("8883", target["Mqtt:Brokers:0:Port"]);
         Assert.Equal("comfobox", target["Mqtt:Brokers:0:Username"]);
     }

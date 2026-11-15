@@ -157,12 +157,35 @@ data:
 
 ## Zwei Wege gleichzeitig?
 
-Ja – das ist unproblematisch. Beide greifen **nur lesend** auf dieselben Daten zu
-(die MQTT-Variante publiziert nur). Es entsteht kein Konflikt.
+Ja – das ist unproblematisch. Beide Wege greifen auf **dasselbe** Gateway zu:
+Die MQTT-Variante liest und schreibt über MQTT-Topics, die HACS-Integration über
+die REST-Schnittstelle. Schreibvorgänge laufen in beiden Fällen durch denselben
+Schreibschutz (24-h-Zähler, Min/Max, Experten-Modus).
 
-> **Anders wäre es nur, wenn das Gateway selbst noch auf den Bus schreibt** – das
-> ist genau der Fall, in dem der Schreibzähler zählt. Beide Wege zusammen erzeugen
-> also **keine** doppelten Schreibvorgänge.
+> **Empfehlung:** Nutzen Sie **einen** Weg. Wer die HACS-Integration verwendet,
+> schaltet MQTT ab – das verkleinert die Angriffsfläche und es entstehen keine
+> doppelten Entitäten.
+
+### MQTT abschalten
+
+| Zugang | So schalten Sie ab |
+|---|---|
+| **Web-Oberfläche** | *Konfiguration → MQTT* → **MQTT aktiviert** aus → *Speichern* → **neu starten** |
+| **HA-Add-on** | Feld **Broker-Host** leer lassen |
+| **Docker / Synology** | `COMFOBOX_Mqtt__Enabled=false` in der Compose-Datei |
+
+Was dann gilt:
+
+| Bereich | Wirkung |
+|---|---|
+| MQTT-Verbindung | wird **nicht** aufgebaut |
+| Topics und Discovery | werden **nicht** veröffentlicht |
+| Schreiben über MQTT | wird **nicht** angenommen |
+| REST-API, Web-Oberfläche, HACS-Integration | **unverändert** |
+| Schreibschutz | **unverändert** (der Zähler bleibt im Gateway) |
+
+> Nach dem Umschalten ist ein **Neustart** nötig. Der Status meldet danach
+> `mqtt.enabled: false` – das ist kein Fehler, sondern die gewünschte Einstellung.
 
 ---
 

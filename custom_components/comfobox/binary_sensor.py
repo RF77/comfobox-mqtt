@@ -82,5 +82,14 @@ class ComfoBoxStatusBinarySensor(
         status = self.coordinator.data.get(STATUS_KEY)
         if status is None:
             return None
+
+        # Ist MQTT bewusst abgeschaltet, ist "nicht verbunden" kein Fehler.
+        # `None` zeigt in Home Assistant "unbekannt" statt "aus".
+        if (
+            self.entity_description.key == "mqtt_connected"
+            and getattr(status, "mqtt_enabled", None) is False
+        ):
+            return None
+
         value: Any = getattr(status, self.entity_description.key, None)
         return None if value is None else bool(value)

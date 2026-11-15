@@ -1,5 +1,6 @@
 using ComfoBox.Bacnet;
 using ComfoBox.Gateway.Api.Models;
+using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Mqtt;
 using Microsoft.Extensions.Options;
@@ -68,12 +69,24 @@ internal static class ServiceControlActions
 
         app.MapPost("/api/service/reconnect/mqtt", async (
                 HttpContext context,
+                MqttOptions options,
                 MqttConnectionManager manager,
                 IHealthReporter health,
                 ILoggerFactory loggerFactory,
                 CancellationToken cancellationToken) =>
             {
                 var logger = loggerFactory.CreateLogger("ComfoBox.Gateway.Api");
+
+                if (!options.Enabled)
+                {
+                    return Results.Json(
+                        new ApiError
+                        {
+                            Error = "mqtt_disabled",
+                            Message = "Die MQTT-Anbindung ist deaktiviert (Mqtt:Enabled=false).",
+                        },
+                        statusCode: StatusCodes.Status409Conflict);
+                }
 
                 var count = await manager.RequestReconnectAsync(cancellationToken).ConfigureAwait(false);
 
@@ -84,6 +97,7 @@ internal static class ServiceControlActions
             })
             .WithTags("Betrieb")
             .WithName("ReconnectMqtt")
-            .Produces(StatusCodes.Status202Accepted);
+            .Produces(StatusCodes.Status202Accepted)
+            .Produces<ApiError>(StatusCodes.Status409Conflict);
     }
 }

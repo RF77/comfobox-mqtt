@@ -67,6 +67,18 @@ public sealed class BacnetDevice : IDisposable
     private readonly GatewayRuntimeSettings _gateway;
 
     /// <summary>
+    /// Die Items, für die bereits ein Hinweis „Wert außerhalb der
+    /// Katalog-Grenzen" geloggt wurde.
+    /// </summary>
+    /// <remarks>
+    /// Der Hinweis erscheint **einmal je Item und Prozesslauf**: sonst
+    /// entstünde bei jedem Poll-Zyklus eine neue Zeile und der Ringpuffer
+    /// (1000 Einträge) wäre innerhalb von Minuten unbrauchbar.
+    /// </remarks>
+    private readonly HashSet<string> _rangeWarned = new(StringComparer.Ordinal);
+    private readonly object _rangeWarnedLock = new();
+
+    /// <summary>
     /// Erzeugt das Gerät.
     /// </summary>
     /// <param name="client">Der BACnet-Client.</param>
@@ -345,6 +357,11 @@ public sealed class BacnetDevice : IDisposable
                 ? new EnumValue((int)number.Value, item.EnumValues)
                 : new AnalogValue(number.Value, item.Min, item.Max, item.Unit);
 
+            if (item.Kind == ItemValueKind.Analog)
+            {
+                WarnIfOutOfCatalogRange(item, number.Value);
+            }
+
             _cache.Update(item.Id, value);
             MarkConnected();
             return true;
@@ -403,10 +420,54 @@ public sealed class BacnetDevice : IDisposable
     }
 
     /// <summary>
+    /// Meldet **einmalig** einen gelesenen Wert außerhalb der Katalog-Grenzen.
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <param name="value">Der gelesene Wert.</param>
+    /// <remarks>
+    /// <para>
+    /// Das ist **kein** Fehler des Gateways: der Wert wird übernommen, wie er
+    /// vom Gerät kommt. Die Meldung erklärt aber, warum Home Assistant bei
+    /// einer Zahl-Entität „value is outside of the range" protokolliert.
+    /// </para>
+    /// <para>
+    /// Die häufigste Ursache im Katalog ist ein **geteiltes BACnet-Objekt**:
+    /// <c>KühlraumsollAbstStandby</c> und <c>RestartDelay</c> lesen beide
+    /// Objekt 864 - der Rohwert kann nur zu einer der beiden Grenzen passen.
+    /// </para>
+    /// </remarks>
+    private void WarnIfOutOfCatalogRange(ItemDefinition item, float value)
+    {
+        if (item.IsInRange(value))
+        {
+            return;
+        }
+
+        lock (_rangeWarnedLock)
+        {
+            if (!_rangeWarned.Add(item.Id))
+            {
+                return;
+            }
+        }
+
+        _logger.LogWarning(
+            "Der gelesene Wert von {Item} ({Value} {Unit}) liegt außerhalb der Katalog-Grenzen "
+            + "[{Min} … {Max}]. Der Wert wird trotzdem übernommen. "
+            + "Meist teilen sich zwei Items dasselbe BACnet-Objekt (Objekt-Id {ObjectId}) "
+            + "oder die Katalog-Grenzen sind zu eng.",
+            item.Id,
+            value,
+            item.Unit ?? string.Empty,
+            item.Min,
+            item.Max,
+            item.BacnetObjectId);
+    }
+
+    /// <summary>
     /// Vermerkt einen erfolgreichen Buszugriff.
     /// </summary>
-    private void MarkConnected()
-    {
+    private void MarkConnected()    {
         IsConnected = true;
         LastError = null;
     }

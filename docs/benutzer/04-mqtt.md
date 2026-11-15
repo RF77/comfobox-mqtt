@@ -52,6 +52,30 @@ Das Ergebnis sagt klar, was fehlt:
 
 ---
 
+## MQTT abschalten
+
+Sie nutzen Home Assistant über die **HACS-Integration** (REST) und wollen keinen
+Broker? Dann schalten Sie MQTT **vollständig** ab. Das ist der sichere Betrieb:
+Es gibt keine offene MQTT-Verbindung, keine veröffentlichten Topics und **keine
+Schreibbefehle** über MQTT. Die Web-Oberfläche, die REST-API und die
+HACS-Integration funktionieren unverändert.
+
+| Zugang | So schalten Sie ab |
+|---|---|
+| **Web-Oberfläche** | *Konfiguration → MQTT* → Schalter **MQTT aktiviert** aus → *Speichern* → **neu starten** |
+| **HA-Add-on** | Feld **Broker-Host** leer lassen |
+| **Docker / Synology** | `COMFOBOX_Mqtt__Enabled=false` in der Compose-Datei |
+| **`config.json`** | `"Mqtt": { "Enabled": false }` |
+
+> **Neustart nötig:** Die MQTT-Dienste werden beim Start eingerichtet. Nach dem
+> Umschalten starten Sie das Gateway bitte neu (Dashboard → *Gateway neu starten*).
+
+> **Sicherheit:** Ohne MQTT bleibt nur die HTTP-Schnittstelle übrig. Schützen Sie
+> diese mit einem **API-Token** (siehe [API](10-api.md)) und lassen Sie den Port
+> nicht ins Internet.
+
+---
+
 ## Topics
 
 Alle Werte werden unter einem gemeinsamen Präfix veröffentlicht – standardmäßig

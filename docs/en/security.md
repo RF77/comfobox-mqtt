@@ -12,6 +12,21 @@ the requirement on at any time.
 > [!WARNING]
 > Pre-release software — see [Status](README.md#status).
 
+## Reduce the attack surface
+
+If you use the **HACS integration** (REST/SSE) and do not need MQTT, switch MQTT off:
+
+| Where | Setting |
+|---|---|
+| Web UI | **Configuration → MQTT → MQTT enabled** off, then restart |
+| `config.json` | `"Mqtt": { "Enabled": false }` |
+| Environment | `COMFOBOX_Mqtt__Enabled=false` |
+| HA add-on | leave **Broker host** empty |
+
+With MQTT off, the gateway opens no broker connection, publishes no topics and accepts no MQTT
+write commands. REST, SSE, the web UI and the HA integration keep working. `GET /api/status`
+reports `mqtt.enabled = false`.
+
 ## Administrator account
 
 ### Created during setup

@@ -77,16 +77,27 @@ export function formatTime(value: string | null | undefined): string {
   return date.toLocaleTimeString(activeLocale, { timeStyle: 'medium' });
 }
 
-/** Formatiert eine Zahl (deutsch, mit höchstens zwei Nachkommastellen). */
+/**
+ * Formatiert eine Zahl im aktiven Gebietsschema - mit **Apostroph** als
+ * Tausendertrennzeichen (z. B. `1'234,5`).
+ *
+ * <p>Der Apostroph ist bewusst gesetzt: der Punkt als Tausendertrennzeichen
+ * (de-DE) ist bei technischen Werten leicht mit dem Dezimaltrennzeichen zu
+ * verwechseln. Das Dezimaltrennzeichen bleibt das des Gebietsschemas.</p>
+ */
 export function formatNumber(value: number | null | undefined, digits = 2): string {
   if (value === null || value === undefined || Number.isNaN(value)) {
     return '–';
   }
 
-  return value.toLocaleString(activeLocale, {
+  return new Intl.NumberFormat(activeLocale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: digits,
-  });
+    useGrouping: true,
+  })
+    .formatToParts(value)
+    .map((part) => (part.type === 'group' ? "'" : part.value))
+    .join('');
 }
 
 /** Formatiert einen Anteil (0–1) als Prozentwert. */

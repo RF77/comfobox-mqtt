@@ -4,6 +4,7 @@ import type { ItemDto } from '../models/item.model';
 import { EventsService } from '../api/events.service';
 import { ItemsService } from '../api/items.service';
 import { toApiError } from '../api/api-client';
+import { formatNumber } from '../util/format';
 
 /**
  * Der Zustand des Item-Katalogs.
@@ -238,7 +239,7 @@ export class ItemsStore {
       return null;
     }
 
-    const formatted = value.toLocaleString('de-DE', { maximumFractionDigits: 2 });
+    const formatted = formatNumber(value);
 
     return unit ? `${formatted} ${unit}` : formatted;
   }

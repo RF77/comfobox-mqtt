@@ -80,18 +80,23 @@ Antwort (gekürzt):
 ````json
 [
   {
-    "id": "zone_setpoint_normal",
+    "id": "zone.set_point_normal",
     "group": "Zone",
     "name": "SetPointNormal",
-    "description": "Raumsollwert Normal",
-    "valueType": "float",
-    "unit": "°C",
-    "isReadOnly": false,
-    "min": 5,
-    "max": 35,
+    "displayName": "Raumsollwert normal",
+    "kind": "analog",
     "value": 21.5,
-    "lastUpdated": "2026-10-31T10:22:41Z",
-    "isStale": false
+    "valueText": "21,5 °C",
+    "unit": "°C",
+    "min": 5,
+    "max": 30,
+    "writable": true,
+    "requiresExpertMode": false,
+    "stateTopic": "ComfoBox/Zone/SetPointNormal",
+    "setTopic": "ComfoBox/Zone/SetPointNormal/Set",
+    "lastUpdated": "2026-11-15T10:22:41+00:00",
+    "stale": false,
+    "enumValues": {}
   }
 ]
 ````
@@ -99,12 +104,15 @@ Antwort (gekürzt):
 | Feld | Bedeutung |
 |---|---|
 | `id` | stabiler Schlüssel – für Schreibvorgänge verwenden |
-| `valueType` | `float`, `enum` oder `bool` |
+| `kind` | `analog`, `enum` oder `date` |
 | `min` / `max` | gültiger Bereich (bei `null`: kein Limit) |
-| `isReadOnly` | `true` = nur lesbar |
-| `enumValues` | erlaubte Namen (bei `valueType = enum`) |
-| `value` | aktueller Wert (`null` = noch nie gelesen) |
-| `isStale` | `true` = der Wert ist älter als drei Abfragezyklen |
+| `writable` | `true` = schreibbar (Experten-Modus berücksichtigt) |
+| `requiresExpertMode` | `true` = erfordert den Experten-Modus |
+| `enumValues` | erlaubte Namen als `{ "Zahl": "Name" }` (bei `kind = enum`) |
+| `value` | aktueller Wert (`null` = noch nie gelesen) – **maschinenlesbar** |
+| `valueText` | Anzeigetext (nur für Menschen – nicht auswerten) |
+| `stale` | `true` = der Wert ist älter als drei Abfragezyklen |
+| `stateTopic` / `setTopic` | die MQTT-Adressen des Werts (auch bei abgeschaltetem MQTT) |
 
 > **Zahlenformat:** Die API liefert und erwartet **immer** einen Punkt als
 > Dezimaltrennzeichen – unabhängig von den Einstellungen des Systems.
@@ -117,7 +125,7 @@ Antwort (gekürzt):
 curl -X PUT -H "Authorization: Bearer MEIN-TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"value": 22.5}' \
-  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+  http://192.168.1.20:8081/api/items/zone.set_point_normal
 ````
 
 | Antwort | Bedeutung |
@@ -177,7 +185,7 @@ curl -H "Authorization: Bearer MEIN-TOKEN" http://192.168.1.20:8081/api/status
   "version": "1.0.0",
   "uptimeSeconds": 4523,
   "bacnet": { "connected": true, "port": "/dev/ttyUSB0", "lastError": null },
-  "mqtt":   { "connected": false, "broker": "core-mosquitto" },
+  "mqtt":   { "enabled": false, "connected": false, "broker": "" },
   "writes": { "count": 17, "limit": 200, "resetsAt": "2026-11-01T00:00:00Z" }
 }
 ````
@@ -185,6 +193,7 @@ curl -H "Authorization: Bearer MEIN-TOKEN" http://192.168.1.20:8081/api/status
 | Feld | Bedeutung |
 |---|---|
 | `bacnet.connected` | antwortet die Heizung? |
+| `mqtt.enabled` | ist MQTT überhaupt eingeschaltet? |
 | `mqtt.connected` | ist der Broker erreichbar? |
 | `writes.count` | Schreibvorgänge heute |
 | `writes.limit` | Tageslimit |
@@ -201,7 +210,7 @@ curl -s -X PUT \
   -H "Authorization: Bearer MEIN-TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"value": 21.5}' \
-  http://192.168.1.20:8081/api/items/zone_setpoint_normal
+  http://192.168.1.20:8081/api/items/zone.set_point_normal
 ````
 
 > **Beachten Sie das Tageslimit.** Ein Cronjob, der stündlich schreibt, erreicht
@@ -217,3 +226,46 @@ curl -s -X PUT \
 | Token nur im Gateway-Netz | nicht ins Internet exponieren |
 | Für Zugriff von außen | Reverse Proxy mit TLS **und** Authentifizierung |
 | Tokens regelmäßig prüfen | widerrufene Tokens wirken sofort |
+
+---
+
+## KI-Assistenten (Home-Assistant-MCP)
+
+Die ComfoBox-Werte lassen sich auch einem KI-Assistenten zugänglich machen.
+Es gibt zwei Wege:
+
+| Weg | Was die KI sieht | Voraussetzung |
+|---|---|---|
+| **Home-Assistant-MCP** | die HA-Entitäten und Dienste | HA-MCP-Server ist eingerichtet |
+| **REST-API** | den vollständigen Item-Katalog | API-Token mit passendem Umfang |
+
+### Über Home-Assistant-MCP
+
+Die KI sieht die Entitäten der **HACS-Integration**: Sensoren, Number-, Select-
+und Schalter-Entitäten des Geräts **ComfoBox ELESTA**. Die Entitäts-IDs leiten
+sich aus Geräte- und Wertnamen ab, z. B.
+`number.comfobox_elesta_raumsollwert_normal`. Die **genauen** IDs und die
+erlaubten Werte stehen in Home Assistant unter *Einstellungen → Geräte &
+Dienste → ComfoBox ELESTA*.
+
+| Was die KI tun soll | Wie |
+|---|---|
+| Werte lesen | Entitätszustand lesen (Sensor, Number, Select) |
+| Zahlenwert schreiben | Dienst `comfobox.set_value` mit `entity_id` und `value` |
+| Auswahlwert schreiben | Dienst `comfobox.set_value` mit dem **exakten** Enum-Namen |
+| Neu lesen / Neustart | `comfobox.read_all` bzw. `comfobox.restart` |
+
+> **Die KI darf keine Grenzen erfinden.** Min/Max und die erlaubten Enum-Namen
+> kommen aus dem Gateway. Ein Wert außerhalb des Bereichs wird abgelehnt – es
+> wird **nichts** geschrieben.
+
+### Über die REST-API
+
+Für KI-Werkzeuge, die direkt HTTP sprechen, ist die API der präzisere Weg:
+`GET /api/items` liefert alle Werte **mit** `min`, `max`, `enumValues` und
+`writable`. Ein Überblick über Entitäten, Felder und Sicherheitsregeln steht in
+der Hilfeseite [KI-Assistenten](11-ki.md).
+
+> **Empfehlung:** Für lesende KI-Aufgaben einen Token mit dem Umfang
+> **Nur lesen** verwenden. Für schreibende Aufgaben einen eigenen Token mit
+> **Lesen und regeln** – er lässt sich jederzeit widerrufen.

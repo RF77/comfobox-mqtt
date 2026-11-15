@@ -13,12 +13,32 @@ public sealed class MqttOptions
     public const string SectionName = "Mqtt";
 
     /// <summary>
+    /// Ist die MQTT-Anbindung aktiv?
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Wird der Gateway **ohne** Broker betrieben - etwa mit der
+    /// Home-Assistant-Integration über REST/SSE -, schaltet
+    /// <c>Mqtt:Enabled=false</c> die gesamte MQTT-Anbindung ab: keine
+    /// Verbindung, keine Discovery, keine Werte-Publishes und **keine**
+    /// Schreib-Topics. Die REST-API, die Oberfläche und der Schreibschutz
+    /// bleiben unberührt.
+    /// </para>
+    /// <para>
+    /// Der Standard ist <c>true</c> - bestehende Installationen ändern sich
+    /// nicht. Die Änderung wirkt nach einem **Neustart**, weil die Dienste
+    /// beim Start registriert werden.
+    /// </para>
+    /// </remarks>
+    public bool Enabled { get; init; } = true;
+
+    /// <summary>
     /// Die Broker, mit denen verbunden wird.
     /// </summary>
     /// <remarks>
-    /// Mindestens ein Broker mit Host und Port muss konfiguriert sein -
-    /// sonst startet der Gateway nicht (der Start schlägt bei ungültiger
-    /// Konfiguration fehl).
+    /// Ist <see cref="Enabled"/> <c>true</c>, muss mindestens ein Broker mit
+    /// Host und Port konfiguriert sein - sonst startet der Gateway nicht
+    /// (der Start schlägt bei ungültiger Konfiguration fehl).
     /// </remarks>
     public IReadOnlyList<MqttBrokerOptions> Brokers { get; init; } = [];
 
@@ -126,6 +146,21 @@ public sealed class MqttOptions
     /// </remarks>
     [Range(1, 300)]
     public int StatusIntervalSeconds { get; init; } = 10;
+
+    /// <summary>
+    /// Prüft, ob die MQTT-Konfiguration gültig ist.
+    /// </summary>
+    /// <param name="options">Die zu prüfenden Einstellungen.</param>
+    /// <returns>
+    /// <c>true</c>, wenn MQTT deaktiviert ist oder ein gültiger Broker
+    /// konfiguriert ist.
+    /// </returns>
+    public static bool IsConfigurationValid(MqttOptions options)
+    {
+        ArgumentNullException.ThrowIfNull(options);
+
+        return !options.Enabled || HasValidBroker(options);
+    }
 
     /// <summary>
     /// Prüft, ob mindestens ein vollständig konfigurierter Broker vorhanden ist.

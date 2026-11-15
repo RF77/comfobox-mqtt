@@ -107,6 +107,8 @@ public sealed class BacnetPollingService : BackgroundService
             secondary.Count,
             withoutPriority.Count);
 
+        LogSharedBacnetObjects();
+
         try
         {
             _client.Start();
@@ -186,4 +188,34 @@ public sealed class BacnetPollingService : BackgroundService
     /// </summary>
     private List<ItemDefinition> ItemsWith(RefreshPriority priority)
         => [.. _catalog.All.Where(i => i.Priority == priority)];
+
+    /// <summary>
+    /// Meldet BACnet-Objekte, die von **mehreren** Items gelesen werden.
+    /// </summary>
+    /// <remarks>
+    /// Im Katalog gibt es solche Doppelbelegungen (Altbestand): Objekt 864
+    /// gehört sowohl <c>KühlraumsollAbstStandby</c> (0 … 10 K) als auch
+    /// <c>RestartDelay</c> (20 … 60 min). Beide Topics zeigen deshalb
+    /// denselben Rohwert - der kann nur zu einer der beiden Grenzen passen.
+    /// Ein Hinweis beim Start erspart die Suche, warum Home Assistant einen
+    /// Wert „außerhalb des Bereichs" meldet.
+    /// </remarks>
+    private void LogSharedBacnetObjects()
+    {
+        var shared = _catalog.All
+            .GroupBy(item => item.BacnetObjectId)
+            .Where(group => group.Count() > 1)
+            .OrderBy(group => group.Key);
+
+        foreach (var group in shared)
+        {
+            _logger.LogWarning(
+                "BACnet-Objekt {ObjectId} wird von {Count} Items gelesen: {Items}. "
+                + "Beide Topics zeigen denselben Rohwert - die Katalog-Grenzen können deshalb nicht "
+                + "für beide passen.",
+                group.Key,
+                group.Count(),
+                string.Join(", ", group.Select(item => item.TopicPath)));
+        }
+    }
 }

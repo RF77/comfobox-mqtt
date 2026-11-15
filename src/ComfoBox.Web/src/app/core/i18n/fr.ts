@@ -153,7 +153,10 @@ export const FR: Translations = {
     writePriority: 'Priorité d’écriture',
     writePriorityHint:
       '0 = sans priorité (par défaut). Si la ComfoBox en exige une (write-access-denied), utiliser 8. Effet après un redémarrage.',
-    mqttSection: 'MQTT (fichier de configuration uniquement)',
+    mqttSection: 'MQTT',
+    mqttEnabled: 'MQTT activé',
+    mqttEnabledHint:
+      'Désactivé = REST uniquement (par exemple l’intégration Home Assistant sans broker). Aucun topic MQTT n’est publié et aucune commande d’écriture MQTT n’est acceptée. Effet après un redémarrage.',
     restartRequired: 'Redémarrage nécessaire',
     discovery: 'Découverte',
     discoveryPrefix: 'Préfixe de découverte',

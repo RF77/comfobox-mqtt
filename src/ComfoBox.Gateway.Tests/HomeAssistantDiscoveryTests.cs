@@ -69,7 +69,7 @@ public sealed class HomeAssistantDiscoveryTests
             var payload = discovery.BuildItemPayload(item, writable);
 
             Assert.False(string.IsNullOrWhiteSpace(payload["name"] as string));
-            Assert.Equal($"comfobox_{item.Id.Replace('.', '_')}", payload["unique_id"]);
+            Assert.Equal($"comfobox_{DiscoveryId.Slug(item.Id)}", payload["unique_id"]);
             Assert.Equal($"ComfoBox/{item.TopicPath}", payload["state_topic"]);
         }
     }
@@ -221,6 +221,44 @@ public sealed class HomeAssistantDiscoveryTests
     }
 
     [Fact]
+    public void Die_Unique_Id_Ist_Immer_Ascii()
+    {
+        // Die MQTT-Integration von Home Assistant akzeptiert in den
+        // Discovery-Topics und unique_ids nur a-z, A-Z, 0-9, '-' und '_'.
+        // Die Item-Ids enthalten aber Umlaute (Altbestand) - sie werden
+        // transliteriert, damit der Topic-Vertrag unverändert bleibt.
+        var discovery = CreateDiscovery();
+
+        foreach (var item in Catalog.All)
+        {
+            var id = discovery.UniqueId(item);
+            Assert.All(id, character => Assert.True(
+                char.IsAsciiLetterOrDigit(character) || character is '_' or '-',
+                $"'{id}' enthält das unzulässige Zeichen '{character}'."));
+
+            var topic = discovery.DiscoveryTopic(item, writable: false);
+            Assert.All(topic, character => Assert.True(
+                char.IsAsciiLetterOrDigit(character) || character is '_' or '-' or '/',
+                $"Das Discovery-Topic '{topic}' enthält das unzulässige Zeichen '{character}'."));
+        }
+    }
+
+    [Fact]
+    public void Umlaute_In_Der_Item_Id_Werden_Transliteriert()
+    {
+        var discovery = CreateDiscovery();
+        var item = Catalog.All.First(i => i.Id.Contains('ä', StringComparison.Ordinal));
+
+        var id = discovery.UniqueId(item);
+
+        Assert.Contains("ae", id, StringComparison.Ordinal);
+        Assert.DoesNotContain('ä', id);
+
+        // Der Topic-Vertrag bleibt unverändert - nur der Discovery-Name ist ASCII.
+        Assert.Contains("ä", item.TopicPath, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Das_Discovery_Topic_Enthaelt_Die_Plattform_Und_Die_Unique_Id()
     {
         var discovery = CreateDiscovery();
@@ -233,18 +271,16 @@ public sealed class HomeAssistantDiscoveryTests
     }
 
     [Fact]
-    public void Die_Device_Discovery_Enthaelt_Die_Geraete_Referenz()
+    public void Die_Geraete_Discovery_Wird_Geleert()
     {
+        // Die Entitäten bringen den `device`-Block selbst mit. Eine eigene
+        // Geräte-Discovery verlangt `components`/`child_devices`; fehlen sie,
+        // meldet die MQTT-Integration eine Warnung. Das Topic wird deshalb nur
+        // noch **geleert** (eine ältere Version hat es retained gefüllt).
         var discovery = CreateDiscovery();
 
-        var payload = discovery.BuildDevicePayload();
-
-        var dev = Assert.IsType<Dictionary<string, object?>>(payload["dev"]);
-        Assert.Equal(GeraeteIds, Assert.IsType<string[]>(dev["ids"]));
-        Assert.Equal("Zehnder", dev["mf"]);
-
-        var origin = Assert.IsType<Dictionary<string, object?>>(payload["o"]);
-        Assert.Equal("comfobox-gateway", origin["name"]);
+        Assert.EndsWith("/config", discovery.DeviceTopic, StringComparison.Ordinal);
+        Assert.Contains("/device/", discovery.DeviceTopic, StringComparison.Ordinal);
     }
 
     [Fact]

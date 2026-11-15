@@ -153,9 +153,14 @@ public sealed class GatewayEndToEndTests : IAsyncLifetime, IDisposable
             Received().Count(m => m.StartsWith("homeassistant/", StringComparison.Ordinal)) >= 127,
             $"Die Discovery wurde nicht für alle Items publiziert. Empfangen: {Received().Count(m => m.StartsWith("homeassistant/", StringComparison.Ordinal))}");
 
-        // Die Geräte-Discovery ist die **letzte** Discovery-Nachricht.
-        await WaitForAsync(() => HasTopic("homeassistant/device/comfobox/config"));
-        Assert.True(HasTopic("homeassistant/device/comfobox/config"), "Die Geräte-Discovery fehlt.");
+        // Die Geräte-Discovery ist die **letzte** Discovery-Nachricht. Sie
+        // wird bewusst **geleert**: die Entitäten bringen den device-Block
+        // selbst mit, und eine Payload ohne `components` beanstandet die
+        // MQTT-Integration.
+        await WaitForAsync(() => Has("homeassistant/device/comfobox/config="));
+        Assert.True(
+            Has("homeassistant/device/comfobox/config="),
+            "Das Geräte-Discovery-Topic wurde nicht geleert.");
 
         // Der Health-Status ist die Availability von Home Assistant. Er wird
         // beim Connect publiziert - die Zustellung ist aber asynchron, der

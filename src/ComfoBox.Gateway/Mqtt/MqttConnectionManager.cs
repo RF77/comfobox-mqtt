@@ -35,6 +35,15 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     private readonly CancellationTokenSource _shutdown = new();
 
     /// <summary>
+    /// Wurde die Verbindungsverwaltung gestartet?
+    /// </summary>
+    /// <remarks>
+    /// Bei <c>Mqtt:Enabled=false</c> startet sie nicht - dann darf der
+    /// geordnete Shutdown auch keinen <c>offline</c>-Zustand melden.
+    /// </remarks>
+    private bool _started;
+
+    /// <summary>
     /// Erzeugt den Manager.
     /// </summary>
     /// <param name="mqttOptions">Die MQTT-Einstellungen.</param>
@@ -91,6 +100,16 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Ohne MQTT-Verbindung gibt es nichts zu verwalten. Der Gateway läuft
+        // dann nur mit REST/SSE - die Home-Assistant-Integration braucht
+        // keinen Broker.
+        if (!_mqttOptions.Enabled)
+        {
+            _logger.LogInformation(
+                "MQTT ist deaktiviert (Mqtt:Enabled=false) - es wird keine Broker-Verbindung aufgebaut.");
+            return;
+        }
+
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, _shutdown.Token);
 
         foreach (var broker in _mqttOptions.Brokers)
@@ -107,6 +126,8 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
             _connections.Add(connection);
             _runs.Add(connection.RunAsync(linked.Token));
         }
+
+        _started = true;
 
         _logger.LogInformation(
             "MQTT-Verbindungsmanagement gestartet: {Count} Broker, Keepalive {Keepalive} s.",
@@ -126,6 +147,14 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     /// <inheritdoc />
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
+        if (!_started)
+        {
+            // MQTT war nie aktiv - es gibt weder Verbindungen noch einen
+            // Health-Zustand, der auf "offline" gesetzt werden müsste.
+            await base.StopAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         _logger.LogInformation("MQTT-Verbindungen werden beendet.");
 
         // Zuerst die Reconnect-Schleifen beenden - sonst verbindet sich der
@@ -176,6 +205,12 @@ public sealed class MqttConnectionManager : BackgroundService, IAsyncDisposable
     /// </remarks>
     public async Task<int> RequestReconnectAsync(CancellationToken cancellationToken)
     {
+        if (!_mqttOptions.Enabled)
+        {
+            _logger.LogInformation("Ein MQTT-Reconnect wurde angefordert, aber MQTT ist deaktiviert.");
+            return 0;
+        }
+
         var count = 0;
 
         foreach (var connection in _connections)
