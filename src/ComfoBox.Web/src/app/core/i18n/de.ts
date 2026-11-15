@@ -270,6 +270,10 @@ export const DE: Translations = {
     severityAria: 'Fehler nach Schweregrad filtern',
     all: 'Alle',
     noErrors: 'Keine Fehler aufgetreten.',
+    errorsScopeHint:
+      'Diese Liste enthält Meldungen des Gateways (Verbindung, Zeitüberschreitung, '
+      + 'Schreiblimit). Fehler der Wärmepumpe stehen im Fehlerspeicher des Reglers am Display – '
+      + 'sie lassen sich über BACnet nicht auslesen.',
     loading: 'Der Status wird geladen …',
     writeCounter: 'Schreibzähler (24 h)',
     resetsAt: (value) => `Zurückgesetzt am ${value}`,

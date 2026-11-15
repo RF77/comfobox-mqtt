@@ -270,6 +270,10 @@ export const FR: Translations = {
     severityAria: 'Filtrer les erreurs par gravité',
     all: 'Toutes',
     noErrors: 'Aucune erreur enregistrée.',
+    errorsScopeHint:
+      'Cette liste contient les messages de la passerelle (connexion, délai d’attente, '
+      + 'limite d’écriture). Les défauts de la pompe à chaleur se trouvent dans la mémoire '
+      + 'de défauts du régulateur, sur l’afficheur – ils ne peuvent pas être lus via BACnet.',
     loading: 'Chargement de l’état …',
     writeCounter: 'Compteur d’écritures (24 h)',
     resetsAt: (value) => `Réinitialisé le ${value}`,

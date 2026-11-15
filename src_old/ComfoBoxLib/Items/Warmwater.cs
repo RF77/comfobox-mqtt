@@ -34,28 +34,28 @@ namespace ComfoBoxLib.Items
         /// </summary>
         [Secondary]
         [Description(@"WW Sollwert normal")]
-        public AnalogValue SetPointNormal => new AnalogValue(72, "°C", 5);
+        public AnalogValue SetPointNormal => new AnalogValue(72, "°C", 5, 58);
 
         /// <summary>
         ///     WW Sollwert reduziert
         /// </summary>
         [Secondary]
         [Description(@"WW Sollwert reduziert")]
-        public AnalogValue SetPointReduced => new AnalogValue(71, "°C", 5);
+        public AnalogValue SetPointReduced => new AnalogValue(71, "°C", 5, 58);
 
         /// <summary>
         ///     WW Sollwert Frost
         /// </summary>
         [Secondary]
         [Description(@"WW Sollwert Frost")]
-        public AnalogValue SetPointFrost => new AnalogValue(70, "°C", 5);
+        public AnalogValue SetPointFrost => new AnalogValue(70, "°C", 5, 58);
 
         /// <summary>
         ///     WW Sollwert Legionellen
         /// </summary>
         [Secondary]
         [Description(@"WW Sollwert Legionellen")]
-        public AnalogValue SetPointLegio => new AnalogValue(73, "°C", 5);
+        public AnalogValue SetPointLegio => new AnalogValue(73, "°C", 5, 58);
 
     }
 }

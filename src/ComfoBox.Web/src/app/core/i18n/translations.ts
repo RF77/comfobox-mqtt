@@ -271,6 +271,7 @@ export interface Translations {
     readonly severityAria: string;
     readonly all: string;
     readonly noErrors: string;
+    readonly errorsScopeHint: string;
     readonly loading: string;
     readonly writeCounter: string;
     readonly resetsAt: (value: string) => string;

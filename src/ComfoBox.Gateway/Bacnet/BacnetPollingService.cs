@@ -193,12 +193,12 @@ public sealed class BacnetPollingService : BackgroundService
     /// Meldet BACnet-Objekte, die von **mehreren** Items gelesen werden.
     /// </summary>
     /// <remarks>
-    /// Im Katalog gibt es solche Doppelbelegungen (Altbestand): Objekt 864
-    /// gehört sowohl <c>KühlraumsollAbstStandby</c> (0 … 10 K) als auch
-    /// <c>RestartDelay</c> (20 … 60 min). Beide Topics zeigen deshalb
-    /// denselben Rohwert - der kann nur zu einer der beiden Grenzen passen.
-    /// Ein Hinweis beim Start erspart die Suche, warum Home Assistant einen
-    /// Wert „außerhalb des Bereichs" meldet.
+    /// Im Katalog gibt es drei solche Doppelbelegungen - sie sind **beabsichtigt**:
+    /// die Ausgänge <c>R4</c>, <c>Y1</c> und <c>Y2</c> stehen einmal als
+    /// Test-Topic (<c>Tests/*</c>, Inbetriebnahme) und einmal als Zustands-Topic
+    /// (<c>States/Outputs/*</c>, Istwert). Beide Topics zeigen denselben Rohwert;
+    /// ein Hinweis beim Start erspart die Suche, warum Home Assistant einen Wert
+    /// „außerhalb des Bereichs" meldet.
     /// </remarks>
     private void LogSharedBacnetObjects()
     {
@@ -209,10 +209,9 @@ public sealed class BacnetPollingService : BackgroundService
 
         foreach (var group in shared)
         {
-            _logger.LogWarning(
+            _logger.LogInformation(
                 "BACnet-Objekt {ObjectId} wird von {Count} Items gelesen: {Items}. "
-                + "Beide Topics zeigen denselben Rohwert - die Katalog-Grenzen können deshalb nicht "
-                + "für beide passen.",
+                + "Das ist im Katalog beabsichtigt (Test- und Zustands-Topic).",
                 group.Key,
                 group.Count(),
                 string.Join(", ", group.Select(item => item.TopicPath)));

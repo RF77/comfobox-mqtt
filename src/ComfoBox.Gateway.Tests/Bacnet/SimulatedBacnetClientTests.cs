@@ -102,8 +102,9 @@ public sealed class SimulatedBacnetClientTests : IDisposable
 
         foreach (var item in catalog.All.Where(i => i.Kind == ItemValueKind.Analog))
         {
-            // Zwei Topics koennen auf dasselbe Objekt zeigen (Legacy: 864).
-            // Der Wert gehoert dem Objekt - geprueft wird er beim ersten Item.
+            // Zwei Topics koennen auf dasselbe Objekt zeigen (R4/Y1/Y2 als
+            // Test- und als Zustands-Topic). Der Wert gehoert dem Objekt -
+            // geprueft wird er beim ersten Item.
             if (!seen.Add(item.BacnetObjectId))
             {
                 continue;
@@ -119,17 +120,17 @@ public sealed class SimulatedBacnetClientTests : IDisposable
     [Fact]
     public async Task Zwei_Topics_auf_demselben_Objekt_haben_denselben_Wert()
     {
-        // Legacy-Eigenheit: Objekt 864 wird von zwei Topics benutzt
-        // (KuehlraumsollAbstStandby und RestartDelay). Am echten Geraet
-        // lesen beide denselben Rohwert.
+        // R4 gibt es als Test-Topic (Tests/R4) und als Zustands-Topic
+        // (States/Outputs/R4ZonePump) - beide lesen Objekt 2782. Am echten
+        // Geraet lesen beide denselben Rohwert.
         var client = CreateClient();
         var catalog = new ItemCatalog();
 
-        var items = catalog.All.Where(i => i.BacnetObjectId == 864).ToList();
+        var items = catalog.All.Where(i => i.BacnetObjectId == 2782).ToList();
         Assert.Equal(2, items.Count);
 
-        var first = await ReadAsync(client, 864);
-        var second = await ReadAsync(client, 864);
+        var first = await ReadAsync(client, 2782);
+        var second = await ReadAsync(client, 2782);
 
         Assert.Equal(first, second);
         Assert.NotNull(first);

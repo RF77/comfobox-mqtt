@@ -23,27 +23,27 @@ namespace ComfoBoxLib.Items
         /// </summary>
         [Primary]
         [Description(@"Ausgänge inaktiv")]
-        public AnalogValue OutputsInactive => new AnalogValue(2049, null);
+        public AnalogValue OutputsInactive => new AnalogValue(2049, null) { IsReadOnly = true };
 
         /// <summary>
         ///     Ausgang R4
         /// </summary>
         [Primary]
         [Description(@"Ausgang R4")]
-        public AnalogValue R4 => new AnalogValue(2782, null);
+        public AnalogValue R4 => new AnalogValue(2782, null) { IsReadOnly = true };
 
         /// <summary>
         ///     Ausgang Y1
         /// </summary>
         [Primary]
         [Description(@"Ausgang Y1")]
-        public AnalogValue Y1 => new AnalogValue(2789, null);
+        public AnalogValue Y1 => new AnalogValue(2789, null) { IsReadOnly = true };
 
         /// <summary>
         ///     Ausgang Y2
         /// </summary>
         [Primary]
         [Description(@"Ausgang Y2")]
-        public AnalogValue Y2 => new AnalogValue(2790, null);
+        public AnalogValue Y2 => new AnalogValue(2790, null) { IsReadOnly = true };
     }
 }

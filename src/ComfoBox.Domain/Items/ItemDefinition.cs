@@ -52,6 +52,22 @@ public sealed record ItemDefinition
     public float? Max { get; init; }
 
     /// <summary>
+    /// Die erlaubten Werte eines Auswahl-Parameters (oder <c>null</c>).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Min"/> und <see cref="Max"/> sind <b>Bereiche</b>, keine
+    /// Wertelisten: <c>Cooling</c> erlaubt 0…3, das Gerät kennt aber nur
+    /// 0, 1 und 3. Der Wert 2 wäre „in Range", aber ungültig.
+    /// </para>
+    /// <para>
+    /// Die Liste stammt aus dem Legacy-Attribut <c>[Values(…)]</c> und ist
+    /// <b>kein</b> Bestandteil der Topic-Fixture.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<float>? AllowedValues { get; init; }
+
+    /// <summary>
     /// Die Einheit, z. B. <c>°C</c> (oder <c>null</c>).
     /// </summary>
     public string? Unit { get; init; }
@@ -112,6 +128,16 @@ public sealed record ItemDefinition
     /// <param name="value">Der zu prüfende Wert.</param>
     public bool IsInRange(float value)
         => (Min is null || value >= Min.Value) && (Max is null || value <= Max.Value);
+
+    /// <summary>
+    /// Prüft, ob ein Wert zu den erlaubten Werten gehört.
+    /// </summary>
+    /// <param name="value">Der zu prüfende Wert.</param>
+    /// <returns>
+    /// <c>true</c>, wenn keine Werteliste hinterlegt ist oder der Wert darin vorkommt.
+    /// </returns>
+    public bool IsValueAllowed(float value)
+        => AllowedValues is null || AllowedValues.Contains(value);
 
     /// <summary>
     /// Löst einen Enum-Namen zu seinem Zahlenwert auf.

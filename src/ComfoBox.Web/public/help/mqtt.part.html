@@ -163,13 +163,35 @@ nicht ins Internet.</p>
 </tr>
 <tr>
 <td><code>Tests</code></td>
-<td>Testwerte (nur mit Expertenmodus)</td>
+<td>Testwerte der Ausgänge (<strong>nur lesbar</strong>)</td>
 </tr>
 </tbody></table>
 <blockquote>
 <p><strong>Die vollständige Liste aller 127 Topics</strong> steht in der
-<a href="/help/https://github.com/RF77/comfobox-mqtt/blob/main/docs/topics">Topic-Referenz</a>.</p>
+<a href="/help/https://github.com/RF77/comfobox-mqtt/blob/master/docs/topics">Topic-Referenz</a>.</p>
 </blockquote>
+<h3 id="zwei-topics-heißen-neu">Zwei Topics heißen neu</h3>
+<p>Zwei Eingangs-Topics waren um einen Kanal falsch benannt. Sie heißen seit dem
+Update vom 15.11.2026:</p>
+<table>
+<thead>
+<tr>
+<th>alt</th>
+<th>neu</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ComfoBox/States/Inputs/E6SecondRoomTemperature</code></td>
+<td><code>ComfoBox/States/Inputs/E7SecondRoomTemperature</code></td>
+</tr>
+<tr>
+<td><code>ComfoBox/States/Inputs/E7HpFlowBackTemp</code></td>
+<td><code>ComfoBox/States/Inputs/E8HpFlowBackTemp</code></td>
+</tr>
+</tbody></table>
+<p>Der <strong>Wert</strong> ändert sich nicht – nur der Name. In Home Assistant entstehen dadurch zwei
+<strong>neue</strong> Entitäten; die alten bleiben als „nicht verfügbar“ stehen und können einmal
+entfernt werden.</p>
 <h3 id="werte-lesen">Werte lesen</h3>
 <p>Ein einfaches Abo:</p>
 <pre><code class="language-bash">mosquitto_sub -h 192.168.1.10 -t &#39;ComfoBox/Zone/SetPointNormal&#39; -v

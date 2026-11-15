@@ -284,6 +284,11 @@ curl -s http://localhost:8081/api/diagnostics/writes
 | Schreibvorgänge werden abgelehnt | Das 24-h-Limit ist erreicht | Werte prüfen; Limit ggf. bewusst erhöhen |
 | Die Entitäten werden `unavailable` | `ComfoBox/Status/Health` ist nicht `online` | Broker-Verbindung und Gateway-Status prüfen |
 
+> **Gateway-Fehler sind nicht Gerätefehler.** Die Fehlerhistorie im Gateway enthält nur
+> Meldungen des Gateways (Verbindung, Zeitüberschreitung, Schreiblimit). Fehler der
+> ComfoBox stehen im Fehlerspeicher des Reglers am Display – sie lassen sich über BACnet
+> nicht auslesen. Details: [Fehlersuche](09-fehlersuche.md#gerätefehler-und-gateway-fehler).
+
 ## 9. Weiterführende Seiten
 
 - [Fehlersuche](09-fehlersuche.md) – die häufigsten Symptome und ihre Ursache

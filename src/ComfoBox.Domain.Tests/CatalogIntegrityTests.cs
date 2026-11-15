@@ -10,6 +10,15 @@ public sealed class CatalogIntegrityTests
     private static readonly ItemCatalog Catalog = new();
 
     /// <summary>
+    /// Objekte, die von einem Test- **und** einem Zustands-Topic gelesen werden.
+    /// </summary>
+    /// <remarks>
+    /// Es ist dasselbe Geräte-Objekt, einmal zum Setzen (Inbetriebnahme) und
+    /// einmal als Istwert. Nach R6 zeigen beide Topics auf dieselbe Nummer.
+    /// </remarks>
+    private static readonly int[] SharedObjects = [2782, 2789, 2790];
+
+    /// <summary>
     /// Jede Id ist eindeutig.
     /// </summary>
     [Fact]
@@ -21,14 +30,13 @@ public sealed class CatalogIntegrityTests
     }
 
     /// <summary>
-    /// Nur **ein** BACnet-Objekt wird doppelt gelesen (Altbestand).
+    /// Nur die **bekannten** BACnet-Objekte werden doppelt gelesen.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// Objekt <b>864</b> gehört sowohl <c>KühlraumsollAbstStandby</c> (0 … 10 K)
-    /// als auch <c>RestartDelay</c> (20 … 60 min). Beide Topics zeigen deshalb
-    /// denselben Rohwert - der kann nur zu einer der beiden Grenzen passen.
-    /// Genau das führt in Home Assistant zu „value is outside of the range".
+    /// Seit der Korrektur von <c>RestartDelay</c> auf Objekt 846 (R3) ist 864
+    /// eindeutig. Dafür gibt es drei **bewusste** Doppelbelegungen: das Gerät
+    /// führt Ausgänge als Test- **und** als Zustands-Topic.
     /// </para>
     /// <para>
     /// Der Test ist eine <b>Wache</b>: kommt eine weitere Doppelbelegung dazu,
@@ -36,7 +44,7 @@ public sealed class CatalogIntegrityTests
     /// </para>
     /// </remarks>
     [Fact]
-    public void Nur_Das_Bekannte_Objekt_Wird_Doppelt_Gelesen()
+    public void Nur_Die_Bekannten_Objekte_Werden_Doppelt_Gelesen()
     {
         var shared = Catalog.All
             .GroupBy(item => item.BacnetObjectId)
@@ -45,21 +53,33 @@ public sealed class CatalogIntegrityTests
             .Order()
             .ToList();
 
-        Assert.Equal([864], shared);
+        Assert.Equal(SharedObjects, shared);
     }
 
     /// <summary>
-    /// Die Doppelbelegung betrifft genau die beiden bekannten Items.
+    /// Jede Doppelbelegung besteht genau aus einem Test- und einem Zustands-Topic.
     /// </summary>
     [Fact]
-    public void Objekt_864_Gehoert_Zu_Standby_Und_RestartDelay()
+    public void Jedes_Geteilte_Objekt_Hat_Ein_Test_Und_Ein_Zustands_Topic()
     {
-        var ids = Catalog.All
-            .Where(item => item.BacnetObjectId == 864)
-            .Select(item => item.Name)
-            .Order(StringComparer.Ordinal)
-            .ToList();
+        foreach (var objectId in SharedObjects)
+        {
+            var items = Catalog.All.Where(item => item.BacnetObjectId == objectId).ToList();
 
-        Assert.Equal(["KühlraumsollAbstStandby", "RestartDelay"], ids);
+            Assert.Equal(2, items.Count);
+            Assert.Single(items, item => item.Group == "Tests");
+            Assert.Single(items, item => item.Group == "States/Outputs");
+        }
+    }
+
+    /// <summary>
+    /// Objekt 864 gehört nach der Korrektur nur noch dem Kühl-Offset.
+    /// </summary>
+    [Fact]
+    public void Objekt_864_Ist_Nur_KuehlraumsollAbstStandby()
+    {
+        var item = Assert.Single(Catalog.All, item => item.BacnetObjectId == 864);
+
+        Assert.Equal("KühlraumsollAbstStandby", item.Name);
     }
 }

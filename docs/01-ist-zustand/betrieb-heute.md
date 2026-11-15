@@ -74,21 +74,24 @@ Kein systemd-Unit, kein Autostart, kein Restart-on-failure. Der Prozess läuft m
 
 ## 3. Kopieren auf den Raspberry (Copy-Skripte)
 
+Die vier Skripte gehörten zum Legacy-Bestand und liegen deshalb ebenfalls unter
+`src_old\` (verschoben am 2026-11-15). Sie werden **nicht** gepflegt.
+
 | Datei | Quelle | Ziel |
 |---|---|---|
-| `CopyConsoleToRaspberry.cmd` | `src\ComfoBoxMqttConsole\bin\Debug\*.*` | `N:\mono\ComfoBox` |
-| `CopyReleaseConsoleToRaspberry.cmd` | `src\ComfoBoxMqttConsole\bin\Release\*.*` | `N:\mono\ComfoBox` |
-| `CopyServiceToRaspberry.cmd` | `src\ComfoboxService\bin\Debug\*.*` | (analog) |
-| `CopyReleaseServiceToRaspberry.cmd` | `src\ComfoboxService\bin\Release\*.*` | (analog) |
+| `src_old\CopyConsoleToRaspberry.cmd` | `ComfoBoxMqttConsole\bin\Debug\*.*` | `N:\mono\ComfoBox` |
+| `src_old\CopyReleaseConsoleToRaspberry.cmd` | `ComfoBoxMqttConsole\bin\Release\*.*` | `N:\mono\ComfoBox` |
+| `src_old\CopyServiceToRaspberry.cmd` | `ComfoboxService\bin\Debug\*.*` | (analog) |
+| `src_old\CopyReleaseServiceToRaspberry.cmd` | `ComfoboxService\bin\Release\*.*` | (analog) |
 
 ```bat
 del N:\mono\ComfoBox\*.* /S /Q
-xcopy D:\_git\comfobox-mqtt\src\ComfoBoxMqttConsole\bin\Debug\*.* N:\mono\ComfoBox
+xcopy "%~dp0ComfoBoxMqttConsole\bin\Debug\*.*" N:\mono\ComfoBox /Y
 ```
 
 | Problem | Auswirkung |
 |---|---|
-| Fest verdrahtete Pfade `D:\_git\comfobox-mqtt` | Repo liegt jetzt unter `C:\_git\rf77\comfobox-mqtt` → **Skripte laufen ins Leere** |
+| Quellpfad relativ zum Skript (`%~dp0`) | seit dem Verschieben nach `src_old\` korrekt (vorher fest verdrahtet `D:\_git\comfobox-mqtt\src\…`) |
 | `N:\mono\ComfoBox` | Netzwerk-Share; das Skript ist nicht portable |
 | `del … /S /Q` | löscht rekursiv das **gesamte** Zielverzeichnis |
 | Konfigurationsdateien werden **nicht** kopiert | `.exe.config` muss manuell nachgezogen werden |

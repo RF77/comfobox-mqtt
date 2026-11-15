@@ -163,6 +163,33 @@ public sealed class HomeAssistantDiscoveryTests
         }
     }
 
+    [Fact]
+    public void Die_Test_Und_Ausgangs_Topics_Sind_Diagnose_Sensoren()
+    {
+        // R5/R6: die Test- und Ausgangs-Topics sind read-only. Sie dürfen in
+        // Home Assistant nicht als Zahl-Entität (number) erscheinen.
+        var discovery = CreateDiscovery();
+        string[] ids =
+        [
+            "tests.outputs_inactive",
+            "tests.r4",
+            "tests.y1",
+            "tests.y2",
+            "states.outputs.y1_primary_pump",
+            "states.outputs.y2",
+        ];
+
+        foreach (var id in ids)
+        {
+            var item = Catalog.All.Single(i => i.Id == id);
+            Assert.True(item.IsReadOnly, $"{id} ist nicht read-only.");
+
+            var payload = discovery.BuildItemPayload(item, writable: false);
+            Assert.False(payload.ContainsKey("command_topic"));
+            Assert.Equal("sensor", HomeAssistantDiscovery.ComponentFor(item, writable: false));
+        }
+    }
+
     [Theory]
     [InlineData(ItemValueKind.Analog, false, "sensor")]
     [InlineData(ItemValueKind.Analog, true, "number")]

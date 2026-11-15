@@ -498,6 +498,39 @@ Heizung beeinflussen (Kurvenparameter, Grenzwerte).
 
 ---
 
+## Gerätefehler und Gateway-Fehler
+
+**Symptom:** Sie suchen einen Fehler der Heizung in der Fehlerhistorie und finden ihn
+nicht.
+
+Das ist so vorgesehen. Die Fehlerhistorie (Diagnose → *Fehlerhistorie*) enthält
+**ausschließlich Meldungen des Gateways**: Verbindungsabbrüche, Zeitüberschreitungen,
+abgelehnte Schreibvorgänge, das erreichte Schreiblimit.
+
+Die **Fehler der ComfoBox** stehen im Fehlerspeicher des Reglers am Display. Über BACnet
+sind diese Speicherplätze nicht adressierbar – der Gateway kann sie deshalb nicht lesen
+und zeigt sie auch nicht an.
+
+| Ort | Inhalt |
+|---|---|
+| Diagnose → *Fehlerhistorie* | Gateway: Verbindung, Zeitüberschreitung, Schreiblimit |
+| Display des Reglers | Gerätefehler mit Datum und Uhrzeit (zehn Speicherplätze) |
+
+**Indirekt erkennbar** ist eine Störung am Topic `ComfoBox/States/HeatPump/HeatPumpStatus`
+(Betriebszustand der Wärmepumpe). Diese Werte bedeuten eine Störung oder Warnung:
+
+| Wert | Bedeutung |
+|---:|---|
+| 11…14 | Störungen der Wärmepumpe |
+| 41, 46, 49 | Störungen |
+| 53, 54 | Störungen |
+| 61, 62 | Störungen |
+
+Steht dort einer dieser Werte, sehen Sie am Display des Reglers nach, welcher Fehler
+ansteht.
+
+---
+
 ## Alles hilft nicht
 
 | Weg | was Sie tun |

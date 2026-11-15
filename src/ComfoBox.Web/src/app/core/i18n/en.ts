@@ -268,6 +268,10 @@ export const EN: Translations = {
     severityAria: 'Filter errors by severity',
     all: 'All',
     noErrors: 'No errors recorded.',
+    errorsScopeHint:
+      'This list contains gateway messages (connection, timeout, write limit). '
+      + 'Heat pump faults are stored in the controller’s fault memory on the display – '
+      + 'they cannot be read via BACnet.',
     loading: 'Loading status …',
     writeCounter: 'Write counter (24 h)',
     resetsAt: (value) => `Resets at ${value}`,

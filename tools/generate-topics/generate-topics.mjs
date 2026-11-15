@@ -200,6 +200,13 @@ const PRIORITY_RE = /\[(Once|Primary|Secondary)\]/gu;
 const EXPERT_RE = /\[ExpertMode\]/gu;
 
 /**
+ * Erlaubte Werte eines Auswahl-Parameters, z. B. `[Values(0, 3)]`.
+ * Min/Max sind Bereiche, keine Wertelisten - das Gerät kennt bei
+ * "Kühlen" nur 0, 1 und 3.
+ */
+const VALUES_RE = /\[Values\(([^)]*)\)\]/gu;
+
+/**
  * Werttyp-Name laut Fixture.
  * `AnalogValue` → `float?`, `DateValue`/`CommandValue` → `DateTime?`,
  * `EnumValue<T>` → `ComfoBoxLib.Items.Enums.T?`.
@@ -477,11 +484,28 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
     return found;
   });
 
+  const valuesBySegment = ownSegment.map((segment) => {
+    const found = [];
+    VALUES_RE.lastIndex = 0;
+    let values;
+    while ((values = VALUES_RE.exec(segment)) !== null) {
+      found.push({
+        index: values.index,
+        value: values[1]
+          .split(',')
+          .map((part) => Number(part.trim()))
+          .filter((number) => !Number.isNaN(number)),
+      });
+    }
+    return found;
+  });
+
   const properties = [];
   for (const [segmentIndex, segment] of ownSegment.entries()) {
     const descriptions = descriptionsBySegment[segmentIndex];
     const priorities = prioritiesBySegment[segmentIndex];
     const experts = expertsBySegment[segmentIndex];
+    const values = valuesBySegment[segmentIndex];
     PROP_RE.lastIndex = 0;
     let prop;
     let lastPropEnd = 0;
@@ -504,6 +528,15 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
       const priority = priorityCandidates.length > 0 ? priorityCandidates[0].value : 'None';
 
       const expertCandidates = experts.filter((e) => e.index >= lastPropEnd && e.index < prop.index);
+
+      // Dasselbe für die erlaubten Werte: nur ein Attribut zwischen der
+      // vorigen Property und dieser zählt (sonst erbt ein Item die Liste
+      // seines Vorgängers).
+      const valuesCandidates = values
+        .filter((v) => v.index >= lastPropEnd && v.index < prop.index)
+        .sort((a, b) => b.index - a.index);
+      const allowedValues = valuesCandidates.length > 0 ? valuesCandidates[0].value : null;
+
       lastPropEnd = prop.index + prop[0].length;
 
       const unit = argList.length > 1 ? literalToString(argList[1]) : null;
@@ -527,6 +560,7 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
         EnumType: ctor === 'EnumValue' ? enumTypeOf(generic) : null,
         Min: min,
         Max: max,
+        AllowedValues: allowedValues,
         DeclaredType: declaredType,
         BacnetId: argList.length > 0 ? Number(argList[0]) : null,
       });
@@ -671,6 +705,10 @@ export function emitCatalog(items) {
     if (item.Unit !== null) lines.push(`            Unit = ${escapeCsString(item.Unit)},`);
     if (item.Min !== null) lines.push(`            Min = ${formatCsFloat(item.Min)},`);
     if (item.Max !== null) lines.push(`            Max = ${formatCsFloat(item.Max)},`);
+    if (item.AllowedValues !== null && item.AllowedValues.length > 0) {
+      const list = item.AllowedValues.map(formatCsFloat).join(', ');
+      lines.push(`            AllowedValues = [${list}],`);
+    }
     if (item.IsReadOnlyLiteral) lines.push('            IsReadOnly = true,');
     if (item.RequiresExpertMode) lines.push('            RequiresExpertMode = true,');
     lines.push(`            Priority = RefreshPriority.${item.Priority},`);

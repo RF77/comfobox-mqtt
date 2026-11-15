@@ -702,6 +702,60 @@ Heizung beeinflussen (Kurvenparameter, Grenzwerte).</p>
 unter Umständen nur durch einen Service-Einsatz zurücksetzen.</p>
 </blockquote>
 <hr>
+<h2 id="gerätefehler-und-gateway-fehler">Gerätefehler und Gateway-Fehler</h2>
+<p><strong>Symptom:</strong> Sie suchen einen Fehler der Heizung in der Fehlerhistorie und finden ihn
+nicht.</p>
+<p>Das ist so vorgesehen. Die Fehlerhistorie (Diagnose → <em>Fehlerhistorie</em>) enthält
+<strong>ausschließlich Meldungen des Gateways</strong>: Verbindungsabbrüche, Zeitüberschreitungen,
+abgelehnte Schreibvorgänge, das erreichte Schreiblimit.</p>
+<p>Die <strong>Fehler der ComfoBox</strong> stehen im Fehlerspeicher des Reglers am Display. Über BACnet
+sind diese Speicherplätze nicht adressierbar – der Gateway kann sie deshalb nicht lesen
+und zeigt sie auch nicht an.</p>
+<table>
+<thead>
+<tr>
+<th>Ort</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Diagnose → <em>Fehlerhistorie</em></td>
+<td>Gateway: Verbindung, Zeitüberschreitung, Schreiblimit</td>
+</tr>
+<tr>
+<td>Display des Reglers</td>
+<td>Gerätefehler mit Datum und Uhrzeit (zehn Speicherplätze)</td>
+</tr>
+</tbody></table>
+<p><strong>Indirekt erkennbar</strong> ist eine Störung am Topic <code>ComfoBox/States/HeatPump/HeatPumpStatus</code>
+(Betriebszustand der Wärmepumpe). Diese Werte bedeuten eine Störung oder Warnung:</p>
+<table>
+<thead>
+<tr>
+<th align="right">Wert</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="right">11…14</td>
+<td>Störungen der Wärmepumpe</td>
+</tr>
+<tr>
+<td align="right">41, 46, 49</td>
+<td>Störungen</td>
+</tr>
+<tr>
+<td align="right">53, 54</td>
+<td>Störungen</td>
+</tr>
+<tr>
+<td align="right">61, 62</td>
+<td>Störungen</td>
+</tr>
+</tbody></table>
+<p>Steht dort einer dieser Werte, sehen Sie am Display des Reglers nach, welcher Fehler
+ansteht.</p>
+<hr>
 <h2 id="alles-hilft-nicht">Alles hilft nicht</h2>
 <table>
 <thead>

@@ -2833,15 +2833,149 @@ Paket-Test gelöscht werden, sonst scheitert der Start an einer Kollision.
 
 ---
 
+## 2026-11-15 (2) – Phase 9 abgeschlossen: Datenpunkt-Korrekturen (Aufgaben 9.1–9.15)
+
+**Testzahl:** 390 → **396 grün** (Domain 33 → 36, Contract 10, Bacnet 56, Gateway 291 → 294).
+`dotnet build` 0 Warnungen / 0 Fehler.
+
+### 9.1 – `[Values(…)]` (die Mechanik)
+
+- Neu `src_old/ComfoBoxLib/Attributes/ValuesAttribute.cs` (nur Deklaration – `src_old/`
+  wird nicht kompiliert).
+- Generator: `VALUES_RE`, `valuesBySegment` (gleiche `lastPropEnd`-Logik wie die
+  Prioritäts-Attribute, **letzter** Treffer vor der Property), Ausgabe als
+  `AllowedValues = [0.0f, 3.0f],` direkt nach `Max`.
+- `ItemDefinition.AllowedValues` (`IReadOnlyList<float>?`) + `IsValueAllowed(float)`.
+- Schreibpfad: `BacnetDevice.WriteAsync` prüft **nach** `IsInRange` auch
+  `IsValueAllowed` → `WriteOutcome.OutOfRange`, **kein** BACnet-Request, **kein**
+  Zählerverbrauch. `WarnIfOutOfCatalogRange` prüft beides und nennt die erlaubten Werte.
+- **Die Fixture bleibt durch 9.1 unverändert** – `AllowedValues` ist kein Feld der Fixture.
+
+### 9.2–9.10 – die zehn Katalogkorrekturen
+
+Alle Änderungen in `src_old/ComfoBoxLib/Items/*.cs` mit **CP1252 gelesen und
+geschrieben**. `git diff --stat src_old/` → **29 Einfügungen, 25 Löschungen** in vier
+Dateien – keine Encoding-Welle, `Select-String 'Ã|Â'` leer.
+
+| Befund | Änderung |
+|---|---|
+| R1 | `HeatingHysteresis` 3452 → **3432** |
+| R2 | `Entladeschutz` `[Values(0, 3)]`, Max `1` → **3**, Beschreibung `EIN = 3` |
+| R3 | `RestartDelay` 864 → **846** (20 min Untergrenze bleibt) |
+| R5 | `Tests/{OutputsInactive,R4,Y1,Y2}` → `{ IsReadOnly = true }` |
+| R6 | `States/Outputs/*` → **2779, 2781, 2782, 2783, 2785, 2788**; `Y1PrimaryPump`/`Y2` → **2789/2790** + `IsReadOnly = true` |
+| R7 | `E6SecondRoomTemperature` → **`E7SecondRoomTemperature`**, `E7HpFlowBackTemp` → **`E8HpFlowBackTemp`** (Objekt-Ids 2619/2620 bleiben) |
+| R8 | `StoppedMode` `[Values(0, 1, 11)]`, Max `1` → **11**, Beschreibung um PWM ergänzt |
+| R9 | `Cooling` `[Values(0, 1, 3)]` (Bereich `0…3` bleibt) |
+| R10 | `SetPoint{Normal,Reduced,Frost,Legio}` Max **58** |
+
+**Fixture-Diff (`--out`, danach BOM wieder vorangestellt):** genau die erwarteten Felder –
+4× `Tests/*` (`IsReadOnly`/`PublishTopic`), 2× `States/Outputs/Y*`, 2× Topic-Namen,
+4× WW-`Max`, `Entladeschutz`/`StoppedMode` (`Max` + `Description`), `Cooling` (nur
+Katalog), und `DoHeatWaterNow` `ValueType` (die **einzige** bekannte Ausnahme, 9.11).
+Item-Anzahl unverändert **127**.
+
+**Bewusste Doppelbelegungen nach R6:** 2782, 2789, 2790 – je ein `Tests/*`- und ein
+`States/Outputs/*`-Item. `CatalogIntegrityTests` prüft die Liste **exakt** und dass jedes
+dieser Objekte genau aus einem Test- und einem Zustands-Topic besteht; Objekt 864 gehört
+nur noch `KühlraumsollAbstStandby` (Wache). `LogSharedBacnetObjects` meldet die drei
+Objekte jetzt als `Information` („beabsichtigt“) statt als Warnung.
+
+**Neue Tests:** `IsValueAllowed` für `Entladeschutz`/`StoppedMode`/`Cooling` (+ „ohne
+Liste ist alles erlaubt"), Schreibversuch mit `2` auf `Cooling` → `OutOfRange` ohne
+BACnet-Request und ohne Zählerverbrauch, `PUT /api/items/tests.outputs_inactive` → `409
+read_only`, HA-Discovery: die vier `Tests/*` und die zwei `States/Outputs/Y*` sind
+`sensor` ohne `command_topic`.
+
+### 9.13 – R12: Gerätefehler vs. Gateway-Fehler
+
+- Benutzerdoku: neuer Abschnitt [Fehlersuche → Gerätefehler und Gateway-Fehler](../benutzer/09-fehlersuche.md#gerätefehler-und-gateway-fehler)
+  mit der Tabelle der Störungswerte von `HeatPumpStatus` (11…14, 41, 46, 49, 53, 54,
+  61, 62); ein Satz mit Verweis in [08-monitoring.md](../benutzer/08-monitoring.md).
+- Web-UI: Hinweisblock im Reiter *Fehlerhistorie*; neuer i18n-Schlüssel
+  `diagnostics.errorsScopeHint` in **allen vier** Sprachdateien.
+- `node tools/build-docs.mjs` neu gelaufen (Hilfe-Seiten eingecheckt),
+  `check-links.ps1` grün (128 Dateien, 863 Links, 0 Probleme).
+
+### 9.14 – `topics.md` bleibt eingefroren
+
+`git diff -- docs/topics.md` ist **leer**. `docs/topics.json` wurde ausschließlich über
+`--out` geändert (nie von Hand). Die Archivkopie `src_old/docs/topics.md` bleibt wie sie
+ist (127 Einträge). `--emit-markdown` wurde **nicht** gebaut (optionale eigene Session).
+
+**Hinweis zur Formulierung in 9.14:** „`docs/topics.json` bleibt unverändert“ gilt nur für
+die *Handbearbeitung*. 9.8/9.11 verlangen ausdrücklich die Regeneration über den
+Generator – der Diff ist dort dokumentiert und oben aufgeführt.
+
+**Bewusste Abweichung von 9.3/9.11 (eine Zeile):** bei `Entladeschutz` wurde neben `Max`
+auch die **Beschreibung** korrigiert (`* EIN = 1` → `* EIN = 3`). 9.3 sagt „Diff enthält
+für dieses Item nur `Max`“ – aber die alte Beschreibung nennt mit `1` genau den Wert, den
+das Gerät **nicht** kennt, und sie landet über die Fixture in Home Assistant und in der
+Oberfläche. Nach der Korrektur von `Max` wäre der Text sachlich falsch. Rückbau: eine
+Zeile in `src_old/ComfoBoxLib/Items/Config.cs`.
+
+### Stolpersteine dieser Session
+
+1. **`{ IsReadOnly = false };` hat ein Leerzeichen vor der schließenden Klammer** –
+   das Muster `false\}` traf nicht (0 Treffer). Erst `Select-String` auf die echte Zeile
+   zeigte `false };`. Merksatz: vor dem Massen-Ersetzen die Zeile **ausgeben**, nicht
+   aus dem Gedächtnis schreiben.
+2. **`git show HEAD:docs/topics.json` durch PowerShell gepipet** zerstört die Umlaute
+   (`´` statt `ComfoBox`) – der JSON-Vergleich scheiterte an Position 0. Richtig:
+   `cmd /c "git show … > datei"` (Rohbytes) und den Vergleich in **Node** machen.
+3. **`--out` entfernt das BOM** der Fixture. Nach dem Lauf wieder voranstellen
+   (`EF BB BF`), sonst entsteht eine zusätzliche Byte-Diff-Zeile.
+4. **`update` des Generators traf die CRLF-Datei** – `tools/generate-topics/generate-topics.mjs`
+   ist im Index **CRLF**; nach den Edits `git diff --stat` prüfen.
+
+---
+
 ## Nächste Session
 
-**Phase 7** – Parallelbetrieb & Umschaltung (7.1–7.5): zwei Gateways
+**Phase 9 ist abgeschlossen.** Offen bleiben die Punkte, die Hardware brauchen:
+
+| Punkt | Warum offen |
+|---|---|
+| R6-Regression am Gerät | liefern 2779…2790 plausible Werte? Wenn ein Wert `unknown` bleibt, war die alte Nummer die richtige – Rückbau ist eine Zeile |
+| R2/R8 am Gerät | `Entladeschutz = 3` und `StoppedMode = 11` müssen vom Regler bestätigt werden |
+| 9.14 optional | `--emit-markdown <datei>` für eine reproduzierbare Topic-Liste (neue Datei, **nicht** `docs/topics.md`) |
+
+**Nächste geplante Phase: 7** – Parallelbetrieb & Umschaltung (7.1–7.5): zwei Gateways
 nebeneinander (unterschiedlicher `BaseTopic`), maschineller Payload-Vergleich
 (`old` vs. `new`), dann Umschaltung auf `ComfoBox`
 → [phase-7.md](phase-7.md)
 → **Prompt:** [prompts/Prompt-Phase-7.md](prompts/Prompt-Phase-7.md)
 
-> **Noch offen aus Phase 6:** 6.4 (Test auf der echten DS923+) – die Hardware
-> steht hier nicht zur Verfügung. Ein CI-Release ist ebenfalls noch nicht
-> gelaufen (kein Tag gepusht).
+**Prompt für die nächste Session (Phase 9, Hardware-Abnahme):**
+[kopierfertig als Datei](prompts/Prompt-Phase-9-Abnahme.md)
+
+```text
+Phase 9 ist umgesetzt (Commit "Korrekturen Phase 9"). Prüfe die Punkte, die nur am
+Gerät gehen, und ziehe die Doku nach.
+
+Lies zuerst:
+1. docs/06-aufgaben/phase-9-datenpunkt-korrekturen.md  (Abnahmekriterien)
+2. docs/06-aufgaben/protokoll.md, Abschnitt 2026-11-15 (2)  (was umgesetzt ist)
+3. docs/07-technikerhandbuch/review-ist-implementierung.md  (R1-R12)
+
+Aufgaben:
+- POST /api/diagnostics/bacnet/observe starten und die Objekte 2779, 2781, 2782,
+  2783, 2785, 2788, 2789, 2790, 3432, 846 lesen. Was antwortet, bleibt; was
+  "unknown" liefert, wird im Review als Rückbau-Kandidat vermerkt (eine Zeile in
+  src_old/ComfoBoxLib/Items/States.cs bzw. Config.cs).
+- Entladeschutz = 3 und PrimaryPump/StoppedMode = 11 schreiben und am Gerät prüfen.
+- SetPointLegio: prüfen, ob 58 °C vom Regler angenommen wird (Obergrenze der WP).
+- Ergebnisse in docs/07-technikerhandbuch/review-ist-implementierung.md und
+  docs/06-aufgaben/protokoll.md eintragen.
+
+Wichtig:
+- src_old/**/Items/*.cs sind Windows-1252 - mit CP1252 lesen UND schreiben.
+- Danach: node tools/generate-topics/generate-topics.mjs --catalog
+  src/ComfoBox.Domain/Items, --out docs/topics.json, --catalog-check, --check
+  sowie dotnet test, npm run lint/build, node tools/build-docs.mjs,
+  pwsh -NoProfile -File tools/check-links.ps1.
+- docs/topics.md nie anfassen (eingefroren).
+```
+
+> **Noch offen aus Phase 6:** 6.4 (Test auf der echten DS923+).
 

@@ -194,12 +194,12 @@ namespace ComfoBoxLib.Items
         {
             [Description("Raumtemperatur 2 E6")]
             [Primary]
-            public AnalogValue E6SecondRoomTemperature => new AnalogValue(2619, "°C") { IsReadOnly = true };
+            public AnalogValue E7SecondRoomTemperature => new AnalogValue(2619, "°C") { IsReadOnly = true };
 
 
             [Description("WP Rücklauftemperatur E7")]
             [Primary]
-            public AnalogValue E7HpFlowBackTemp => new AnalogValue(2620, "°C") { IsReadOnly = true };
+            public AnalogValue E8HpFlowBackTemp => new AnalogValue(2620, "°C") { IsReadOnly = true };
         }
 
         /// <summary>
@@ -210,30 +210,30 @@ namespace ComfoBoxLib.Items
         {
             [Description("Primärpumpe Y1")]
             [Primary]
-            public AnalogValue Y1PrimaryPump => new AnalogValue(2634, "%") {IsReadOnly = false};
+            public AnalogValue Y1PrimaryPump => new AnalogValue(2789, "%") {IsReadOnly = true};
 
             [Description("Y2")]
             [Primary]
-            public AnalogValue Y2 => new AnalogValue(2635, "%") { IsReadOnly = false };
+            public AnalogValue Y2 => new AnalogValue(2790, "%") { IsReadOnly = true };
 
             [Description("Passivkühlen R1")]
             [Primary]
-            public AnalogValue R1FreeCooling => new AnalogValue(2624, null) {IsReadOnly = true};
+            public AnalogValue R1FreeCooling => new AnalogValue(2779, null) {IsReadOnly = true};
 
             //[Description("Passivkühlen inv")]
             //public AnalogValue R2 => new AnalogValue(2625, null);
 
             [Description("Verdichter R3")]
             [Primary]
-            public AnalogValue R3Verdichter => new AnalogValue(2626, null) {IsReadOnly = true};
+            public AnalogValue R3Verdichter => new AnalogValue(2781, null) {IsReadOnly = true};
 
             [Description("Heizkreispumpe R4")]
             [Primary]
-            public AnalogValue R4ZonePump => new AnalogValue(2627, null) {IsReadOnly = true};
+            public AnalogValue R4ZonePump => new AnalogValue(2782, null) {IsReadOnly = true};
 
             [Description("Warmwasser R5")]
             [Primary]
-            public AnalogValue R5WarmWater => new AnalogValue(2628, null) {IsReadOnly = true};
+            public AnalogValue R5WarmWater => new AnalogValue(2783, null) {IsReadOnly = true};
 
             //[Description("Warmwasser invers")]
             //[Primary]
@@ -241,7 +241,7 @@ namespace ComfoBoxLib.Items
 
             [Description("Warmwasser elektrisch R7")]
             [Primary]
-            public AnalogValue R7ElectricalWarmWater => new AnalogValue(2630, null) {IsReadOnly = true};
+            public AnalogValue R7ElectricalWarmWater => new AnalogValue(2785, null) {IsReadOnly = true};
 
             //[Description("Kein Funktion")]
             //public AnalogValue R8 => new AnalogValue(2631, null);
@@ -252,7 +252,7 @@ namespace ComfoBoxLib.Items
 
             [Description("Zusatzheizung R10")]
             [Primary]
-            public AnalogValue R10AdditionalHeater => new AnalogValue(2633, null) {IsReadOnly = true};
+            public AnalogValue R10AdditionalHeater => new AnalogValue(2788, null) {IsReadOnly = true};
         }
 
         /// <summary>

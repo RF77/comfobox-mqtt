@@ -407,6 +407,12 @@ curl -s http://localhost:8081/api/diagnostics/writes
 <td>Broker-Verbindung und Gateway-Status prüfen</td>
 </tr>
 </tbody></table>
+<blockquote>
+<p><strong>Gateway-Fehler sind nicht Gerätefehler.</strong> Die Fehlerhistorie im Gateway enthält nur
+Meldungen des Gateways (Verbindung, Zeitüberschreitung, Schreiblimit). Fehler der
+ComfoBox stehen im Fehlerspeicher des Reglers am Display – sie lassen sich über BACnet
+nicht auslesen. Details: <a href="fehlersuche.html#ger%C3%A4tefehler-und-gateway-fehler">Fehlersuche</a>.</p>
+</blockquote>
 <h2>9. Weiterführende Seiten</h2>
 <ul>
 <li><a href="fehlersuche.html">Fehlersuche</a> – die häufigsten Symptome und ihre Ursache</li>

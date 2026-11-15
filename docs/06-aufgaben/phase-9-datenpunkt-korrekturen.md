@@ -1,7 +1,12 @@
 # Phase 9 – Datenpunkt-Korrekturen aus dem Technikerhandbuch
 
-> **Status:** ⬜ offen · **Aufwand:** ≈ 4 PT · **Befunde:** R1…R12 aus
+> **Status:** ✅ **umgesetzt 2026-11-15** · **Aufwand:** ≈ 4 PT · **Befunde:** R1…R12 aus
 > [07-technikerhandbuch/review-ist-implementierung.md](../07-technikerhandbuch/review-ist-implementierung.md)
+>
+> Umsetzungsprotokoll mit Testzahlen und den aufgetretenen Fallstricken:
+> [protokoll.md](protokoll.md) (Abschnitt *2026-11-15 (2)*).
+> Die Abnahmekriterien, die **Hardware** brauchen (R6-Regression, `Entladeschutz = 3`,
+> `StoppedMode = 11`), stehen im Abschnitt *Nächste Session* desselben Protokolls.
 >
 > Diese Phase setzt die am **2026-11-15** getroffenen Entscheidungen um. Sie ändert
 > **ausschliesslich Metadaten und Objekt-Ids** – mit **einer** bewussten Ausnahme:

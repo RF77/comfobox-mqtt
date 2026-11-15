@@ -12,9 +12,10 @@ Bereiche und Enum-Werte wurden zeichenweise verglichen.
 oder nicht belegten Datenpunkt, drei haben einen zu engen Wertebereich – davon **zwei
 funktional blockierend**.
 
-> **Bearbeitungsstand:** Die Befunde sind am 2026-11-15 **entschieden**. Die Umsetzung
-> läuft in [Phase 9](../06-aufgaben/phase-9-datenpunkt-korrekturen.md). Dieses Dokument
-> bleibt als **Nachweis** stehen – es beschreibt den Zustand vor der Korrektur.
+> **Bearbeitungsstand:** Die Befunde sind am 2026-11-15 **entschieden** und in
+> [Phase 9](../06-aufgaben/phase-9-datenpunkt-korrekturen.md) am **2026-11-15 umgesetzt**
+> (R1–R3, R5–R10 behoben; R4, R11, R12 entschieden). Dieses Dokument bleibt als
+> **Nachweis** stehen – es beschreibt den Zustand **vor** der Korrektur.
 
 ## Entscheidungen (2026-11-15)
 
@@ -56,6 +57,8 @@ funktional blockierend**.
 
 ## R1
 
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.2](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#92--r1-comfofondheatinghysteresis-auf-dp-3432)
+
 **`Config/Comfofond/HeatingHysteresis` zeigt auf DP 3452 – das ist ein Fehler-Flag.**
 
 | | |
@@ -83,6 +86,8 @@ sein) – bisher wurde nur `0` beobachtet.
 
 ## R2
 
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.3](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#93--r2-entladeschutz-dp-157-auf-03)
+
 **`Entladeschutz` – der gültige Wert 3 wird vom Gateway abgelehnt.**
 
 | | |
@@ -107,6 +112,8 @@ wie bei `KondensatFrostschutzEnum`.
 ---
 
 ## R3
+
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.6](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#96--r3-restartdelay-auf-dp-846)
 
 **`RestartDelay` liest den Kühl-Sollwert-Offset statt der Wiedereinschaltverzögerung.**
 
@@ -142,6 +149,11 @@ gerätekonform, 20…60 ist anlagenkonform) – aber dokumentieren.
 
 ## R4
 
+> **Status: entschieden (2026-11-15)** – **kein Befund.** 58 °C ist die Liefergrenze der
+> Wärmepumpe, nicht des Reglers. Keine Änderung am Katalog; die vier WW-Sollwerte bekommen
+> in [Aufgabe 9.10](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#910--r10-ww-sollwerte-mit-obergrenze-58-c)
+> dieselbe Grenze.
+
 > **Entscheidung 2026-11-15: kein Befund, keine Änderung.**
 > Die 58 °C sind die **Grenze der Wärmepumpe** (ComfoBox/Zehnder), nicht des Reglers. Die
 > 150 °C aus dem Handbuch gelten für den ECR450 als Universalregler und damit auch für
@@ -173,6 +185,8 @@ es ohne technischen Grund.
 ---
 
 ## R5
+
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.9](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#99--r5-tests-vollständig-read-only)
 
 **`Tests/OutputsInactive` ist ohne Experten-Modus schreibbar.**
 
@@ -210,6 +224,8 @@ ohne Experten-Modus).
 ---
 
 ## R6
+
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.7](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#97--r6-statesoutputs-auf-die-dokumentierten-dps)
 
 **`States/Outputs/*` verwendet Objekt-Nummern, die im Handbuch nicht existieren.**
 
@@ -250,6 +266,8 @@ kennzeichnen.
 
 ## R7
 
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.8](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#98--r7-topics-e6-und-e7-sind-falsch-benannt)
+
 **Eingangs-Topics sind um einen Kanal verschoben.**
 
 | Topic | Katalog-DP | Handbuch |
@@ -286,6 +304,8 @@ V2 durch generische `Status/Inputs/E<n>` ersetzen
 
 ## R8
 
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.4](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#94--r8-primarypumpstoppedmode-dp-3096-auf-0111)
+
 **`PrimaryPump/StoppedMode` (DP 3096) – Wert 11 fehlt.**
 
 | | |
@@ -308,6 +328,8 @@ das den Payload von Zahl auf Namen umstellen würde (Vertragsbruch).
 ---
 
 ## R9
+
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.5](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#95--r9-coolingzonecooling-dp-470-nur-013)
 
 **`CoolingZone/Cooling` (DP 470): der Wert 2 existiert nicht.**
 
@@ -336,6 +358,8 @@ ignoriert den Schreibvorgang (dann glaubt der Nutzer, es sei gesetzt).
 
 ## R10
 
+> **Status: behoben (2026-11-15)** · [Aufgabe 9.10](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#910--r10-ww-sollwerte-mit-obergrenze-58-c)
+
 **`Warmwater/SetPoint*` haben keine Obergrenze.**
 
 | | |
@@ -363,6 +387,8 @@ abbilden, weil sie von einem anderen Item abhängt.
 
 ## R11
 
+> **Status: entschieden (2026-11-15)** – Hinweis, **keine Änderung** · [Aufgabe 9.12](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#912--r11-nur-ein-hinweis-keine-änderung)
+
 **`Config/PrimaryPump/*` sind nicht die Pumpe, sondern der stetige Ausgang Y1.**
 
 | Topic | DP | Handbuch |
@@ -389,6 +415,8 @@ in V2 die analogen Themen als `Status/Outputs/Y1*` führen.
 ---
 
 ## R12
+
+> **Status: entschieden (2026-11-15)** – Doku + UI-Hinweis, keine Funktion · [Aufgabe 9.13](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#913--r12-gerätefehler-sind-nicht-auslesbar-doku--ui-hinweis)
 
 **Fehlerspeicher ist nicht abgebildet – und über dieses Handbuch auch nicht abbildbar.**
 

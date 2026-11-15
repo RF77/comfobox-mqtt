@@ -128,12 +128,14 @@ als „Immer aktiv“ definiert werden.
             /// </summary>
             [Secondary]
             [ExpertMode]
+            [Values(0, 1, 11)]
             [Description(@"Stopp Mode:
 Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
-* 0: 0V
-* 1: 1V")]
+* 0: 0..10 V
+* 1: 0..10 V, stop = 1 V
+* 11: PWM")]
             public AnalogValue StoppedMode
-                => new AnalogValue(3096, "", 0, 1) {IsReadOnly = !Settings.Default.ExpertMode};
+                => new AnalogValue(3096, "", 0, 11) {IsReadOnly = !Settings.Default.ExpertMode};
         }
 
 
@@ -218,7 +220,7 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
                 @"Hysterese beim Ein- und Ausschalten der Heizung über das Comfofond-L z.B. Sollwert ist bei 2°C;
 * -> falls Heizung aus, wird sie erst unter 0°C eingeschaltet
 * -> falls Heizung ein, wird sie erst oberhalb 4°C ausgeschaltet")]
-            public AnalogValue HeatingHysteresis => new AnalogValue(3452, "K", 2, 20);
+            public AnalogValue HeatingHysteresis => new AnalogValue(3432, "K", 2, 20);
         }
 
         /// <summary>
@@ -547,6 +549,7 @@ Zuordnung erfolgt über „Umschaltung Raumfühler“ (3085).")]
 * Keine Funktion = 0
 * Kühlen = 1
 * Nur Kühlen = 3")]
+                [Values(0, 1, 3)]
                 public AnalogValue Cooling => new AnalogValue(470, "", 0, 3) {IsReadOnly = !Settings.Default.ExpertMode}
                     ;
 
@@ -753,11 +756,12 @@ Zuordnung erfolgt über „Umschaltung Raumfühler“ (3085).")]
                 ///     WW-Entladeschutz
                 /// </summary>
                 [Secondary]
+                [Values(0, 3)]
                 [Description(@"WW-Entladeschutz:
 * Keine Funktion = 0
-* EIN = 1
+* EIN = 3
 ")]
-                public AnalogValue Entladeschutz => new AnalogValue(157, "", 0, 1);
+                public AnalogValue Entladeschutz => new AnalogValue(157, "", 0, 3);
                
             }
 
@@ -845,7 +849,7 @@ Zuordnung erfolgt über „Umschaltung Raumfühler“ (3085).")]
                 /// </summary>
                 [Secondary]
                 [Description(@"Wiedereinschaltverzögerung")]
-                public AnalogValue RestartDelay => new AnalogValue(864, "min", 20, 60) {IsReadOnly = false};
+                public AnalogValue RestartDelay => new AnalogValue(846, "min", 20, 60) {IsReadOnly = false};
 
                 /// <summary>
                 ///     WP-Vorlauf Maximal

@@ -211,6 +211,42 @@ public sealed class CatalogTests
     }
 
     [Fact]
+    public void Auswahl_Parameter_Akzeptieren_Nur_Die_Erlaubten_Werte()
+    {
+        // R2: der Entladeschutz lässt sich ausschliesslich mit 3 einschalten.
+        var entladeschutz = Catalog.Find("config.energy_comsumer.warmwater.entladeschutz");
+        Assert.NotNull(entladeschutz);
+        Assert.True(entladeschutz!.IsInRange(3f));
+        Assert.True(entladeschutz.IsValueAllowed(3f));
+        Assert.True(entladeschutz.IsValueAllowed(0f));
+        Assert.False(entladeschutz.IsValueAllowed(1f));
+        Assert.False(entladeschutz.IsValueAllowed(2f));
+
+        // R8: Y1 kennt neben 0/1 auch den PWM-Betrieb (11).
+        var stoppedMode = Catalog.Find("config.primary_pump.stopped_mode");
+        Assert.NotNull(stoppedMode);
+        Assert.True(stoppedMode!.IsValueAllowed(11f));
+        Assert.False(stoppedMode.IsValueAllowed(5f));
+
+        // R9: Kühlen kennt 0/1/3 - der Wert 2 liegt im Bereich, ist aber ungültig.
+        var cooling = Catalog.Find("config.energy_comsumer.cooling_zone.cooling");
+        Assert.NotNull(cooling);
+        Assert.True(cooling!.IsInRange(2f));
+        Assert.False(cooling.IsValueAllowed(2f));
+        Assert.True(cooling.IsValueAllowed(3f));
+    }
+
+    [Fact]
+    public void Items_Ohne_Werteliste_Akzeptieren_Jeden_Wert_Im_Bereich()
+    {
+        var item = Catalog.Find("zone.set_point_normal");
+        Assert.NotNull(item);
+
+        Assert.Null(item!.AllowedValues);
+        Assert.True(item.IsValueAllowed(17.25f));
+    }
+
+    [Fact]
     public void Enum_Name_Lasst_Sich_Zum_Zahlenwert_aufloesen()
     {
         var item = Catalog.Find("zone.operation_mode");

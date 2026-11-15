@@ -89,7 +89,8 @@ für einen Review.
 [prompts/Prompt-Phase-5.md](prompts/Prompt-Phase-5.md) ·
 [prompts/Prompt-Phase-8.md](prompts/Prompt-Phase-8.md) ·
 [prompts/Prompt-Phase-8ad.md](prompts/Prompt-Phase-8ad.md) ·
-[prompts/Prompt-Phase-7.md](prompts/Prompt-Phase-7.md)
+[prompts/Prompt-Phase-7.md](prompts/Prompt-Phase-7.md) ·
+[prompts/Prompt-Phase-9-Abnahme.md](prompts/Prompt-Phase-9-Abnahme.md)
 
 > **Warum?** Die Phasen sind aufeinander aufgebaut. Wer die Fallstricke nicht
 > weitergibt, verschwendet in der nächsten Session Zeit mit demselben Fehler –

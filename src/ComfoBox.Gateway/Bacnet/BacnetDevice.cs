@@ -211,6 +211,17 @@ public sealed class BacnetDevice : IDisposable
             return WriteOutcome.OutOfRange;
         }
 
+        if (!item.IsValueAllowed((float)value))
+        {
+            _logger.LogWarning(
+                "Schreibvorgang für {Item} abgelehnt: Wert {Value} ist nicht zulässig "
+                + "(erlaubt: {Allowed}).",
+                item.Id,
+                value,
+                string.Join(", ", item.AllowedValues ?? []));
+            return WriteOutcome.OutOfRange;
+        }
+
         if (!_writeCounter.TryAcquire())
         {
             _logger.LogWarning(
@@ -432,13 +443,14 @@ public sealed class BacnetDevice : IDisposable
     /// </para>
     /// <para>
     /// Die häufigste Ursache im Katalog ist ein **geteiltes BACnet-Objekt**:
-    /// <c>KühlraumsollAbstStandby</c> und <c>RestartDelay</c> lesen beide
-    /// Objekt 864 - der Rohwert kann nur zu einer der beiden Grenzen passen.
+    /// die Ausgänge <c>R4</c>, <c>Y1</c> und <c>Y2</c> werden sowohl als
+    /// Test-Topic (<c>Tests/*</c>) als auch als Zustands-Topic
+    /// (<c>States/Outputs/*</c>) gelesen.
     /// </para>
     /// </remarks>
     private void WarnIfOutOfCatalogRange(ItemDefinition item, float value)
     {
-        if (item.IsInRange(value))
+        if (item.IsInRange(value) && item.IsValueAllowed(value))
         {
             return;
         }
@@ -453,7 +465,7 @@ public sealed class BacnetDevice : IDisposable
 
         _logger.LogWarning(
             "Der gelesene Wert von {Item} ({Value} {Unit}) liegt außerhalb der Katalog-Grenzen "
-            + "[{Min} … {Max}]. Der Wert wird trotzdem übernommen. "
+            + "[{Min} … {Max}]{Allowed}. Der Wert wird trotzdem übernommen. "
             + "Meist teilen sich zwei Items dasselbe BACnet-Objekt (Objekt-Id {ObjectId}) "
             + "oder die Katalog-Grenzen sind zu eng.",
             item.Id,
@@ -461,6 +473,9 @@ public sealed class BacnetDevice : IDisposable
             item.Unit ?? string.Empty,
             item.Min,
             item.Max,
+            item.AllowedValues is null
+                ? string.Empty
+                : $" (erlaubt: {string.Join(", ", item.AllowedValues)})",
             item.BacnetObjectId);
     }
 

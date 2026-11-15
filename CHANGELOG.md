@@ -17,9 +17,13 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   einen Wert, der nicht zu `Min`/`Max` des Katalogs passt, protokolliert das
   Gateway das **einmal je Item** (mit BACnet-Objekt-Id und Bereich) – statt dass
   die Meldung nur im Home-Assistant-Protokoll auftaucht.
-- **Hinweis auf doppelt belegte BACnet-Objekte** beim Start des Pollings
-  (im Katalog teilen sich `KühlraumsollAbstStandby` und `RestartDelay`
-  Objekt 864 – beide Topics zeigen deshalb denselben Rohwert).
+- **Hinweis auf doppelt belegte BACnet-Objekte** beim Start des Pollings. Im Katalog
+  teilen sich die Ausgänge `R4`, `Y1` und `Y2` je ein Objekt als Test- und als
+  Zustands-Topic (2782, 2789, 2790) – beide Topics zeigen denselben Rohwert.
+- **Werteprüfung für Auswahl-Parameter.** Ein neues Legacy-Attribut `[Values(…)]`
+  landet als `ItemDefinition.AllowedValues` im Katalog: ein Wert, den das Gerät nicht
+  kennt, wird abgelehnt, **auch wenn er im Bereich liegt**. `Cooling` (DP 470) kennt
+  nur `0`, `1` und `3` – der Wert `2` geht nicht mehr an das Gerät.
 - **MQTT lässt sich vollständig abschalten** (`Mqtt:Enabled=false`). Wer Home
   Assistant über die HACS-Integration (REST/SSE) nutzt, braucht keinen Broker:
   Das Gateway baut dann keine Verbindung auf, veröffentlicht keine Topics,
@@ -34,6 +38,35 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Changed
 
+- **⚠️ breaking: zwei Topics im Bereich `States/Inputs` heißen neu** (Befund R7 aus dem
+  Technikerhandbuch). Die Objekt-Ids bleiben unverändert, die Namen folgen der
+  Handbuchformel `E_n = 2612 + n`:
+
+  | alt | neu |
+  |---|---|
+  | `ComfoBox/States/Inputs/E6SecondRoomTemperature` | `ComfoBox/States/Inputs/E7SecondRoomTemperature` |
+  | `ComfoBox/States/Inputs/E7HpFlowBackTemp` | `ComfoBox/States/Inputs/E8HpFlowBackTemp` |
+
+  **Migration in Home Assistant:** die beiden Entitäten werden **neu** angelegt
+  (`unique_id` folgt dem Namen). Die alten bleiben als nicht verfügbare Leichen stehen
+  und müssen einmal gelöscht werden. Automationen, die die alten Topics abonnieren,
+  müssen umgestellt werden. Siehe
+  [MQTT-Kompatibilität](docs/04-migration/mqtt-kompatibilitaet.md#14-zwei-korrigierte-topic-namen-2026-11-15).
+- **Die vier `Tests/*`-Topics sind vollständig read-only** (Befund R5). Sie schalten
+  echte Ausgänge (`OutputsInactive` legt die ganze Anlage still); ohne Rückmeldung am
+  Gerät ist das aus der Ferne nicht vertretbar. `/Set`-Topics entfallen, Home Assistant
+  führt sie als Diagnose-Sensoren statt als Zahl-Entität.
+- **`States/Outputs/Y1PrimaryPump` und `Y2` sind read-only** (Befund R6): sie zeigen
+  künftig den Ausgangs-**Istwert** – darauf zu schreiben wäre eine Ausgangssteuerung.
+- **Warmwasser-Sollwerte haben eine Obergrenze von 58 °C** (`SetPointNormal`,
+  `-Reduced`, `-Frost`, `-Legio`). 58 °C ist die Liefergrenze der Wärmepumpe.
+  Damit ist `SetPointLegio` nicht mehr auf 60…70 °C einstellbar – wer höher muss,
+  nutzt `WW-elektrisch` am Gerät.
+- **Zwei Auswahl-Parameter haben jetzt eine Werteliste**: `Entladeschutz` (`0/3`)
+  und `PrimaryPump/StoppedMode` (`0/1/11`).
+- **Die Fehlerhistorie der Oberfläche sagt, was sie zeigt.** Neuer Hinweis im Reiter
+  *Fehlerhistorie*: die Liste enthält **Gateway**-Meldungen; Gerätefehler stehen im
+  Fehlerspeicher des Reglers am Display und sind über BACnet nicht auslesbar.
 - **Tausendertrennzeichen in der Seite „Werte" ist jetzt der Apostroph**
   (`1'234,5` statt `1.234,5`). Der Punkt war als Tausendertrennzeichen bei
   technischen Werten leicht mit dem Dezimaltrennzeichen zu verwechseln. Die
@@ -52,6 +85,27 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   `components`/`child_devices` (Warnung der MQTT-Integration); die Entitäten
   bringen den `device`-Block ohnehin selbst mit. Das retained Topic wird jetzt
   mit einer leeren Nachricht **entfernt**.
+
+### Fixed
+
+Abgleich des Item-Katalogs mit dem **Technikerhandbuch ECR450 V4.0** (Befunde R1–R12,
+[Review](docs/07-technikerhandbuch/review-ist-implementierung.md),
+[Aufgabenstellung](docs/06-aufgaben/phase-9-datenpunkt-korrekturen.md)):
+
+- **`Comfofond/HeatingHysteresis` zeigt auf DP 3432** statt 3452 (R1). 3452 ist
+  „KM2-Ausgang bei Error" (0/1); die Schaltdifferenz von KM2 ist 3432.
+- **`Entladeschutz` ist schreibbar.** Der Katalog erlaubte nur `0…1`, das Gerät kennt
+  `0` und **`3`** – das Einschalten war dadurch **unmöglich** (R2).
+- **`HeatPump/RestartDelay` zeigt auf DP 846** statt 864 (R3). 864 ist der
+  Kühlraumsoll-Abstand; der gelesene Wert lag deshalb außerhalb von 20…60 min.
+  Die 20-min-Untergrenze bleibt (Herstellervorgabe der ComfoBox).
+- **`States/Outputs/*` verwendet die im Handbuch dokumentierten Objekte** (R6):
+  R1 2779, R3 2781, R4 2782, R5 2783, R7 2785, R10 2788, Y1 2789, Y2 2790.
+  Der Bereich 2624…2635 ist im Handbuch unbelegt.
+- **`PrimaryPump/StoppedMode` kennt den PWM-Betrieb** (R8): Bereich bis 11,
+  erlaubte Werte `0/1/11` (`Y1 Antriebstyp`).
+- **`CoolingZone/Cooling` lehnt den Wert 2 ab** (R9): das Gerät kennt nur `0/1/3`.
+- **Warmwasser-Sollwerte ohne Obergrenze** sind korrigiert (R10, siehe *Changed*).
 
 ## [1.1.0] – 2026-11-15
 

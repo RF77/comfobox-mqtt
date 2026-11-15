@@ -145,8 +145,9 @@ Spalte **DP** = BACnet-Object-Identifier (Datenpunkt-Nummer laut Handbuch).
 | `ComfoBox/Warmwater/SetPointLegio` | 73 | Analog | 5.0…58.0 | °C | x |
 
 > Der Höchstwert ist die **Liefergrenze der Wärmepumpe** (58 °C), nicht DP 190.
-> Bis zur Korrektur (Aufgabe 9.10) gilt `Max = null`; `SetPointLegio` ist danach nicht
-> mehr auf 60…70 °C einstellbar – bewusst.
+> Seit [Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md) (Aufgabe 9.10, 2026-11-15)
+> gilt `Max = 58`; `SetPointLegio` ist damit nicht mehr auf 60…70 °C einstellbar – bewusst.
+> Wer höher muss, nutzt `WW-elektrisch` (DP 118/421) am Gerät.
 
 ### 4.3 Tests / Inbetriebnahme
 
@@ -157,11 +158,12 @@ Spalte **DP** = BACnet-Object-Identifier (Datenpunkt-Nummer laut Handbuch).
 | `ComfoBox/Tests/Y1` | 2789 | Analog | | — |
 | `ComfoBox/Tests/Y2` | 2790 | Analog | | — |
 
-> Diese Topics schalten **echte Ausgänge** und sind deshalb ab
-> [Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md) **read-only**: `OutputsInactive`
+> Diese Topics schalten **echte Ausgänge** und sind deshalb seit
+> [Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md) (Aufgabe 9.9, 2026-11-15)
+> **read-only**: `OutputsInactive`
 > legt die gesamte Anlage still (`1` = alle Ausgänge inaktiv, Gerätefehler 99), `R4`, `Y1`
 > und `Y2` setzen einen Ausgang von Hand – gedacht für den Techniker **am Gerät**
-> (Handbuch §7 „Anlage testen"). Bis zur Umsetzung sind sie schreibbar.
+> (Handbuch §7 „Anlage testen").
 
 ### 4.4 States – Controller und Zähler
 
@@ -217,9 +219,9 @@ Spalte **DP** = BACnet-Object-Identifier (Datenpunkt-Nummer laut Handbuch).
 
 > Die Objekt-Ids in dieser Tabelle sind der **Zielzustand** nach
 > [Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md): `2619/2620` sind laut Handbuch
-> E7/E8, die Ausgangszustände stehen in §7 (2779…2790). Bis zur Umsetzung liest der
-> Katalog 2624…2635 – diese Objekte sind im Handbuch **nicht** belegt.
-> Die Topics `E7…`/`E8…` sind **neue Namen** (Aufgabe 9.8); heute heissen sie
+> E7/E8, die Ausgangszustände stehen in §7 (2779…2790). **Seit 2026-11-15 gilt das auch im
+> Katalog** (Aufgaben 9.7 und 9.8).
+> Die Topics `E7…`/`E8…` sind **neue Namen**; vorher hiessen sie
 > `E6SecondRoomTemperature` und `E7HpFlowBackTemp`.
 
 ### 4.7 Config – Allgemein, Primärpumpe, Freecooling
@@ -524,8 +526,9 @@ Neue Enums, die zu den V2-Topics gehören. Die Namen werden Teil des Vertrags.
 
 ## 6 Korrekturen am V1-Katalog
 
-Diese Punkte sind am **2026-11-15 entschieden** und werden in
-[Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md) umgesetzt. Sie stehen hier, weil
+Diese Punkte sind am **2026-11-15 entschieden** und in
+[Phase 9](06-aufgaben/phase-9-datenpunkt-korrekturen.md) **umgesetzt** (2026-11-15). Sie
+stehen hier, weil
 sie den Bestand betreffen – nicht die V2-Topics.
 
 | # | Item | Befund | Korrektur | Aufgabe |

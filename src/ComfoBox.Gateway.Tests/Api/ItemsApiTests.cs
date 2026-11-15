@@ -228,6 +228,25 @@ public sealed class ItemsApiTests
     }
 
     /// <summary>
+    /// Die Test-Topics sind seit R5 vollständig read-only (Aufgabe 9.9).
+    /// </summary>
+    [Fact]
+    public async Task Ein_Test_Topic_Wird_Nicht_Geschrieben()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var response = await fixture.Client.PutAsync(
+            "/api/items/tests.outputs_inactive",
+            Json("{\"value\":1}"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Empty(fixture.Bacnet.WrittenObjects);
+
+        var error = await GatewayApiFixture.ReadJsonAsync(response);
+        Assert.Equal("read_only", error.GetProperty("error").GetString());
+    }
+
+    /// <summary>
     /// Ohne Expert-Modus wird der Schreibvorgang mit 403 abgelehnt.
     /// </summary>
     [Fact]

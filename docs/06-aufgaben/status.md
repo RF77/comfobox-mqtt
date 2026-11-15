@@ -203,21 +203,21 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 9.1 | `[Values(…)]`: erlaubte Werte im Katalog (Mechanik + Schreibpfad) | ⬜ | 1.0 |
-| 9.2 | R1 `Comfofond/HeatingHysteresis` → DP 3432 | ⬜ | 0.1 |
-| 9.3 | R2 `Entladeschutz` → `0/3` | ⬜ | 0.1 |
-| 9.4 | R8 `PrimaryPump/StoppedMode` → `0/1/11` | ⬜ | 0.1 |
-| 9.5 | R9 `CoolingZone/Cooling` → `{0, 1, 3}` | ⬜ | 0.1 |
-| 9.6 | R3 `RestartDelay` → DP 846 (20 min bleibt) | ⬜ | 0.2 |
-| 9.7 | R6 `States/Outputs/*` auf 2779…2790 + `Y*` read-only | ⬜ | 0.4 |
-| 9.8 | R7 Topics `E6…`/`E7…` → `E7…`/`E8…` (⚠️ Vertrag) | ⬜ | 0.4 |
-| 9.9 | R5 `Tests/*` vollständig read-only | ⬜ | 0.3 |
-| 9.10 | R10 WW-Sollwerte `Max = 58 °C` | ⬜ | 0.1 |
-| 9.11 | Regenerieren + Gesamtverifikation | ⬜ | 0.3 |
-| 9.12 | R11 Hinweis (keine Änderung) | ⬜ | 0.1 |
-| 9.13 | R12 Geräte- vs. Gateway-Fehler (UI + Benutzerdoku) | ⬜ | 0.5 |
-| 9.14 | `topics.md` bleibt eingefroren (Archivkopie in `src_old` ✅ angelegt) | ⬜ | 0.1 |
-| 9.15 | Abschluss (Review, CHANGELOG, Protokoll) | ⬜ | 0.2 |
+| 9.1 | `[Values(…)]`: erlaubte Werte im Katalog (Mechanik + Schreibpfad) | ✅ | 1.0 |
+| 9.2 | R1 `Comfofond/HeatingHysteresis` → DP 3432 | ✅ | 0.1 |
+| 9.3 | R2 `Entladeschutz` → `0/3` | ✅ | 0.1 |
+| 9.4 | R8 `PrimaryPump/StoppedMode` → `0/1/11` | ✅ | 0.1 |
+| 9.5 | R9 `CoolingZone/Cooling` → `{0, 1, 3}` | ✅ | 0.1 |
+| 9.6 | R3 `RestartDelay` → DP 846 (20 min bleibt) | ✅ | 0.2 |
+| 9.7 | R6 `States/Outputs/*` auf 2779…2790 + `Y*` read-only | ✅ | 0.4 |
+| 9.8 | R7 Topics `E6…`/`E7…` → `E7…`/`E8…` (⚠️ Vertrag) | ✅ | 0.4 |
+| 9.9 | R5 `Tests/*` vollständig read-only | ✅ | 0.3 |
+| 9.10 | R10 WW-Sollwerte `Max = 58 °C` | ✅ | 0.1 |
+| 9.11 | Regenerieren + Gesamtverifikation | ✅ | 0.3 |
+| 9.12 | R11 Hinweis (keine Änderung) | ✅ | 0.1 |
+| 9.13 | R12 Geräte- vs. Gateway-Fehler (UI + Benutzerdoku) | ✅ | 0.5 |
+| 9.14 | `topics.md` bleibt eingefroren (Archivkopie in `src_old` ✅ angelegt) | ✅ | 0.1 |
+| 9.15 | Abschluss (Review, CHANGELOG, Protokoll) | ✅ | 0.2 |
 
 > **Nur 9.8 ändert Topic-Adressen** – alle übrigen Punkte sind Metadaten
 > (Objekt-Id, Grenze, Werteliste, Schreibbarkeit).

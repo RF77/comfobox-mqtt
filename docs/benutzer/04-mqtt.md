@@ -101,10 +101,24 @@ ComfoBox/
 | `States` | Zustände (Betriebsstunden, Störungen, Typen) |
 | `Warmwater` | Warmwasser (Sollwert, Sofortaufheizung) |
 | `Config` | Konfigurationswerte (nur mit Expertenmodus) |
-| `Tests` | Testwerte (nur mit Expertenmodus) |
+| `Tests` | Testwerte der Ausgänge (**nur lesbar**) |
 
 > **Die vollständige Liste aller 127 Topics** steht in der
-> [Topic-Referenz](https://github.com/RF77/comfobox-mqtt/blob/main/docs/topics.md).
+> [Topic-Referenz](https://github.com/RF77/comfobox-mqtt/blob/master/docs/topics.md).
+
+### Zwei Topics heißen neu
+
+Zwei Eingangs-Topics waren um einen Kanal falsch benannt. Sie heißen seit dem
+Update vom 15.11.2026:
+
+| alt | neu |
+|---|---|
+| `ComfoBox/States/Inputs/E6SecondRoomTemperature` | `ComfoBox/States/Inputs/E7SecondRoomTemperature` |
+| `ComfoBox/States/Inputs/E7HpFlowBackTemp` | `ComfoBox/States/Inputs/E8HpFlowBackTemp` |
+
+Der **Wert** ändert sich nicht – nur der Name. In Home Assistant entstehen dadurch zwei
+**neue** Entitäten; die alten bleiben als „nicht verfügbar“ stehen und können einmal
+entfernt werden.
 
 ### Werte lesen
 

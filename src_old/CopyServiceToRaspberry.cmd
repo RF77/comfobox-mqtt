@@ -1,3 +1,3 @@
 del N:\mono\ComfoBox\*.* /S /Q
-xcopy D:\_git\comfobox-mqtt\src\ComfoBoxService\bin\Debug\*.* N:\mono\ComfoBox
+xcopy "%~dp0ComfoboxService\bin\Debug\*.*" N:\mono\ComfoBox /Y
 pause

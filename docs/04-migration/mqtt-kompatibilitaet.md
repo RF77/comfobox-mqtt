@@ -56,6 +56,26 @@ Dieses Dokument ist die **verbindliche Zusicherung**. Jede Abweichung ist ein Fe
 > **Prüfung:** Der Contract-Test schlägt fehl, falls ein `Virtual`-Topic im neuen Katalog
 > auftaucht – es gab sie nie.
 
+### 1.4 Zwei korrigierte Topic-Namen (2026-11-15)
+
+Die **einzige** Adressänderung seit dem Legacy-Stand. Sie beruht auf einem Abgleich mit dem
+Technikerhandbuch ECR450 V4.0 (Befund R7):
+
+| alt | neu | Objekt-Id |
+|---|---|---|
+| `ComfoBox/States/Inputs/E6SecondRoomTemperature` | `ComfoBox/States/Inputs/E7SecondRoomTemperature` | 2619 (unverändert) |
+| `ComfoBox/States/Inputs/E7HpFlowBackTemp` | `ComfoBox/States/Inputs/E8HpFlowBackTemp` | 2620 (unverändert) |
+
+**Begründung:** Das Handbuch nummeriert die Eingänge mit `E_n = 2612 + n`; `2619` ist damit
+E7 und `2620` E8. Die Objekt-Ids waren richtig, nur die Namen um eins verschoben. Der am
+Gerät gelesene Wert passt zur jeweiligen Semantik (zweiter Raumfühler bzw.
+WP-Vor-/Rücklauffühler).
+
+**Folge für Home Assistant:** die beiden Entitäten werden **neu** angelegt (`unique_id`
+folgt dem Namen). Die alten bleiben als nicht verfügbare Leichen stehen und müssen einmal
+gelöscht werden. Details: [Phase 9, Aufgabe 9.8](../06-aufgaben/phase-9-datenpunkt-korrekturen.md#98--r7-topics-e6-und-e7-sind-falsch-benannt),
+[CHANGELOG](../../CHANGELOG.md).
+
 ## 2. Topic-Ableitung im Detail
 
 ### 2.1 Gruppen
@@ -234,6 +254,7 @@ public void AnalogPayload_Parses_RegardlessOfCurrentCulture()
 | 5 | `ComfoBox/Connected` als `availability_topic` bleibt gültig | aber `Status/Health` ist besser |
 | 6 | Schreib-Automationen auf `/Set` bleiben unverändert | Topologie identisch |
 | 7 | `ComfoBox/Virtual/*` in Automationen entfernen (falls vorhanden) | existierte nie |
+| 8 | Zwei **umbenannte** Topics prüfen: `States/Inputs/E7SecondRoomTemperature`, `States/Inputs/E8HpFlowBackTemp` | alte Namen entfallen (§1.4) |
 
 ## 6. Zusicherung
 
@@ -241,3 +262,6 @@ public void AnalogPayload_Parses_RegardlessOfCurrentCulture()
 > Änderungen sind ausschließlich **additiv** (neue `Status/`- und `Command/`-Topics) oder
 > **korrigierend** (kultur-invariante Zahlen, kein „0"-Fallback bei ungültigen Enums).
 > Der Contract-Test stellt dies automatisch sicher und schlägt bei jeder Regression fehl.
+>
+> **Eine** Ausnahme ist dokumentiert und begründet: zwei Topic-Namen im Bereich
+> `States/Inputs` wurden am 2026-11-15 korrigiert (§1.4). Die Objekt-Ids blieben gleich.

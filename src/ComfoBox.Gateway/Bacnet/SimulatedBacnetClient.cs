@@ -66,9 +66,9 @@ public sealed class SimulatedBacnetClient : IBacnetClient
             if (_values.ContainsKey(item.BacnetObjectId))
             {
                 // Zwei Topics können auf **dasselbe** BACnet-Objekt zeigen
-                // (im Legacy z. B. Objekt 864: KuehlraumsollAbstStandby und
-                // RestartDelay). Am echten Geraet lesen beide denselben
-                // Rohwert - die Simulation muss das abbilden.
+                // (R4/Y1/Y2 gibt es als Test- und als Zustands-Topic). Am echten
+                // Geraet lesen beide denselben Rohwert - die Simulation muss das
+                // abbilden.
                 continue;
             }
 

@@ -50,6 +50,10 @@
 
       <!-- Fehlerhistorie -->
       <p-tabpanel value="errors">
+        <p-message severity="info" styleClass="w-full">
+          <p>{{ t().diagnostics.errorsScopeHint }}</p>
+        </p-message>
+
         <div class="cb-toolbar">
           <label class="cb-switch">
             <span>{{ t().diagnostics.severity }}:</span>

@@ -209,6 +209,34 @@ public sealed class BacnetDeviceTests : IDisposable
     }
 
     [Fact]
+    public async Task Ein_Nicht_Erlaubter_Wert_Wird_Abgelehnt()
+    {
+        // R9: Kühlen kennt 0/1/3 - der Wert 2 liegt im Bereich, ist aber ungültig.
+        var item = new ItemDefinition
+        {
+            Id = "config.energy_comsumer.cooling_zone.cooling",
+            Group = "Config/EnergyComsumer/CoolingZone",
+            Name = "Cooling",
+            BacnetObjectId = 470,
+            Kind = ItemValueKind.Analog,
+            Min = 0f,
+            Max = 3f,
+            AllowedValues = [0f, 1f, 3f],
+        };
+
+        var device = CreateDevice();
+
+        var ergebnis = await device.WriteAsync(item, 2, CancellationToken.None);
+
+        Assert.Equal(WriteOutcome.OutOfRange, ergebnis);
+        Assert.Empty(_client.WrittenObjects);
+        Assert.Equal(0, _counter.Count);
+
+        Assert.Equal(WriteOutcome.Ok, await device.WriteAsync(item, 3, CancellationToken.None));
+        Assert.Equal([470u], _client.WrittenObjects);
+    }
+
+    [Fact]
     public async Task Ein_Fehlgeschlagener_Schreibvorgang_Zaehlt_Nicht()
     {
         // Befund A22: nur erfolgreiche Schreibvorgänge zählen.
