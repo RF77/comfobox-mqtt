@@ -25,7 +25,16 @@ Die Teile 03–05 enthalten Deployment, Migrations-Roadmap und die dokumentierte
 | [04-migration](04-migration/README.md) | Roadmap, Kompatibilitäts-Garantien, Tests, Risiken | Projektleitung |
 | [05-entscheidungen](05-entscheidungen/README.md) | Architektur-Entscheidungsprotokolle (ADR) | Reviewer |
 | [06-aufgaben](06-aufgaben/README.md) | **Arbeitsanweisungen** für die Umsetzung (Task-Dokument) + [Session-Prompts](06-aufgaben/prompts/) | Implementierung |
+| [07-technikerhandbuch](07-technikerhandbuch/README.md) | **Auswertung des ELESTA-Technikerhandbuchs**: Datenpunkt-Register, Review der Implementierung, Verbesserungen | Implementierung & Support |
 | [benutzer](benutzer/README.md) | **Benutzerdokumentation** (→ HTML für Web-UI, HACS, Synology) | Endanwender |
+
+### Topic-Dokumente
+
+| Dokument | Inhalt |
+|---|---|
+| [topics.json](topics.json) | **V1-Fixture** – die Test-Fixture des Contract-Tests, erzeugt aus dem Legacy-Katalog. **Eingefroren.** |
+| [topics.md](topics.md) | **V1-Referenz** – dieselben 127 Items als Markdown, lesbar. **Eingefroren** und **nicht** vom Generator erzeugt; das Legacy-Programm hat sie geschrieben. Archivkopie: [`src_old/docs/topics.md`](../src_old/docs/topics.md). |
+| [topics-v2.md](topics-v2.md) | **V2** – der erweiterte Topic-Vertrag: 127 bestehende Topics unverändert plus Vorschläge für Status-, Config- und Command-Topics |
 
 ### 01 – Ist-Zustand
 

@@ -27,6 +27,69 @@
 
 ---
 
+## 2026-11-15 – Technikerhandbuch ECR450 ausgewertet, Phase 9 geplant
+
+**Ergebnis:** Der Item-Katalog ist erstmals gegen die **Herstellerdokumentation**
+geprüft (`164829_TH_ECR450_V4.0.pdf`, 119 Seiten, ELESTA, Software-Version 4).
+**118 von 127** Objekt-Ids stimmen exakt, alle vier Enums sind vollständig. Zwölf
+Befunde (R1…R12) sind dokumentiert, bewertet und **entschieden** – die Umsetzung
+steht als Phase 9 bereit.
+
+**Neue Dateien:**
+- `docs/07-technikerhandbuch/README.md` – Quelle, Nutzungsrechte, was das Handbuch
+  **nicht** hergibt
+- `docs/07-technikerhandbuch/datenpunkt-register.md` – alle ~400 Parameter mit
+  DP, Bereich, Einheit, Kapitel und Seite
+- `docs/07-technikerhandbuch/review-ist-implementierung.md` – R1…R12 mit Nachweis
+- `docs/07-technikerhandbuch/verbesserungen-und-neue-topics.md` – Vorschläge
+- `docs/topics-v2.md` – der erweiterte Topic-Vertrag (V1 unverändert + ≈57 neue)
+- `docs/06-aufgaben/phase-9-datenpunkt-korrekturen.md` – die Aufgaben
+- `tools/extract-handbook.py` – Volltext lokal erzeugen
+
+**Entscheidungen:**
+- **R1** `Comfofond/HeatingHysteresis` → DP **3432** (3452 ist ein Fehler-Flag)
+- **R2** `Entladeschutz` → `0/3` (Wert 3 war **nicht schreibbar**)
+- **R3** `RestartDelay` → DP **846**; 20 min Untergrenze **bleibt** (WP-spezifisch)
+- **R4** *kein Befund* – 58 °C ist die Grenze der Wärmepumpe
+- **R5** alle `Tests/*` werden **read-only** (weitergehend als vorgeschlagen)
+- **R6** `States/Outputs/*` → DPs 2779…2790 (§7 des Handbuchs)
+- **R7** `E6…`/`E7…` sind **falsch benannt** → `E7…`/`E8…` (DPs bleiben)
+- **R8** `StoppedMode` Max **11**; DP 3097 **nicht** nach V1
+- **R9** `Cooling` → Werte `{0, 1, 3}`
+- **R10** WW-Sollwerte `Max = 58 °C`
+- **R11** nur Hinweis · **R12** Doku- und UI-Hinweis
+
+**Verifikation:**
+- `pwsh -NoProfile -File tools/check-links.ps1` → 792 Links, 0 Probleme
+- alle neuen Dateien LF, keine literalen `\n` (bekannter `create_file`-Fehler)
+
+**Offen / nicht gemacht:**
+- **Keine Code-Änderung in dieser Session** – bewusst: die Umsetzung läuft als
+  Phase 9 in einer eigenen Session.
+- Das Handbuch ist **nicht** eingecheckt (Nutzungsrechte, öffentliches Repo).
+  Volltext lokal über `tools/extract-handbook.py`, Ziel ist gitignored.
+
+**Überraschungen:**
+- **`docs/topics.md` ist nicht reproduzierbar.** Sie stammt aus dem Legacy-Programm
+  (`WriteTopicsFilePath` in `App.config`), nicht aus dem Generator. **Entscheidung
+  (2026-11-15):** sie bleibt wie `topics.json` **eingefroren** und wird nicht mehr
+  gepflegt; der Legacy-Stand liegt als Archivkopie in
+  [`src_old/docs/topics.md`](../../src_old/docs/topics.md). Ein
+  `--emit-markdown`-Modus bleibt Option (Aufgabe 9.14).
+- **Der Generator schreibt die Fixture ohne BOM**, die committete Datei hat eines.
+  `--out` entfernt es (unkritisch, aber es erzeugt eine Byte-Diff-Zeile).
+- **`--catalog` erwartet ein Verzeichnis**, die README des Werkzeugs nennt eine
+  Datei (`…/Catalog.g.cs`) – das wäre ein Fehler beim Kopieren.
+- **DP 3097 ist nirgends im Repo** – der Befund „das führt der Katalog nicht" ist
+  damit bestätigt.
+- **Objekt 864 war keine Geräte-Eigenheit.** Der Katalog liest dort den
+  Kühl-Sollwert-Offset (0…10 K) statt der Wiedereinschaltverzögerung – die
+  „Value outside of the range: 10" aus Home Assistant ist damit erklärt.
+- Der Bereich `2624…2648` ist im Handbuch **komplett unbelegt** – die acht
+  `States/Outputs/*`-Items zeigten auf Objekte, die es dort nicht gibt.
+
+---
+
 ## 2026-11-08 – Version 1.0.2: der Worker-Emulations-Test war der Durchbruch
 
 **Ergebnis:** Die Worker-Emulation auf der NAS hat die Ursache gefunden und

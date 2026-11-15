@@ -30,11 +30,20 @@ node tools/generate-topics/generate-topics.mjs --check
 node tools/generate-topics/generate-topics.mjs --out docs/topics.json
 
 # C#-Item-Katalog für ComfoBox.Domain erzeugen (Aufgabe 2.1)
-node tools/generate-topics/generate-topics.mjs --catalog src/ComfoBox.Domain/Items/Catalog.g.cs
+# ACHTUNG: Ziel ist ein VERZEICHNIS, keine Datei.
+node tools/generate-topics/generate-topics.mjs --catalog src/ComfoBox.Domain/Items
 ```
 
 `--check` liefert Exit 0, wenn die Fixture deckungsgleich ist, sonst Exit 1.
 Der Check läuft in CI (`build-test.yml`).
+
+### Was der Generator **nicht** erzeugt
+
+`docs/topics.md` stammt aus dem **Legacy-Programm** (`WriteTopicsFilePath` in
+`src_old/ComfoBoxMqtt/App.config`) und wird hier **nicht** erzeugt. Die Datei ist
+zusammen mit `docs/topics.json` der eingefrorene V1-Vertrag und wird nicht mehr
+geändert; eine Archivkopie liegt unter `src_old/docs/topics.md`. Ein
+`--emit-markdown`-Modus existiert nicht (Stand 2026-11-15).
 
 ## Bekannte Abweichung
 

@@ -322,7 +322,7 @@ feststecken, direkt auf die passende Hilfeseite:
 | Migrations-Roadmap | `docs/04-migration/` |
 | Ist-Zustand mit Code-Stellen | `docs/01-ist-zustand/` |
 | BACnet-Protokolldetails | `docs/02-modernisierung/bacnet-portierung.md` |
-| Topic-Liste (alle 127) | `docs/topics.md` (generiert) – verlinkt, nicht abgeschrieben |
+| Topic-Liste (alle 127) | `docs/topics.md` (eingefroren, V1) – verlinkt, nicht abgeschrieben |
 
 > **Die Benutzerdoku verlinkt die Spezifikation, sie kopiert sie nicht.**
 
