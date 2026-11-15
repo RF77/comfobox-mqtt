@@ -33,6 +33,8 @@ für einen Review.
 | [phase-8.md](phase-8.md) | Synology-Paket & Getting Started |
 | [phase-8ad.md](phase-8ad.md) | HA-Add-on & HACS-Integration |
 | [phase-7.md](phase-7.md) | Parallelbetrieb & Umschaltung |
+| [phase-9-datenpunkt-korrekturen.md](phase-9-datenpunkt-korrekturen.md) | Datenpunkt-Korrekturen aus dem Technikerhandbuch |
+| [phase-10-topics-v2.md](phase-10-topics-v2.md) | Topics V2: Diagnose, Energie und Experten-Konfiguration |
 | [prompts/](prompts/) | **Kopierfertige Session-Prompts** je Phase |
 
 ## 3. Wie eine Session läuft

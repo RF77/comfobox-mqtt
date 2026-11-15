@@ -545,7 +545,7 @@ Acht Funktionen mit je fünf Parametern:
 |---:|---|---|---|---:|---|
 | 140 | Schaltdifferenz Stufe 1 | 2…20 | K | 60 | ✅ `Config/EnergyComsumer/HeatPump/SwitchingDifferenceStage1` |
 | 143 | Min WP-Laufzeit | 0…30 | min | 60 | ✅ `Config/EnergyComsumer/HeatPump/MinHeatpumpRunningTime` |
-| 846 | Wiedereinschaltverzög 1 | 0…60 | min | 60 | ➕ `Config/EnergyProducer/RestartDelayStage1` |
+| 846 | Wiedereinschaltverzög 1 | 0…60 | min | 60 | ✅ `Config/EnergyComsumer/HeatPump/RestartDelay` (V1) |
 | **444** | **WP-Vorlauf Maximal** | **0…150** | °C | 60 | ✅ `Config/EnergyComsumer/HeatPump/FlowMaxTemperature` |
 | 141 | Schaltdifferenz Stufe 2 | 2…20 | K | 61 | ➕ `Config/EnergyProducer/SwitchingDifferenceStage2` |
 | 142 | Min Einschaltverz Stufe 2 | 0…60 | min | 61 | ➕ `Config/EnergyProducer/MinRunTimeStage2` |

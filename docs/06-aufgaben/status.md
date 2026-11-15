@@ -224,6 +224,38 @@
 > **Entschieden, keine Änderung:** R4 (58 °C bleibt), R11 (Namensirreführung),
 > DP 3097 (nicht nach V1).
 
+## Phase 10 – Topics V2: Diagnose, Energie und Experten-Konfiguration (≈ 12,5 PT)
+
+> Quelle: [topics-v2.md](../topics-v2.md),
+> [ADR-014](../05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md).
+> Aufgaben: [phase-10-topics-v2.md](phase-10-topics-v2.md)
+>
+> **Entschieden 2026-11-16:** P1 = 60 s · Lesetopics wie vorgeschlagen · alle neuen
+> schreibbaren Topics nur mit Experten-Modus · DP 3340-Gate für kWh/COP.
+
+| # | Aufgabe | Status | PT |
+|---|---|---|---|
+| 10.1 | V1/V2-Trennung im Katalog + Generator | ⬜ | 1.0 |
+| 10.2 | Contract-Tests V1/V2 + reservierte Topics | ⬜ | 0.5 |
+| 10.3 | Diagnose Zone/Warmwasser (8) | ⬜ | 0.5 |
+| 10.4 | Kältekreis/Wärmepumpe (13) | ⬜ | 1.0 |
+| 10.5 | Puffer + Solar (10) | ⬜ | 0.5 |
+| 10.6 | DP 3340-Gate + Durchfluss (3 + Availability) | ⬜ | 1.0 |
+| 10.7 | Energie + COP (11) | ⬜ | 0.5 |
+| 10.8 | Zähler + Wartung (11) | ⬜ | 0.5 |
+| 10.9 | Neue Config-Topics (21, nur Experten-Modus) | ⬜ | 1.5 |
+| 10.10 | Abgeleitete Werte (7) | ⬜ | 1.0 |
+| 10.11 | Poll-Plan P3 + Buslast | ⬜ | 0.5 |
+| 10.12 | HA-Discovery + Availability | ⬜ | 1.0 |
+| 10.13 | Experten-Modus zur Laufzeit für MQTT | ⬜ | 1.0 |
+| 10.14 | UI: Diagnose-/Energie-Block | ⬜ | 1.0 |
+| 10.15 | Benutzerdoku (2 Seiten) | ⬜ | 0.5 |
+| 10.16 | Verifikation + Abschluss | ⬜ | 0.5 |
+
+> **Noch nicht in der Gesamtsumme** – V2 ist additiv und wird separat abgerechnet.
+> **V1 bleibt eingefroren:** `docs/topics.json` und `docs/topics.md` werden in Phase 10
+> **nicht** angefasst; V2 bekommt eine eigene Fixture.
+
 ## Dokumentation (parallel, nicht in der PT-Summe)
 
 | # | Aufgabe | Status | PT |

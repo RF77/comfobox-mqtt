@@ -27,6 +27,46 @@
 
 ---
 
+## 2026-11-16 – V2-Entscheidungen, DP 3340 und Phase 10 geplant
+
+**Ergebnis:** Die offenen Punkte aus [topics-v2.md](../topics-v2.md) sind entschieden und
+als [Phase 10](phase-10-topics-v2.md) beschrieben. Der Energie-Block bekommt ein
+**DP-3340-Gate**: Ohne Wärmemengenmessung werden kWh und COP **nicht als 0** publiziert.
+
+**Entscheidungen:**
+- **Poll-Priorität 1 bleibt bei 60 s** – nicht 30 s. 11 Topics ⇒ 660 statt 1320 Reads/h.
+- **Neue Lesetopics** wie in `topics-v2.md` §5 vorgeschlagen.
+- **Alle neuen schreibbaren Topics** tragen `RequiresExpertMode = true`.
+- **`Config/` bleibt für schreibbare Werte erlaubt** (ADR-014).
+- **V2 bekommt eine eigene Fixture** `docs/topics-v2.json`; V1 bleibt byte-identisch.
+- **DP 3340** wird gelesen; `Status/Energy/MeasurementMode` und
+  `Status/Energy/Available` steuern die Publikation. Kein automatisches Schreiben.
+
+**Neue/geänderte Dateien:**
+- `docs/06-aufgaben/phase-10-topics-v2.md` – die Aufgaben (10.1–10.16)
+- `docs/05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md` – die Entscheidung
+- `docs/topics-v2.md` – 60-s-Intervall, Experten-Modus-Regel, DP-3340-Gate, Bereinigung
+- `docs/07-technikerhandbuch/verbesserungen-und-neue-topics.md` – §6.1 (DP 3340)
+- `docs/06-aufgaben/status.md`, `docs/06-aufgaben/README.md` – Phase 10 eingetragen
+
+**Verifikation:**
+- `pwsh -NoProfile -File tools/check-links.ps1` → 920 Links, **0 Probleme**
+- **Keine Code-Änderung** in dieser Session – bewusst: die Umsetzung läuft als Phase 10.
+
+**Offen / nicht gemacht:**
+- Die Umsetzung selbst (Katalog, Gate, Discovery, UI, Benutzerdoku) – Phase 10.
+- `Config/Energy/MeasurementMode` (Schreiben von DP 3340) nur nach Verifikation am Gerät.
+
+**Überraschungen:**
+- **`Status/Outputs/*` ist nach Phase 9 ein Duplikat.** `States/Outputs/*` zeigt bereits
+  auf DP 2779…2790. Ein zusätzliches V2-Topic würde dieselben Werte doppelt publizieren.
+- **`Status/Counters/ServiceInterval` ist ein Duplikat** von `Config/Service/Interval`
+  (DP 3365). Deshalb entfällt das Status-Topic.
+- **Die Summen in `topics-v2.md` §9 waren grösser als der bereinigte Bestand:** 60 Topics
+  im Entwurf, 56 nach der Bereinigung (78 inkl. Config und Command).
+
+---
+
 ## 2026-11-15 – Technikerhandbuch ECR450 ausgewertet, Phase 9 geplant
 
 **Ergebnis:** Der Item-Katalog ist erstmals gegen die **Herstellerdokumentation**

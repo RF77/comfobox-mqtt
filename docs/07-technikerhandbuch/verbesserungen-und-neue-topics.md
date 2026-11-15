@@ -27,6 +27,12 @@ Heute beantwortet der Gateway nur Frage 1.
 
 Alle fünf sind **rein lesend**, kosten keinen Schreibvorgang und keine EEPROM-Zyklen.
 
+> **Voraussetzung für Platz 4:** Die Energie- und COP-Topics liefern nur dann Werte, wenn
+> am Gerät die **Wärmemengenmessung** (DP 3340) aktiviert ist. Ohne sie rechnet der Regler
+> keine Wärme – die kWh-Zähler bleiben 0 und der COP ist nicht definiert. Der Gateway muss
+> das erkennen und die Werte als **nicht verfügbar** markieren, nicht als 0. Details:
+> [§6.1](#61-dp-3340--warum-ohne-wärmemengenmessung-keine-kwh-und-kein-cop-entstehen).
+
 ---
 
 ## 2 Fehlerspeicher
@@ -214,14 +220,74 @@ Damit niemand Zeit in Sackgassen steckt:
 | **Ferienprogramm setzen** | wie oben |
 | **Manuell Abtauen auslösen** | keine DP-Nummer – nur als Digitalfunktion `26` an einem Ausgang |
 | **Zonen 2…7 ansprechen** | nur erster Kreis dokumentiert |
-| **Echte Ventilposition / Durchfluss** | das Gerät meldet nur die Ausgangsspannung in % (Y1/Y2) |
+| **Echte Ventilposition / hydraulischer Durchfluss** | das Gerät meldet nur die Ausgangsspannung in % (Y1/Y2); der Durchfluss der Wärmemengenmessung (DP 3341/3348) ist kein Hydraulik-Durchfluss |
 | **Kältemitteldruck** | nur über Drucksensoren E151/E152 als Analogwert, nicht kalibriert in bar |
-| **Wärmemenge ohne Wärmemengenmessung** | DP 3340 muss am Gerät aktiviert sein, sonst liefern die kWh-Zähler nichts |
+| **Wärmemenge ohne Wärmemengenmessung** | DP 3340 = 0 ⇒ der Regler rechnet keine Wärme; die kWh-Zähler bleiben 0. Der Gateway erkennt das und markiert die Werte als nicht verfügbar – siehe [§6.1](#61-dp-3340--warum-ohne-wärmemengenmessung-keine-kwh-und-kein-cop-entstehen) |
 | **Firmware-Update** | nicht Teil von BACnet |
 | **Gerät neustarten** | kein DP bekannt. Nur `Command/Restart` = **Gateway**-Neustart |
 
 > Diese Liste gehört auch in die Benutzerdoku. Nichts erzeugt mehr Supportaufwand als eine
 > Funktion, die alle erwarten und niemand liefern kann.
+
+### 6.1 DP 3340 – warum ohne Wärmemengenmessung keine kWh und kein COP entstehen
+
+**Der Datenpunkt.** Das Handbuch führt die Wärmemengenmessung in §6.3.14 (Seite 74):
+
+| DP | Parameter | Werte |
+|---:|---|---|
+| **3340** | Wärmemengenmessung | `0` keine · `1` EIN · `2` EIN, WW separat |
+| 3341 | Durchfluss | 0.00…99.00 m³/h |
+| 3348 | Durchfluss WW | 0.00…99.00 m³/h |
+
+Die eigentlichen Zähler stehen in §4.8: Wärmeleistung (3342/3346), Wärmemenge
+(3343/3347/3349), elektrische Energie (3344/3354/3355) und COP (3345/3356/3357).
+
+**Die Rechnung des Reglers.** Wärme ist keine Messgröße, sondern ein Integral:
+
+```text
+Wärmemenge = ∫ Volumenstrom(t) × ρ × c_p × ΔT(t) dt
+```
+
+Der Regler braucht dafür drei Dinge:
+
+1. die **Freigabe** „Wärmemengenmessung“ (DP 3340),
+2. einen **Durchflussfühler** (DP 3341 für Heizung, DP 3348 für Warmwasser),
+3. die **Temperaturfühler** Vorlauf und Rücklauf (DP 600/3468 bzw. die WW-Fühler).
+
+**Was bei DP 3340 = 0 passiert.** Der Regler rechnet nicht. Die Wärmeleistungen bleiben 0,
+und die Wärmemengen-Zähler bleiben auf ihrem Startwert stehen – sie zählen nichts. Der
+COP ist definiert als Wärme geteilt durch Strom; ohne Wärmezähler gibt es deshalb auch
+keinen COP. Die **elektrischen** Zähler (3344/3354/3355) können je nach Konfiguration
+weiterlaufen – sie zählen den Strom des Verdichters und des Zusatzheizers. Ohne Wärme
+sind sie aber nur Stromzähler, keine Effizienzaussage.
+
+**Warum der Gateway dann keine 0 publizieren darf.** `0 kWh` und `COP 0` sind **gültige
+Werte**. In Home Assistant würde daraus eine flache Statistik bei 0 entstehen; sobald die
+Messung später eingeschaltet wird, springt der `total_increasing`-Zähler und die
+Energie-Historie ist dauerhaft verfälscht. Deshalb gilt: **unbekannt ist nicht null.**
+
+**Was der Gateway umsetzt** (Aufgabe 10.6 in
+[Phase 10](../06-aufgaben/phase-10-topics-v2.md#106--dp-3340-wärmemengenmessung-erkennen-und-sperren)):
+
+| Schritt | Wirkung |
+|---|---|
+| DP 3340 lesen (P3, stündlich) | `Status/Energy/MeasurementMode` = `None` / `On` / `OnSeparateWarmWater` |
+| Verfügbarkeit bilden | `Status/Energy/Available` = `1` nur bei `On`/`OnSeparateWarmWater` und frisch gelesenem Energie-Block; sonst `0` |
+| Energie-Topics sperren | bei `Available = 0` werden die 11 kWh-/COP-/Leistungs-Topics **nicht** publiziert (HA-Entitäten werden über `availability_topic` „nicht verfügbar“) |
+| Fehler melden | **einmal pro Zustandswechsel** ein `Status/Errors`-Eintrag `energy_measurement_disabled` mit Handlungsanweisung |
+| Durchfluss anzeigen | `Status/Energy/FlowRate` und `FlowRateWarmWater` machen sichtbar, ob der Fühler liefert |
+
+**Was der Betreiber tun muss.** Am Regler §6.3.14 „Wärmemengenmessung“ auf `1` oder `2`
+stellen, den Durchflussfühler anschliessen und parametrieren, und prüfen, ob
+`Status/Energy/FlowRate` bei laufender Pumpe einen Wert grösser 0 zeigt. Erst dann liefern
+die kWh-Zähler und der COP Werte.
+
+**Was der Gateway nicht kann.** Er kann die Wärmemenge **nicht** aus Laufzeiten oder
+Leistungsaufnahme schätzen. Eine geschätzte Wärmemenge wäre eine falsche
+Abrechnungsgrundlage und würde bei einer späteren echten Messung einen Sprung erzeugen.
+Er schreibt DP 3340 auch **nicht automatisch**: ohne Durchflussfühler würde die Messung
+zwar „an“ stehen, aber weiterhin 0 liefern – und der Fehler wäre schwerer zu finden als
+heute.
 
 ---
 
@@ -232,8 +298,9 @@ Damit niemand Zeit in Sackgassen steckt:
 | Diagnose Zone/WW (`Override`, `State`, `SetPointType`) | 6 | klein | sehr hoch | **1** |
 | Kältekreis-Fühler | 13 | klein | hoch | **2** |
 | Energie + COP | 11 | klein | hoch | **3** |
+| DP 3340 + Energie-Verfügbarkeit | 3 | klein | sehr hoch | **3** |
 | Rücklauf + Puffer | 6 | klein | hoch | **4** |
-| Zähler + Wartung | 12 | klein | mittel | 5 |
+| Zähler + Wartung | 11 | klein | mittel | 5 |
 | Abgeleitete Werte | 7 | klein | hoch | **2** |
 | Bus-Selbstdiagnose | 2 | klein | mittel | 6 |
 | Ein-/Ausgänge generisch | 30 | mittel | niedrig | 7 |
@@ -242,7 +309,7 @@ Damit niemand Zeit in Sackgassen steckt:
 | Schaltuhren | – | sehr hoch | fraglich | **nicht** |
 | Zonen 2…7 | 30+ | hoch | fraglich | **nicht** |
 
-Summe der empfohlenen Topics (Priorität 1–6): **≈ 57**.
+Summe der empfohlenen Topics (Priorität 1–6): **≈ 59**.
 
 ---
 

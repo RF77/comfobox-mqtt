@@ -291,7 +291,7 @@ Für eine andere Anlage ist das Topic schlicht falsch.
 
 **Empfehlung:** Die beiden Topics als „Altbestand, anlagenspezifisch" dokumentieren und in
 V2 durch generische `Status/Inputs/E<n>` ersetzen
-(siehe [../topics-v2.md](../topics-v2.md#58-status--ein--und-ausgänge)).
+(siehe [../topics-v2.md](../topics-v2.md#58-status--eingänge-optional)).
 > **Entscheidung 2026-11-15: Lesart 2 – die Namen sind falsch, die Datenpunkte bleiben.**
 > Der am Gerät gelesene Wert passt zur jeweiligen Semantik, also zeigt `2619` tatsächlich
 > den zweiten Raumfühler und `2620` den WP-Vor-/Rücklauffühler. Damit ist nur die

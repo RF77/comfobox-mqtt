@@ -32,6 +32,7 @@ ihre Konsequenzen. Ein ADR ist **unveränderlich** – eine geänderte Entscheid
 | [ADR-011](adr-011-logging-serilog-und-ringbuffer.md) | Logging: Serilog als Provider, In-Memory-Ringbuffer (1000) für die Web-UI | Accepted |
 | [ADR-012](adr-012-api-zugriffskontrolle.md) | Zugriffskontrolle der REST-API: Bearer-Token, Administrator, LAN-Modus | Accepted |
 | [ADR-013](adr-013-vergleich-ohne-geraet.md) | Vergleich ohne Gerät: Simulationsbetrieb im Gateway + Golden-Master-Vergleich | Accepted |
+| [ADR-014](adr-014-topics-v2-namensraum-und-expertenmodus.md) | Topics V2: Namensraum `Status/`/`Config/` und Experten-Modus für neue schreibbare Topics | Accepted |
 
 ## 3. Offene Entscheidungen (noch kein ADR)
 

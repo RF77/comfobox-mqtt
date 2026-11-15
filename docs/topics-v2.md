@@ -1,7 +1,9 @@
 # Topics V2 – der erweiterte Topic-Vertrag
 
-> **Status:** Entwurf zur Entscheidung. **V2 ist rein additiv** – kein bestehendes Topic,
-> kein Payload-Format und kein Enum-Name aus [topics.md](topics.md) wird geändert.
+> **Status:** **entschieden am 2026-11-16** – siehe §10 und
+> [ADR-014](05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md).
+> **V2 ist rein additiv** – kein bestehendes Topic, kein Payload-Format und kein
+> Enum-Name aus [topics.md](topics.md) wird geändert.
 >
 > **Grundlage:** Technikerhandbuch ELESTA ECR450 V4.0 (Software-Version 4).
 > Auswertung und Datenpunkt-Register: [07-technikerhandbuch/](07-technikerhandbuch/README.md).
@@ -19,12 +21,12 @@ stammt aus dem Legacy-Code (2016) und ist historisch gewachsen: sie enthält fas
 Für ein Gateway, das eine Wärmepumpe in Home Assistant abbilden soll, ist das die falsche
 Gewichtung:
 
-| | V1 (heute) | V2 (Vorschlag) |
+| | V1 (heute) | V2 (entschieden) |
 |---|---|---|
-| lesende Topics | 46 | + 60…80 |
+| lesende Topics | 46 | + 56 |
 | davon Diagnose-relevant | wenige | vollständig |
 | Energie-/COP-Daten | keine | vollständig |
-| Zählerstände | 4 | 20 |
+| Zählerstände | 4 | 15 |
 | Fehlerursache erkennbar | nein | ja (Übersteuerung, Zustände) |
 
 V2 ändert **nichts** an V1 – es ergänzt.
@@ -77,6 +79,20 @@ für neue V2-Topics.
 
 Ein ungültiger Wert wird **abgelehnt**. Niemals einen Default schreiben.
 
+### 2.5 Neue schreibbare Topics nur mit Experten-Modus
+
+Alle in V2 **neu** hinzugefügten schreibbaren Topics tragen `RequiresExpertMode = true`.
+Ohne Experten-Modus existiert ihr `/Set`-Topic **nicht**: kein Subscribe, keine
+Home-Assistant-Discovery als `number`/`select`, kein REST-Schreibpfad. Das gilt auch für
+die neuen Konfigurations-Topics unter `Config/`.
+
+**Begründung:** Die neuen Werte ändern das Regelverhalten der Anlage (Heizkurve,
+Ventilation, Kältekreis). Ein versehentliches Schreiben – etwa aus einer HA-Automation –
+darf nicht möglich sein. **Lesen bleibt immer erlaubt.**
+
+Die bestehenden V1-Topics behalten ihr bisheriges Verhalten; nur die bereits im
+Legacy-Katalog markierten Items bleiben experten-pflichtig.
+
 ## 3 Namensräume in V2
 
 | Namensraum | Inhalt | Status |
@@ -92,8 +108,9 @@ Ein ungültiger Wert wird **abgelehnt**. Niemals einen Default schreiben.
 Einstellungen bewusst geweitet:** neue *Konfigurations*-Werte bleiben unter `Config/`, damit
 lesen/schreiben symmetrisch bleibt (`Config/X/Y` + `Config/X/Y/Set`). Ein neuer
 Konfigurationswert unter `Status/` mit `/Set` wäre semantisch falsch und würde die
-Home-Assistant-Discovery verkomplizieren. Diese Weitung ist als
-[ADR-014](#10-offene-entscheidungen) zu beschliessen.
+Home-Assistant-Discovery verkomplizieren. Diese Weitung ist am 2026-11-16 als
+[ADR-014](05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md)
+beschlossen.
 
 > **Merksatz:** `States/` = V1-Altbestand, `Status/` = V2. Beide bedeuten „nur lesen";
 > der Unterschied ist die Herkunft, nicht die Semantik.
@@ -412,7 +429,25 @@ sehr hoher Nutzen** für Verbrauchsauswertung in Home Assistant.
 | `ComfoBox/Status/Energy/CopHeating` | 3345 | Analog | | 3 |
 | `ComfoBox/Status/Energy/CopWarmWater` | 3356 | Analog | | 3 |
 | `ComfoBox/Status/Energy/CopTotal` | 3357 | Analog | | 3 |
+| `ComfoBox/Status/Energy/MeasurementMode` | 3340 | Enum `EnergyMeasurementModes` | | 3 |
+| `ComfoBox/Status/Energy/FlowRate` | 3341 | Analog | m³/h | 3 |
+| `ComfoBox/Status/Energy/FlowRateWarmWater` | 3348 | Analog | m³/h | 3 |
+| `ComfoBox/Status/Energy/Available` | — | abgeleitet | 1/0 | — |
 
+> **Voraussetzung (DP 3340):** Die kWh-Zähler und der COP sind **nur** aussagekräftig,
+> wenn am Gerät die Wärmemengenmessung aktiviert ist. `MeasurementMode = None` (0) ⇒ der
+> Regler rechnet keine Wärme; die Zähler bleiben ohne Aussage. Der Gateway publiziert dann
+> **keine 0**, sondern markiert die Energie-Entitäten als nicht verfügbar
+> (`Status/Energy/Available = 0`). Details:
+> [07-technikerhandbuch/verbesserungen-und-neue-topics.md §6.1](07-technikerhandbuch/verbesserungen-und-neue-topics.md#61-dp-3340--warum-ohne-wärmemengenmessung-keine-kwh-und-kein-cop-entstehen).
+>
+> `Status/Energy/Available` ist **kein** Katalog-Item (kein BACnet-Objekt). Es wird aus
+> DP 3340 und dem Zustand des Energie-Blocks gebildet und als `availability_topic` der
+> Energie-Entitäten verwendet. Vor dem ersten erfolgreichen Lesen wird es **nicht**
+> publiziert – Home Assistant zeigt die Entitäten dann als nicht verfügbar. Beim Start und
+> beim Wechsel auf `Available = 0` werden die retained Energie-Topics einmal geleert,
+> damit keine veralteten Werte stehen bleiben.
+>
 > Der COP ist ein **Durchschnitt** über die Laufzeit, kein Momentanwert. In Home Assistant
 > als `sensor` mit `state_class: measurement` abbilden, nicht als Energiemengen-Zähler.
 
@@ -431,11 +466,16 @@ sehr hoher Nutzen** für Verbrauchsauswertung in Home Assistant.
 | `ComfoBox/Status/Counters/DefrostCycles` | 3485 | Analog | | 3 |
 | `ComfoBox/Status/Counters/DefrostOperatingHours` | 3484 | Analog | h | 3 |
 | `ComfoBox/Status/Counters/ServiceHours` | 3366 | Analog | h | 3 |
-| `ComfoBox/Status/Counters/ServiceInterval` | 3365 | Analog | h | 3 |
 
-**Begründung:** `ServiceHours` gegen `ServiceInterval` ergibt die Wartungsanzeige
+**Begründung:** `ServiceHours` gegen `Config/Service/Interval` ergibt die Wartungsanzeige
 („Service notwendig" ab Überschreitung). Die Einschaltzahlen sind für die
 Verschleissbewertung relevant.
+
+> **Nicht doppelt anlegen:** DP 3365 ist bereits als `Config/Service/Interval`
+> (schreibbar, Experten-Modus) im Katalog. Ein zusätzliches
+> `Status/Counters/ServiceInterval` würde denselben Datenpunkt ein zweites Mal als
+> Entität publizieren. Deshalb gibt es **kein** Status-Topic; gelesen wird der Wert über
+> `Config/Service/Interval`.
 
 ### 5.7 Status – Sonnenkollektor (nur falls vorhanden)
 
@@ -447,30 +487,30 @@ Verschleissbewertung relevant.
 | `ComfoBox/Status/Solar/EnergyTotal` | 36 | Analog | kWh | 3 |
 | `ComfoBox/Status/Solar/EnergyToday` | 3911 | Analog | kWh | 3 |
 
-### 5.8 Status – Ein- und Ausgänge
+### 5.8 Status – Eingänge (optional)
 
-Die **tatsächlichen** Zustände der Ein-/Ausgänge (§7 des Handbuchs). Nur sinnvoll, wenn die
+Die **tatsächlichen** Zustände der Eingänge (§7 des Handbuchs). Nur sinnvoll, wenn die
 Beschriftung der Anlage bekannt ist – daher optional und standardmässig **aus**.
 
 | Topic | DP | Typ | Einheit | P |
 |---|---:|---|---|---:|
 | `ComfoBox/Status/Inputs/E1` … `E10` | 2613…2622 | Analog | °C / % | 3 |
 | `ComfoBox/Status/Inputs/E21` … `E28` | 2649…2656 | Analog | °C / % | 3 |
-| `ComfoBox/Status/Outputs/Y1` | 2789 | Analog | % | 2 |
-| `ComfoBox/Status/Outputs/Y2` | 2790 | Analog | % | 2 |
-| `ComfoBox/Status/Outputs/R1` … `R10` | 2779…2788 | Analog | 1/0 | 2 |
 
-> **Achtung – Kollision vermeiden:** `ComfoBox/States/Outputs/Y1PrimaryPump` (V1, DP 2634)
-> und `ComfoBox/Status/Outputs/Y1` (V2, DP 2789) sind **zwei verschiedene** Topics mit
-> ähnlicher Bedeutung. Wenn DP 2634 auf dem Gerät nicht existiert
-> ([Review R1](07-technikerhandbuch/review-ist-implementierung.md#r1)), sollte V1
-> **nicht** geändert, sondern in V2 auf 2789 verwiesen werden.
+> **Seit Phase 9 (2026-11-15) teilweise erledigt:** `States/Outputs/R1…R10`, `Y1` und
+> `Y2` zeigen im V1-Katalog bereits auf die dokumentierten DPs **2779…2790**
+> ([Phase 9, Aufgabe 9.7](06-aufgaben/phase-9-datenpunkt-korrekturen.md#97--r6-statesoutputs-auf-die-dokumentierten-dps)).
+> Ein zusätzliches `Status/Outputs/*` würde dieselben Datenpunkte ein zweites Mal
+> publizieren und in Home Assistant doppelte Entitäten erzeugen. **Deshalb entfallen
+> `Status/Outputs/Y1`, `Y2` und `R1…R10` in V2.** Es bleiben die Eingänge `E1…E10` und
+> `E21…E28` – sie sind optional und standardmässig aus.
+>
+> Die alten DPs 2624…2635 sind im Handbuch unbelegt und werden nicht mehr verwendet.
 
 ### 5.9 Config – zusätzliche Einstellungen (schreibbar)
 
 | Topic (+ `/Set`) | DP | Typ | Bereich | Einheit |
 |---|---:|---|---|---|
-| `ComfoBox/Config/EnergyProducer/RestartDelayStage1` | 846 | Analog | 0.0…60.0 | min |
 | `ComfoBox/Config/EnergyProducer/SwitchingDifferenceStage2` | 141 | Analog | 2.0…20.0 | K |
 | `ComfoBox/Config/EnergyProducer/RestartDelayStage2` | 847 | Analog | 0.0…60.0 | min |
 | `ComfoBox/Config/EnergyProducer/BivalenceStage2` | 803 | Analog | −40.0…60.0 | °C |
@@ -493,8 +533,18 @@ Beschriftung der Anlage bekannt ist – daher optional und standardmässig **aus
 | `ComfoBox/Config/Ventilation/SpeedStage3` | 3226 | Analog | 0.0…100.0 | % |
 | `ComfoBox/Config/Service/Interval` | 3365 | Analog | | h |
 
-> Diese Werte ändern das **Regelverhalten der Anlage**. Sie gehören in der UI hinter den
-> Experten-Modus und in Home Assistant höchstens als `number` mit `entity_category: config`.
+> **Nicht doppelt anlegen:** `Config/EnergyComsumer/HeatPump/RestartDelay` (V1, DP 846) ist
+> bereits die Wiedereinschaltverzögerung der ersten Stufe (Phase 9, R3). Ein zusätzliches
+> `Config/EnergyProducer/RestartDelayStage1` würde denselben Datenpunkt ein zweites Mal
+> publizieren. Deshalb gibt es nur `RestartDelayStage2` (DP 847) als neues Topic.
+>
+> **Alle** Topics in dieser Tabelle sind neu und **schreibbar**. Sie tragen
+> `RequiresExpertMode = true` (siehe §2.5): ohne Experten-Modus gibt es kein `/Set`-Topic,
+> keine `number`/`select`-Entität in Home Assistant und keinen REST-Schreibpfad. Das ist
+> verbindlich – die Werte ändern das Regelverhalten der Anlage.
+>
+> In Home Assistant höchstens als `number`/`select` mit `entity_category: config` und
+> `entity_registry_enabled_default: false`.
 
 ### 5.10 Command – Aktionen
 
@@ -504,6 +554,11 @@ Beschriftung der Anlage bekannt ist – daher optional und standardmässig **aus
 | `ComfoBox/Command/DoHeatWaterNow` | 2590 | `1` | Erzwingt eine WW-Ladung (V1-kompatibel als `Warmwater/DoHeatWaterNow`) |
 | `ComfoBox/Command/Restart` | — | `1` | Neustart des **Gateways** (nicht des Reglers) |
 
+> **Schreiben nur mit Experten-Modus:** `Command/ResetHeatingCurveAdaption` ist neu und
+> schreibbar; er trägt deshalb ebenfalls `RequiresExpertMode = true`. `Command/Restart`
+> ist der bestehende Gateway-Neustart (kein Geräte-Schreibvorgang) und bleibt unverändert.
+> `Warmwater/DoHeatWaterNow` ist V1 und behält sein Verhalten.
+>
 > **Nicht möglich:** „Manuell Abtauen" hat im Handbuch **keine** DP-Nummer. Die Funktion
 > existiert nur als Digitalfunktion (Wert `26`) an einem Ausgang oder als Menüpunkt am
 > Gerät. Ein Abtau-Command ist über BACnet **nicht** umsetzbar – das gehört in die Doku,
@@ -520,6 +575,7 @@ Neue Enums, die zu den V2-Topics gehören. Die Namen werden Teil des Vertrags.
 | `WarmWaterSetPointTypes` | `FrostProtection` 0 · `Reduced` 1 · `Normal` 2 · `Legionella` 3 |
 | `WarmWaterStates` | `Off` 0 · `WithEnergyProducer` 1 · `Electrical` 2 · `WithAdditionalHeater` 3 · `DischargeProtection` 4 · `EnergyProducerLock` 5 |
 | `WarmWaterOverrides` | `None` 0 · `Party` 1 · `Holiday` 3 · `ExternalInput` 5 · `HeatPumpFault` 9 · `Optimization` 10 · `SetPointShiftDeltaT` 13 · `TimesOff` 14 · `FlowTemperatureTooHigh` 15 · `Electrical` 17 · `OptimizationElectrical` 19 · `EnergyProducerLock` 20 · `AdditionalHeaterOnly` 22 |
+| `EnergyMeasurementModes` | `None` 0 · `On` 1 · `OnSeparateWarmWater` 2 |
 
 > **Regel:** Ein Enum-Wert, den das Gerät liefert, aber das Enum nicht kennt, wird **nicht**
 > auf `0` abgebildet (Befund A6). Der Publish wird verworfen und ein Fehler protokolliert.
@@ -564,6 +620,8 @@ Reglers. `Config/PrimaryPump/*` bleibt so benannt (R11, nur ein Hinweis).
 | `state_class` | `measurement` für Temperaturen/Leistung, `total_increasing` für kWh-Zähler |
 | Kategorie | `entity_category: diagnostic` für Zähler, Service, Fehler; `config` für `Config/*` |
 | `entity_registry_enabled_default: false` | für alle Topics mit Poll-Priorität `3` (Zähler, Ein-/Ausgänge) |
+| Neue schreibbare Topics | ohne Experten-Modus **keine** `number`/`select`-Discovery; das Item erscheint als `sensor` |
+| Energie/COP | `availability_topic` = `ComfoBox/Status/Energy/Available` (`1`/`0`); keine 0-Werte bei `MeasurementMode = None` |
 
 > **Warum `enabled_default: false`:** jedes aktivierte Topic erzeugt einen zusätzlichen
 > Recorder-Eintrag in Home Assistant. 60 neue Sensoren, die sich einmal pro Stunde ändern,
@@ -573,10 +631,10 @@ Reglers. `Config/PrimaryPump/*` bleibt so benannt (R11, nur ein Hinweis).
 
 | Schritt | Inhalt | Abhängigkeit |
 |---|---|---|
-| 1 | `topics-v2.md` beschliessen (inkl. ADR-014 zur Namensraum-Weitung) | — |
-| 2 | Katalog-Metadaten korrigieren (§6 Punkt 1–6) | Schritt 1 |
+| 1 | `topics-v2.md` beschliessen (inkl. ADR-014 zur Namensraum-Weitung) – **entschieden 2026-11-16** | — |
+| 2 | Katalog-Metadaten korrigieren (§6 Punkt 1–6) – **Phase 9, erledigt** | Schritt 1 |
 | 3 | Enum-Klassen für die neuen Status-Topics ergänzen | Schritt 2 |
-| 4 | `PollPlan` um die neuen Prioritäten erweitern (Ziel: ≤ 60 Reads pro Zyklus) | Schritt 3 |
+| 4 | `PollPlan` um die neuen Prioritäten erweitern (P1 60 s · P2 5 min · P3 1 h) | Schritt 3 |
 | 5 | Discovery um die neuen Entitäten erweitern, `enabled_default` je Priorität | Schritt 4 |
 | 6 | UI: Diagnoseseite um „Zustand/Warum"-Block erweitern | Schritt 5 |
 | 7 | Benutzerdoku: neue Seiten „Verbrauch auswerten", „Warum bleibt ein Raum kalt" | Schritt 6 |
@@ -597,21 +655,33 @@ bestehenden Zyklus gelegt werden.
 
 | Poll-Priorität | Topics | Intervall | Reads/h |
 |---|---|---:|---:|
-| 1 (häufig) | 11 | 30 s | 1320 |
+| 1 (häufig) | 11 | **60 s** | 660 |
 | 2 (mittel) | 24 | 5 min | 288 |
 | 3 (selten) | 25 | 1 h | 25 |
-| **Summe** | **60** | | **≈ 1630** |
+| **Summe** | **60** | | **≈ 970** |
 
-Bei 100 ms pro Transaktion sind das ≈ 2,7 Minuten Buszeit pro Stunde – unkritisch.
+Bei 100 ms pro Transaktion sind das ≈ 1,6 Minuten Buszeit pro Stunde – unkritisch.
 **Aber:** die Priorität beeinflusst die Reaktionszeit der V1-Bedien-Topics. Der `PollPlan`
 muss so erweitert werden, dass Priorität 1 weiterhin zuerst und vollständig bedient wird.
 
-## 10 Offene Entscheidungen
+> **Warum 60 s und nicht 30 s:** `Gateway:PollIntervalSeconds` steht per Default auf 60 s.
+> Ein 30-s-Intervall würde die Last der Priorität 1 verdoppeln (1320 statt 660 Reads/h) und
+> die Reaktionszeit der V1-Bedien-Topics verschlechtern, ohne dass die Diagnose davon
+> profitiert. **60 s sind deshalb verbindlich für Priorität 1.**
+>
+> Die Zahl **60** ist die Obergrenze aus dem Entwurf. Nach der Bereinigung in
+> [Phase 10](06-aufgaben/phase-10-topics-v2.md) (keine doppelten Output-Topics, optionale
+> E-Topics) bleiben **56** BACnet-Lesetopics; die Buslast sinkt entsprechend.
 
-| # | Frage | Vorschlag |
+## 10 Entscheidungen
+
+| # | Frage | Entscheidung |
 |---|---|---|
-| 1 | Dürfen neue **schreibbare** Topics unter `Config/` liegen (statt nur `Status/`/`Command/`)? | **Ja** – sonst wird das Lese-/Schreibpaar auseinandergerissen. → ADR-014 |
+| 1 | Dürfen neue **schreibbare** Topics unter `Config/` liegen (statt nur `Status/`/`Command/`)? | **Ja** – sonst wird das Lese-/Schreibpaar auseinandergerissen. **Alle** neuen schreibbaren Topics nur mit Experten-Modus. → [ADR-014](05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md) |
 | 2 | Werden die Korrekturen aus §6 sofort umgesetzt oder erst mit V2? | **Sofort für Punkt 2–6** (reine Bereichsfehler, kein Risiko), Punkt 1 und 7–9 erst nach einer Messung am echten Gerät |
-| 3 | Werden `States/Outputs/*` (DP 2624…2635) abgeschafft? | Nein – erst prüfen, ob das echte Gerät diese Objekte kennt (`POST /api/diagnostics/bacnet/observe`) |
+| 3 | Werden `States/Outputs/*` (DP 2624…2635) abgeschafft? | **Nein** – sie bleiben V1. `Status/Outputs/*` entfällt in V2 (Duplikat, siehe §5.8) |
 | 4 | Sollen Zähler standardmässig aktiviert sein? | **Nein** – `enabled_default: false` |
 | 5 | Fehlerspeicher über eine freie Register-/Analogmodul-Konfiguration lesbar machen? | Nur wenn der Nutzer das am Gerät einrichtet – **nicht** automatisch |
+| 6 | Poll-Intervall für Priorität 1? | **60 s** (Default `Gateway:PollIntervalSeconds`) – nicht 30 s |
+| 7 | Wie werden kWh/COP ohne DP 3340 behandelt? | **Nicht als 0 publizieren.** `Status/Energy/MeasurementMode` + `Status/Energy/Available`; Fehler in `Status/Errors`, Hinweis in UI und Doku |
+| 8 | Werden `Status/Outputs/*` zusätzlich zu `States/Outputs/*` angelegt? | **Nein** – Duplikate. `States/Outputs/*` deckt 2779…2790 bereits ab |
