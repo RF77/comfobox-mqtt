@@ -22,6 +22,8 @@ public sealed class ItemCatalog : IItemCatalog
     public ItemCatalog(IReadOnlyList<ItemDefinition>? items = null)
     {
         All = items ?? Catalog.All;
+        V1 = [.. All.Where(static item => !item.IsV2)];
+        V2 = [.. All.Where(static item => item.IsV2)];
 
         _byId = new Dictionary<string, ItemDefinition>(All.Count, StringComparer.Ordinal);
         _byTopicPath = new Dictionary<string, ItemDefinition>(All.Count, StringComparer.Ordinal);
@@ -44,6 +46,16 @@ public sealed class ItemCatalog : IItemCatalog
 
     /// <inheritdoc />
     public IReadOnlyList<ItemDefinition> All { get; }
+
+    /// <summary>
+    /// Die Items des eingefrorenen V1-Topic-Vertrags.
+    /// </summary>
+    public IReadOnlyList<ItemDefinition> V1 { get; }
+
+    /// <summary>
+    /// Die Items des additiven V2-Topic-Vertrags.
+    /// </summary>
+    public IReadOnlyList<ItemDefinition> V2 { get; }
 
     /// <inheritdoc />
     public ItemDefinition? Find(string id)

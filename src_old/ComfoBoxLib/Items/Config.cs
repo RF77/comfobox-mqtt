@@ -24,6 +24,28 @@ namespace ComfoBoxLib.Items
         public class General
         {
             /// <summary>
+            ///     Kühlfunktion: Freigabe der aktiven Kühlung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1)]
+            [Description(@"Kühlfunktion: 0 = gesperrt, 1 = freigegeben")]
+            public AnalogValue CoolingEnabled
+                => new AnalogValue(3118, null, 0, 1) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Hydraulik der passiven Kühlung: Art der Kühlflächen
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1, 2, 3, 4, 9)]
+            [Description(@"Hydraulik der passiven Kühlung: Art der Kühlflächen (0, 1, 2, 3, 4 oder 9)")]
+            public AnalogValue PassiveCoolingHydraulics
+                => new AnalogValue(572, null, 0, 9) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
             ///     Die Sommerintervallschaltung (185) verhindert das Festsitzen der Heizkreispumpen, der
             ///     Energieerzeugerpumpe und der Mischer im Sommerbetrieb.
             ///     0: Funktion deaktiviert
@@ -230,6 +252,26 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
         public class HeatingSystem
         {
             /// <summary>
+            ///     Mischerabgleich des direkten Heizkreises
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Mischerabgleich des direkten Heizkreises in Kelvin")]
+            public AnalogValue MixerDirectOffset
+                => new AnalogValue(3608, "K", 0, 20) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Normalsollwert unterhalb der Aussentemperaturgrenze
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Normalsollwert unterhalb der Aussentemperaturgrenze")]
+            public AnalogValue SetPointNormalBelowOutdoor
+                => new AnalogValue(862, "°C", -30, 10) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
             ///     Energieerz’temp im Auslegep
             /// </summary>
             [Secondary]
@@ -266,6 +308,77 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
         [Description(@"Energieerzeuger parametrieren")]
         public class EnergyProducer
         {
+            /// <summary>
+            ///     Schaltdifferenz Stufe 2
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Schaltdifferenz Stufe 2: liegt symmetrisch zum Energieerzeugersollwert der zweiten Stufe")]
+            public AnalogValue SwitchingDifferenceStage2
+                => new AnalogValue(141, "K", 2, 20) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Wiedereinschaltverzögerung Stufe 2
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Wiedereinschaltverzögerung Stufe 2: Sperrzeit nach dem Abschalten des Kompressors der zweiten Stufe")]
+            public AnalogValue RestartDelayStage2
+                => new AnalogValue(847, "min", 0, 60) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Bivalenztemperatur Stufe 2
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Bivalenztemperatur Stufe 2: Aussentemperatur, ab der die zweite Stufe zuschaltet")]
+            public AnalogValue BivalenceStage2
+                => new AnalogValue(803, "°C", -40, 60) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Vorlaufzeit Kondensatorpumpe
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Vorlaufzeit Kondensatorpumpe: Laufzeit vor der Freigabe des Energieerzeugers")]
+            public AnalogValue CondenserPumpPreRunningTime
+                => new AnalogValue(3234, "min", 0, 99) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Nachlaufzeit Kondensatorpumpe
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Nachlaufzeit Kondensatorpumpe: Laufzeit nach dem Abschalten des Energieerzeugers")]
+            public AnalogValue CondenserPumpPostRunningTime
+                => new AnalogValue(188, "min", 0, 99) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Frostschutzbetrieb des Energieerzeugers
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1, 2, 3, 10)]
+            [Description(@"Frostschutzbetrieb: Art des Frostschutzes (0, 1, 2, 3 oder 10)")]
+            public AnalogValue FrostProtectionMode
+                => new AnalogValue(498, null, 0, 10) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Frostschutztemperatur
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Frostschutztemperatur: Aussentemperatur, ab der der Frostschutz greift")]
+            public AnalogValue FrostProtectionTemperature
+                => new AnalogValue(446, "°C", 2, 20) {IsReadOnly = !Settings.Default.ExpertMode};
+
             /// <summary>
             ///     Vorlaufzeit Primär
             ///     Bei einer Energieanforderung wird die Primärpumpe bzw. der Ventilator aktiviert und der
@@ -858,6 +971,125 @@ Zuordnung erfolgt über „Umschaltung Raumfühler“ (3085).")]
                 [Description(@"WP-Vorlauf Maximal")]
                 public AnalogValue FlowMaxTemperature => new AnalogValue(444, "°C", 0, 58) {IsReadOnly = false};
             }
+        }
+
+        [Description(@"Warmwasser parametrieren")]
+        public class Warmwater
+        {
+            /// <summary>
+            ///     Art der Warmwasserbereitung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1, 2)]
+            [Description(@"Warmwasserbereitung: Art der Warmwasserbereitung (0, 1 oder 2)")]
+            public AnalogValue Equipment
+                => new AnalogValue(117, null, 0, 2) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Energieerzeugerwahl für die Warmwasserbereitung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Energieerzeugerwahl für die Warmwasserbereitung (0 bis 4)")]
+            public AnalogValue PowerSelection
+                => new AnalogValue(195, null, 0, 4) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Umschaltverzögerung zwischen Heizung und Warmwasser
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Umschaltverzögerung zwischen Heizung und Warmwasser")]
+            public AnalogValue SwitchOverDelay
+                => new AnalogValue(848, "min", 0, 10) {IsReadOnly = !Settings.Default.ExpertMode};
+        }
+
+        [Description(@"Kühlung parametrieren")]
+        public class Cooling
+        {
+            /// <summary>
+            ///     Betriebsart der passiven Kühlung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1, 2)]
+            [Description(@"Betriebsart der passiven Kühlung (0, 1 oder 2)")]
+            public AnalogValue PassiveMode
+                => new AnalogValue(579, null, 0, 2) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Freigabe der Kühlung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Freigabe der Kühlung (0 bis 6)")]
+            public AnalogValue Release
+                => new AnalogValue(571, null, 0, 6) {IsReadOnly = !Settings.Default.ExpertMode};
+        }
+
+        [Description(@"Lüftung parametrieren")]
+        public class Ventilation
+        {
+            /// <summary>
+            ///     Art der Lüfterregelung
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Values(0, 1, 2)]
+            [Description(@"Lüfterregelung: Art der Drehzahlvorgabe (0, 1 oder 2)")]
+            public AnalogValue FanControl
+                => new AnalogValue(3092, null, 0, 2) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Drehzahl der Lüftungsstufe 1
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Drehzahl der Lüftungsstufe 1 in Prozent")]
+            public AnalogValue SpeedStage1
+                => new AnalogValue(3224, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Drehzahl der Lüftungsstufe 2
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Drehzahl der Lüftungsstufe 2 in Prozent")]
+            public AnalogValue SpeedStage2
+                => new AnalogValue(3225, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
+
+            /// <summary>
+            ///     Drehzahl der Lüftungsstufe 3
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Drehzahl der Lüftungsstufe 3 in Prozent")]
+            public AnalogValue SpeedStage3
+                => new AnalogValue(3226, "%", 0, 100) {IsReadOnly = !Settings.Default.ExpertMode};
+        }
+
+        [Description(@"Wartung und Service")]
+        public class Service
+        {
+            /// <summary>
+            ///     Wartungsintervall in Betriebsstunden
+            /// </summary>
+            [V2]
+            [Secondary]
+            [ExpertMode]
+            [Description(@"Wartungsintervall in Betriebsstunden")]
+            public AnalogValue Interval
+                => new AnalogValue(3365, "h") {IsReadOnly = !Settings.Default.ExpertMode};
         }
     }
 }

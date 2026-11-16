@@ -36,7 +36,8 @@ public sealed class TopicContractTests
 
     private static readonly FixtureItem[] Fixture = LoadFixture();
 
-    private static readonly ItemCatalog Catalog = new();
+    // V1 ist der eingefrorene Vertrag: nur Items mit IsV2 == false.
+    private static readonly ItemCatalog Catalog = new(ComfoBox.Domain.Items.Catalog.V1);
 
     [Fact]
     public void Fixture_Und_Katalog_Haben_Die_Gleiche_Anzahl_Items()

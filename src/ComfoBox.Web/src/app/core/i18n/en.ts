@@ -108,6 +108,7 @@ export const EN: Translations = {
   item: {
     stale: 'stale',
     expert: 'Expert mode',
+    expertRequired: 'Expert mode required',
     save: 'Save',
     choose: 'Choose a value',
     readonly: 'Read only',
@@ -129,14 +130,24 @@ export const EN: Translations = {
     maxWritesHint: 'The counter protects the EEPROM of the heating system. 0 means: no limit.',
     expertMode: 'Expert mode',
     expertModeHint:
-      'Allows writing sensitive parameters. The switch is saved immediately; the MQTT topics for these values appear after a restart. Default: off.',
+      'Allows writing sensitive parameters. The switch applies immediately – the sensitive values become writable without a restart. Default: off.',
     expertModeConfirmTitle: 'Enable expert mode',
     expertModeConfirmText:
       'Expert mode allows writing sensitive heating parameters. A wrong value can cause malfunctions. Continue?',
     expertModeConfirmAccept: 'Enable expert mode',
     expertModeSaved: (enabled) => (enabled ? 'Expert mode enabled' : 'Expert mode disabled'),
     expertModeSavedHint:
-      'The value is stored. The MQTT topics for these values appear after a gateway restart.',
+      'The value is stored. The values list has been reloaded – the sensitive parameters are writable immediately.',
+    expertItems: 'Expert parameters',
+    expertItemsHint:
+      'These parameters can only be written while expert mode is active. Writing happens on the "Values" page – write protection and the write counter apply there too.',
+    expertItemsEnergyWarning:
+      'Parameters from the energy area (Config/Energy…) affect the heat pump control loop. Change them only with the technician handbook and note the previous value.',
+    expertItemName: 'Parameter',
+    expertItemGroup: 'Group',
+    expertItemTopic: 'Topic',
+    expertItemOpen: (name) => `Open ${name}`,
+    expertItemNone: 'No expert parameters in the catalogue.',
     bacnetSection: 'BACnet (serial interface)',
     appliesImmediately: 'applies immediately',
     deviceId: 'Device ID',
@@ -258,6 +269,7 @@ export const EN: Translations = {
     tabWrites: 'Writes',
     tabConnections: 'Connections',
     tabBus: 'BACnet bus',
+    tabPlant: 'Plant',
     component: 'Component',
     source: 'Source',
     state: 'State',
@@ -313,6 +325,63 @@ export const EN: Translations = {
     kindFrameSent: 'Frame sent',
     kindDataReceived: 'BACnet data received',
     kindReplyPosted: 'Reply postponed',
+    loadingValues: 'Loading the plant values …',
+    noValues: 'These values are not available yet.',
+    parameter: 'Parameter',
+    reading: 'Value',
+    topic: 'MQTT topic',
+    heatingCard: 'Why is it not heating?',
+    heatingLead:
+      'The zone override usually names the cause in one word – holiday, times off, '
+      + 'dew point guard or a heat pump fault. The setpoint type shows which setpoint currently applies.',
+    heatingHelpLink: 'Help: Why does a room stay cold?',
+    zoneOverride: 'Zone override',
+    zoneState: 'Zone state',
+    zoneSetPointType: 'Zone setpoint type',
+    warmWaterState: 'Domestic hot water state',
+    warmWaterOverride: 'Domestic hot water override',
+    heatPumpReturnTemperature: 'Heat pump return temperature',
+    zoneFlowTemperature: 'Zone flow temperature',
+    refrigerantCard: 'Refrigerant circuit',
+    refrigerantLead:
+      'Hot gas and suction gas show whether refrigerant is missing or the expansion valve is stuck open; '
+      + 'evaporator and condenser show the heat exchangers. Hot gas above 130 °C is a fault.',
+    suctionGasTemperature: 'Suction gas temperature',
+    hotGasTemperature: 'Hot gas temperature',
+    evaporatorTemperature: 'Evaporator temperature',
+    condenserTemperature: 'Condenser temperature',
+    defrostDeltaActual: 'Defrost delta (actual)',
+    superheatHint:
+      'The gateway calculates the superheat itself from the suction gas and evaporator '
+      + 'temperature. It is not a catalogue value and is only available as an MQTT topic – '
+      + 'for example for Home Assistant. The formula is in the tooltip.',
+    superheatFormula:
+      'Superheat = suction gas temperature (DP 641) − evaporator temperature (DP 660)',
+    energyCard: 'Consumption and efficiency',
+    energyLead:
+      'Heat and electricity meters of the controller. The COP is a runtime average, not an instantaneous value.',
+    energyBanner:
+      'Heat metering is switched off on the unit (DP 3340 = 0). The kWh meters and the COP '
+      + 'therefore return no values. Set "Heat metering" to 1 or 2 on the controller and '
+      + 'check the flow sensor.',
+    energyHelpLink: 'Help: consumption and efficiency',
+    measurementMode: 'Heat metering (DP 3340)',
+    energyAvailable: 'Metering active',
+    energyUnavailable: 'Metering off',
+    energyAvailableNote:
+      'Home Assistant sees the same statement as the MQTT topic ComfoBox/Status/Energy/Available '
+      + '(1 = available, 0 = not available). This topic does not exist on the REST interface.',
+    heatingPower: 'Heating power',
+    warmWaterPower: 'Domestic hot water power',
+    thermalEnergyHeating: 'Thermal energy heating',
+    thermalEnergyWarmWater: 'Thermal energy hot water',
+    thermalEnergyTotal: 'Thermal energy total',
+    electricalEnergyHeating: 'Electrical energy heating',
+    electricalEnergyWarmWater: 'Electrical energy hot water',
+    electricalEnergyTotal: 'Electrical energy total',
+    copHeating: 'COP heating (runtime average)',
+    copWarmWater: 'COP hot water (runtime average)',
+    copTotal: 'COP total (runtime average)',
   },
 
   logs: {

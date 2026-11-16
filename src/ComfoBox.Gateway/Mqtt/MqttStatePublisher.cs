@@ -1,5 +1,6 @@
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Energy;
 using MQTTnet;
 using MQTTnet.Protocol;
 
@@ -19,6 +20,12 @@ namespace ComfoBox.Gateway.Mqtt;
 /// publiziert - so hat Home Assistant nach einem Neustart sofort den
 /// aktuellen Stand.
 /// </para>
+/// <para>
+/// Items mit <see cref="ItemDefinition.RequiresEnergyMeasurement"/> werden
+/// **übersprungen**, solange <see cref="EnergyMeasurementGate.IsAvailable"/>
+/// <c>false</c> ist: ohne Wärmemengenmessung (DP 3340) sind kWh-Zähler und COP
+/// ohne Aussage - sie dürfen nicht als <c>0</c> erscheinen.
+/// </para>
 /// </remarks>
 public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandler
 {
@@ -26,6 +33,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     private readonly IItemCatalog _catalog;
     private readonly MqttTopicMap _topics;
     private readonly IMqttPublisher _publisher;
+    private readonly EnergyMeasurementGate _gate;
     private readonly MqttOptions _options;
     private readonly ILogger<MqttStatePublisher> _logger;
 
@@ -36,6 +44,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     /// <param name="catalog">Der Item-Katalog.</param>
     /// <param name="topics">Die Topic-Zuordnung.</param>
     /// <param name="publisher">Der Publisher.</param>
+    /// <param name="gate">Das DP-3340-Gate.</param>
     /// <param name="options">Die MQTT-Einstellungen.</param>
     /// <param name="logger">Logger.</param>
     public MqttStatePublisher(
@@ -43,6 +52,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
         IItemCatalog catalog,
         MqttTopicMap topics,
         IMqttPublisher publisher,
+        EnergyMeasurementGate gate,
         MqttOptions options,
         ILogger<MqttStatePublisher> logger)
     {
@@ -50,6 +60,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(topics);
         ArgumentNullException.ThrowIfNull(publisher);
+        ArgumentNullException.ThrowIfNull(gate);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -57,6 +68,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
         _catalog = catalog;
         _topics = topics;
         _publisher = publisher;
+        _gate = gate;
         _options = options;
         _logger = logger;
     }
@@ -123,7 +135,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     private async Task PublishAsync(CachedValue cached, CancellationToken cancellationToken)
     {
         var item = _catalog.Find(cached.Id);
-        if (item is null || cached.Value is null)
+        if (item is null || cached.Value is null || IsSuppressed(item))
         {
             return;
         }
@@ -165,6 +177,11 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
         CachedValue cached,
         CancellationToken cancellationToken)
     {
+        if (IsSuppressed(item))
+        {
+            return false;
+        }
+
         var payload = MqttValueFormatter.StatePayload(item, cached.Value);
 
         var message = new MqttApplicationMessageBuilder()
@@ -193,4 +210,21 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
 
         return true;
     }
+
+    /// <summary>
+    /// Darf der Wert dieses Items gerade nicht publiziert werden?
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <returns>
+    /// <c>true</c> für Energie-Items, solange die Wärmemengenmessung nicht
+    /// nachweislich eingeschaltet ist (DP 3340 fehlt, ist <c>0</c> oder der
+    /// Wert ist veraltet).
+    /// </returns>
+    /// <remarks>
+    /// Die Prüfung sitzt in **beiden** Publish-Pfaden (Cache-Änderung und
+    /// vollständiger Publish nach dem Verbindungsaufbau) - sonst käme ein
+    /// gesperrter Wert über den Umweg des Reconnects doch in den Broker.
+    /// </remarks>
+    private bool IsSuppressed(ItemDefinition item)
+        => item.RequiresEnergyMeasurement && !_gate.IsAvailable;
 }

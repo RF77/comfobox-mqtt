@@ -30,6 +30,15 @@
   color: var(--p-text-muted-color, inherit);
 }
 
+// Die Tabellen nutzen die volle Breite.
+//
+// Hinweis: die Breite wird über eine CSS-Klasse gesetzt, **nicht** über
+// einen Binding-Ausdruck mit geschweiften Klammern - Angular zählt die
+// Klammern eines Binding-Ausdrucks beim Parsen des Control-Flows mit.
+:host ::ng-deep .cb-table-full table {
+  min-width: 100%;
+}
+
 .cb-readonly-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));

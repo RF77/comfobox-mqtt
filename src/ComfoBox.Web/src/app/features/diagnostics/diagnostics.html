@@ -13,6 +13,7 @@
       <p-tab value="logs">{{ t().diagnostics.tabLogs }}</p-tab>
       <p-tab value="writes">{{ t().diagnostics.tabWrites }}</p-tab>
       <p-tab value="connections">{{ t().diagnostics.tabConnections }}</p-tab>
+      <p-tab value="plant">{{ t().diagnostics.tabPlant }}</p-tab>
       <p-tab value="bus">{{ t().diagnostics.tabBus }}</p-tab>
     </p-tablist>
 
@@ -196,6 +197,164 @@
             </p-card>
           </div>
         }
+      </p-tabpanel>
+
+      <!--
+        Werte der Anlage (V2): Warum heizt es nicht?, Kältekreis und
+        Verbrauch/Effizienz. Die Werte kommen aus dem Item-Katalog
+        (`ItemsStore`) und werden per SSE live aktualisiert.
+      -->
+      <p-tabpanel value="plant">
+        <!-- Der Ladehinweis wird per CSS gesteuert - siehe Kommentar oben. -->
+        <p-message severity="info" styleClass="w-full" [class.cb-hidden]="!valuesLoading()">
+          <p>{{ t().diagnostics.loadingValues }}</p>
+        </p-message>
+
+        <p-card [header]="t().diagnostics.heatingCard" styleClass="cb-card">
+          <p class="cb-hint">{{ t().diagnostics.heatingLead }}</p>
+
+          <p class="cb-hint">
+            <a class="cb-help-link" [routerLink]="heatingHelpLink">
+              {{ t().diagnostics.heatingHelpLink }}
+            </a>
+          </p>
+
+          <p-table [value]="heatingRows()" styleClass="cb-table-full">
+            <ng-template #header>
+              <tr>
+                <th>{{ t().diagnostics.parameter }}</th>
+                <th>{{ t().diagnostics.reading }}</th>
+                <th>{{ t().diagnostics.topic }}</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <!-- Der Tooltip trägt die Katalog-Beschreibung und das Topic. -->
+              <tr [title]="row.tooltip">
+                <td>{{ row.label }}</td>
+                <td>
+                  <span class="cb-value">{{ row.display }}</span>
+                  @if (row.raw) {
+                    <span class="cb-raw">{{ row.raw }}</span>
+                  }
+                </td>
+                <td><code>{{ row.topic ?? t().common.dash }}</code></td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="3">{{ t().diagnostics.noValues }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-card>
+
+        <p-card [header]="t().diagnostics.refrigerantCard" styleClass="cb-card">
+          <p class="cb-hint">{{ t().diagnostics.refrigerantLead }}</p>
+
+          <p-table [value]="refrigerantRows()" styleClass="cb-table-full">
+            <ng-template #header>
+              <tr>
+                <th>{{ t().diagnostics.parameter }}</th>
+                <th>{{ t().diagnostics.reading }}</th>
+                <th>{{ t().diagnostics.topic }}</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr [title]="row.tooltip">
+                <td>{{ row.label }}</td>
+                <td>
+                  <span class="cb-value">{{ row.display }}</span>
+                  @if (row.raw) {
+                    <span class="cb-raw">{{ row.raw }}</span>
+                  }
+                </td>
+                <td><code>{{ row.topic ?? t().common.dash }}</code></td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="3">{{ t().diagnostics.noValues }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+
+          <!--
+            Abgeleiteter Wert: kein Katalog-Item, kein REST-Feld - die
+            Überhitzung rechnet der Gateway und publiziert sie nur per MQTT.
+          -->
+          <p-message severity="info" styleClass="w-full">
+            <p>{{ t().diagnostics.superheatHint }}</p>
+            <p>
+              <code [title]="t().diagnostics.superheatFormula">{{ superheatTopic }}</code>
+            </p>
+          </p-message>
+        </p-card>
+
+        <p-card [header]="t().diagnostics.energyCard" styleClass="cb-card">
+          <p class="cb-hint">{{ t().diagnostics.energyLead }}</p>
+
+          <!--
+            Der Banner wird per CSS ein- und ausgeblendet, nicht per `@if`:
+            innerhalb eines `p-tabpanel` bleibt ein ersetzter Zweig sonst als
+            Waise im DOM stehen (siehe Kommentar am Tab „Schreibvorgänge").
+          -->
+          <p-message
+            severity="warn"
+            styleClass="w-full"
+            [class.cb-hidden]="!energyMeasurementOff()"
+          >
+            <p>{{ t().diagnostics.energyBanner }}</p>
+            <p>
+              <a class="cb-help-link" [routerLink]="energyHelpLink">
+                {{ t().diagnostics.energyHelpLink }}
+              </a>
+            </p>
+          </p-message>
+
+          <div class="cb-mode" [class.cb-hidden]="!measurementModeKnown()">
+            <span>{{ t().diagnostics.measurementMode }}:</span>
+            <strong>{{ measurementModeText() }}</strong>
+            <p-tag
+              [value]="
+                energyMeasurementOff()
+                  ? t().diagnostics.energyUnavailable
+                  : t().diagnostics.energyAvailable
+              "
+              [severity]="energyMeasurementOff() ? 'warn' : 'success'"
+            />
+          </div>
+
+          <p class="cb-hint" [class.cb-hidden]="!measurementModeKnown()">
+            {{ t().diagnostics.energyAvailableNote }}
+          </p>
+
+          <p-table [value]="energyRows()" styleClass="cb-table-full">
+            <ng-template #header>
+              <tr>
+                <th>{{ t().diagnostics.parameter }}</th>
+                <th>{{ t().diagnostics.reading }}</th>
+                <th>{{ t().diagnostics.topic }}</th>
+              </tr>
+            </ng-template>
+            <ng-template #body let-row>
+              <tr [title]="row.tooltip">
+                <td>{{ row.label }}</td>
+                <td>
+                  <span class="cb-value">{{ row.display }}</span>
+                  @if (row.raw) {
+                    <span class="cb-raw">{{ row.raw }}</span>
+                  }
+                </td>
+                <td><code>{{ row.topic ?? t().common.dash }}</code></td>
+              </tr>
+            </ng-template>
+            <ng-template #emptymessage>
+              <tr>
+                <td colspan="3">{{ t().diagnostics.noValues }}</td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </p-card>
       </p-tabpanel>
 
       <!-- BACnet-Bus-Analyse (nur lesend) -->

@@ -27,6 +27,114 @@
 
 ---
 
+## 2026-11-16 (2) – Phase 10 abgeschlossen: Topics V2, Energie und Experten-Modus (Aufgaben 10.1–10.16)
+
+**Testzahl:** 396 → **497 grün** (Domain 36 → 77, Contract 10 → 20, Bacnet 56,
+Gateway 294 → 344). `dotnet build` 0 Warnungen / 0 Fehler. Katalog **205** Items
+(127 V1 + 78 V2). Fixtures unverändert: `docs/topics.json` und `docs/topics.md` sind
+**byte-identisch** zu `HEAD`, neu ist `docs/topics-v2.json` mit **78** Items.
+
+### Die sechs Wellen
+
+| Welle | Inhalt |
+|---|---|
+| 1 Mechanik | `[V2]`/`[Energy]`/`[Slow]`, `Catalog.V1`/`V2`, `--out-v2`/`--check-v2`, `RefreshPriority.Slow` |
+| 2 Katalog | Zone/Warmwasser, Kältekreis, Puffer, Solar, Energie, Zähler, Command (78 Items) |
+| 3 Energie-Gate | `EnergyMeasurementGate` (DP 3340), Durchfluss, `Status/Energy/Available` |
+| 4 Derived + Discovery | `DerivedValues`/`DerivedValueService` (7), Discovery-Regeln, 220 Payloads |
+| 5 UI und Doku | Reiter „Anlage“, Experten-Schalter, Benutzerdoku 12/13, `build-docs.mjs`-Fix |
+| 6 Abschluss | Experten-Modus zur Laufzeit für MQTT (10.13 **ohne** Fallback), Verifikation |
+
+**Was entstanden ist:**
+
+- **Katalog:** 56 neue Status-Topics + 21 Config-Topics (nur mit Experten-Modus) +
+  `Command/ResetHeatingCurveAdaption`. Damit **78** V2-Topics; V1 unverändert 127.
+- **Poll-Plan:** `RefreshPriority.Slow` (Priorität 3) wird **stündlich** gelesen. Den
+  Slow-Faktor rechnet `PollPlan` aus `Gateway:PollIntervalSeconds`
+  (`3600 / Intervall`) – P3 bleibt auch bei einem 30-s-Zyklus eine Stunde.
+- **DP-3340-Gate:** `EnergyMeasurementGate` leitet die Verfügbarkeit bei **jedem**
+  Zugriff aus dem Cache ab (kann nie hinterherhinken); ohne Wärmemengenmessung keine
+  kWh-/COP-Werte und keine 0.
+- **Abgeleitete Werte:** Überhitzung, Spreizung, Puffer-Schichtung, Laufzeitverhältnis,
+  Wartung fällig, Momentan-COP, Kühlung aktiv – `unknown` statt 0, nie schreibbar.
+- **Discovery:** `entity_registry_enabled_default: false` für stündliche Werte,
+  `entity_category` (`diagnostic`/`config`), `device_class`/`state_class` für kWh/kW,
+  Availability über `Status/Energy/Available`.
+- **Experten-Modus:** `ExpertModeCoordinator` (Hosted Service) und
+  `MqttTopicMap.UpdateExpertMode`; `MqttSubscriber` bestellt ab/neu,
+  `HomeAssistantDiscovery` veröffentlicht neu.
+- **Oberfläche:** Reiter **„Anlage“** der Diagnose-Seite („Warum heizt es nicht?“,
+  Kältekreis, Verbrauch/Effizienz); Experten-Parameter hinter dem Schalter.
+- **Benutzerdoku:** `12-verbrauch.md` und `13-warum-bleibt-ein-raum-kalt.md`
+  (17 Seiten im Hilfe-Bereich).
+
+### Abweichungen und Erkenntnisse
+
+1. **Die fünf neuen Enums liegen in zwei Dateien** (`Enums/ZoneStatusEnums.cs`:
+   `ZoneSetPointTypes` + `ZoneOverrides`; `Enums/WarmWaterStatusEnums.cs`:
+   `WarmWaterSetPointTypes` + `WarmWaterStates` + `WarmWaterOverrides`) statt in fünf.
+   Die **Typnamen** sind unverändert – sie sind Teil des Vertrags: `ZoneOverrides`
+   kennt keine 12/15/16/17/19/20, `WarmWaterOverrides` keine 2/4/6/7/8/11/12.
+2. **Das Command-Topic hat eine eigene Legacy-Datei** `Command.cs` (ein Item);
+   `CLASS_FILES` im Generator endet jetzt auf `['Config', 'Status', 'Command']`.
+3. **`docs/topics-v2.json` entsteht ohne BOM** – die V1-Fixture hat eines. Der
+   V2-Contract-Test toleriert beide Formen.
+4. **Frische-Regel der abgeleiteten Werte:** `ValueCache.IsStale` lässt nach drei
+   Sekundär-Zyklen (15 min) ablaufen. Stündliche Eingänge wären damit 45 von 60
+   Minuten „veraltet“, `RuntimeRatio`/`ServiceDue`/`CopInstant` praktisch immer
+   `unknown`. `DerivedValueService` prüft deshalb ein **prioritätsbewusstes** Fenster
+   (3 × Leseabstand) und fragt `IValueCache.IsMarkedStale(id)` (neu) ab – ein
+   fehlgeschlagener Read bleibt Ausschlusskriterium.
+5. **`Status/Energy/Available` publiziert das Gate selbst** (nicht
+   `MqttStatusPublisher`) und leert es beim Start **und** nach jedem Connect. Beim
+   Wechsel auf `0` werden die 11 retained Energie-Topics geleert – nur so löscht der
+   Broker sie.
+6. **`CopInstant`:** ein negatives Δelektrisch (Zählerrücksetzung) ergibt `unknown`,
+   nicht nur „Δ = 0“.
+7. **Der Experten-Modus wirkt sofort:** `MqttTopicMap` rebuildet seine Bindings
+   (`UpdateExpertMode`), `MqttSubscriber` bestellt ab/neu, `HomeAssistantDiscovery`
+   republiziert und räumt das alte Plattform-Topic (sonst behält Home Assistant nach
+   `number` → `sensor` die alte Entität). Der Koordinator ist ein Hosted Service –
+   **kein** Neustart mehr; der Fallback wurde nicht gebraucht.
+8. **Discovery:** **220** Payloads (205 Items + 7 Derived + 8 Status). `unique_id` der
+   abgeleiteten Werte `{Identifier}_derived_{name}`; `CoolingActive` ist ein
+   `binary_sensor` mit `payload_on`/`payload_off`.
+9. **`GET /api/items` liefert `description`** – der Katalogtext wird zum Tooltip.
+10. **Die UI zeigt die Blöcke in einem neuen Reiter „Anlage“** der Diagnose-Seite,
+    nicht auf dem Dashboard – sie **erklären** statt eine Kennzahl zu sein. Der
+    Hilfe-Link ist `/help/verbrauch`, weil `build-docs.mjs` den Zahlenpräfix aus dem
+    Slug entfernt.
+11. **`tools/build-docs.mjs` musste YAML-Blocklisten lernen** (`tags:` mit
+    `-`-Liste): Die Vorgabe in `docs.instructions.md` schreibt sie vor, der Parser
+    scheiterte mit `TypeError: (meta.tags ?? []).map is not a function`.
+
+### Fallstricke dieser Session
+
+- **`src_old/ComfoBoxLib/Items/*.cs` sind in diesem Checkout Windows-1252 und LF**
+  (kein `.gitattributes`, `core.autocrlf=false`). Mit CP1252 lesen **und** schreiben,
+  LF erhalten – CRLF-Patches erzeugen Mixed-EOL.
+- **`Config.cs` wuchs um 232 Zeilen:** jede Property mit `/// <summary>`, fünf
+  Attributen und Beschreibung.
+- **`.Result`, `async void` und `Task.Delay` kommen im neuen Code nicht vor** –
+  Analyzer und Konvention greifen.
+- **`ValueCache.MarkStale` notifiziert keine Subscriber.** Der Publisher hängt an der
+  Cache-Subscription; die Availability ist deshalb *abgeleitet* (bei jedem Zugriff aus
+  dem Cache) und nicht gespeichert.
+
+**Verifikation:**
+
+- `dotnet build src/ComfoBox.sln -c Release` → 0 Warnungen, 0 Fehler
+- `dotnet test src/ComfoBox.sln -c Release` → **497** grün
+- `generate-topics.mjs --check` (127) · `--check-v2` (78) · `--catalog-check` (205)
+- `npm run lint` + `npm run build` (`src/ComfoBox.Web`) grün
+- `node tools/build-docs.mjs` → 17 Seiten · `pwsh -NoProfile -File tools/check-links.ps1` → 0 Probleme
+
+**Nächster Schritt:** Phase **7.2** – der Lauf gegen das **echte** alte Gateway
+(Aufzeichnung mit dem CH340-Adapter, Vergleich offline) bzw. die offenen Punkte aus
+[status.md](status.md) (7.1, 7.3–7.5, 6.4).
+
+---
+
 ## 2026-11-16 – V2-Entscheidungen, DP 3340 und Phase 10 geplant
 
 **Ergebnis:** Die offenen Punkte aus [topics-v2.md](../topics-v2.md) sind entschieden und

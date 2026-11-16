@@ -33,6 +33,11 @@
       kopiert, damit der Test sie ohne Pfad-Salat lesen kann.
     -->
     <None Include="..\..\docs\topics.json" Link="topics.json" CopyToOutputDirectory="PreserveNewest" />
+    <!--
+      Die V2-Fixture ist die Gegenprobe: sie enthält nur Items mit IsV2 == true.
+      Sie wird ebenfalls vom Generator erzeugt (Aufruf mit der Option out-v2).
+    -->
+    <None Include="..\..\docs\topics-v2.json" Link="topics-v2.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

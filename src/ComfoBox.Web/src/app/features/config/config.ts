@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { CardModule } from '@openng/optimus-ui/card';
 import { ConfirmDialogModule } from '@openng/optimus-ui/confirmdialog';
@@ -19,6 +20,7 @@ import { ServiceService } from '../../core/api/service.service';
 import { TokensService } from '../../core/api/tokens.service';
 import { I18n } from '../../core/i18n/i18n';
 import { ConfigStore } from '../../core/state/config.store';
+import { ItemsStore } from '../../core/state/items.store';
 import { SessionStore } from '../../core/state/session.store';
 import { formatDateTime } from '../../core/util/format';
 import { SerialPortPickerComponent } from '../../shared/serial-port-picker';
@@ -41,6 +43,7 @@ import type { CreatedTokenDto, TokenInfoDto, TokenScope } from '../../core/model
     InputTextModule,
     MessageModule,
     PasswordModule,
+    RouterLink,
     SelectModule,
     SerialPortPickerComponent,
     TableModule,
@@ -57,6 +60,9 @@ export class ConfigComponent {
 
   /** Der Zustand der Sitzung. */
   readonly session = inject(SessionStore);
+
+  /** Der Item-Katalog (für die Experten-Parameter). */
+  readonly items = inject(ItemsStore);
 
   private readonly service = inject(ServiceService);
   private readonly tokens = inject(TokensService);
@@ -161,8 +167,35 @@ export class ConfigComponent {
   /** Ist der Experten-Modus aktiv (aus der Konfiguration)? */
   readonly expertModeActive = computed(() => this.config.expertMode());
 
+  /**
+   * Die Items, die den Experten-Modus erfordern.
+   *
+   * <p>Ohne Experten-Modus liefert der Server sie mit `writable = false` –
+   * gesperrt. Die Liste erscheint deshalb erst hinter dem Schalter.</p>
+   */
+  readonly expertItems = computed(() =>
+    this.items
+      .items()
+      .filter((item) => item.requiresExpertMode)
+      .sort(
+        (a, b) =>
+          a.group.localeCompare(b.group) || a.displayName.localeCompare(b.displayName),
+      ),
+  );
+
+  /** Gibt es Experten-Items aus dem Energie-Umfeld (Warnhinweis)? */
+  readonly hasExpertEnergyItems = computed(() =>
+    this.expertItems().some((item) => item.group.startsWith('Config/Energy')),
+  );
+
   constructor() {
     void this.load();
+
+    // Die Shell lädt den Katalog beim Start - für den direkten Aufruf der
+    // Seite wird er hier nachgezogen.
+    if (this.items.count() === 0) {
+      void this.items.load();
+    }
   }
 
   /** Lädt die Konfiguration und die Token. */
@@ -305,6 +338,11 @@ export class ConfigComponent {
       this.expertMode.set(this.config.expertMode());
 
       if (ok) {
+        // Der Experten-Modus wirkt sofort: der Server liefert die sensiblen
+        // Items jetzt mit `writable = true`. Die Liste muss deshalb neu
+        // geladen werden - ein Neustart ist **nicht** nötig.
+        await this.items.load();
+
         this.messages.add({
           severity: 'success',
           summary: this.t().config.expertModeSaved(enabled),

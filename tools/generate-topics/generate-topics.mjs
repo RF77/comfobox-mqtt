@@ -12,11 +12,18 @@
  * Aufruf
  * ------
  *   node tools/generate-topics/generate-topics.mjs --check
- *       Prüft, ob die committete Fixture noch zum Katalog passt.
- *       Exit 0 = deckungsgleich, Exit 1 = Abweichung.
+ *       Prüft, ob die committete V1-Fixture noch zum Katalog passt.
+ *       Nur Items mit `IsV2 == false`. Exit 0 = deckungsgleich, Exit 1 = Abweichung.
  *
  *   node tools/generate-topics/generate-topics.mjs --out docs/topics.json
- *       Schreibt die Fixture neu.
+ *       Schreibt die V1-Fixture neu (nur `IsV2 == false`).
+ *
+ *   node tools/generate-topics/generate-topics.mjs --check-v2
+ *       Prüft die V2-Fixture `docs/topics-v2.json` (nur `IsV2 == true`).
+ *       Fehlt die Fixture, endet der Lauf mit Exit 1.
+ *
+ *   node tools/generate-topics/generate-topics.mjs --out-v2 [docs/topics-v2.json]
+ *       Schreibt die V2-Fixture neu (nur `IsV2 == true`).
  *
  *   node tools/generate-topics/generate-topics.mjs --catalog <zielordner>
  *       Erzeugt den C#-Item-Katalog für `ComfoBox.Domain` (Aufgabe 2.1):
@@ -28,7 +35,7 @@
  *
  * Quellen
  * -------
- * - Item-Katalog:  src_old/ComfoBoxLib/Items/{Zone,Tests,Warmwater,States,Time,Config}.cs
+ * - Item-Katalog:  src_old/ComfoBoxLib/Items/{Zone,Tests,Warmwater,States,Time,Config,Status}.cs
  * - Enums:         src_old/ComfoBoxLib/Items/Enums/*.cs
  * - Reihenfolge:   src_old/ComfoBoxMqtt/Groups/ItemFactory.cs
  * - Encoding:      Windows-1252 (die Altdateien sind nicht UTF-8)
@@ -44,7 +51,7 @@ const LEGACY_ITEMS = join(REPO, 'src_old', 'ComfoBoxLib', 'Items');
 const LEGACY_ENUMS = join(LEGACY_ITEMS, 'Enums');
 
 /** Reihenfolge aus ItemFactory.CreateItems – verbindlich. */
-const CLASS_FILES = ['Zone', 'Tests', 'Warmwater', 'States', 'Time', 'Config'];
+const CLASS_FILES = ['Zone', 'Tests', 'Warmwater', 'States', 'Time', 'Config', 'Status', 'Command'];
 
 /** Standard-BaseTopic der Fixture. */
 const BASE_TOPIC = 'ComfoBox';
@@ -193,11 +200,17 @@ const PROP_RE = new RegExp(
 );
 const DESC_RE = /\[Description\(\s*(@"(?:[^"]|"")*"|"(?:[^"\\]|\\.)*")\s*\)\s*\]/gu;
 
-/** Prioritäts-Attribute: einmalig beim Start, häufig oder selten. */
-const PRIORITY_RE = /\[(Once|Primary|Secondary)\]/gu;
+/** Prioritäts-Attribute: einmalig beim Start, häufig, selten oder stündlich. */
+const PRIORITY_RE = /\[(Once|Primary|Secondary|Slow)\]/gu;
 
 /** Expert-Modus-Attribut. */
 const EXPERT_RE = /\[ExpertMode\]/gu;
+
+/** V2-Attribut: Item gehört zum additiven V2-Vertrag. */
+const V2_RE = /\[V2\]/gu;
+
+/** Energy-Attribut: Item ist ohne DP 3340 nicht publizierbar. */
+const ENERGY_RE = /\[Energy\]/gu;
 
 /**
  * Erlaubte Werte eines Auswahl-Parameters, z. B. `[Values(0, 3)]`.
@@ -500,12 +513,37 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
     return found;
   });
 
+  // [V2] und [Energy] werden genauso je Segment eingesammelt wie die
+  // übrigen Attribute: nur ein Treffer zwischen der vorigen Property und
+  // dieser zählt, sonst erbt ein Item das Attribut seines Vorgängers.
+  const v2BySegment = ownSegment.map((segment) => {
+    const found = [];
+    V2_RE.lastIndex = 0;
+    let v2;
+    while ((v2 = V2_RE.exec(segment)) !== null) {
+      found.push({ index: v2.index });
+    }
+    return found;
+  });
+
+  const energyBySegment = ownSegment.map((segment) => {
+    const found = [];
+    ENERGY_RE.lastIndex = 0;
+    let energy;
+    while ((energy = ENERGY_RE.exec(segment)) !== null) {
+      found.push({ index: energy.index });
+    }
+    return found;
+  });
+
   const properties = [];
   for (const [segmentIndex, segment] of ownSegment.entries()) {
     const descriptions = descriptionsBySegment[segmentIndex];
     const priorities = prioritiesBySegment[segmentIndex];
     const experts = expertsBySegment[segmentIndex];
     const values = valuesBySegment[segmentIndex];
+    const v2Attributes = v2BySegment[segmentIndex];
+    const energyAttributes = energyBySegment[segmentIndex];
     PROP_RE.lastIndex = 0;
     let prop;
     let lastPropEnd = 0;
@@ -528,6 +566,9 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
       const priority = priorityCandidates.length > 0 ? priorityCandidates[0].value : 'None';
 
       const expertCandidates = experts.filter((e) => e.index >= lastPropEnd && e.index < prop.index);
+
+      const v2Candidates = v2Attributes.filter((a) => a.index >= lastPropEnd && a.index < prop.index);
+      const energyCandidates = energyAttributes.filter((a) => a.index >= lastPropEnd && a.index < prop.index);
 
       // Dasselbe für die erlaubten Werte: nur ein Attribut zwischen der
       // vorigen Property und dieser zählt (sonst erbt ein Item die Liste
@@ -556,6 +597,8 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
         RequiresExpertMode: requiresExpertMode,
         IsReadOnlyLiteral: isReadOnlyLiteral(initializer),
         Priority: priority,
+        IsV2: v2Candidates.length > 0,
+        RequiresEnergyMeasurement: energyCandidates.length > 0,
         Ctor: ctor,
         EnumType: ctor === 'EnumValue' ? enumTypeOf(generic) : null,
         Min: min,
@@ -712,6 +755,8 @@ export function emitCatalog(items) {
     if (item.IsReadOnlyLiteral) lines.push('            IsReadOnly = true,');
     if (item.RequiresExpertMode) lines.push('            RequiresExpertMode = true,');
     lines.push(`            Priority = RefreshPriority.${item.Priority},`);
+    if (item.IsV2) lines.push('            IsV2 = true,');
+    if (item.RequiresEnergyMeasurement) lines.push('            RequiresEnergyMeasurement = true,');
     if (item.Description !== null) lines.push(`            Description = ${escapeCsString(item.Description)},`);
     if (kind === 'Enum') lines.push(`            EnumValues = ItemEnums.${item.EnumType},`);
     lines.push('        },');
@@ -789,7 +834,10 @@ export function diff(expected, actual) {
       continue;
     }
     for (const field of Object.keys(want)) {
+      // IsV2/RequiresEnergyMeasurement sind Katalog-Metadaten, kein
+      // Fixture-Feld – die V1-Fixture kennt sie nicht.
       if (field === 'DeclaredType' || field === 'BacnetId') continue;
+      if (field === 'IsV2' || field === 'RequiresEnergyMeasurement') continue;
       const a = want[field];
       const b = got[field];
       if (a === null && b === null) continue;
@@ -822,9 +870,20 @@ export function diff(expected, actual) {
 // CLI
 // ---------------------------------------------------------------------------
 
+/**
+ * Liest eine Fixture-Datei und entfernt ein optionales UTF-8-BOM.
+ * `JSON.parse` würde an U+FEFF scheitern.
+ */
+function readJsonFile(path) {
+  return JSON.parse(readFileSync(path, 'utf8').replace(/^\uFEFF/, ''));
+}
+
 function main(argv) {
   const items = readCatalog();
-  const json = serialize(items);
+  // V1 und V2 werden getrennt geprüft und geschrieben. `--catalog` bleibt
+  // die vollständige Sicht (alle Items).
+  const v1Items = items.filter((item) => !item.IsV2);
+  const v2Items = items.filter((item) => item.IsV2);
 
   if (argv.includes('--catalog') || argv.includes('--catalog-check')) {
     const check = argv.includes('--catalog-check');
@@ -868,11 +927,22 @@ function main(argv) {
     return 0;
   }
 
-  if (argv.includes('--check')) {
-    const fixturePath = join(REPO, 'docs', 'topics.json');
-    // Die Fixture hat ein UTF-8-BOM - JSON.parse mag das nicht.
-    const committed = JSON.parse(readFileSync(fixturePath, 'utf8').replace(/^﻿/, ''));
-    const { relevant, ignored } = diff(committed, items);
+  if (argv.includes('--check') || argv.includes('--check-v2')) {
+    const checkV2 = argv.includes('--check-v2');
+    const fixturePath = join(REPO, 'docs', checkV2 ? 'topics-v2.json' : 'topics.json');
+    const catalogItems = checkV2 ? v2Items : v1Items;
+
+    if (!existsSync(fixturePath)) {
+      process.stdout.write(`Die Fixture fehlt: ${fixturePath}\n`);
+      process.stdout.write(
+        `Neu erzeugen: node tools/generate-topics/generate-topics.mjs ${checkV2 ? '--out-v2' : '--out'}\n`,
+      );
+      return 1;
+    }
+
+    // Die Fixture kann ein UTF-8-BOM tragen - JSON.parse mag das nicht.
+    const committed = readJsonFile(fixturePath);
+    const { relevant, ignored } = diff(committed, catalogItems);
 
     for (const entry of ignored) {
       process.stdout.write(`~ bekannt: ${entry.topic} (${entry.field})\n`);
@@ -885,14 +955,19 @@ function main(argv) {
       process.stdout.write('\nFixture-Bearbeitung ist nicht erlaubt – bitte den Katalog prüfen.\n');
       return 1;
     }
-    process.stdout.write(`Fixture ist deckungsgleich (${items.length} Items).\n`);
+    process.stdout.write(`Fixture ${checkV2 ? 'V2' : 'V1'} ist deckungsgleich (${catalogItems.length} Items).\n`);
     return 0;
   }
 
-  const index = argv.indexOf('--out');
-  const target = index >= 0 ? argv[index + 1] : join(REPO, 'docs', 'topics.json');
-  writeFileSync(resolve(process.cwd(), target), json, 'utf8');
-  process.stdout.write(`Fixture geschrieben: ${target} (${items.length} Items)\n`);
+  const outV2 = argv.includes('--out-v2');
+  const flag = outV2 ? '--out-v2' : '--out';
+  const index = argv.indexOf(flag);
+  const fallback = join(REPO, 'docs', outV2 ? 'topics-v2.json' : 'topics.json');
+  const target = index >= 0 && argv[index + 1] ? argv[index + 1] : fallback;
+  const output = outV2 ? v2Items : v1Items;
+
+  writeFileSync(resolve(process.cwd(), target), serialize(output), 'utf8');
+  process.stdout.write(`Fixture ${outV2 ? 'V2' : 'V1'} geschrieben: ${target} (${output.length} Items)\n`);
   return 0;
 }
 

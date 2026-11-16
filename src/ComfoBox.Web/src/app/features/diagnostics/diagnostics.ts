@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ButtonModule } from '@openng/optimus-ui/button';
 import { CardModule } from '@openng/optimus-ui/card';
 import { MessageModule } from '@openng/optimus-ui/message';
@@ -19,15 +20,31 @@ import { HealthService } from '../../core/api/health.service';
 import { BacnetService } from '../../core/api/bacnet.service';
 import { I18n } from '../../core/i18n/i18n';
 import { HealthStore } from '../../core/state/health.store';
+import { ItemsStore } from '../../core/state/items.store';
 import { LogsStore } from '../../core/state/logs.store';
-import { formatDateTime, formatRelative, formatUptime } from '../../core/util/format';
+import { formatDateTime, formatNumber, formatRelative, formatUptime } from '../../core/util/format';
 import type { ErrorEntryDto } from '../../core/models/status.model';
 import type { BacnetAnalysis } from '../../core/models/bacnet.model';
+import type { ItemDto } from '../../core/models/item.model';
 import { LogViewerComponent } from './logs/log-viewer';
+
+/** Eine Zeile in einem der Werte-Blöcke. */
+interface ValueRow {
+  /** Die Bezeichnung in der gewählten Sprache. */
+  readonly label: string;
+  /** Der Wert als Text (Zahl mit Einheit oder Enum-Name). */
+  readonly display: string;
+  /** Der Rohwert eines Enums (die Nummer) - sonst `null`. */
+  readonly raw: string | null;
+  /** Der Tooltip: Katalog-Beschreibung und MQTT-Topic. */
+  readonly tooltip: string;
+  /** Das MQTT-Topic (oder `null`). */
+  readonly topic: string | null;
+}
 
 /**
  * Die Diagnoseseite: Health-Checks, Fehlerhistorie, Schreibvorgänge,
- * Verbindungen und das Protokoll (Log-Viewer).
+ * Verbindungen, die Werte der Anlage und das Protokoll (Log-Viewer).
  */
 @Component({
   selector: 'app-diagnostics',
@@ -38,6 +55,7 @@ import { LogViewerComponent } from './logs/log-viewer';
     FormsModule,
     LogViewerComponent,
     MessageModule,
+    RouterLink,
     TableModule,
     TabsModule,
     TagModule,
@@ -52,6 +70,9 @@ export class DiagnosticsComponent {
 
   /** Der Zustand des Log-Viewers. */
   readonly logs = inject(LogsStore);
+
+  /** Der Item-Katalog (die V2-Werte der Anlage). */
+  readonly items = inject(ItemsStore);
 
   private readonly api = inject(HealthService);
 
@@ -136,10 +157,145 @@ export class DiagnosticsComponent {
   /** Die Health-Checks. */
   readonly checks = computed(() => this.health.health()?.checks ?? []);
 
+  /**
+   * Das MQTT-Topic der berechneten Überhitzung.
+   *
+   * <p>Die abgeleiteten Werte (`Status/Derived/*`) sind **keine**
+   * Katalog-Items: sie stehen nicht in `/api/items`. In der Oberfläche
+   * erscheinen sie deshalb nur als erklärender Hinweis, nie als Live-Wert.</p>
+   */
+  readonly superheatTopic = 'ComfoBox/Status/Derived/Superheat';
+
+  /**
+   * Der Pfad der Hilfeseite „Verbrauch und Effizienz".
+   *
+   * <p>Die Quelle heißt `docs/benutzer/12-verbrauch.md`; `tools/build-docs.mjs`
+   * entfernt beim Bilden des Slugs das führende Zahlenpräfix. Die SPA-Route
+   * ist deshalb `/help/verbrauch` (nicht `/help/12-verbrauch`).</p>
+   */
+  readonly energyHelpLink = '/help/verbrauch';
+
+  /** Der Pfad der Hilfeseite „Warum bleibt ein Raum kalt?". */
+  readonly heatingHelpLink = '/help/warum-bleibt-ein-raum-kalt';
+
+  /** Die Items des Katalogs nach Id. */
+  private readonly itemsById = computed(() => {
+    const map = new Map<string, ItemDto>();
+
+    for (const item of this.items.items()) {
+      map.set(item.id, item);
+    }
+
+    return map;
+  });
+
+  /** Die Werte des Blocks „Warum heizt es nicht?". */
+  readonly heatingRows = computed<ValueRow[]>(() => {
+    const labels = this.t().diagnostics;
+    const byId = this.itemsById();
+
+    return [
+      this.row(byId.get('status.zone.override'), labels.zoneOverride),
+      this.row(byId.get('status.zone.state'), labels.zoneState),
+      this.row(byId.get('status.zone.set_point_type'), labels.zoneSetPointType),
+      this.row(byId.get('status.warm_water.state'), labels.warmWaterState),
+      this.row(byId.get('status.warm_water.override'), labels.warmWaterOverride),
+      this.row(byId.get('status.heat_pump.return_temperature'), labels.heatPumpReturnTemperature),
+      this.row(byId.get('status.zone.flow_temperature'), labels.zoneFlowTemperature),
+    ].filter((row): row is ValueRow => row !== null);
+  });
+
+  /** Die Werte des Blocks „Kältekreis". */
+  readonly refrigerantRows = computed<ValueRow[]>(() => {
+    const labels = this.t().diagnostics;
+    const byId = this.itemsById();
+
+    return [
+      this.row(byId.get('status.heat_pump.suction_gas_temperature'), labels.suctionGasTemperature),
+      this.row(byId.get('status.heat_pump.hot_gas_temperature'), labels.hotGasTemperature),
+      this.row(byId.get('status.heat_pump.evaporator_temperature'), labels.evaporatorTemperature),
+      this.row(byId.get('status.heat_pump.condenser_temperature'), labels.condenserTemperature),
+      this.row(byId.get('status.heat_pump.defrost_delta_actual'), labels.defrostDeltaActual),
+    ].filter((row): row is ValueRow => row !== null);
+  });
+
+  /** Die Werte der Karte „Verbrauch und Effizienz". */
+  readonly energyRows = computed<ValueRow[]>(() => {
+    const labels = this.t().diagnostics;
+    const byId = this.itemsById();
+
+    return [
+      this.row(byId.get('status.energy.heating_power'), labels.heatingPower),
+      this.row(byId.get('status.energy.warm_water_power'), labels.warmWaterPower),
+      this.row(byId.get('status.energy.thermal_energy_heating'), labels.thermalEnergyHeating),
+      this.row(byId.get('status.energy.thermal_energy_warm_water'), labels.thermalEnergyWarmWater),
+      this.row(byId.get('status.energy.thermal_energy_total'), labels.thermalEnergyTotal),
+      this.row(byId.get('status.energy.electrical_energy_heating'), labels.electricalEnergyHeating),
+      this.row(
+        byId.get('status.energy.electrical_energy_warm_water'),
+        labels.electricalEnergyWarmWater,
+      ),
+      this.row(byId.get('status.energy.electrical_energy_total'), labels.electricalEnergyTotal),
+      this.row(byId.get('status.energy.cop_heating'), labels.copHeating),
+      this.row(byId.get('status.energy.cop_warm_water'), labels.copWarmWater),
+      this.row(byId.get('status.energy.cop_total'), labels.copTotal),
+    ].filter((row): row is ValueRow => row !== null);
+  });
+
+  /** Der Zustand der Wärmemengenmessung (`Status/Energy/MeasurementMode`). */
+  readonly measurementMode = computed(() => this.itemsById().get('status.energy.measurement_mode'));
+
+  /** Der Zustand der Wärmemengenmessung als lesbarer Name. */
+  readonly measurementModeText = computed(
+    () => this.measurementMode()?.valueText ?? this.t().common.dash,
+  );
+
+  /**
+   * Ist der Zustand der Wärmemengenmessung bekannt?
+   *
+   * <p>Vor dem ersten erfolgreichen Lesen ist der Wert `null`. Dann darf die
+   * Oberfläche **nicht** „Messung aktiv" behaupten.</p>
+   */
+  readonly measurementModeKnown = computed(() => {
+    const mode = this.measurementMode();
+
+    return mode !== undefined && mode.value !== null;
+  });
+
+  /**
+   * Ist die Wärmemengenmessung am Gerät ausgeschaltet (DP 3340 = `None`)?
+   *
+   * <p>Ohne diese Messung publiziert der Gateway **keine** kWh- und
+   * COP-Werte. Der Banner erklärt dann, was am Regler einzustellen ist.</p>
+   */
+  readonly energyMeasurementOff = computed(() => {
+    const mode = this.measurementMode();
+
+    if (!mode || mode.value === null) {
+      return false;
+    }
+
+    const name = mode.enumValues[String(mode.value)] ?? mode.valueText;
+
+    // Der Enum-Name ist Teil des MQTT-Vertrags - verglichen wird deshalb
+    // der Name, nicht die Nummer. Die 0 ist nur der Rückfall, falls der
+    // Katalog die Namen (noch) nicht liefert.
+    return name === 'None' || (name === null && mode.value === 0);
+  });
+
+  /** Sind die Werte der Anlage schon geladen? */
+  readonly valuesLoading = computed(() => this.items.count() === 0 && !this.items.error());
+
   constructor() {
     void this.load();
     void this.logs.load();
     void this.loadBacnet();
+
+    // Die Shell lädt den Katalog beim Start. Wird die Seite direkt
+    // aufgerufen (Neuladen im Browser), ist er unter Umständen noch leer.
+    if (this.items.count() === 0) {
+      void this.items.load();
+    }
 
     // Der Aktualisierungs-Timer darf die Seite nicht überleben.
     inject(DestroyRef).onDestroy(() => {
@@ -254,6 +410,55 @@ export class DiagnosticsComponent {
       default:
         return kind;
     }
+  }
+
+  /**
+   * Baut eine Zeile für einen Werte-Block.
+   *
+   * @param item Das Item (oder `undefined`, wenn der Katalog es nicht kennt).
+   * @param label Die Bezeichnung in der gewählten Sprache.
+   * @returns Die Zeile - oder `null`, wenn das Item fehlt.
+   */
+  private row(item: ItemDto | undefined, label: string): ValueRow | null {
+    if (!item) {
+      return null;
+    }
+
+    return {
+      label,
+      display: this.valueText(item),
+      raw: item.kind === 'enum' && item.value !== null ? String(item.value) : null,
+      tooltip: this.tooltipText(item),
+      topic: item.stateTopic,
+    };
+  }
+
+  /** Der Anzeigetext eines Items: Zahl mit Einheit oder Enum-Name. */
+  private valueText(item: ItemDto): string {
+    if (item.kind === 'enum') {
+      return item.valueText ?? this.t().common.dash;
+    }
+
+    if (item.value === null) {
+      return this.t().common.dash;
+    }
+
+    const number = formatNumber(item.value);
+
+    return item.unit ? `${number} ${item.unit}` : number;
+  }
+
+  /**
+   * Der Tooltip eines Items.
+   *
+   * <p>Basis ist die Katalog-Beschreibung; liefert das Gateway sie nicht
+   * (derzeit der Fall), steht dort der Anzeigename. Das MQTT-Topic kommt in
+   * die zweite Zeile.</p>
+   */
+  private tooltipText(item: ItemDto): string {
+    const description = item.description ?? item.displayName;
+
+    return item.stateTopic ? `${description}\n${item.stateTopic}` : description;
   }
 
   /** Lädt die Diagnose-Daten. */

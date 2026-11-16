@@ -18,6 +18,15 @@ export interface ItemDto {
   readonly name: string;
   /** Der Anzeigename (aus der Beschreibung abgeleitet). */
   readonly displayName: string;
+  /**
+   * Die vollständige Beschreibung aus dem Katalog.
+   *
+   * <p>Optional: das Gateway liefert das Feld derzeit **nicht** – die
+   * Oberfläche fällt dann auf {@link displayName} zurück. Sobald der
+   * REST-Vertrag das Feld liefert, erscheint es ohne weitere Änderung als
+   * Tooltip an den Werten.</p>
+   */
+  readonly description?: string | null;
   /** Die Art des Werts. */
   readonly kind: ItemKind;
   /** Der aktuelle Zahlenwert (oder `null`). */

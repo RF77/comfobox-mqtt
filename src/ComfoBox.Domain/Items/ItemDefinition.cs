@@ -88,6 +88,26 @@ public sealed record ItemDefinition
     public bool RequiresExpertMode { get; init; }
 
     /// <summary>
+    /// Das Item gehört zum V2-Topic-Vertrag.
+    /// </summary>
+    /// <remarks>
+    /// V2-Items sind rein additiv: sie ersetzen kein V1-Topic, sondern stehen
+    /// in einer eigenen Fixture (<c>docs/topics-v2.json</c>). Das Flag ändert
+    /// weder <see cref="TopicPath"/> noch <see cref="IsWritable"/>.
+    /// </remarks>
+    public bool IsV2 { get; init; }
+
+    /// <summary>
+    /// Das Item liefert nur mit Wärmemengenmessung (DP 3340) einen sinnvollen Wert.
+    /// </summary>
+    /// <remarks>
+    /// Ohne Wärmemengenmessung werden Energie- und COP-Werte nicht als <c>0</c>
+    /// publiziert, sondern gesperrt. Das Flag ändert weder <see cref="TopicPath"/>
+    /// noch <see cref="IsWritable"/>.
+    /// </remarks>
+    public bool RequiresEnergyMeasurement { get; init; }
+
+    /// <summary>
     /// Die Lese-Priorität des Items.
     /// </summary>
     public RefreshPriority Priority { get; init; } = RefreshPriority.Secondary;

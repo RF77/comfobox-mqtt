@@ -1,6 +1,8 @@
 using ComfoBox.Domain.Items;
 using ComfoBox.Domain.Values;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Energy;
+using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Mqtt;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -37,7 +39,7 @@ public sealed class HomeAssistantBirthHandlerTests
             topics,
             Catalog,
             options,
-            new GatewayOptions { BaseTopic = "ComfoBox" },
+            new GatewayRuntimeSettings(expertMode: false),
             NullLogger<HomeAssistantDiscovery>.Instance);
 
         var statePublisher = new MqttStatePublisher(
@@ -45,6 +47,7 @@ public sealed class HomeAssistantBirthHandlerTests
             Catalog,
             topics,
             publisher,
+            CreateGate(cache, topics, options),
             options,
             NullLogger<MqttStatePublisher>.Instance);
 
@@ -87,7 +90,7 @@ public sealed class HomeAssistantBirthHandlerTests
             topics,
             Catalog,
             options,
-            new GatewayOptions { BaseTopic = "ComfoBox" },
+            new GatewayRuntimeSettings(expertMode: false),
             NullLogger<HomeAssistantDiscovery>.Instance);
 
         var statePublisher = new MqttStatePublisher(
@@ -95,6 +98,7 @@ public sealed class HomeAssistantBirthHandlerTests
             Catalog,
             topics,
             publisher,
+            CreateGate(cache, topics, options),
             options,
             NullLogger<MqttStatePublisher>.Instance);
 
@@ -111,4 +115,17 @@ public sealed class HomeAssistantBirthHandlerTests
 
         Assert.Empty(client.Published);
     }
+
+    /// <summary>
+    /// Das Gate für die Tests - der Cache ist leer, also bleibt es gesperrt.
+    /// </summary>
+    private static EnergyMeasurementGate CreateGate(IValueCache cache, MqttTopicMap topics, MqttOptions options)
+        => new(
+            cache,
+            Catalog,
+            topics,
+            new RecordingMqttPublisher(),
+            new ErrorCollector(),
+            options,
+            NullLogger<EnergyMeasurementGate>.Instance);
 }

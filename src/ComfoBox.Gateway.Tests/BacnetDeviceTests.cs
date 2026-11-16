@@ -186,6 +186,28 @@ public sealed class BacnetDeviceTests : IDisposable
         Assert.Empty(_client.WrittenObjects);
     }
 
+    /// <summary>
+    /// Die neuen V2-Konfigurationswerte (Welle 2c) sind ohne Experten-Modus gesperrt.
+    /// </summary>
+    /// <remarks>
+    /// ADR-014: kein BACnet-Request, kein Verbrauch des Schreibzählers - der Wert
+    /// verändert das Regelverhalten der Anlage.
+    /// </remarks>
+    [Fact]
+    public async Task Ein_Config_Item_Braucht_Den_Experten_Modus()
+    {
+        var item = new ItemCatalog().FindByTopicPath("Config/Ventilation/SpeedStage3");
+        Assert.NotNull(item);
+
+        var device = CreateDevice(expertMode: false);
+
+        var ergebnis = await device.WriteAsync(item!, 50, CancellationToken.None);
+
+        Assert.Equal(WriteOutcome.ExpertModeRequired, ergebnis);
+        Assert.Empty(_client.WrittenObjects);
+        Assert.Equal(0, _counter.Count);
+    }
+
     [Fact]
     public async Task Ein_Wert_Ausserhalb_Der_Grenzen_Wird_Abgelehnt()
     {
@@ -260,34 +282,6 @@ public sealed class BacnetDeviceTests : IDisposable
     }
 
     [Fact]
-    public void Der_Poll_Plan_Liest_Primaere_Items_Zuerst()
-    {
-        var primaer = new List<ItemDefinition> { Item(1), Item(2) };
-        var sekundaer = new List<ItemDefinition> { Item(3) };
-        var ohne = new List<ItemDefinition> { Item(4) };
-
-        var zyklus = PollPlan.ForCycle(primaer, sekundaer, ohne, cycle: 0, secondaryFactor: 5);
-
-        Assert.Equal([1, 2, 4, 3], zyklus.Select(i => i.BacnetObjectId));
-    }
-
-    [Fact]
-    public void Sekundaere_Items_Werden_Nur_Jeden_Fuenften_Zyklus_Gelesen()
-    {
-        var primaer = new List<ItemDefinition> { Item(1) };
-        var sekundaer = new List<ItemDefinition> { Item(3) };
-        var ohne = new List<ItemDefinition>();
-
-        for (var cycle = 0; cycle < 10; cycle++)
-        {
-            var zyklus = PollPlan.ForCycle(primaer, sekundaer, ohne, cycle, secondaryFactor: 5);
-            var enthaeltSekundaere = zyklus.Any(i => i.BacnetObjectId == 3);
-
-            Assert.Equal(cycle % 5 == 0, enthaeltSekundaere);
-        }
-    }
-
-    [Fact]
     public async Task Die_Reihenfolge_der_Lesezugriffe_Folgt_Dem_Poll_Plan()
     {
         _client.Values[1] = 1f;
@@ -296,7 +290,7 @@ public sealed class BacnetDeviceTests : IDisposable
 
         var device = CreateDevice();
 
-        var plan = PollPlan.ForCycle([Item(1), Item(2)], [Item(3)], [], cycle: 0, secondaryFactor: 5);
+        var plan = PollPlan.ForCycle([Item(1), Item(2)], [Item(3)], [], [], cycle: 0, secondaryFactor: 5, slowFactor: 60);
         await device.ReadItemsAsync(plan, CancellationToken.None);
 
         Assert.Equal([1u, 2u, 3u], _client.ReadObjects);

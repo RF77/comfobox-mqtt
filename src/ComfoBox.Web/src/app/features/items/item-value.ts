@@ -31,7 +31,8 @@ import { formatNumber, formatRelative } from '../../core/util/format';
   template: `
     <div class="cb-item">
       <div class="cb-item-head">
-        <span class="cb-item-name">{{ item().displayName }}</span>
+        <!-- Der Tooltip trägt die Katalog-Beschreibung (REST) und das Topic. -->
+        <span class="cb-item-name" [title]="tooltip()">{{ item().displayName }}</span>
         @if (item().stale) {
           <p-tag [value]="t().item.stale" severity="warn" />
         }
@@ -93,9 +94,7 @@ import { formatNumber, formatRelative } from '../../core/util/format';
         </div>
       } @else {
         <div class="cb-item-editor">
-          <span class="cb-item-readonly">
-            {{ item().writable ? '' : t().item.readonly }}
-          </span>
+          <span class="cb-item-readonly">{{ lockHint() }}</span>
         </div>
       }
 
@@ -193,6 +192,37 @@ export class ItemValueComponent {
 
   /** Das Alter des Werts (als Text). */
   readonly age = computed(() => formatRelative(this.item().lastUpdated));
+
+  /**
+   * Der Tooltip des Items.
+   *
+   * <p>Basis ist die Katalog-Beschreibung. Liefert das Gateway sie nicht
+   * (derzeit der Fall), steht dort der Anzeigename - in jedem Fall gefolgt
+   * vom MQTT-Topic.</p>
+   */
+  readonly tooltip = computed(() => {
+    const item = this.item();
+    const description = item.description ?? item.displayName;
+
+    return item.stateTopic ? `${description}\n${item.stateTopic}` : description;
+  });
+
+  /**
+   * Der Hinweis statt des Editors.
+   *
+   * <p>Ein Experten-Item ist ohne Experten-Modus gesperrt (`writable` ist
+   * dann `false`, der Server lehnt den Schreibvorgang ab). Der Hinweis nennt
+   * deshalb den Grund - „Nur lesbar" allein wäre irreführend.</p>
+   */
+  readonly lockHint = computed(() => {
+    const item = this.item();
+
+    if (item.writable) {
+      return '';
+    }
+
+    return item.requiresExpertMode ? this.t().item.expertRequired : this.t().item.readonly;
+  });
 
   /**
    * Die Anzeige des aktuellen Werts.

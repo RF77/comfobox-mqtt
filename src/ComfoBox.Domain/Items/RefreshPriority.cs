@@ -29,4 +29,9 @@ public enum RefreshPriority
     /// Seltener lesen.
     /// </summary>
     Secondary,
+
+    /// <summary>
+    /// Stündlich lesen, unabhängig vom Poll-Intervall.
+    /// </summary>
+    Slow,
 }

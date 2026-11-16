@@ -108,6 +108,7 @@ export const FR: Translations = {
   item: {
     stale: 'obsolète',
     expert: 'Mode expert',
+    expertRequired: 'Mode expert requis',
     save: 'Enregistrer',
     choose: 'Choisir une valeur',
     readonly: 'Lecture seule',
@@ -131,14 +132,24 @@ export const FR: Translations = {
     maxWritesHint: "Le compteur protège l'EEPROM du chauffage. 0 signifie : aucune limite.",
     expertMode: 'Mode expert',
     expertModeHint:
-      'Autorise l’écriture de paramètres sensibles. L’interrupteur est enregistré immédiatement ; les topics MQTT de ces valeurs apparaissent après un redémarrage. Par défaut : désactivé.',
+      'Autorise l’écriture de paramètres sensibles. L’interrupteur agit immédiatement : les valeurs sensibles deviennent modifiables sans redémarrage. Par défaut : désactivé.',
     expertModeConfirmTitle: 'Activer le mode expert',
     expertModeConfirmText:
       "Le mode expert autorise l'écriture de paramètres sensibles du chauffage. Une valeur erronée peut provoquer des dysfonctionnements. Continuer ?",
     expertModeConfirmAccept: 'Activer le mode expert',
     expertModeSaved: (enabled) => (enabled ? 'Mode expert activé' : 'Mode expert désactivé'),
     expertModeSavedHint:
-      'La valeur est enregistrée. Les topics MQTT de ces valeurs apparaissent après un redémarrage de la passerelle.',
+      'La valeur est enregistrée. La liste des valeurs a été rechargée : les paramètres sensibles sont modifiables immédiatement.',
+    expertItems: 'Paramètres experts',
+    expertItemsHint:
+      'Ces paramètres ne sont modifiables que si le mode expert est actif. L’écriture se fait sur la page « Valeurs » – la protection et le compteur d’écritures s’y appliquent aussi.',
+    expertItemsEnergyWarning:
+      'Les paramètres du domaine énergie (Config/Energy…) interviennent dans la régulation de la pompe à chaleur. Ne les modifiez qu’avec le manuel du technicien et notez l’ancienne valeur.',
+    expertItemName: 'Paramètre',
+    expertItemGroup: 'Groupe',
+    expertItemTopic: 'Topic',
+    expertItemOpen: (name) => `Ouvrir ${name}`,
+    expertItemNone: 'Aucun paramètre expert dans le catalogue.',
     bacnetSection: 'BACnet (interface série)',
     appliesImmediately: 'effet immédiat',
     deviceId: "ID de l'appareil",
@@ -260,6 +271,7 @@ export const FR: Translations = {
     tabWrites: 'Écritures',
     tabConnections: 'Connexions',
     tabBus: 'Bus BACnet',
+    tabPlant: 'Installation',
     component: 'Composant',
     source: 'Source',
     state: 'État',
@@ -315,6 +327,65 @@ export const FR: Translations = {
     kindFrameSent: 'Trame envoyée',
     kindDataReceived: 'Données BACnet reçues',
     kindReplyPosted: 'Réponse reportée',
+    loadingValues: 'Chargement des valeurs de l’installation …',
+    noValues: 'Ces valeurs ne sont pas encore disponibles.',
+    parameter: 'Grandeur',
+    reading: 'Valeur',
+    topic: 'Topic MQTT',
+    heatingCard: 'Pourquoi ça ne chauffe pas ?',
+    heatingLead:
+      'La surcharge de zone nomme le plus souvent la cause en un mot – vacances, plages horaires '
+      + 'désactivées, garde du point de rosée ou défaut de la pompe à chaleur. Le type de consigne '
+      + 'indique la consigne actuellement appliquée.',
+    heatingHelpLink: 'Aide : Pourquoi une pièce reste froide ?',
+    zoneOverride: 'Surcharge de zone (Override)',
+    zoneState: 'État de la zone',
+    zoneSetPointType: 'Type de consigne de zone',
+    warmWaterState: 'État de l’eau chaude',
+    warmWaterOverride: 'Surcharge eau chaude',
+    heatPumpReturnTemperature: 'Température de retour pompe à chaleur',
+    zoneFlowTemperature: 'Température de départ zone',
+    refrigerantCard: 'Circuit frigorifique',
+    refrigerantLead:
+      'Le gaz chaud et le gaz aspiré indiquent un manque de fluide frigorigène ou un détendeur '
+      + 'bloqué ouvert ; l’évaporateur et le condenseur représentent les échangeurs. Un gaz chaud '
+      + 'supérieur à 130 °C est un défaut.',
+    suctionGasTemperature: 'Température du gaz aspiré',
+    hotGasTemperature: 'Température du gaz chaud',
+    evaporatorTemperature: 'Température d’évaporation',
+    condenserTemperature: 'Température de condensation',
+    defrostDeltaActual: 'Écart de dégivrage (réel)',
+    superheatHint:
+      'La passerelle calcule elle-même la surchauffe à partir du gaz aspiré et de la température '
+      + 'd’évaporation. Ce n’est pas une valeur du catalogue ; elle n’existe que comme topic MQTT – '
+      + 'par exemple pour Home Assistant. La formule figure dans l’infobulle.',
+    superheatFormula:
+      'Surchauffe = température du gaz aspiré (DP 641) − température d’évaporation (DP 660)',
+    energyCard: 'Consommation et efficacité',
+    energyLead:
+      'Compteurs de chaleur et d’électricité du régulateur. Le COP est une moyenne de fonctionnement, pas une valeur instantanée.',
+    energyBanner:
+      'La mesure de chaleur est désactivée sur l’appareil (DP 3340 = 0). Les compteurs kWh et le '
+      + 'COP ne fournissent donc aucune valeur. Réglez « Mesure de chaleur » sur 1 ou 2 sur le '
+      + 'régulateur et vérifiez la sonde de débit.',
+    energyHelpLink: 'Aide : consommation et efficacité',
+    measurementMode: 'Mesure de chaleur (DP 3340)',
+    energyAvailable: 'Mesure active',
+    energyUnavailable: 'Mesure désactivée',
+    energyAvailableNote:
+      'Home Assistant voit la même information via le topic MQTT ComfoBox/Status/Energy/Available '
+      + '(1 = disponible, 0 = non disponible). Ce topic n’existe pas sur l’interface REST.',
+    heatingPower: 'Puissance de chauffage',
+    warmWaterPower: 'Puissance eau chaude',
+    thermalEnergyHeating: 'Énergie thermique chauffage',
+    thermalEnergyWarmWater: 'Énergie thermique eau chaude',
+    thermalEnergyTotal: 'Énergie thermique totale',
+    electricalEnergyHeating: 'Énergie électrique chauffage',
+    electricalEnergyWarmWater: 'Énergie électrique eau chaude',
+    electricalEnergyTotal: 'Énergie électrique totale',
+    copHeating: 'COP chauffage (moyenne)',
+    copWarmWater: 'COP eau chaude (moyenne)',
+    copTotal: 'COP total (moyenne)',
   },
 
   logs: {

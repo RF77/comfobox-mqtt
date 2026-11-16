@@ -161,6 +161,191 @@ public sealed class MqttTopicMapTests
         }
     }
 
+    /// <summary>
+    /// Das V2-Command-Topic existiert nur mit Experten-Modus als `/Set`.
+    /// </summary>
+    /// <remarks>
+    /// <c>Command/ResetHeatingCurveAdaption</c> schreibt DP 678 und verändert
+    /// die Regelung. ADR-014: ohne Experten-Modus gibt es kein Schreib-Topic,
+    /// dann bleibt nur der Lesewert.
+    /// </remarks>
+    [Fact]
+    public void Das_Command_Topic_Ist_Nur_Mit_Experten_Modus_Schreibbar()
+    {
+        var item = Catalog.FindByTopicPath("Command/ResetHeatingCurveAdaption");
+        Assert.NotNull(item);
+
+        var ohneExperten = CreateMap(expertMode: false);
+        var mitExperten = CreateMap(expertMode: true);
+
+        var setTopic = mitExperten.ItemSetTopic(item!);
+
+        Assert.Equal("ComfoBox/Command/ResetHeatingCurveAdaption", ohneExperten.ItemTopic(item!));
+        Assert.Equal("ComfoBox/Command/ResetHeatingCurveAdaption/Set", setTopic);
+
+        // Ohne Experten-Modus gibt es kein Schreib-Topic.
+        Assert.False(ohneExperten.TryResolve(setTopic, out _, out _));
+        Assert.DoesNotContain(ohneExperten.WriteTopics(),
+            topic => topic.StartsWith("ComfoBox/Command/", StringComparison.Ordinal));
+
+        // Mit Experten-Modus ist es vorhanden und schreibbar.
+        Assert.Contains(mitExperten.WriteTopics(), topic => topic == setTopic);
+        Assert.True(mitExperten.TryResolve(setTopic, out var gefunden, out var form));
+        Assert.Equal(item!.Id, gefunden!.Id);
+        Assert.Equal(MqttTopicForm.Value, form);
+    }
+
+    /// <summary>
+    /// Die 21 Konfigurations-Topics aus Welle 2c existieren nur mit Experten-Modus als `/Set`.
+    /// </summary>
+    [Fact]
+    public void Die_Config_Topics_Existieren_Nur_Mit_Experten_Modus_Als_Set()
+    {
+        var configItems = Catalog.V2
+            .Where(item => item.TopicPath.StartsWith("Config/", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(21, configItems.Count);
+
+        var ohneExperten = CreateMap(expertMode: false);
+        var mitExperten = CreateMap(expertMode: true);
+
+        var ohneSet = ohneExperten.SetTopics().ToHashSet(StringComparer.Ordinal);
+        var mitSet = mitExperten.SetTopics().ToHashSet(StringComparer.Ordinal);
+
+        foreach (var item in configItems)
+        {
+            var setTopic = $"{BaseTopic}/{item.TopicPath}/Set";
+
+            Assert.DoesNotContain(setTopic, ohneSet);
+            Assert.Contains(setTopic, mitSet);
+        }
+    }
+
+    /// <summary>
+    /// Das Availability-Topic der Energiemessung ist ein Gateway-Topic.
+    /// </summary>
+    /// <remarks>
+    /// <c>Status/Energy/Available</c> hat kein BACnet-Objekt - es wird aus
+    /// DP 3340 gebildet (siehe <c>EnergyMeasurementGate</c>).
+    /// </remarks>
+    [Fact]
+    public void EnergyAvailableTopic_Zeigt_Auf_Status_Energy_Available()
+    {
+        var map = CreateMap();
+
+        Assert.Equal("ComfoBox/Status/Energy/Available", map.EnergyAvailableTopic);
+
+        // Kein Katalog-Item trägt diesen Pfad - das Topic gehört dem Gateway.
+        Assert.DoesNotContain(Catalog.All, item => item.TopicPath == "Status/Energy/Available");
+        Assert.Null(Catalog.FindByTopicPath("Status/Energy/Available"));
+    }
+
+    /// <summary>
+    /// Der Experten-Modus lässt sich zur Laufzeit einschalten (Aufgabe 10.13).
+    /// </summary>
+    /// <remarks>
+    /// Die Instanz wird an mehrere Singletons injiziert - sie darf nicht
+    /// ersetzt werden, sondern muss ihren Inhalt tauschen.
+    /// </remarks>
+    [Fact]
+    public void ExpertMode_An_Erzeugt_Set_Topics()
+    {
+        var map = CreateMap(expertMode: false);
+
+        var item = Catalog.FindByTopicPath("Config/Ventilation/SpeedStage3");
+        Assert.NotNull(item);
+
+        var vorher = map.SetTopics().Count;
+        var werteTopic = map.ItemTopic(item!);
+
+        Assert.False(map.ExpertModeEnabled);
+        Assert.False(map.TryResolve(map.ItemSetTopic(item!), out _, out _));
+
+        map.UpdateExpertMode(true);
+
+        Assert.True(map.ExpertModeEnabled);
+
+        // Die 21 Config-Topics + das Command-Topic sind jetzt schreibbar.
+        var v2SetTopics = Catalog.V2
+            .Where(i => i.IsWritableWithExpertMode(expertModeEnabled: true))
+            .Select(i => map.ItemSetTopic(i))
+            .ToList();
+
+        Assert.Equal(22, v2SetTopics.Count);
+
+        // Dazu kommen die 34 V1-Items, die schon im Legacy experten-pflichtig
+        // waren - zusammen 56 Items mit je zwei Schreib-Topics.
+        var expertenItems = Catalog.All.Count(i => i.RequiresExpertMode && i.IsWritable);
+        Assert.Equal(56, expertenItems);
+        Assert.Equal(vorher + expertenItems, map.SetTopics().Count);
+        Assert.Equal((vorher + expertenItems) * 2, map.WriteTopics().Count);
+
+        foreach (var topic in v2SetTopics)
+        {
+            Assert.Contains(topic, map.SetTopics());
+            Assert.True(map.TryResolve(topic, out _, out var form));
+            Assert.Equal(MqttTopicForm.Value, form);
+        }
+
+        Assert.Contains(map.ItemAsNumberSetTopic(item!), map.WriteTopics());
+
+        // Das Lese-Topic bleibt unverändert.
+        Assert.Equal(werteTopic, map.ItemTopic(item!));
+        Assert.True(map.TryResolve(werteTopic, out var gefunden, out _));
+        Assert.Equal(item!.Id, gefunden!.Id);
+    }
+
+    /// <summary>
+    /// Der Experten-Modus lässt sich zur Laufzeit wieder ausschalten.
+    /// </summary>
+    [Fact]
+    public void ExpertMode_Aus_Entfernt_Set_Topics()
+    {
+        var map = CreateMap(expertMode: true);
+
+        var item = Catalog.FindByTopicPath("Config/Ventilation/SpeedStage3");
+        Assert.NotNull(item);
+
+        var setTopic = map.ItemSetTopic(item!);
+        var asNumberSetTopic = map.ItemAsNumberSetTopic(item!);
+        var werteTopic = map.ItemTopic(item!);
+
+        Assert.True(map.ExpertModeEnabled);
+        Assert.Contains(setTopic, map.WriteTopics());
+
+        map.UpdateExpertMode(false);
+
+        Assert.False(map.ExpertModeEnabled);
+        Assert.DoesNotContain(setTopic, map.WriteTopics());
+        Assert.DoesNotContain(setTopic, map.SetTopics());
+        Assert.DoesNotContain(asNumberSetTopic, map.WriteTopics());
+        Assert.False(map.TryResolve(setTopic, out _, out _));
+
+        // Die Werte-Topics bleiben - Lesen ist immer erlaubt.
+        Assert.Equal(werteTopic, map.ItemTopic(item!));
+        Assert.True(map.TryResolve(werteTopic, out _, out _));
+        Assert.True(map.TryResolve(map.ItemAsNumberTopic(item!), out _, out var form));
+        Assert.Equal(MqttTopicForm.AsNumber, form);
+    }
+
+    /// <summary>
+    /// Ein Aufruf mit dem bereits gültigen Modus baut nichts neu.
+    /// </summary>
+    [Fact]
+    public void UpdateExpertMode_Mit_Dem_Selben_Wert_Aendert_Nichts()
+    {
+        var map = CreateMap(expertMode: false);
+
+        var topics = map.WriteTopics();
+        var bindingsVorher = topics.Count;
+
+        map.UpdateExpertMode(false);
+
+        Assert.Equal(bindingsVorher, map.WriteTopics().Count);
+        Assert.Same(topics, map.WriteTopics());
+    }
+
     private static string TopicPathOf(FixtureItem item)
         => item.SubscribeTopic.StartsWith(BaseTopic + "/", StringComparison.Ordinal)
             ? item.SubscribeTopic[(BaseTopic.Length + 1)..]

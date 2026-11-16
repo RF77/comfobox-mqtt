@@ -3,6 +3,8 @@ using ComfoBox.Bacnet.Serial;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Derived;
+using ComfoBox.Gateway.Energy;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Logging;
 using ComfoBox.Gateway.Mqtt;
@@ -236,11 +238,12 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton(sp =>
         {
             var gateway = sp.GetRequiredService<IOptions<GatewayOptions>>().Value;
+            var runtime = sp.GetRequiredService<GatewayRuntimeSettings>();
 
             return new MqttTopicMap(
                 sp.GetRequiredService<IItemCatalog>(),
                 gateway.BaseTopic,
-                gateway.ExpertMode);
+                runtime.ExpertMode);
         });
 
         services.AddSingleton(sp =>
@@ -256,7 +259,19 @@ public static class GatewayServiceCollectionExtensions
         services.AddSingleton<IMqttPublisher, MqttPublisher>();
         services.AddSingleton<MqttSubscriber>();
         services.AddSingleton<HomeAssistantDiscovery>();
+
+        // Der Experten-Modus wirkt zur Laufzeit auf MQTT und Discovery
+        // (Aufgabe 10.13). Der Koordinator hört auf das Ereignis der
+        // Laufzeit-Einstellungen und gilt für alle drei betroffenen Dienste.
+        //
+        // Er wird als Hosted-Service registriert, damit der Host ihn beim
+        // Start **erzeugt**: ein reines Singleton entstünde erst, wenn jemand
+        // es anfordert - und niemand fordert es an. Bei MQTT:Enabled=false
+        // gibt es keine Topics und keine Discovery; dann entfällt er.
+        services.AddSingleton<ExpertModeCoordinator>();
+        services.AddSingleton<EnergyMeasurementGate>();
         services.AddSingleton<MqttStatePublisher>();
+        services.AddSingleton<DerivedValueService>();
         services.AddSingleton<MqttStatusPublisher>();
         services.AddSingleton<HomeAssistantBirthHandler>();
 
@@ -268,13 +283,22 @@ public static class GatewayServiceCollectionExtensions
         // auf ihre Availability.
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttSubscriber>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatusPublisher>());
+        services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<EnergyMeasurementGate>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantDiscovery>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatePublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantBirthHandler>());
 
         if (startBackgroundServices && mqttEnabled)
         {
+            // Der Koordinator des Experten-Modus hat keine eigene Schleife -
+            // er muss nur **existieren**, damit das Ereignis abonniert ist.
+            services.AddHostedService(sp => sp.GetRequiredService<ExpertModeCoordinator>());
+
+            // Das Gate startet **vor** dem Werte-Publisher: es muss den
+            // Energie-Zustand kennen, bevor die ersten Werte publiziert werden.
+            services.AddHostedService(sp => sp.GetRequiredService<EnergyMeasurementGate>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatePublisher>());
+            services.AddHostedService(sp => sp.GetRequiredService<DerivedValueService>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatusPublisher>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttConnectionManager>());
         }

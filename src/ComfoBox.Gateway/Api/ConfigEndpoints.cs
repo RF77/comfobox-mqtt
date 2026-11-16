@@ -271,7 +271,11 @@ internal static class ConfigEndpoints
                 if (request.ExpertMode is not null)
                 {
                     // Der Experten-Modus wirkt sofort: er entscheidet bei jedem
-                    // Schreibvorgang.
+                    // Schreibvorgang. Über GatewayRuntimeSettings.ExpertModeChanged
+                    // zieht der ExpertModeCoordinator zusätzlich die /Set-Topics
+                    // (Subscribe) und die Home-Assistant-Discovery nach - ohne
+                    // Neustart. Deshalb wird hier **nur** der Laufzeitwert
+                    // gesetzt und kein MQTT-Code aufgerufen.
                     gatewayRuntime.ExpertMode = request.ExpertMode.Value;
                     immediate.Add("ExpertMode");
                 }

@@ -39,6 +39,44 @@
   gap: 1rem;
 }
 
+// Die Karten der Werte-Blöcke stehen untereinander (nicht im Raster).
+.cb-card {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.cb-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+// Der Enum-Rohwert steht klein neben dem Namen - der Name allein ist der
+// Vertrag, die Nummer hilft beim Abgleich mit dem Gerät.
+.cb-raw {
+  margin-left: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--p-text-muted-color, inherit);
+}
+
+.cb-value {
+  font-weight: 600;
+}
+
+.cb-mode {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.cb-help-link {
+  color: var(--p-primary-color, #3b82f6);
+  text-decoration: underline;
+}
+
 // Die Tabelle nutzt die volle Breite.
 //
 // Hinweis: die Breite wird über eine CSS-Klasse gesetzt, **nicht** über

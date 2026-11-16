@@ -235,26 +235,28 @@
 
 | # | Aufgabe | Status | PT |
 |---|---|---|---|
-| 10.1 | V1/V2-Trennung im Katalog + Generator | ⬜ | 1.0 |
-| 10.2 | Contract-Tests V1/V2 + reservierte Topics | ⬜ | 0.5 |
-| 10.3 | Diagnose Zone/Warmwasser (8) | ⬜ | 0.5 |
-| 10.4 | Kältekreis/Wärmepumpe (13) | ⬜ | 1.0 |
-| 10.5 | Puffer + Solar (10) | ⬜ | 0.5 |
-| 10.6 | DP 3340-Gate + Durchfluss (3 + Availability) | ⬜ | 1.0 |
-| 10.7 | Energie + COP (11) | ⬜ | 0.5 |
-| 10.8 | Zähler + Wartung (11) | ⬜ | 0.5 |
-| 10.9 | Neue Config-Topics (21, nur Experten-Modus) | ⬜ | 1.5 |
-| 10.10 | Abgeleitete Werte (7) | ⬜ | 1.0 |
-| 10.11 | Poll-Plan P3 + Buslast | ⬜ | 0.5 |
-| 10.12 | HA-Discovery + Availability | ⬜ | 1.0 |
-| 10.13 | Experten-Modus zur Laufzeit für MQTT | ⬜ | 1.0 |
-| 10.14 | UI: Diagnose-/Energie-Block | ⬜ | 1.0 |
-| 10.15 | Benutzerdoku (2 Seiten) | ⬜ | 0.5 |
-| 10.16 | Verifikation + Abschluss | ⬜ | 0.5 |
+| 10.1 | V1/V2-Trennung im Katalog + Generator | ✅ | 1.0 |
+| 10.2 | Contract-Tests V1/V2 + reservierte Topics | ✅ | 0.5 |
+| 10.3 | Diagnose Zone/Warmwasser (8) | ✅ | 0.5 |
+| 10.4 | Kältekreis/Wärmepumpe (13) | ✅ | 1.0 |
+| 10.5 | Puffer + Solar (10) | ✅ | 0.5 |
+| 10.6 | DP 3340-Gate + Durchfluss (3 + Availability) | ✅ | 1.0 |
+| 10.7 | Energie + COP (11) | ✅ | 0.5 |
+| 10.8 | Zähler + Wartung (11) | ✅ | 0.5 |
+| 10.9 | Neue Config-Topics (21, nur Experten-Modus) | ✅ | 1.5 |
+| 10.10 | Abgeleitete Werte (7) | ✅ | 1.0 |
+| 10.11 | Poll-Plan P3 + Buslast | ✅ | 0.5 |
+| 10.12 | HA-Discovery + Availability | ✅ | 1.0 |
+| 10.13 | Experten-Modus zur Laufzeit für MQTT | ✅ | 1.0 |
+| 10.14 | UI: Diagnose-/Energie-Block | ✅ | 1.0 |
+| 10.15 | Benutzerdoku (2 Seiten) | ✅ | 0.5 |
+| 10.16 | Verifikation + Abschluss | ✅ | 0.5 |
 
-> **Noch nicht in der Gesamtsumme** – V2 ist additiv und wird separat abgerechnet.
-> **V1 bleibt eingefroren:** `docs/topics.json` und `docs/topics.md` werden in Phase 10
-> **nicht** angefasst; V2 bekommt eine eigene Fixture.
+> **Abgeschlossen und abgerechnet (2026-11-16):** Die 12,5 PT der Phase 10 stehen in
+> der Gesamtsumme; V2 ist **additiv** umgesetzt (**78** neue Topics, Katalog **205**
+> Items). **V1 bleibt eingefroren:** `docs/topics.json` und `docs/topics.md` sind
+> **byte-identisch** geblieben (127 Items); V2 hat eine eigene Fixture
+> `docs/topics-v2.json`.
 
 ## Dokumentation (parallel, nicht in der PT-Summe)
 
@@ -275,10 +277,12 @@
 | Bereich | PT |
 |---|---|
 | Implementierung (Phase 0–8d) | 64 |
+| Implementierung (Phase 9) | 4 |
+| Implementierung (Phase 10, V2) | 12.5 |
 | Dokumentation (D.6 + D.9) | 9 |
-| **Gesamt** | **73** |
+| **Gesamt** | **89.5** |
 
-> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) + 14 PT (Phase 8a–8d, Aufgaben 8a.1–8d.1) + 1 PT (Phase 7, Aufgabe 7.0) von 64 PT.
+> **Fertig:** 2 PT (Phase 0) + 8 PT (Phase 1, Aufgaben 1.1–1.8) + 7 PT (Phase 2, Aufgaben 2.1–2.7) + 6 PT (Phase 3, Aufgaben 3.1–3.6) + 4.5 PT (Phase 4, Aufgaben 4.1–4.9) + 10.5 PT (Phase 5, Aufgaben 5.1–5.13) + 3 PT (Phase 6, Aufgaben 6.1–6.3 + 6.5 + 6.6) + 13 PT (Phase 8, Aufgaben 8.1–8.9) + 14 PT (Phase 8a–8d, Aufgaben 8a.1–8d.1) + 1 PT (Phase 7, Aufgabe 7.0) + 4 PT (Phase 9, Aufgaben 9.1–9.15) + 12,5 PT (Phase 10, Aufgaben 10.1–10.16) von 80,5 PT.
 >
 > **Stand 2026-11-01:** **339 Tests grün** (52 BACnet + 30 Domain + 10 Contract + 247 Gateway),
 > **12 Werkzeug-Tests** und **35 HA-Integrationstests** grün. Das Container-Image (`comfobox-gateway`, 261 MB) ist gebaut – **amd64 und arm64**,
@@ -290,6 +294,13 @@
 > abgeschaltet**, das Synology-Paket hat einen **eigenständigen Workflow**
 > (Release-Assets + GHCR liegen außerhalb des 500-MB-Limits), und die
 > **Bus-Analyse** zeigt nur lesend, ob ein MS/TP-Token im Umlauf ist.
+
+> **Stand 2026-11-16:** **497 Tests grün** (Domain 77, Contract 20, Bacnet 56, Gateway 344),
+> `dotnet build` 0 Warnungen / 0 Fehler. Der Katalog umfasst **205** Items
+> (127 V1 + 78 V2); die V1-Fixtures sind byte-identisch geblieben. Der Generator meldet
+> `--check` (127), `--check-v2` (78) und `--catalog-check` (205) grün, die Oberfläche
+> baut (`npm run lint` + `npm run build`), die Benutzerdoku hat **17** Seiten,
+> `check-links.ps1` meldet 0 Probleme.
 
 ## Nächste Aufgabe
 

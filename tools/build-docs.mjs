@@ -87,12 +87,32 @@ function parseFrontMatter(raw, file) {
     fail(`${file}: Front-Matter fehlt (muss mit "---\n" beginnen)`);
   }
   const meta = {};
+  // Schlüssel einer begonnenen YAML-Blockliste ("tags:" + "- wert").
+  let listKey = null;
+
   for (const line of match[1].split(/\r?\n/)) {
     if (!line.trim() || line.trimStart().startsWith('#')) continue;
+
+    // "- wert" setzt die zuletzt begonnene Blockliste fort.
+    const item = /^\s*-\s+(.*)$/.exec(line);
+    if (item && listKey) {
+      meta[listKey].push(item[1].trim().replace(/^["']|["']$/g, ''));
+      continue;
+    }
+
     const sep = line.indexOf(':');
     if (sep === -1) continue;
     const key = line.slice(0, sep).trim();
     let value = line.slice(sep + 1).trim();
+
+    // "tags:" ohne Wert → Beginn einer YAML-Blockliste.
+    if (!value) {
+      meta[key] = [];
+      listKey = key;
+      continue;
+    }
+
+    listKey = null;
     if (value.startsWith('[') && value.endsWith(']')) {
       value = value
         .slice(1, -1)
@@ -109,8 +129,13 @@ function parseFrontMatter(raw, file) {
     }
   }
 
+  // "tags" ist immer eine Liste – auch wenn keine angegeben ist.
+  if (meta.tags !== undefined && !Array.isArray(meta.tags)) {
+    meta.tags = meta.tags ? [meta.tags] : [];
+  }
+
   for (const required of ['title', 'description', 'order']) {
-    if (!meta[required]) {
+    if (typeof meta[required] !== 'string' || !meta[required]) {
       fail(`${file}: Front-Matter-Feld "${required}" fehlt`);
     }
   }

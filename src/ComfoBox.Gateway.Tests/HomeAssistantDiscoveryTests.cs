@@ -18,6 +18,11 @@ public sealed class HomeAssistantDiscoveryTests
     private static HomeAssistantDiscovery CreateDiscovery(
         bool expertMode = false,
         string discoveryIdentifier = "comfobox")
+        => CreateDiscovery(new GatewayRuntimeSettings(expertMode), discoveryIdentifier);
+
+    private static HomeAssistantDiscovery CreateDiscovery(
+        GatewayRuntimeSettings runtime,
+        string discoveryIdentifier = "comfobox")
     {
         var options = new MqttOptions
         {
@@ -26,13 +31,11 @@ public sealed class HomeAssistantDiscoveryTests
             DiscoveryIdentifier = discoveryIdentifier,
         };
 
-        var gateway = new GatewayOptions { BaseTopic = "ComfoBox", ExpertMode = expertMode };
-
         return new HomeAssistantDiscovery(
-            new MqttTopicMap(Catalog, "ComfoBox", expertMode),
+            new MqttTopicMap(Catalog, "ComfoBox", runtime.ExpertMode),
             Catalog,
             options,
-            gateway,
+            runtime,
             NullLogger<HomeAssistantDiscovery>.Instance);
     }
 
@@ -109,7 +112,7 @@ public sealed class HomeAssistantDiscoveryTests
     }
 
     [Fact]
-    public void Jede_Discovery_Hat_Die_Availability_Des_Health_Topics()
+    public void Jede_Discovery_Hat_Die_Passende_Availability()
     {
         var discovery = CreateDiscovery();
 
@@ -117,9 +120,20 @@ public sealed class HomeAssistantDiscoveryTests
         {
             var payload = discovery.BuildItemPayload(item, item.IsWritableWithExpertMode(expertModeEnabled: false));
 
-            Assert.Equal("ComfoBox/Status/Health", payload["availability_topic"]);
-            Assert.Equal("online", payload["payload_available"]);
-            Assert.Equal("offline", payload["payload_not_available"]);
+            if (item.RequiresEnergyMeasurement)
+            {
+                // Die 11 Energie-Items hängen an der Wärmemengenmessung
+                // (DP 3340) - nicht am Gateway-Health.
+                Assert.Equal("ComfoBox/Status/Energy/Available", payload["availability_topic"]);
+                Assert.Equal("1", payload["payload_available"]);
+                Assert.Equal("0", payload["payload_not_available"]);
+            }
+            else
+            {
+                Assert.Equal("ComfoBox/Status/Health", payload["availability_topic"]);
+                Assert.Equal("online", payload["payload_available"]);
+                Assert.Equal("offline", payload["payload_not_available"]);
+            }
         }
     }
 
@@ -321,5 +335,314 @@ public sealed class HomeAssistantDiscoveryTests
         Assert.Contains("homeassistant/sensor/comfobox_status_version/config", topics);
         Assert.Contains("homeassistant/sensor/comfobox_status_uptime/config", topics);
         Assert.Contains("homeassistant/sensor/comfobox_status_writes/config", topics);
+    }
+
+    [Fact]
+    public void Die_Slow_Items_Sind_Standardmaessig_Deaktiviert()
+    {
+        // P3 wird nur stündlich gelesen - die Entitäten sollen den Recorder
+        // in Home Assistant nicht ungefragt füllen.
+        var discovery = CreateDiscovery();
+
+        string[] ids =
+        [
+            "status.counters.heating_operating_hours",
+            "status.heat_pump.condensation_temperature",
+        ];
+
+        foreach (var id in ids)
+        {
+            var item = Catalog.All.Single(i => i.Id == id);
+
+            Assert.Equal(RefreshPriority.Slow, item.Priority);
+            Assert.True(item.IsReadOnly, $"{id} ist nicht read-only.");
+
+            var payload = discovery.BuildItemPayload(item, writable: false);
+
+            Assert.False(Assert.IsType<bool>(payload["entity_registry_enabled_default"]));
+        }
+    }
+
+    [Fact]
+    public void Die_Zaehler_Sind_Diagnose()
+    {
+        var discovery = CreateDiscovery();
+
+        var counter = Catalog.All.Where(i => i.Group == "Status/Counters").ToList();
+        Assert.NotEmpty(counter);
+
+        foreach (var item in counter)
+        {
+            var payload = discovery.BuildItemPayload(item, writable: false);
+
+            Assert.Equal("diagnostic", payload["entity_category"]);
+        }
+    }
+
+    [Fact]
+    public void Die_Energie_Items_Tragen_Die_Energie_Availability()
+    {
+        var discovery = CreateDiscovery();
+
+        var energy = Catalog.All.Where(i => i.RequiresEnergyMeasurement).ToList();
+
+        Assert.Equal(11, energy.Count);
+
+        foreach (var item in energy)
+        {
+            var payload = discovery.BuildItemPayload(item, writable: false);
+
+            Assert.Equal("ComfoBox/Status/Energy/Available", payload["availability_topic"]);
+            Assert.Equal("1", payload["payload_available"]);
+            Assert.Equal("0", payload["payload_not_available"]);
+        }
+    }
+
+    [Fact]
+    public void Die_Energie_Zaehler_Sind_Energy_Total_Increasing()
+    {
+        var discovery = CreateDiscovery();
+
+        var total = Catalog.All.Single(i => i.TopicPath == "Status/Energy/ThermalEnergyTotal");
+        var totalPayload = discovery.BuildItemPayload(total, writable: false);
+
+        Assert.Equal("kWh", totalPayload["unit_of_measurement"]);
+        Assert.Equal("energy", totalPayload["device_class"]);
+        Assert.Equal("total_increasing", totalPayload["state_class"]);
+
+        var power = Catalog.All.Single(i => i.TopicPath == "Status/Energy/HeatingPower");
+        var powerPayload = discovery.BuildItemPayload(power, writable: false);
+
+        Assert.Equal("kW", powerPayload["unit_of_measurement"]);
+        Assert.Equal("power", powerPayload["device_class"]);
+        Assert.Equal("measurement", powerPayload["state_class"]);
+    }
+
+    [Fact]
+    public void Der_Cop_Traegt_Keine_Geraeteklasse()
+    {
+        // Ein COP ist ein Verhältnis - Home Assistant kennt dafür keine
+        // Geräteklasse. Er bleibt eine Messung.
+        var discovery = CreateDiscovery();
+        var cop = Catalog.All.Single(i => i.TopicPath == "Status/Energy/CopHeating");
+
+        var payload = discovery.BuildItemPayload(cop, writable: false);
+
+        Assert.False(payload.ContainsKey("device_class"));
+        Assert.False(payload.ContainsKey("unit_of_measurement"));
+        Assert.Equal("measurement", payload["state_class"]);
+    }
+
+    [Fact]
+    public void Die_Neuen_Config_Items_Sind_Config_Kategorie()
+    {
+        var mitExperten = CreateDiscovery(expertMode: true);
+        var ohneExperten = CreateDiscovery(expertMode: false);
+
+        var configItems = Catalog.V2
+            .Where(i => i.Group.StartsWith("Config/", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.NotEmpty(configItems);
+
+        foreach (var item in configItems)
+        {
+            // Mit Experten-Modus: number in der Config-Kategorie, aus.
+            var expertenPayload = mitExperten.BuildItemPayload(item, writable: true);
+
+            Assert.Equal("number", HomeAssistantDiscovery.ComponentFor(item, writable: true));
+            Assert.Equal("config", expertenPayload["entity_category"]);
+            Assert.False(Assert.IsType<bool>(expertenPayload["entity_registry_enabled_default"]));
+
+            // Ohne Experten-Modus bleibt nur der Sensor (Welle 4b schaltet um).
+            var startPayload = ohneExperten.BuildItemPayload(item, writable: false);
+
+            Assert.Equal("sensor", HomeAssistantDiscovery.ComponentFor(item, writable: false));
+            Assert.False(startPayload.ContainsKey("command_topic"));
+        }
+    }
+
+    [Fact]
+    public void Die_Sieben_Abgeleiteten_Werte_Werden_Angekuendigt()
+    {
+        var discovery = CreateDiscovery();
+
+        var payloads = discovery.BuildDerivedPayloads();
+
+        Assert.Equal(7, payloads.Count);
+        Assert.Equal(7, payloads.Select(p => p.Key).Distinct(StringComparer.Ordinal).Count());
+
+        var names = payloads.Select(p => Assert.IsType<string>(p.Value["name"])).ToList();
+        string[] erwarteteNamen =
+        [
+            "Überhitzung",
+            "Spreizung Heizkreis",
+            "Puffer-Schichtung",
+            "Laufzeitverhältnis",
+            "Wartung fällig",
+            "Momentan-COP",
+            "Kühlung aktiv",
+        ];
+        Assert.Equal(erwarteteNamen, names);
+
+        foreach (var (topic, payload) in payloads)
+        {
+            var uniqueId = Assert.IsType<string>(payload["unique_id"]);
+            var isCooling = uniqueId.EndsWith("cooling_active", StringComparison.Ordinal);
+
+            Assert.StartsWith(
+                isCooling ? "homeassistant/binary_sensor/" : "homeassistant/sensor/",
+                topic,
+                StringComparison.Ordinal);
+
+            Assert.Equal("diagnostic", payload["entity_category"]);
+            Assert.Equal("ComfoBox/Status/Health", payload["availability_topic"]);
+            Assert.Equal("online", payload["payload_available"]);
+            Assert.Equal("offline", payload["payload_not_available"]);
+
+            var stateTopic = Assert.IsType<string>(payload["state_topic"]);
+            Assert.StartsWith("ComfoBox/Status/Derived/", stateTopic, StringComparison.Ordinal);
+
+            if (isCooling)
+            {
+                // binary_sensor: kein state_class, keine Einheit, 1/0-Payloads.
+                Assert.False(payload.ContainsKey("state_class"));
+                Assert.False(payload.ContainsKey("unit_of_measurement"));
+                Assert.Equal("1", payload["payload_on"]);
+                Assert.Equal("0", payload["payload_off"]);
+            }
+            else if (uniqueId.EndsWith("runtime_ratio", StringComparison.Ordinal))
+            {
+                // Nur das Laufzeitverhältnis ist eine Prozent-Messung.
+                Assert.Equal("%", payload["unit_of_measurement"]);
+                Assert.Equal("measurement", payload["state_class"]);
+            }
+            else
+            {
+                // K ist eine Differenz, ServiceDue ist ein Zustand.
+                Assert.False(payload.ContainsKey("state_class"), $"{uniqueId} trägt state_class.");
+            }
+        }
+    }
+
+    [Fact]
+    public void Jede_Discovery_Payload_Ist_Gueltiges_Json()
+    {
+        var discovery = CreateDiscovery(expertMode: true);
+
+        var payloads = new List<IReadOnlyDictionary<string, object?>>();
+        payloads.AddRange(Catalog.All.Select(item => discovery.BuildItemPayload(item, writable: true)));
+        payloads.AddRange(discovery.BuildDerivedPayloads().Select(p => p.Value));
+        payloads.AddRange(discovery.BuildStatusPayloads().Select(p => p.Value));
+
+        foreach (var payload in payloads)
+        {
+            var json = JsonSerializer.Serialize(payload);
+
+            using var document = JsonDocument.Parse(json);
+            Assert.Equal(JsonValueKind.Object, document.RootElement.ValueKind);
+        }
+    }
+
+    /// <summary>
+    /// Ein Wechsel des Experten-Modus wirkt sofort auf die Discovery
+    /// (Aufgabe 10.13).
+    /// </summary>
+    /// <remarks>
+    /// <c>Config/Ventilation/SpeedStage3</c> ist ein Zahlenwert: ohne
+    /// Experten-Modus ein <c>sensor</c>, mit Experten-Modus ein <c>number</c>.
+    /// Weil die Plattform im Discovery-Topic steckt, muss das jeweils andere
+    /// Topic geleert werden - sonst behält Home Assistant die erste Fassung.
+    /// </remarks>
+    [Fact]
+    public async Task Nach_Dem_Umschalten_Wird_SpeedStage3_Eine_Zahl()
+    {
+        var runtime = new GatewayRuntimeSettings(expertMode: false);
+        var discovery = CreateDiscovery(runtime);
+
+        var item = Catalog.FindByTopicPath("Config/Ventilation/SpeedStage3");
+        Assert.NotNull(item);
+
+        var client = new NoopMqttClient();
+
+        // Start: ohne Experten-Modus ist das Item ein Sensor.
+        await discovery.OnConnectedAsync(client, CancellationToken.None);
+
+        Assert.NotNull(client.LastPayloadFor(discovery.DiscoveryTopic(item!, writable: false)));
+
+        // Umschalten - die Discovery liest den Modus bei jedem Publish.
+        runtime.ExpertMode = true;
+        await discovery.RepublishAsync([client], CancellationToken.None);
+
+        var numberPayload = client.LastPayloadFor(discovery.DiscoveryTopic(item!, writable: true));
+        Assert.NotNull(numberPayload);
+        Assert.Contains("\"command_topic\":", numberPayload, StringComparison.Ordinal);
+
+        // Das alte sensor-Topic ist geräumt (leere, retained Payload).
+        Assert.True(client.WasCleared(discovery.DiscoveryTopic(item!, writable: false)));
+
+        // Zurück: number wird geräumt, sensor kommt wieder - ohne command_topic.
+        runtime.ExpertMode = false;
+        await discovery.RepublishAsync([client], CancellationToken.None);
+
+        Assert.True(client.WasCleared(discovery.DiscoveryTopic(item!, writable: true)));
+
+        var sensorPayload = client.LastPayloadFor(discovery.DiscoveryTopic(item!, writable: false));
+        Assert.NotNull(sensorPayload);
+        Assert.DoesNotContain("command_topic", sensorPayload, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Ein abgeschalteter Discovery-Lauf bleibt abgeschaltet - auch beim
+    /// Republish nach einem Moduswechsel.
+    /// </summary>
+    [Fact]
+    public async Task Ohne_Discovery_Wird_Auch_Nach_Dem_Umschalten_Nichts_Publiziert()
+    {
+        var runtime = new GatewayRuntimeSettings(expertMode: false);
+
+        var options = new MqttOptions
+        {
+            Brokers = [new MqttBrokerOptions { Host = "localhost", Port = 1883 }],
+            DiscoveryPrefix = "homeassistant",
+            EnableDiscovery = false,
+        };
+
+        var discovery = new HomeAssistantDiscovery(
+            new MqttTopicMap(Catalog, "ComfoBox", runtime.ExpertMode),
+            Catalog,
+            options,
+            runtime,
+            NullLogger<HomeAssistantDiscovery>.Instance);
+
+        var client = new NoopMqttClient();
+
+        await discovery.OnConnectedAsync(client, CancellationToken.None);
+        runtime.ExpertMode = true;
+        await discovery.RepublishAsync([client], CancellationToken.None);
+
+        Assert.Empty(client.Published);
+    }
+
+    /// <summary>
+    /// Die abgeleiteten Werte tragen das **letzte** Id-Segment als Slug.
+    /// </summary>
+    /// <remarks>
+    /// Vorher entstand <c>comfobox_derived_derived_superheat</c>: die Id lautet
+    /// bereits <c>derived.superheat</c>, der Präfix steht schon in der Kennung.
+    /// </remarks>
+    [Fact]
+    public void Die_Abgeleiteten_Werte_Tragen_Den_Kurzen_Slug()
+    {
+        var discovery = CreateDiscovery();
+
+        var ids = discovery.BuildDerivedPayloads()
+            .Select(p => Assert.IsType<string>(p.Value["unique_id"]))
+            .ToList();
+
+        Assert.Equal(7, ids.Count);
+        Assert.Contains("comfobox_derived_superheat", ids);
+        Assert.DoesNotContain("comfobox_derived_derived_superheat", ids);
+        Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
     }
 }

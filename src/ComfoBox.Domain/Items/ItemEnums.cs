@@ -14,6 +14,16 @@ namespace ComfoBox.Domain.Items;
 public static class ItemEnums
 {
     /// <summary>
+    /// Die Werte des Legacy-Enums <c>EnergyMeasurementModes</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> EnergyMeasurementModes { get; } = new Dictionary<int, string>
+    {
+        [0] = "None",
+        [1] = "On",
+        [2] = "OnSeparateWarmWater",
+    };
+
+    /// <summary>
     /// Die Werte des Legacy-Enums <c>HeatPumpStatusEnums</c>.
     /// </summary>
     public static IReadOnlyDictionary<int, string> HeatPumpStatusEnums { get; } = new Dictionary<int, string>
@@ -109,6 +119,85 @@ public static class ItemEnums
         [5] = "NormalAndReduced",
         [6] = "Normal",
         [7] = "Reduced",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>WarmWaterSetPointTypes</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> WarmWaterSetPointTypes { get; } = new Dictionary<int, string>
+    {
+        [0] = "FrostProtection",
+        [1] = "Reduced",
+        [2] = "Normal",
+        [3] = "Legionella",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>WarmWaterStates</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> WarmWaterStates { get; } = new Dictionary<int, string>
+    {
+        [0] = "Off",
+        [1] = "WithEnergyProducer",
+        [2] = "Electrical",
+        [3] = "WithAdditionalHeater",
+        [4] = "DischargeProtection",
+        [5] = "EnergyProducerLock",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>WarmWaterOverrides</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> WarmWaterOverrides { get; } = new Dictionary<int, string>
+    {
+        [0] = "None",
+        [1] = "Party",
+        [3] = "Holiday",
+        [5] = "ExternalInput",
+        [9] = "HeatPumpFault",
+        [10] = "Optimization",
+        [13] = "SetPointShiftDeltaT",
+        [14] = "TimesOff",
+        [15] = "FlowTemperatureTooHigh",
+        [17] = "Electrical",
+        [19] = "OptimizationElectrical",
+        [20] = "EnergyProducerLock",
+        [22] = "AdditionalHeaterOnly",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>ZoneSetPointTypes</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> ZoneSetPointTypes { get; } = new Dictionary<int, string>
+    {
+        [0] = "FrostProtection",
+        [1] = "Reduced",
+        [2] = "Normal",
+        [3] = "Legionella",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>ZoneOverrides</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> ZoneOverrides { get; } = new Dictionary<int, string>
+    {
+        [0] = "None",
+        [1] = "Party",
+        [2] = "Eco",
+        [3] = "Holiday",
+        [4] = "RemoteControl",
+        [5] = "ExternalInput",
+        [6] = "Commissioning",
+        [7] = "DewPointGuard",
+        [8] = "FloorDrying",
+        [9] = "HeatPumpFault",
+        [10] = "OptimizedHeatPumpShutdown",
+        [11] = "SolarSetPointRise",
+        [13] = "SetPointShiftDeltaT",
+        [14] = "TimesOff",
+        [18] = "OutdoorTemperature",
+        [21] = "SecondaryCircuitVenting",
+        [22] = "AdditionalHeaterOnly",
     };
 
 }

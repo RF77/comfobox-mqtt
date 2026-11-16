@@ -21,45 +21,42 @@ namespace ComfoBox.Gateway.Mqtt;
 /// Neue Topics gibt es ausschließlich unter <c>{BaseTopic}/Status/</c> und
 /// <c>{BaseTopic}/Command/</c>.
 /// </para>
+/// <para>
+/// <b>Experten-Modus zur Laufzeit (Aufgabe 10.13):</b> Die Zuordnung lebt in
+/// einem unveränderlichen Schnappschuss, der bei
+/// <see cref="UpdateExpertMode"/> **vollständig neu gebaut** und erst dann
+/// veröffentlicht wird. Leser sehen deshalb immer einen ganzen Satz Topics -
+/// nie eine halb aufgebaute Zuordnung. Die Instanz bleibt dieselbe: sie wird an
+/// mehrere Singletons injiziert und darf nicht ersetzt werden.
+/// </para>
 /// </remarks>
 public sealed class MqttTopicMap
 {
-    private readonly Dictionary<string, TopicBinding> _bindings = new(StringComparer.Ordinal);
+    private readonly IItemCatalog _catalog;
+    private readonly object _sync = new();
+
+    private TopicSnapshot _current;
 
     /// <summary>
     /// Erzeugt die Zuordnung.
     /// </summary>
     /// <param name="catalog">Der Item-Katalog.</param>
     /// <param name="baseTopic">Das Basis-Topic (Standard: <c>ComfoBox</c>).</param>
-    /// <param name="expertModeEnabled">Ist der Experten-Modus aktiv?</param>
+    /// <param name="expertModeEnabled">Der Startwert des Experten-Modus.</param>
     public MqttTopicMap(IItemCatalog catalog, string baseTopic, bool expertModeEnabled)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentException.ThrowIfNullOrWhiteSpace(baseTopic);
 
-        Catalog = catalog;
+        _catalog = catalog;
         BaseTopic = baseTopic;
-        ExpertModeEnabled = expertModeEnabled;
-
-        foreach (var item in catalog.All)
-        {
-            _bindings[ItemTopic(item)] = new TopicBinding(item, MqttTopicForm.Value);
-            _bindings[ItemAsNumberTopic(item)] = new TopicBinding(item, MqttTopicForm.AsNumber);
-
-            if (!item.IsWritableWithExpertMode(expertModeEnabled))
-            {
-                continue;
-            }
-
-            _bindings[ItemSetTopic(item)] = new TopicBinding(item, MqttTopicForm.Value);
-            _bindings[ItemAsNumberSetTopic(item)] = new TopicBinding(item, MqttTopicForm.AsNumber);
-        }
+        _current = BuildSnapshot(expertModeEnabled);
     }
 
     /// <summary>
     /// Der Item-Katalog.
     /// </summary>
-    public IItemCatalog Catalog { get; }
+    public IItemCatalog Catalog => _catalog;
 
     /// <summary>
     /// Das Basis-Topic (Standard: <c>ComfoBox</c>).
@@ -69,7 +66,47 @@ public sealed class MqttTopicMap
     /// <summary>
     /// Ist der Experten-Modus aktiv?
     /// </summary>
-    public bool ExpertModeEnabled { get; }
+    /// <remarks>
+    /// Der Wert wird bei jedem Zugriff aus dem aktuellen Schnappschuss gelesen -
+    /// nicht beim Erzeugen der Zuordnung festgeschrieben.
+    /// </remarks>
+    public bool ExpertModeEnabled => Snapshot.ExpertModeEnabled;
+
+    /// <summary>
+    /// Der aktuelle, unveränderliche Schnappschuss.
+    /// </summary>
+    private TopicSnapshot Snapshot => Volatile.Read(ref _current);
+
+    /// <summary>
+    /// Schaltet die Zuordnung auf einen anderen Experten-Modus um.
+    /// </summary>
+    /// <param name="expertModeEnabled">Ist der Experten-Modus ab jetzt aktiv?</param>
+    /// <remarks>
+    /// <para>
+    /// Die Werte- und <c>/AsNumber</c>-Topics bleiben für **alle** Items
+    /// bestehen - Lesen ist immer erlaubt. Nur die Schreib-Topics
+    /// (<c>…/Set</c> und <c>…/AsNumber/Set</c>) kommen hinzu oder entfallen.
+    /// </para>
+    /// <para>
+    /// Ein Aufruf mit dem bereits gültigen Wert tut nichts: ein Neuaufbau würde
+    /// nur unnötig Abonnements und Discovery-Payloads auslösen.
+    /// </para>
+    /// </remarks>
+    public void UpdateExpertMode(bool expertModeEnabled)
+    {
+        lock (_sync)
+        {
+            if (Snapshot.ExpertModeEnabled == expertModeEnabled)
+            {
+                return;
+            }
+
+            // Erst vollständig bauen, dann veröffentlichen: Volatile.Write gibt
+            // die Schreibzugriffe frei, Volatile.Read in Snapshot nimmt sie
+            // ohne Sperre auf.
+            Volatile.Write(ref _current, BuildSnapshot(expertModeEnabled));
+        }
+    }
 
     /// <summary>
     /// Das Topic des Item-Werts.
@@ -171,6 +208,20 @@ public sealed class MqttTopicMap
     public string MqttTopic => $"{BaseTopic}/Status/Mqtt";
 
     /// <summary>
+    /// Das Topic der Verfügbarkeit der Wärmemengenmessung (DP 3340).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Es ist **kein** Katalog-Item - es gibt kein BACnet-Objekt dazu. Der
+    /// Wert wird aus <c>Status/Energy/MeasurementMode</c> gebildet:
+    /// <c>1</c> = verfügbar, <c>0</c> = nicht verfügbar, leere Payload = noch
+    /// nie gelesen. Das Topic ist die Availability der Energie-Entitäten in
+    /// Home Assistant.
+    /// </para>
+    /// </remarks>
+    public string EnergyAvailableTopic => $"{BaseTopic}/Status/Energy/Available";
+
+    /// <summary>
     /// Das Topic des letzten Fehlers.
     /// </summary>
     public string LastErrorTopic => $"{BaseTopic}/Status/LastError";
@@ -197,16 +248,21 @@ public sealed class MqttTopicMap
     /// Die Schreib-Topics in Katalog-Reihenfolge - also <c>…/Set</c> und
     /// <c>…/AsNumber/Set</c>.
     /// </returns>
-    public IReadOnlyList<string> WriteTopics()
-        => [.. _bindings.Keys.Where(t => t.EndsWith("/Set", StringComparison.Ordinal))];
+    /// <remarks>
+    /// Die Liste gehört zum veröffentlichten Schnappschuss und darf nicht
+    /// verändert werden.
+    /// </remarks>
+    public IReadOnlyList<string> WriteTopics() => Snapshot.WriteTopics;
 
     /// <summary>
     /// Die Schreib-Topics in der Namensform (<c>…/Set</c>).
     /// </summary>
     /// <returns>Die Topics in Katalog-Reihenfolge.</returns>
-    public IReadOnlyList<string> SetTopics()
-        => [.. _bindings.Keys.Where(t => t.EndsWith("/Set", StringComparison.Ordinal)
-            && !t.EndsWith("/AsNumber/Set", StringComparison.Ordinal))];
+    /// <remarks>
+    /// Die Liste gehört zum veröffentlichten Schnappschuss und darf nicht
+    /// verändert werden.
+    /// </remarks>
+    public IReadOnlyList<string> SetTopics() => Snapshot.SetTopics;
 
     /// <summary>
     /// Löst ein Topic auf.
@@ -217,7 +273,7 @@ public sealed class MqttTopicMap
     /// <returns><c>true</c>, wenn das Topic bekannt ist.</returns>
     public bool TryResolve(string topic, out ItemDefinition? item, out MqttTopicForm form)
     {
-        if (topic is not null && _bindings.TryGetValue(topic, out var binding))
+        if (topic is not null && Snapshot.Bindings.TryGetValue(topic, out var binding))
         {
             item = binding.Item;
             form = binding.Form;
@@ -228,6 +284,60 @@ public sealed class MqttTopicMap
         form = MqttTopicForm.Value;
         return false;
     }
+
+    /// <summary>
+    /// Baut die Zuordnung für einen Experten-Modus.
+    /// </summary>
+    /// <param name="expertModeEnabled">Ist der Experten-Modus aktiv?</param>
+    /// <returns>Der fertige, unveränderliche Schnappschuss.</returns>
+    private TopicSnapshot BuildSnapshot(bool expertModeEnabled)
+    {
+        var bindings = new Dictionary<string, TopicBinding>(StringComparer.Ordinal);
+        var writeTopics = new List<string>();
+        var setTopics = new List<string>();
+
+        foreach (var item in _catalog.All)
+        {
+            var topic = ItemTopic(item);
+
+            bindings[topic] = new TopicBinding(item, MqttTopicForm.Value);
+            bindings[ItemAsNumberTopic(item)] = new TopicBinding(item, MqttTopicForm.AsNumber);
+
+            if (!item.IsWritableWithExpertMode(expertModeEnabled))
+            {
+                continue;
+            }
+
+            var setTopic = ItemSetTopic(item);
+            var asNumberSetTopic = ItemAsNumberSetTopic(item);
+
+            bindings[setTopic] = new TopicBinding(item, MqttTopicForm.Value);
+            bindings[asNumberSetTopic] = new TopicBinding(item, MqttTopicForm.AsNumber);
+
+            writeTopics.Add(setTopic);
+            writeTopics.Add(asNumberSetTopic);
+            setTopics.Add(setTopic);
+        }
+
+        return new TopicSnapshot(
+            bindings,
+            [.. writeTopics],
+            [.. setTopics],
+            expertModeEnabled);
+    }
+
+    /// <summary>
+    /// Ein unveränderlicher Satz aus Zuordnung und Schreib-Topics.
+    /// </summary>
+    /// <param name="Bindings">Topic → Item.</param>
+    /// <param name="WriteTopics">Alle Schreib-Topics in Katalog-Reihenfolge.</param>
+    /// <param name="SetTopics">Die Schreib-Topics in Namensform.</param>
+    /// <param name="ExpertModeEnabled">Der Modus, für den der Satz gebaut wurde.</param>
+    private sealed record TopicSnapshot(
+        Dictionary<string, TopicBinding> Bindings,
+        string[] WriteTopics,
+        string[] SetTopics,
+        bool ExpertModeEnabled);
 }
 
 /// <summary>

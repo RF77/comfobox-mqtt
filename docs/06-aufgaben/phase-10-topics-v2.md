@@ -206,9 +206,14 @@ als `ItemDefinition` im Katalog liegen (`BacnetObjectId` ist Pflicht und muss `>
 | UI „Werte“ | Experten-Items sind ohne Experten-Modus gesperrt und als „Experten-Modus“ markiert |
 | UI „Konfiguration“ | neue Config-Topics erscheinen erst hinter dem Experten-Modus-Schalter |
 
-> **Laufzeit-Umschaltung:** Der Experten-Modus wirkt über `GatewayRuntimeSettings` sofort
-> für REST-Schreibvorgänge. Für MQTT wird er heute **beim Start** gebunden. Aufgabe 10.13
-> schliesst diese Lücke: `/Set`-Topics und Discovery folgen dem Schalter zur Laufzeit.
+> **Laufzeit-Umschaltung (umgesetzt 2026-11-16):** Der Experten-Modus wirkt **sofort** –
+> für REST-Schreibvorgänge (über `GatewayRuntimeSettings`) **und** für MQTT.
+> `MqttTopicMap.UpdateExpertMode` baut die Bindings neu auf, `MqttSubscriber` bestellt die
+> `/Set`-Topics ab bzw. neu, `HomeAssistantDiscovery` veröffentlicht die Payloads erneut
+> und räumt das alte Plattform-Topic (sonst bliebe nach `number` → `sensor` die alte
+> Entität in Home Assistant stehen). Angestossen wird der Wechsel von
+> `ExpertModeCoordinator` (Hosted Service) – Aufgabe 10.13 ist damit erledigt, ein
+> Neustart ist nicht mehr nötig.
 
 ### 5.7 Poll-Prioritäten und Buslast
 
@@ -310,10 +315,10 @@ zurückgestellt:
 
 **Abnahme:**
 
-- [ ] `docs/topics.json` ist **byte-identisch** zu `HEAD`
-- [ ] `docs/topics-v2.json` existiert und enthält **78** Items
-- [ ] `Catalog.All` ist eindeutig (Ids und Topic-Pfade)
-- [ ] `dotnet test` grün
+- [x] `docs/topics.json` ist **byte-identisch** zu `HEAD`
+- [x] `docs/topics-v2.json` existiert und enthält **78** Items
+- [x] `Catalog.All` ist eindeutig (Ids und Topic-Pfade)
+- [x] `dotnet test` grün
 
 > **78** = 56 Lesetopics + 21 Config-Topics + 1 Command-Topic. Die optionalen
 > E-Topics (18) und ein optionaler DP-3340-Schreibzugriff sind **nicht** enthalten.
@@ -340,9 +345,9 @@ zurückgestellt:
 
 **Abnahme:**
 
-- [ ] `dotnet test src/ComfoBox.Contract.Tests` grün
-- [ ] `node tools/generate-topics/generate-topics.mjs --check` grün
-- [ ] `node tools/generate-topics/generate-topics.mjs --check-v2` grün
+- [x] `dotnet test src/ComfoBox.Contract.Tests` grün
+- [x] `node tools/generate-topics/generate-topics.mjs --check` grün
+- [x] `node tools/generate-topics/generate-topics.mjs --check-v2` grün
 
 ### 10.3 – Diagnose Zone und Warmwasser (8 Topics)
 
@@ -370,9 +375,9 @@ zurückgestellt:
 
 **Abnahme:**
 
-- [ ] alle 8 Topics erscheinen in `docs/topics-v2.json`
-- [ ] `Status/Zone/Override` liefert bei einem unbekannten Gerätewert **keinen** Publish
-- [ ] `dotnet test` grün
+- [x] alle 8 Topics erscheinen in `docs/topics-v2.json`
+- [x] `Status/Zone/Override` liefert bei einem unbekannten Gerätewert **keinen** Publish
+- [x] `dotnet test` grün
 
 ### 10.4 – Kältekreis und Wärmepumpe (13 Topics)
 
@@ -397,9 +402,9 @@ bereits), Prioritäten, Einheiten.
 
 **Abnahme:**
 
-- [ ] 13 Items in `docs/topics-v2.json`
-- [ ] `HeatPumpStatusStage2` nutzt exakt dieselben Enum-Namen wie `States/HeatPump/HeatPumpStatus`
-- [ ] `dotnet test` grün
+- [x] 13 Items in `docs/topics-v2.json`
+- [x] `HeatPumpStatusStage2` nutzt exakt dieselben Enum-Namen wie `States/HeatPump/HeatPumpStatus`
+- [x] `dotnet test` grün
 
 ### 10.5 – Puffer und Solar (10 Topics)
 
@@ -418,9 +423,9 @@ bereits), Prioritäten, Einheiten.
 
 **Abnahme:**
 
-- [ ] 10 Items in `docs/topics-v2.json`
-- [ ] `Status/Solar/*` ist auch ohne Sonnenkollektor unschädlich (Wert bleibt `unknown`)
-- [ ] `dotnet test` grün
+- [x] 10 Items in `docs/topics-v2.json`
+- [x] `Status/Solar/*` ist auch ohne Sonnenkollektor unschädlich (Wert bleibt `unknown`)
+- [x] `dotnet test` grün
 
 ### 10.6 – DP 3340: Wärmemengenmessung erkennen und sperren
 
@@ -499,11 +504,11 @@ größer 0 sein).
 
 **Abnahme:**
 
-- [ ] bei `MeasurementMode = None` erscheinen **keine** kWh-/COP-Werte
-- [ ] `Status/Energy/Available` ist retained und wechselt korrekt
-- [ ] nach Start oder Abschalten stehen **keine** veralteten retained Werte
-- [ ] der Fehler erscheint in `Status/Errors` und in der UI
-- [ ] `dotnet test` grün
+- [x] bei `MeasurementMode = None` erscheinen **keine** kWh-/COP-Werte
+- [x] `Status/Energy/Available` ist retained und wechselt korrekt
+- [x] nach Start oder Abschalten stehen **keine** veralteten retained Werte
+- [x] der Fehler erscheint in `Status/Errors` und in der UI
+- [x] `dotnet test` grün
 
 ### 10.7 – Energie und COP (11 Topics)
 
@@ -533,10 +538,10 @@ Alle 11 Items tragen `[Energy]` (→ `RequiresEnergyMeasurement = true`).
 
 **Abnahme:**
 
-- [ ] 11 Items in `docs/topics-v2.json`
-- [ ] alle 11 tragen `RequiresEnergyMeasurement = true`
-- [ ] Discovery-Payloads haben die richtige `device_class`/`state_class`
-- [ ] `dotnet test` grün
+- [x] 11 Items in `docs/topics-v2.json`
+- [x] alle 11 tragen `RequiresEnergyMeasurement = true`
+- [x] Discovery-Payloads haben die richtige `device_class`/`state_class`
+- [x] `dotnet test` grün
 
 ### 10.8 – Zähler und Wartung (11 Topics)
 
@@ -559,9 +564,9 @@ Alle 11 Items tragen `[Energy]` (→ `RequiresEnergyMeasurement = true`).
 
 **Abnahme:**
 
-- [ ] 11 Items in `docs/topics-v2.json`
-- [ ] alle mit `entity_registry_enabled_default: false` in der Discovery
-- [ ] `dotnet test` grün
+- [x] 11 Items in `docs/topics-v2.json`
+- [x] alle mit `entity_registry_enabled_default: false` in der Discovery
+- [x] `dotnet test` grün
 
 ### 10.9 – Neue Konfigurations-Topics (21, nur Experten-Modus)
 
@@ -616,9 +621,9 @@ verfügbar machen – **nur** mit Experten-Modus.
 
 **Abnahme:**
 
-- [ ] 21 Items in `docs/topics-v2.json`
-- [ ] ohne Experten-Modus existiert **kein** `/Set`-Topic
-- [ ] `dotnet test` grün
+- [x] 21 Items in `docs/topics-v2.json`
+- [x] ohne Experten-Modus existiert **kein** `/Set`-Topic
+- [x] `dotnet test` grün
 
 ### 10.10 – Abgeleitete Werte (7 Topics)
 
@@ -661,10 +666,10 @@ verfügbar machen – **nur** mit Experten-Modus.
 
 **Abnahme:**
 
-- [ ] sieben Topics werden publiziert
-- [ ] kein abgeleiteter Wert ist schreibbar
-- [ ] Formel steht in der UI als Tooltip
-- [ ] `dotnet test` grün
+- [x] sieben Topics werden publiziert
+- [x] kein abgeleiteter Wert ist schreibbar
+- [x] Formel steht in der UI als Tooltip
+- [x] `dotnet test` grün
 
 ### 10.11 – Poll-Plan P3 und Buslast
 
@@ -697,9 +702,9 @@ konfigurierten Poll-Intervall.
 
 **Abnahme:**
 
-- [ ] P1 = 60 s, P2 = 5 min, P3 = 1 h (bei Default-Intervall)
-- [ ] bei `PollIntervalSeconds = 30` bleibt P3 bei 1 h
-- [ ] `dotnet test` grün
+- [x] P1 = 60 s, P2 = 5 min, P3 = 1 h (bei Default-Intervall)
+- [x] bei `PollIntervalSeconds = 30` bleibt P3 bei 1 h
+- [x] `dotnet test` grün
 
 ### 10.12 – Home-Assistant-Discovery
 
@@ -737,9 +742,9 @@ Kategorien und Availability.
 
 **Abnahme:**
 
-- [ ] Discovery-Payloads sind gültiges JSON
-- [ ] HA legt die neuen Entitäten ohne YAML an
-- [ ] `dotnet test` grün
+- [x] Discovery-Payloads sind gültiges JSON
+- [x] HA legt die neuen Entitäten ohne YAML an
+- [x] `dotnet test` grün
 
 ### 10.13 – Experten-Modus zur Laufzeit für MQTT
 
@@ -778,9 +783,9 @@ Neustart“ – und in der UI einen Hinweis anzeigen. **Nicht** stillschweigend 
 
 **Abnahme:**
 
-- [ ] Schalter in der UI umlegen → neue Config-Items werden sofort schreibbar
-- [ ] Schalter aus → `/Set`-Topics verschwinden, HA zeigt `sensor`
-- [ ] `dotnet test` grün
+- [x] Schalter in der UI umlegen → neue Config-Items werden sofort schreibbar
+- [x] Schalter aus → `/Set`-Topics verschwinden, HA zeigt `sensor`
+- [x] `dotnet test` grün
 
 ### 10.14 – UI: Diagnose- und Energie-Block
 
@@ -817,11 +822,11 @@ pwsh -NoProfile -File tools/check-links.ps1
 
 **Abnahme:**
 
-- [ ] der Diagnose-Block zeigt die sechs Werte
-- [ ] bei `MeasurementMode = None` erscheint der Banner
-- [ ] `npm run lint && npm run build` grün
-- [ ] `public/help/` ist neu erzeugt und eingecheckt
-- [ ] `check-links.ps1` grün
+- [x] der Diagnose-Block zeigt die sechs Werte
+- [x] bei `MeasurementMode = None` erscheint der Banner
+- [x] `npm run lint && npm run build` grün
+- [x] `public/help/` ist neu erzeugt und eingecheckt
+- [x] `check-links.ps1` grün
 
 ### 10.15 – Benutzerdoku
 
@@ -865,10 +870,10 @@ keine Dateipfade, keine Klassennamen.
 
 **Abnahme:**
 
-- [ ] beide Seiten haben vollständiges Front-Matter
-- [ ] `node tools/build-docs.mjs` läuft durch
-- [ ] `check-links.ps1` grün
-- [ ] die Seiten erscheinen in der Web-UI unter **Hilfe**
+- [x] beide Seiten haben vollständiges Front-Matter
+- [x] `node tools/build-docs.mjs` läuft durch
+- [x] `check-links.ps1` grün
+- [x] die Seiten erscheinen in der Web-UI unter **Hilfe**
 
 ### 10.16 – Verifikation und Abschluss
 
@@ -899,10 +904,10 @@ pwsh -NoProfile -File tools/check-links.ps1
 
 **Abschluss:**
 
-- [ ] [status.md](status.md): Phase 10 auf `✅`
-- [ ] [protokoll.md](protokoll.md): Eintrag mit Testzahl vorher/nachher
-- [ ] `CHANGELOG.md`: `Added` (V2-Topics, Derived, DP-3340-Gate) + `Changed` (Poll P3)
-- [ ] Prompt für die nächste Session ausgeben ([README §3.4](README.md#34-der-nächste-prompt))
+- [x] [status.md](status.md): Phase 10 auf `✅`
+- [x] [protokoll.md](protokoll.md): Eintrag mit Testzahl vorher/nachher
+- [x] `CHANGELOG.md`: `Added` (V2-Topics, Derived, DP-3340-Gate) + `Changed` (Poll P3)
+- [x] Prompt für die nächste Session ausgeben ([README §3.4](README.md#34-der-nächste-prompt))
 
 ---
 
@@ -926,18 +931,18 @@ pwsh -NoProfile -File tools/check-links.ps1
 
 ## 8 Abnahmekriterien
 
-- [ ] V1: **127** Items, Fixture **byte-identisch**
-- [ ] V2: **78** Items in `docs/topics-v2.json`
-- [ ] alle neuen schreibbaren Items: `RequiresExpertMode = true`
-- [ ] ohne Experten-Modus: **kein** `/Set`-Topic, **keine** `number`/`select`-Discovery
-- [ ] P1 = **60 s**, P2 = 5 min, P3 = 1 h
-- [ ] DP 3340 = 0: **keine** kWh-/COP-Werte, `Available = 0`, Fehler + UI-Banner
-- [ ] abgeleitete Werte: `unknown` statt 0, nie schreibbar
-- [ ] keine Kollision mit den Gateway-Status-Topics
-- [ ] `dotnet build` 0 Warnungen, `dotnet test` grün
-- [ ] `npm run lint && npm run build` grün
-- [ ] `build-docs.mjs` + `check-links.ps1` grün
-- [ ] CHANGELOG, status.md, protokoll.md aktualisiert
+- [x] V1: **127** Items, Fixture **byte-identisch**
+- [x] V2: **78** Items in `docs/topics-v2.json`
+- [x] alle neuen schreibbaren Items: `RequiresExpertMode = true`
+- [x] ohne Experten-Modus: **kein** `/Set`-Topic, **keine** `number`/`select`-Discovery
+- [x] P1 = **60 s**, P2 = 5 min, P3 = 1 h
+- [x] DP 3340 = 0: **keine** kWh-/COP-Werte, `Available = 0`, Fehler + UI-Banner
+- [x] abgeleitete Werte: `unknown` statt 0, nie schreibbar
+- [x] keine Kollision mit den Gateway-Status-Topics
+- [x] `dotnet build` 0 Warnungen, `dotnet test` grün
+- [x] `npm run lint && npm run build` grün
+- [x] `build-docs.mjs` + `check-links.ps1` grün
+- [x] CHANGELOG, status.md, protokoll.md aktualisiert
 
 ## 9 Risiken und Rückbau
 
@@ -949,7 +954,7 @@ pwsh -NoProfile -File tools/check-links.ps1
 | **Neue Config-Topics werden versehentlich schreibbar** | `[ExpertMode]` + Tests auf `WriteOutcome.ExpertModeRequired` ohne Experten-Modus |
 | **Energie-Entitäten zeigen 0 statt „unbekannt“** | DP-3340-Gate + `EnergyMeasurementTests` |
 | **`src_old/`-Encoding zerstört Umlaute** | CP1252 lesen/schreiben; `git diff --stat src_old/` prüfen |
-| **Experten-Modus wirkt unter MQTT erst nach Neustart** | Aufgabe 10.13; Fallback dokumentieren, nicht stillschweigend |
+| ~~**Experten-Modus wirkt unter MQTT erst nach Neustart**~~ **erledigt (2026-11-16)** | Aufgabe 10.13 umgesetzt: `ExpertModeCoordinator` und `MqttTopicMap.UpdateExpertMode`; der Fallback wurde **nicht** gebraucht |
 | **Abgeleitete Werte rechnen mit veralteten Eingängen** | gleicher Zyklus + `IValueCache.IsStale`; sonst `unknown` |
 
 **Rückbau:** V2 ist additiv. Ein `git revert` des Phase-10-Commits entfernt die neuen
@@ -985,3 +990,33 @@ Wichtig:
   pwsh -NoProfile -File tools/check-links.ps1 - alles gruen.
 - Protokoll und status.md aktualisieren.
 ```
+
+---
+
+## 11 Ergebnis und Abweichungen (2026-11-16)
+
+**Ergebnis:** Alle 16 Aufgaben sind umgesetzt – auch 10.13 (Experten-Modus zur Laufzeit
+für MQTT) **ohne** den dokumentierten Fallback. Testzahl **396 → 497** (Domain 36 → 77,
+Contract 10 → 20, Bacnet 56, Gateway 294 → 344), `dotnet build` 0 Warnungen / 0 Fehler.
+**Fixtures unverändert:** `docs/topics.json` und `docs/topics.md` sind byte-identisch zu
+`HEAD`; neu ist `docs/topics-v2.json` mit **78** Items. Katalog: **205** Items
+(127 V1 + 78 V2).
+
+| # | Abweichung / Erkenntnis |
+|---|---|
+| 1 | Die fünf neuen Enums liegen in **zwei** Dateien (`ZoneStatusEnums.cs`, `WarmWaterStatusEnums.cs`) statt in fünf – die **Typnamen** sind unverändert (Vertrag). |
+| 2 | Das Command-Topic hat eine eigene Legacy-Datei `Command.cs`; `CLASS_FILES` endet auf `['Config', 'Status', 'Command']`. |
+| 3 | `docs/topics-v2.json` wird **ohne** BOM erzeugt (die V1-Fixture hat eines); der V2-Contract-Test toleriert beides. |
+| 4 | **Frische-Regel:** `ValueCache.IsStale` lässt nach drei Sekundär-Zyklen (15 min) ablaufen; stündliche Eingänge wären 45 von 60 Minuten „veraltet“. `DerivedValueService` prüft ein **prioritätsbewusstes** Fenster (3 × Leseabstand) und fragt `IValueCache.IsMarkedStale(id)` (neu) ab – ein fehlgeschlagener Read bleibt Ausschlusskriterium. |
+| 5 | `Status/Energy/Available` publiziert das **Gate** selbst (nicht `MqttStatusPublisher`) und leert es beim Start **und** nach jedem Connect; beim Wechsel auf `0` werden die 11 retained Energie-Topics geleert. |
+| 6 | `CopInstant`: negatives Δelektrisch (Zählerrücksetzung) ⇒ `unknown`, nicht nur `= 0`. |
+| 7 | Der Experten-Modus wirkt **sofort** (§5.6): `MqttTopicMap.UpdateExpertMode`, `MqttSubscriber` bestellt ab/neu, `HomeAssistantDiscovery` republiziert und räumt das alte Plattform-Topic; der Koordinator ist ein Hosted Service. |
+| 8 | Discovery: **220** Payloads (205 Items + 7 Derived + 8 Status); `unique_id` der Derived-Werte `{Identifier}_derived_{name}`; `CoolingActive` als `binary_sensor` mit `payload_on`/`payload_off`. |
+| 9 | `GET /api/items` liefert jetzt `description` (Tooltip). |
+| 10 | Die UI zeigt die Blöcke in einem neuen Reiter **„Anlage“** der Diagnose-Seite (nicht auf dem Dashboard – erklärt statt Kennzahl); der Hilfe-Link ist `/help/verbrauch`, weil `build-docs.mjs` den Zahlenpräfix aus dem Slug entfernt. |
+| 11 | `tools/build-docs.mjs` musste **YAML-Blocklisten** im Front-Matter lernen (`tags:` mit `-`-Liste) – die Vorgabe in `docs.instructions.md` schreibt sie vor, der Parser konnte sie nicht. |
+
+**Nachweis:** `generate-topics.mjs --check` (127) · `--check-v2` (78) ·
+`--catalog-check` (205) · `npm run lint` + `npm run build` · `node tools/build-docs.mjs`
+(17 Seiten) · `tools/check-links.ps1` (0 Probleme). Protokoll:
+[protokoll.md](protokoll.md), Abschnitt *2026-11-16 (2)*.

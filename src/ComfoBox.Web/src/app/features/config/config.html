@@ -78,6 +78,56 @@
     </div>
   </p-card>
 
+  <!--
+    Die Experten-Parameter erscheinen erst hinter dem Schalter: ohne
+    Experten-Modus liefert der Server sie gesperrt (`writable = false`).
+    Geschrieben wird auf der Seite „Werte" – hier steht nur der Überblick.
+  -->
+  @if (expertModeActive()) {
+    <p-card [header]="t().config.expertItems" styleClass="cb-card">
+      <p class="cb-hint">{{ t().config.expertItemsHint }}</p>
+
+      @if (hasExpertEnergyItems()) {
+        <p-message severity="warn" styleClass="w-full">
+          <p>{{ t().config.expertItemsEnergyWarning }}</p>
+        </p-message>
+      }
+
+      <p-table [value]="expertItems()" styleClass="cb-table-full">
+        <ng-template #header>
+          <tr>
+            <th>{{ t().config.expertItemName }}</th>
+            <th>{{ t().config.expertItemGroup }}</th>
+            <th>{{ t().config.expertItemTopic }}</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-item>
+          <!-- Der Tooltip trägt die Katalog-Beschreibung (REST). -->
+          <tr [title]="item.description ?? item.displayName">
+            <td>{{ item.displayName }}</td>
+            <td>{{ item.group }}</td>
+            <td><code>{{ item.stateTopic ?? t().common.dash }}</code></td>
+            <td>
+              <p-button
+                icon="pi pi-arrow-right"
+                [text]="true"
+                [ariaLabel]="t().config.expertItemOpen(item.displayName)"
+                [routerLink]="['/items']"
+                [queryParams]="{ q: item.id }"
+              />
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="4">{{ t().config.expertItemNone }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </p-card>
+  }
+
   <!-- Sicherheit -->
   <p-card [header]="t().config.security" styleClass="cb-card">
     <p class="cb-hint">{{ t().config.securityHint }}</p>

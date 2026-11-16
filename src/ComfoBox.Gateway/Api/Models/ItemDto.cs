@@ -42,6 +42,15 @@ public sealed record ItemDto
     public required string DisplayName { get; init; }
 
     /// <summary>
+    /// Die vollständige Beschreibung aus dem Item-Katalog (oder <c>null</c>).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DisplayName"/> ist die gekürzte erste Zeile; die
+    /// Beschreibung trägt den vollständigen Text für Tooltips.
+    /// </remarks>
+    public string? Description { get; init; }
+
+    /// <summary>
     /// Die Art des Wertes: <c>analog</c>, <c>enum</c> oder <c>date</c>.
     /// </summary>
     public required string Kind { get; init; }
@@ -132,6 +141,7 @@ public sealed record ItemDto
             Group = item.Group,
             Name = item.Name,
             DisplayName = MqttValueFormatter.DisplayName(item),
+            Description = item.Description,
             Kind = KindOf(item.Kind),
             Value = NumericValue(cached?.Value),
             ValueText = TextValue(item, cached?.Value),

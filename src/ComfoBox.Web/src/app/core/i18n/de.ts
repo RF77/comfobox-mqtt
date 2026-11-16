@@ -107,8 +107,7 @@ export const DE: Translations = {
 
   item: {
     stale: 'veraltet',
-    expert: 'Expertenmodus',
-    save: 'Speichern',
+    expert: 'Expertenmodus',    expertRequired: 'Experten-Modus erforderlich',    save: 'Speichern',
     choose: 'Wert wählen',
     readonly: 'Nur lesbar',
     newValue: (name) => `Neuer Wert für ${name}`,
@@ -130,7 +129,7 @@ export const DE: Translations = {
     maxWritesHint: 'Der Zähler schützt den EEPROM der Heizung. 0 bedeutet: kein Limit.',
     expertMode: 'Experten-Modus',
     expertModeHint:
-      'Erlaubt das Schreiben sensibler Parameter. Der Schalter wird sofort gespeichert; die MQTT-Topics dieser Werte entstehen nach einem Neustart. Standard: aus.',
+      'Erlaubt das Schreiben sensibler Parameter. Der Schalter wirkt sofort – die sensiblen Werte werden ohne Neustart schreibbar. Standard: aus.',
     expertModeConfirmTitle: 'Experten-Modus aktivieren',
     expertModeConfirmText:
       'Der Experten-Modus erlaubt das Schreiben von sensiblen Parametern der Heizung. Ein falscher Wert kann zu Fehlfunktionen führen. Fortfahren?',
@@ -138,7 +137,17 @@ export const DE: Translations = {
     expertModeSaved: (enabled) =>
       enabled ? 'Experten-Modus eingeschaltet' : 'Experten-Modus ausgeschaltet',
     expertModeSavedHint:
-      'Der Wert ist gespeichert. Die MQTT-Topics dieser Werte entstehen nach einem Neustart des Gateways.',
+      'Der Wert ist gespeichert. Die Werte-Liste wurde neu geladen – die sensiblen Parameter sind sofort schreibbar.',
+    expertItems: 'Experten-Parameter',
+    expertItemsHint:
+      'Diese Parameter sind nur bei aktivem Experten-Modus schreibbar. Geschrieben wird auf der Seite „Werte“ – Schreibschutz und Schreibzähler gelten auch dort.',
+    expertItemsEnergyWarning:
+      'Parameter aus dem Energie-Umfeld (Config/Energy…) greifen in die Regelung der Wärmepumpe ein. Ändern Sie sie nur mit dem Technikerhandbuch und notieren Sie den alten Wert.',
+    expertItemName: 'Parameter',
+    expertItemGroup: 'Gruppe',
+    expertItemTopic: 'Topic',
+    expertItemOpen: (name) => `${name} öffnen`,
+    expertItemNone: 'Keine Experten-Parameter im Katalog.',
     bacnetSection: 'BACnet (serielle Schnittstelle)',
     appliesImmediately: 'wirkt sofort',
     deviceId: 'Geräte-ID',
@@ -260,6 +269,7 @@ export const DE: Translations = {
     tabWrites: 'Schreibvorgänge',
     tabConnections: 'Verbindungen',
     tabBus: 'BACnet-Bus',
+    tabPlant: 'Anlage',
     component: 'Komponente',
     source: 'Quelle',
     state: 'Zustand',
@@ -315,6 +325,63 @@ export const DE: Translations = {
     kindFrameSent: 'Frame gesendet',
     kindDataReceived: 'BACnet-Daten empfangen',
     kindReplyPosted: 'Reply Postponed',
+    loadingValues: 'Die Werte der Anlage werden geladen …',
+    noValues: 'Diese Werte sind noch nicht verfügbar.',
+    parameter: 'Größe',
+    reading: 'Wert',
+    topic: 'MQTT-Topic',
+    heatingCard: 'Warum heizt es nicht?',
+    heatingLead:
+      'Die Zonenübersteuerung nennt die Ursache meist in einem Wort – Ferien, Zeiten AUS, '
+      + 'Taupunktwächter oder eine WP-Störung. Die Sollwertart zeigt, welcher Sollwert gerade gilt.',
+    heatingHelpLink: 'Hilfe: Warum bleibt ein Raum kalt?',
+    zoneOverride: 'Zonenübersteuerung (Override)',
+    zoneState: 'Zustand Zone',
+    zoneSetPointType: 'Sollwertart Zone',
+    warmWaterState: 'Zustand Warmwasser',
+    warmWaterOverride: 'Übersteuerung Warmwasser',
+    heatPumpReturnTemperature: 'Rücklauftemperatur Wärmepumpe',
+    zoneFlowTemperature: 'Vorlauftemperatur Zone',
+    refrigerantCard: 'Kältekreis',
+    refrigerantLead:
+      'Heißgas und Sauggas zeigen, ob Kältemittel fehlt oder das Expansionsventil offen steht; '
+      + 'Verdampfer und Kondensator zeigen die Wärmetauscher. Heißgas über 130 °C ist eine Störung.',
+    suctionGasTemperature: 'Sauggastemperatur',
+    hotGasTemperature: 'Heißgastemperatur',
+    evaporatorTemperature: 'Verdampfertemperatur',
+    condenserTemperature: 'Kondensatortemperatur',
+    defrostDeltaActual: 'Abtau-Differenz (Ist)',
+    superheatHint:
+      'Die Überhitzung (Superheat) rechnet der Gateway selbst aus Sauggas- und '
+      + 'Verdampfertemperatur. Sie ist kein Katalogwert und steht nur als MQTT-Topic bereit – '
+      + 'etwa für Home Assistant. Die Formel steht im Tooltip.',
+    superheatFormula:
+      'Überhitzung = Sauggastemperatur (DP 641) − Verdampfertemperatur (DP 660)',
+    energyCard: 'Verbrauch und Effizienz',
+    energyLead:
+      'Wärmemengen- und Stromzähler des Reglers. Der COP ist ein Laufzeitmittel, kein Momentanwert.',
+    energyBanner:
+      'Die Wärmemengenmessung ist am Gerät ausgeschaltet (DP 3340 = 0). Die kWh-Zähler und der '
+      + 'COP liefern deshalb keine Werte. Am Regler unter „Wärmemengenmessung“ auf 1 oder 2 '
+      + 'stellen und den Durchflussfühler prüfen.',
+    energyHelpLink: 'Hilfe: Verbrauch und Effizienz',
+    measurementMode: 'Wärmemengenmessung (DP 3340)',
+    energyAvailable: 'Messung aktiv',
+    energyUnavailable: 'Messung aus',
+    energyAvailableNote:
+      'Home Assistant sieht dieselbe Aussage als MQTT-Topic ComfoBox/Status/Energy/Available '
+      + '(1 = verfügbar, 0 = nicht verfügbar). Über die REST-Schnittstelle gibt es dieses Topic nicht.',
+    heatingPower: 'Heizleistung',
+    warmWaterPower: 'Warmwasserleistung',
+    thermalEnergyHeating: 'Wärmemenge Heizen',
+    thermalEnergyWarmWater: 'Wärmemenge Warmwasser',
+    thermalEnergyTotal: 'Wärmemenge gesamt',
+    electricalEnergyHeating: 'Strommenge Heizen',
+    electricalEnergyWarmWater: 'Strommenge Warmwasser',
+    electricalEnergyTotal: 'Strommenge gesamt',
+    copHeating: 'COP Heizen (Laufzeitmittel)',
+    copWarmWater: 'COP Warmwasser (Laufzeitmittel)',
+    copTotal: 'COP gesamt (Laufzeitmittel)',
   },
 
   logs: {

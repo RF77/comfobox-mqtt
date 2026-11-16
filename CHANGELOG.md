@@ -36,6 +36,31 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Vertrag für KI-/MCP-Nutzung – REST-Endpunkte, Item-Felder, Entitäts-IDs und
   Grenzen beim Schreiben.
 
+- **78 neue Topics für Diagnose, Energie und Experten-Parameter.** Statt nur
+  Bedienwerten zeigt das Gateway jetzt auch, **warum** die Anlage tut, was sie tut:
+  Diagnose für Zone und Warmwasser (Sollwerttyp, Überhöhung, Freigabe, Betriebsart,
+  Frostschutz), Kältekreis und Wärmepumpe (Drücke, Temperaturen, Verdichter,
+  Überhitzung), Puffer und Solar, Energie und COP, 11 Zähler sowie 21
+  Experten-Parameter. Die Topics liegen unter `ComfoBox/Status/*`, `ComfoBox/Config/*`
+  und `ComfoBox/Command/ResetHeatingCurveAdaption`. Die 127 bestehenden Topics bleiben
+  **byte-identisch** – der neue Vertrag steht in
+  [docs/topics-v2.md](docs/topics-v2.md), die Fixture in
+  [docs/topics-v2.json](docs/topics-v2.json).
+- **7 abgeleitete Topics unter `ComfoBox/Status/Derived/*`**: Überhitzung, Spreizung,
+  Puffer-Schichtung, Laufzeitverhältnis, Wartung fällig, Momentan-COP und Kühlung
+  aktiv. Sie werden aus vorhandenen Werten **gerechnet** und erscheinen als
+  `unknown`, wenn die Eingänge fehlen – **nie** als 0.
+- **`ComfoBox/Status/Energy/Available`** sagt den Energie-Entitäten, ob die
+  Wärmemengenmessung überhaupt vorhanden ist (DP 3340). Ohne Messung werden Leistung,
+  kWh und COP gar nicht mehr veröffentlicht.
+- **Frische-Regel für abgeleitete Werte.** Ein gerechneter Wert entsteht nur, wenn
+  beide Eingänge im passenden Fenster gelesen wurden: Das Fenster richtet sich nach
+  der Priorität des Eingangs (Sekundärwerte 3 × 5 min, stündliche Werte 3 × 1 h). Ein
+  fehlgeschlagener Read schließt den Wert aus; das Topic bleibt `unknown`.
+- **`description` in `GET /api/items`.** Der Katalogtext eines Werts ist jetzt Teil
+  der API-Antwort und erscheint in der Oberfläche als Tooltip (Bereich,
+  Temperaturgrenzen, Bedeutung der Betriebsart).
+
 ### Changed
 
 - **⚠️ breaking: zwei Topics im Bereich `States/Inputs` heißen neu** (Befund R7 aus dem
@@ -86,6 +111,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   bringen den `device`-Block ohnehin selbst mit. Das retained Topic wird jetzt
   mit einer leeren Nachricht **entfernt**.
 
+- **`RefreshPriority.Slow`: Priorität 3 wird stündlich gelesen** – unabhängig von
+  `Gateway:PollIntervalSeconds`. Zähler, Service-Intervalle, Solar und die
+  Wärmemengenmessung kosten damit 25 statt 1 500 Lesevorgänge pro Stunde; der Faktor
+  wird aus dem eingestellten Intervall berechnet, „1 h“ bleibt also auch bei einem
+  30-s-Zyklus richtig.
+- **Der Experten-Modus wirkt jetzt sofort – auch unter MQTT.** Bisher wurde er beim
+  Start gebunden: Ein Schalter in der Oberfläche änderte die REST-Sicht, die
+  `/Set`-Topics und die Home-Assistant-Discovery aber erst nach einem Neustart. Jetzt
+  baut die Topic-Zuordnung ihre Bindings neu auf, der Subscriber bestellt
+  `/Set`-Topics ab und neu, und die Discovery wird erneut veröffentlicht – inklusive
+  Aufräumen des alten Plattform-Topics (wechselt ein Wert von Zahl zu Sensor, bliebe
+  sonst die alte Entität stehen).
+- **Die Home-Assistant-Discovery ist für Diagnose- und Dauerwerte aufgeräumt:**
+  stündliche Werte kommen mit `entity_registry_enabled_default: false` (vorhanden,
+  aber standardmäßig nicht aktiviert), reine Diagnosewerte tragen
+  `entity_category: diagnostic`, Parameter `config`, Energie- und Leistungswerte
+  `device_class`/`state_class` (kWh/kW), und die Energie-Entitäten hängen an
+  `Status/Energy/Available`.
+- **Die Oberfläche hat einen Reiter „Anlage“** auf der Diagnose-Seite: „Warum heizt
+  es nicht?“ (Heizkurve, Überhöhung, Freigaben), Kältekreis (Drücke, Temperaturen,
+  Überhitzung) und Verbrauch/Effizienz (Zähler, COP, Wartungsprognose). Die 21
+  Experten-Parameter erscheinen nur, wenn der Experten-Schalter aktiv ist.
+- **Zwei neue Hilfeseiten**: „Verbrauch und Effizienz“ und „Warum bleibt ein Raum
+  kalt?“ – beide mit Symptom, Ursache und Schritten zum Prüfen, direkt aus der
+  Oberfläche verlinkt.
+
 ### Fixed
 
 Abgleich des Item-Katalogs mit dem **Technikerhandbuch ECR450 V4.0** (Befunde R1–R12,
@@ -106,6 +157,17 @@ Abgleich des Item-Katalogs mit dem **Technikerhandbuch ECR450 V4.0** (Befunde R1
   erlaubte Werte `0/1/11` (`Y1 Antriebstyp`).
 - **`CoolingZone/Cooling` lehnt den Wert 2 ab** (R9): das Gerät kennt nur `0/1/3`.
 - **Warmwasser-Sollwerte ohne Obergrenze** sind korrigiert (R10, siehe *Changed*).
+
+Aus **Phase 10** (Topics V2, [Aufgabenstellung](docs/06-aufgaben/phase-10-topics-v2.md)):
+
+- **Ohne Wärmemengenmessung werden keine kWh-/COP-Nullwerte mehr veröffentlicht.**
+  Meldet die Anlage `MeasurementMode = 0` (DP 3340), sind Zähler, Leistung und COP
+  nicht 0, sondern **unbekannt**: die Topics werden geleert,
+  `Status/Energy/Available` geht auf `0`, und beim Start wie nach jedem Connect wird
+  der Zustand neu gesetzt – alte retained Werte können so nicht stehen bleiben.
+- **`tools/build-docs.mjs` liest YAML-Blocklisten im Front-Matter.** Die Vorgabe in
+  `.github/instructions/docs.instructions.md` schreibt `tags:` als `-`-Liste vor; der
+  Parser machte daraus einen leeren String und brach mit einem `TypeError` ab.
 
 ## [1.1.0] – 2026-11-15
 

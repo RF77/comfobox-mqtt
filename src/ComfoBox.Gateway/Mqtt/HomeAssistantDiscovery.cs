@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ComfoBox.Domain.Derived;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Configuration;
 using MQTTnet;
@@ -32,10 +33,41 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     private const string Model = "ComfoBox Series 5 (ELESTA)";
     private const string OriginName = "comfobox-gateway";
 
+    // Die Payloads der Energie-Availability (Status/Energy/Available).
+    private const string EnergyAvailablePayload = "1";
+    private const string EnergyUnavailablePayload = "0";
+
+    private const string CoolingActiveDerivedId = "derived.cooling_active";
+
+    /// <summary>
+    /// Die deutschen Anzeigenamen der sieben abgeleiteten Werte.
+    /// </summary>
+    /// <remarks>
+    /// Die Namen stehen hier und nicht in der Domäne: die Domäne beschreibt
+    /// die Formel, die Discovery den Namen in Home Assistant.
+    /// </remarks>
+    private static readonly Dictionary<string, string> DerivedDisplayNames =
+        new(StringComparer.Ordinal)
+        {
+            ["derived.superheat"] = "Überhitzung",
+            ["derived.heating_circuit_delta"] = "Spreizung Heizkreis",
+            ["derived.buffer_delta"] = "Puffer-Schichtung",
+            ["derived.runtime_ratio"] = "Laufzeitverhältnis",
+            ["derived.service_due"] = "Wartung fällig",
+            [DerivedValues.CopInstantId] = "Momentan-COP",
+            [CoolingActiveDerivedId] = "Kühlung aktiv",
+        };
+
+    // Die Plattformen, zwischen denen ein Item wechseln kann. Wird der
+    // Experten-Modus umgeschaltet, entsteht die Entität unter einem **anderen**
+    // Discovery-Topic (number ↔ sensor) - das alte muss geräumt werden, sonst
+    // behält Home Assistant die erste Fassung.
+    private static readonly string[] WritableComponents = ["number", "select"];
+
     private readonly MqttTopicMap _topics;
     private readonly IItemCatalog _catalog;
     private readonly MqttOptions _options;
-    private readonly GatewayOptions _gatewayOptions;
+    private readonly GatewayRuntimeSettings _runtime;
     private readonly ILogger<HomeAssistantDiscovery> _logger;
 
     /// <summary>
@@ -44,25 +76,25 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// <param name="topics">Die Topic-Zuordnung.</param>
     /// <param name="catalog">Der Item-Katalog.</param>
     /// <param name="options">Die MQTT-Einstellungen.</param>
-    /// <param name="gatewayOptions">Die Grundeinstellungen (Experten-Modus).</param>
+    /// <param name="runtime">Die Laufzeit-Einstellungen (Experten-Modus).</param>
     /// <param name="logger">Logger.</param>
     public HomeAssistantDiscovery(
         MqttTopicMap topics,
         IItemCatalog catalog,
         MqttOptions options,
-        GatewayOptions gatewayOptions,
+        GatewayRuntimeSettings runtime,
         ILogger<HomeAssistantDiscovery> logger)
     {
         ArgumentNullException.ThrowIfNull(topics);
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(options);
-        ArgumentNullException.ThrowIfNull(gatewayOptions);
+        ArgumentNullException.ThrowIfNull(runtime);
         ArgumentNullException.ThrowIfNull(logger);
 
         _topics = topics;
         _catalog = catalog;
         _options = options;
-        _gatewayOptions = gatewayOptions;
+        _runtime = runtime;
         _logger = logger;
     }
 
@@ -79,15 +111,44 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             return;
         }
 
+        // Der Experten-Modus wird **bei jedem Publish** gelesen - nicht beim
+        // Start gebunden. Ein Umschalten wirkt damit sofort auf die Plattform
+        // (sensor ↔ number/select) und auf das command_topic.
+        var expertModeEnabled = _runtime.ExpertMode;
+
         var count = 0;
+
+        // Zuerst die nicht mehr gültige Plattform räumen: ein Wechsel von
+        // number auf sensor lässt das retained number-Topic sonst stehen -
+        // Home Assistant behielte die erste Entität. Nur experten-pflichtige
+        // Items können die Plattform überhaupt wechseln; bei allen anderen
+        // wäre das Räumen eine leere Nachricht je Connect.
+        foreach (var item in _catalog.All)
+        {
+            if (!item.IsWritable || !item.RequiresExpertMode)
+            {
+                continue;
+            }
+
+            var component = ComponentFor(item, item.IsWritableWithExpertMode(expertModeEnabled));
+            await ClearStaleComponentsAsync(client, item, component, cancellationToken).ConfigureAwait(false);
+        }
 
         foreach (var item in _catalog.All)
         {
-            var writable = item.IsWritableWithExpertMode(_gatewayOptions.ExpertMode);
+            var writable = item.IsWritableWithExpertMode(expertModeEnabled);
             var payload = BuildItemPayload(item, writable);
 
             if (await PublishAsync(client, DiscoveryTopic(item, writable), payload, cancellationToken)
                 .ConfigureAwait(false))
+            {
+                count++;
+            }
+        }
+
+        foreach (var (topic, payload) in BuildDerivedPayloads())
+        {
+            if (await PublishAsync(client, topic, payload, cancellationToken).ConfigureAwait(false))
             {
                 count++;
             }
@@ -109,6 +170,39 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
         await ClearAsync(client, DeviceTopic, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Home-Assistant-Discovery publiziert: {Count} Komponenten.", count);
+    }
+
+    /// <summary>
+    /// Publiziert die Discovery auf allen Clients neu (Wechsel des Experten-Modus).
+    /// </summary>
+    /// <param name="clients">Die verbundenen Clients.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der das Neu-Publizieren abschließt.</returns>
+    /// <remarks>
+    /// <para>
+    /// Die Discovery ist retained und idempotent: dieselbe Payload zweimal zu
+    /// senden ist gefahrlos. Der Weg über die Clients ist trotzdem der einzige,
+    /// der auch einen <c>number</c> → <c>sensor</c>-Wechsel abbildet - dafür muss
+    /// das alte Topic geleert werden (siehe <see cref="OnConnectedAsync"/>).
+    /// </para>
+    /// <para>
+    /// <c>Mqtt:EnableDiscovery=false</c> wird weiterhin respektiert: dann tut
+    /// <see cref="OnConnectedAsync"/> nichts, und diese Methode auch nicht.
+    /// </para>
+    /// </remarks>
+    public async Task RepublishAsync(IReadOnlyList<IMqttClient> clients, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(clients);
+
+        if (!_options.EnableDiscovery)
+        {
+            return;
+        }
+
+        foreach (var client in clients)
+        {
+            await OnConnectedAsync(client, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -178,9 +272,49 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// <param name="writable">Ist das Item schreibbar?</param>
     /// <returns>Das Topic, z. B. <c>homeassistant/number/comfobox_zone_set_point_normal/config</c>.</returns>
     public string DiscoveryTopic(ItemDefinition item, bool writable)
+        => DiscoveryTopicFor(item, ComponentFor(item, writable));
+
+    /// <summary>
+    /// Das Discovery-Topic eines Items für eine bestimmte Plattform.
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <param name="component">Die Plattform, z. B. <c>sensor</c>.</param>
+    /// <returns>Das Topic, z. B. <c>homeassistant/sensor/comfobox_.../config</c>.</returns>
+    private string DiscoveryTopicFor(ItemDefinition item, string component)
+        => $"{_options.DiscoveryPrefix}/{component}/{UniqueId(item)}/config";
+
+    /// <summary>
+    /// Entfernt die Discovery-Topics, die für dieses Item nicht mehr gelten.
+    /// </summary>
+    /// <param name="client">Der Client.</param>
+    /// <param name="item">Das Item.</param>
+    /// <param name="activeComponent">Die Plattform, die jetzt publiziert wird.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der das Räumen abschließt.</returns>
+    /// <remarks>
+    /// Betroffen sind nur schreibbare Items: bei Nur-Lese-Items ist
+    /// <c>sensor</c> die einzige Plattform, ein Wechsel ist dort unmöglich.
+    /// </remarks>
+    private async Task ClearStaleComponentsAsync(
+        IMqttClient client,
+        ItemDefinition item,
+        string activeComponent,
+        CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(item);
-        return $"{_options.DiscoveryPrefix}/{ComponentFor(item, writable)}/{UniqueId(item)}/config";
+        if (!string.Equals(activeComponent, "sensor", StringComparison.Ordinal))
+        {
+            await ClearAsync(client, DiscoveryTopicFor(item, "sensor"), cancellationToken).ConfigureAwait(false);
+        }
+
+        foreach (var component in WritableComponents)
+        {
+            if (string.Equals(component, activeComponent, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            await ClearAsync(client, DiscoveryTopicFor(item, component), cancellationToken).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
@@ -193,17 +327,42 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        // Die Energie-Entitäten hängen an der Wärmemengenmessung (DP 3340),
+        // nicht am Gateway-Health: ohne Messung liefert der Regler keine
+        // kWh-Werte und keinen COP.
+        var energyGated = item.RequiresEnergyMeasurement;
+
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["name"] = MqttValueFormatter.DisplayName(item),
             ["unique_id"] = UniqueId(item),
             ["state_topic"] = _topics.ItemTopic(item),
-            ["availability_topic"] = _topics.HealthTopic,
-            ["payload_available"] = "online",
-            ["payload_not_available"] = "offline",
+            ["availability_topic"] = energyGated ? _topics.EnergyAvailableTopic : _topics.HealthTopic,
+            ["payload_available"] = energyGated ? EnergyAvailablePayload : "online",
+            ["payload_not_available"] = energyGated ? EnergyUnavailablePayload : "offline",
             ["device"] = BuildDevice(),
             ["origin"] = BuildOrigin(),
         };
+
+        // Neue (V2-)Config-Items sind Experten-Werkzeug: Sie liegen in der
+        // Config-Kategorie und sind standardmässig aus. Das gilt unabhängig
+        // vom Experten-Modus - der entscheidet nur über number/select.
+        if (item.IsV2 && item.IsWritable && item.Group.StartsWith("Config/", StringComparison.Ordinal))
+        {
+            payload["entity_category"] = "config";
+            payload["entity_registry_enabled_default"] = false;
+        }
+        else if (IsDiagnosticGroup(item.Group))
+        {
+            payload["entity_category"] = "diagnostic";
+        }
+
+        // P3 wird nur stündlich gelesen (Zähler, langsame Fühler) - solche
+        // Entitäten sollen Home Assistant nicht mit Recorder-Einträgen füllen.
+        if (!writable && item.Priority == RefreshPriority.Slow)
+        {
+            payload["entity_registry_enabled_default"] = false;
+        }
 
         // Ein schreibbares Item bekommt das Schreib-Topic. Die beiden
         // Legacy-DateItems sind read-only und haben deshalb kein command_topic.
@@ -217,7 +376,9 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             payload["unit_of_measurement"] = item.Unit;
         }
 
-        var deviceClass = DeviceClassFor(item.Unit);
+        // Ein COP ist ein Verhältnis, keine Temperatur oder Leistung: Home
+        // Assistant kennt dafür keine Geräteklasse.
+        var deviceClass = IsCop(item) ? null : DeviceClassFor(item.Unit);
         if (deviceClass is not null)
         {
             payload["device_class"] = deviceClass;
@@ -231,7 +392,7 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             }
             else
             {
-                payload["state_class"] = "measurement";
+                payload["state_class"] = StateClassFor(item);
             }
         }
         else if (item.Kind == ItemValueKind.Enum)
@@ -300,6 +461,90 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     }
 
     /// <summary>
+    /// Die Discovery-Payloads der sieben abgeleiteten Werte.
+    /// </summary>
+    /// <returns>Topic → Payload.</returns>
+    /// <remarks>
+    /// <para>
+    /// Die abgeleiteten Werte sind keine Katalog-Items (kein BACnet-Objekt):
+    /// sie werden vom Gateway gerechnet und unter
+    /// <c>{BaseTopic}/Status/Derived/…</c> publiziert. Sie erscheinen deshalb
+    /// als eigene Entitäten - bis auf <c>CoolingActive</c> als
+    /// <c>binary_sensor</c>, weil der Wert <c>1</c>/<c>0</c> ein Zustand ist.
+    /// </para>
+    /// <para>
+    /// Alle sieben sind Diagnose (<c>entity_category: diagnostic</c>) und
+    /// hängen an der Health-Availability: ohne Gateway-Verbindung ist keiner
+    /// der Werte belegbar.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<KeyValuePair<string, IReadOnlyDictionary<string, object?>>> BuildDerivedPayloads()
+    {
+        var result = new List<KeyValuePair<string, IReadOnlyDictionary<string, object?>>>(
+            DerivedValues.All.Count);
+
+        foreach (var definition in DerivedValues.All)
+        {
+            var binary = string.Equals(definition.Id, CoolingActiveDerivedId, StringComparison.Ordinal);
+            var component = binary ? "binary_sensor" : "sensor";
+
+            // Discovery-Kennungen sind ASCII-only; die Ids enthalten Punkte.
+            // Nur das **letzte** Segment wird verwendet: die Id lautet bereits
+            // "derived.superheat", der Präfix steht schon in der Kennung -
+            // sonst entsteht "comfobox_derived_derived_superheat".
+            var uniqueId = $"{DeviceIdentifier}_derived_{DiscoveryId.Slug(LastSegment(definition.Id))}";
+
+            var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+            {
+                ["name"] = DerivedDisplayNames.TryGetValue(definition.Id, out var displayName)
+                    ? displayName
+                    : definition.TopicPath,
+                ["unique_id"] = uniqueId,
+                ["state_topic"] = $"{_topics.BaseTopic}/Status/{definition.TopicPath}",
+                ["availability_topic"] = _topics.HealthTopic,
+                ["payload_available"] = "online",
+                ["payload_not_available"] = "offline",
+                ["entity_category"] = "diagnostic",
+                ["device"] = BuildDevice(),
+                ["origin"] = BuildOrigin(),
+            };
+
+            if (!string.IsNullOrEmpty(definition.Unit))
+            {
+                payload["unit_of_measurement"] = definition.Unit;
+            }
+
+            if (binary)
+            {
+                // Der Dienst publiziert 1/0 - nicht die HA-Vorgabe ON/OFF.
+                payload["payload_on"] = "1";
+                payload["payload_off"] = "0";
+            }
+            else if (string.Equals(definition.Unit, "%", StringComparison.Ordinal))
+            {
+                payload["state_class"] = "measurement";
+            }
+
+            result.Add(new KeyValuePair<string, IReadOnlyDictionary<string, object?>>(
+                $"{_options.DiscoveryPrefix}/{component}/{uniqueId}/config",
+                payload));
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Das letzte Segment einer punktgetrennten Id.
+    /// </summary>
+    /// <param name="id">Die Id, z. B. <c>derived.superheat</c>.</param>
+    /// <returns>Das letzte Segment, z. B. <c>superheat</c>.</returns>
+    private static string LastSegment(string id)
+    {
+        var index = id.LastIndexOf('.');
+        return index < 0 ? id : id[(index + 1)..];
+    }
+
+    /// <summary>
     /// Die Geräte-Referenz für die Entitäten.
     /// </summary>
     /// <returns>Die Referenz.</returns>
@@ -329,12 +574,48 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     /// </summary>
     /// <param name="unit">Die Einheit.</param>
     /// <returns>Der Gerätetyp (oder <c>null</c>).</returns>
+    /// <remarks>
+    /// Für <c>K</c> (Differenz), <c>%</c>, <c>m³/h</c> und <c>h</c> gibt es
+    /// keine passende Home-Assistant-Geräteklasse - dort bleibt es bei der
+    /// reinen Einheit.
+    /// </remarks>
     private static string? DeviceClassFor(string? unit)
         => unit switch
         {
             "°C" => "temperature",
+            "kWh" => "energy",
+            "kW" => "power",
             _ => null,
         };
+
+    /// <summary>
+    /// Die <c>state_class</c> eines read-only Analogwerts.
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <returns><c>total_increasing</c> für kWh-Zähler, sonst <c>measurement</c>.</returns>
+    private static string StateClassFor(ItemDefinition item)
+        => string.Equals(item.Unit, "kWh", StringComparison.Ordinal)
+            ? "total_increasing"
+            : "measurement";
+
+    /// <summary>
+    /// Ist das Item ein COP (Gütezahl)?
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <returns><c>true</c> für <c>Status/Energy/Cop…</c>.</returns>
+    private static bool IsCop(ItemDefinition item)
+        => string.Equals(item.Group, "Status/Energy", StringComparison.Ordinal)
+            && item.Name.StartsWith("Cop", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Gehört die Gruppe in die Diagnose-Kategorie?
+    /// </summary>
+    /// <param name="group">Die Topic-Gruppe.</param>
+    /// <returns><c>true</c> für Zähler und abgeleitete Werte.</returns>
+    private static bool IsDiagnosticGroup(string group)
+        => string.Equals(group, "Status/Counters", StringComparison.Ordinal)
+            || group.StartsWith("Status/Counters/", StringComparison.Ordinal)
+            || string.Equals(group, "Status/Derived", StringComparison.Ordinal);
 
     /// <summary>
     /// Ergänzt die Eigenschaften einer Zahl-Entität.

@@ -8,7 +8,8 @@ namespace ComfoBox.Gateway.Bacnet;
 /// <remarks>
 /// Die Prioritäten des Katalogs werden hier ausgewertet (Befund A15):
 /// primäre Items in jedem Zyklus, sekundäre Items nur alle
-/// <c>secondaryFactor</c> Zyklen. Einmalige Items liest der Dienst nur beim
+/// <c>secondaryFactor</c> Zyklen und langsame Items nur alle
+/// <c>slowFactor</c> Zyklen. Einmalige Items liest der Dienst nur beim
 /// Start.
 /// </remarks>
 public static class PollPlan
@@ -19,27 +20,45 @@ public static class PollPlan
     /// <param name="primary">Die primären Items.</param>
     /// <param name="secondary">Die sekundären Items.</param>
     /// <param name="withoutPriority">Die Items ohne Prioritäts-Attribut.</param>
+    /// <param name="slow">Die stündlichen Items.</param>
     /// <param name="cycle">Die Nummer des Zyklus (0 = der erste).</param>
     /// <param name="secondaryFactor">Wie oft ein sekundäres Item gelesen wird.</param>
+    /// <param name="slowFactor">Wie oft ein stündliches Item gelesen wird.</param>
     /// <returns>Die Items in Lesereihenfolge.</returns>
+    /// <remarks>
+    /// Die Reihenfolge im Zyklus ist: primär, ohne Priorität, langsam
+    /// (falls fällig), sekundär (falls fällig). Langsame Items stehen also
+    /// vor den sekundären - das ist die Priorität 3 aus dem Topic-Vertrag:
+    /// stündlich, unabhängig vom Poll-Intervall.
+    /// </remarks>
     public static IReadOnlyList<ItemDefinition> ForCycle(
         IReadOnlyList<ItemDefinition> primary,
         IReadOnlyList<ItemDefinition> secondary,
         IReadOnlyList<ItemDefinition> withoutPriority,
+        IReadOnlyList<ItemDefinition> slow,
         int cycle,
-        int secondaryFactor)
+        int secondaryFactor,
+        int slowFactor)
     {
         ArgumentNullException.ThrowIfNull(primary);
         ArgumentNullException.ThrowIfNull(secondary);
         ArgumentNullException.ThrowIfNull(withoutPriority);
+        ArgumentNullException.ThrowIfNull(slow);
         ArgumentOutOfRangeException.ThrowIfNegative(cycle);
         ArgumentOutOfRangeException.ThrowIfLessThan(secondaryFactor, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(slowFactor, 1);
 
-        var items = new List<ItemDefinition>(primary.Count + secondary.Count + withoutPriority.Count);
+        var items = new List<ItemDefinition>(
+            primary.Count + secondary.Count + withoutPriority.Count + slow.Count);
 
         // Die wichtigen Werte zuerst - der Nutzer sieht sie zuerst.
         items.AddRange(primary);
         items.AddRange(withoutPriority);
+
+        if (cycle % slowFactor == 0)
+        {
+            items.AddRange(slow);
+        }
 
         if (cycle % secondaryFactor == 0)
         {

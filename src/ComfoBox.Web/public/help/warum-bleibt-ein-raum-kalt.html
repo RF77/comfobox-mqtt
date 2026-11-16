@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Warum bleibt ein Raum kalt? – ComfoBox Gateway</title>
+  <meta name="description" content="Übersteuerung, Zustand und Sollwertart verstehen">
+  <meta name="generator" content="comfobox-build-docs">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="layout">
+    <nav class="sidebar" aria-label="Hilfe-Navigation">
+      <p class="sidebar-title">ComfoBox Hilfe</p>
+      <ul>
+        <li><a href="index.html">Hilfe</a></li>
+        <li><a href="erste-schritte.html">Erste Schritte</a></li>
+        <li><a href="anschluss.html">Anschluss</a></li>
+        <li><a href="installation.html">Installation</a></li>
+        <li><a href="mqtt.html">MQTT</a></li>
+        <li><a href="home-assistant.html">Home Assistant</a></li>
+        <li><a href="bedienung.html">Bedienung</a></li>
+        <li><a href="ha-addon.html">Home-Assistant-Add-on</a></li>
+        <li><a href="07b-raspberry-pi.html">Raspberry Pi</a></li>
+        <li><a href="synology.html">Synology</a></li>
+        <li><a href="08b-synology-test.html">Synology testen</a></li>
+        <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
+        <li><a href="fehlersuche.html">Fehlersuche</a></li>
+        <li><a href="api.html">API</a></li>
+        <li><a href="ki.html">KI-Assistenten</a></li>
+        <li><a href="verbrauch.html">Verbrauch und Effizienz</a></li>
+      </ul>
+    </nav>
+
+    <main class="content">
+      <header class="page-header">
+        <h1>Warum bleibt ein Raum kalt?</h1>
+        <p class="description">Übersteuerung, Zustand und Sollwertart verstehen</p>
+        <div class="tags"><span class="tag">diagnose</span><span class="tag">zone</span></div>
+      </header>
+
+      <article class="prose">
+<h1>Warum bleibt ein Raum kalt?</h1>
+<p>Die Anlage läuft, die Pumpe arbeitet – und trotzdem wird es nicht warm. Fast
+immer hat das eine von vier Ursachen:</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Erkennungszeichen</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>die Betriebsart schließt Heizen aus</td>
+<td>Standby oder Nur Warmwasser</td>
+</tr>
+<tr>
+<td>der Regler rechnet mit einem niedrigen Sollwert</td>
+<td>Sollwertart Frostschutz oder reduziert</td>
+</tr>
+<tr>
+<td>eine Übersteuerung hebt die Vorgabe auf</td>
+<td>Ferien, Eco, Heizzeiten aus, Störung der Wärmepumpe</td>
+</tr>
+<tr>
+<td>die Wärme kommt nicht an</td>
+<td>Vorlauf und Rücklauf fast gleich</td>
+</tr>
+</tbody></table>
+<p>Das Gateway zeigt die Werte, mit denen Sie diese Fälle auseinanderhalten.</p>
+<blockquote>
+<p><strong>Die ComfoBox regelt einen Heizkreis.</strong> Bleibt ein <strong>einzelner</strong> Raum kalt,
+während andere warm werden, ist das kein Regelungsproblem des Reglers – dann
+liegt es an der Verteilung (Heizkörper, Ventile, Abgleich). Siehe
+„Wenn nur ein Raum kalt bleibt&quot;.</p>
+</blockquote>
+<hr>
+<h2>Die Werte, mit denen Sie prüfen</h2>
+<table>
+<thead>
+<tr>
+<th>Wert</th>
+<th>Was er Ihnen sagt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Betriebsart</td>
+<td>ob die Anlage überhaupt heizen <strong>darf</strong></td>
+</tr>
+<tr>
+<td>Sollwertart</td>
+<td>mit welchem Sollwert der Regler gerade rechnet</td>
+</tr>
+<tr>
+<td>Übersteuerung</td>
+<td>was gerade <strong>Vorrang</strong> vor dem Zeitprogramm hat</td>
+</tr>
+<tr>
+<td>Zustand</td>
+<td>interner Zustand des Reglers – als Verlauf nutzbar</td>
+</tr>
+<tr>
+<td>Raumtemperatur und aktueller Sollwert</td>
+<td>ob die Regelung überhaupt eine Differenz sieht</td>
+</tr>
+<tr>
+<td>Vorlauf und Rücklauf</td>
+<td>ob die erzeugte Wärme abgegeben wird</td>
+</tr>
+<tr>
+<td>Warmwasser-Zustand und Warmwasser-Übersteuerung</td>
+<td>ob das Warmwasser die Heizung blockiert</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>1. Betriebsart</h2>
+<p>Die Betriebsart bestimmt, ob die Anlage heizt.</p>
+<table>
+<thead>
+<tr>
+<th>Betriebsart</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Manuell</td>
+<td>keine Automatik – die Anlage folgt der manuellen Vorgabe</td>
+</tr>
+<tr>
+<td>Standby</td>
+<td>Anlage aus, nur Frostschutz bleibt aktiv</td>
+</tr>
+<tr>
+<td>Nur Warmwasser</td>
+<td>Heizung aus, Warmwasser wird bereitet</td>
+</tr>
+<tr>
+<td>Normal/Frost</td>
+<td>Heizbetrieb nach Zeitprogramm, außerhalb der Zeiten Frostschutz</td>
+</tr>
+<tr>
+<td>Normal/Reduziert</td>
+<td>Zeitprogramm wechselt zwischen normal und reduziert</td>
+</tr>
+<tr>
+<td>Dauernd normal</td>
+<td>Heizbetrieb ohne Zeitprogramm</td>
+</tr>
+<tr>
+<td>Dauernd reduziert</td>
+<td>nur reduzierter Sollwert</td>
+</tr>
+</tbody></table>
+<p><strong>Was Sie tun:</strong> Steht die Betriebsart auf <strong>Standby</strong> oder <strong>Nur Warmwasser</strong>,
+ist der kalte Raum erklärt. Wählen Sie die gewünschte Betriebsart, z. B.
+<em>Normal/Reduziert</em>.</p>
+<hr>
+<h2>2. Sollwertart</h2>
+<p>Die Sollwertart sagt, welchen Sollwert der Regler <strong>gerade</strong> verwendet.</p>
+<table>
+<thead>
+<tr>
+<th>Sollwertart</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Frostschutz</td>
+<td>nur der Frostschutz-Sollwert – es wird kaum geheizt</td>
+</tr>
+<tr>
+<td>Reduziert</td>
+<td>der abgesenkte Sollwert (Nacht, Abwesenheit)</td>
+</tr>
+<tr>
+<td>Normal</td>
+<td>der normale Sollwert</td>
+</tr>
+<tr>
+<td>Legionellen</td>
+<td>der erhöhte Sollwert für die Legionellen-Aufheizung (nur Warmwasser)</td>
+</tr>
+</tbody></table>
+<p><strong>Was Sie tun:</strong> Stellen Sie den Sollwert der passenden Art neben die
+Raumtemperatur.</p>
+<table>
+<thead>
+<tr>
+<th>Beobachtung</th>
+<th>Deutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Raumtemperatur liegt deutlich unter dem Sollwert</td>
+<td>die Anlage müsste heizen – Ursache liegt woanders</td>
+</tr>
+<tr>
+<td>Raumtemperatur liegt am oder über dem Sollwert</td>
+<td>kein Fehler: der Sollwert ist zu niedrig gewählt</td>
+</tr>
+<tr>
+<td>Sollwertart ist Frostschutz oder reduziert</td>
+<td>Erklärung gefunden – Zeitprogramm bzw. Betriebsart prüfen</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>3. Übersteuerung – der häufigste Grund</h2>
+<p>Die Übersteuerung sagt, was gerade <strong>Vorrang</strong> vor dem normalen Zeitprogramm hat.
+Steht dort etwas anderes als „ohne&quot;, gilt nicht der Sollwert, den Sie eingestellt
+haben.</p>
+<h3>Übersteuerungen der Heizung</h3>
+<table>
+<thead>
+<tr>
+<th>Übersteuerung</th>
+<th>Bedeutung</th>
+<th>Was Sie tun</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ohne</td>
+<td>keine Übersteuerung – normaler Betrieb</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Party</td>
+<td>der Sollwert wird für die Partyzeit angehoben</td>
+<td>endet von selbst</td>
+</tr>
+<tr>
+<td>Eco</td>
+<td>der Sollwert wird zum Sparen abgesenkt</td>
+<td>Eco-Zeit prüfen oder beenden</td>
+</tr>
+<tr>
+<td>Ferien</td>
+<td>die Anlage fährt auf Frostschutz</td>
+<td>Ferienzeit prüfen und beenden</td>
+</tr>
+<tr>
+<td>Fernbedienung</td>
+<td>ein Bediengerät gibt den Sollwert vor</td>
+<td>Bediengerät prüfen</td>
+</tr>
+<tr>
+<td>Externer Eingang</td>
+<td>ein Kontakt am Gerät gibt etwas vor</td>
+<td>belegten Eingang prüfen</td>
+</tr>
+<tr>
+<td>Inbetriebnahme</td>
+<td>die Anlage steht im Handbetrieb</td>
+<td>Inbetriebnahme beenden</td>
+</tr>
+<tr>
+<td>Taupunktwächter</td>
+<td>Heizen wird gesperrt, damit kein Kondensat entsteht</td>
+<td>betrifft den Kühlbetrieb</td>
+</tr>
+<tr>
+<td>Bodenaustrocknung</td>
+<td>das Estrich-Programm fährt den Vorlauf hoch</td>
+<td>Programmende abwarten</td>
+</tr>
+<tr>
+<td>Störung der Wärmepumpe</td>
+<td>der Verdichter ist gesperrt</td>
+<td>Fehlerspeicher am Display lesen, Fachbetrieb</td>
+</tr>
+<tr>
+<td>Optimierung Wärmepumpen-Ausschaltung</td>
+<td>der Regler hält die Wärmepumpe zurück</td>
+<td>meist kurzzeitig, beobachten</td>
+</tr>
+<tr>
+<td>Raumsoll-Überhöhung Solar</td>
+<td>die Solaranlage hebt den Sollwert an</td>
+<td>kein Fehler</td>
+</tr>
+<tr>
+<td>Sollwertschiebung</td>
+<td>der Sollwert wird um einen Betrag verschoben</td>
+<td>Verschiebung prüfen</td>
+</tr>
+<tr>
+<td>Heizzeiten aus</td>
+<td>das Zeitprogramm hat das Heizen abgeschaltet</td>
+<td>Zeitprogramm prüfen</td>
+</tr>
+<tr>
+<td>Außentemperatur</td>
+<td>der Regler hält Heizen für unnötig</td>
+<td>Heizgrenze prüfen</td>
+</tr>
+<tr>
+<td>Entlüftung Sekundärkreis</td>
+<td>die Anlage entlüftet, das Heizen pausiert</td>
+<td>endet von selbst</td>
+</tr>
+<tr>
+<td>Nur Zusatzheizung</td>
+<td>die Wärmepumpe ist gesperrt, es heizt nur der elektrische Heizstab</td>
+<td>Fehlerspeicher lesen, Fachbetrieb</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Typische Reihenfolge:</strong> Ferien → Heizzeiten aus → Eco → Außentemperatur.
+Diese vier erklären die meisten kalten Räume im Winter.</p>
+</blockquote>
+<hr>
+<h2>4. Warmwasser blockiert die Heizung</h2>
+<p>Solange Warmwasser bereitet wird, pausiert das Heizen oft – das ist Absicht
+(Vorrang). Bei knapper Leistung kann das Warmwasser die Heizung längere Zeit
+übersteuern.</p>
+<h3>Zustand des Warmwassers</h3>
+<table>
+<thead>
+<tr>
+<th>Zustand</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>aus</td>
+<td>Warmwasser ist abgeschaltet</td>
+</tr>
+<tr>
+<td>Warmwasser mit Energieerzeuger</td>
+<td>die Wärmepumpe lädt den Speicher</td>
+</tr>
+<tr>
+<td>Warmwasser elektrisch</td>
+<td>der elektrische Heizstab lädt</td>
+</tr>
+<tr>
+<td>Warmwasser mit Zusatzheizung</td>
+<td>Wärmepumpe und Heizstab laden gemeinsam</td>
+</tr>
+<tr>
+<td>Warmwasser-Entladeschutz</td>
+<td>der Speicher wird gegen Auskühlen geschützt</td>
+</tr>
+<tr>
+<td>Sperre Energieerzeuger</td>
+<td>die Wärmepumpe darf nicht laden</td>
+</tr>
+</tbody></table>
+<h3>Übersteuerung des Warmwassers</h3>
+<table>
+<thead>
+<tr>
+<th>Übersteuerung</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>ohne</td>
+<td>keine Übersteuerung – normaler Betrieb</td>
+</tr>
+<tr>
+<td>Ferien</td>
+<td>Ferienabsenkung aktiv</td>
+</tr>
+<tr>
+<td>Party</td>
+<td>der Warmwasser-Sollwert wird angehoben</td>
+</tr>
+<tr>
+<td>Externer Eingang</td>
+<td>ein Kontakt am Gerät gibt eine Ladung vor</td>
+</tr>
+<tr>
+<td>Störung der Wärmepumpe</td>
+<td>der Verdichter ist gesperrt</td>
+</tr>
+<tr>
+<td>Optimierung</td>
+<td>der Regler verschiebt die Ladung</td>
+</tr>
+<tr>
+<td>Sollwertschiebung</td>
+<td>der Sollwert wird verschoben</td>
+</tr>
+<tr>
+<td>Heizzeiten aus</td>
+<td>die Ladung ist abgeschaltet</td>
+</tr>
+<tr>
+<td>Vorlauf zu hoch</td>
+<td>die Ladung pausiert, weil der Vorlauf über dem Grenzwert liegt</td>
+</tr>
+<tr>
+<td>Warmwasser elektrisch</td>
+<td>es lädt nur der Heizstab</td>
+</tr>
+<tr>
+<td>Optimierung Warmwasser elektrisch</td>
+<td>der Heizstab wird zeitlich verschoben</td>
+</tr>
+<tr>
+<td>Sperre Energieerzeuger</td>
+<td>die Wärmepumpe ist gesperrt</td>
+</tr>
+<tr>
+<td>Nur Zusatzheizung</td>
+<td>es lädt nur der Heizstab</td>
+</tr>
+</tbody></table>
+<p><strong>Was Sie tun:</strong> Ist das Warmwasser kalt, prüfen Sie den Warmwasser-Zustand und
+die Übersteuerung. Steht die Heizung wegen einer dauerhaften Warmwasser-Ladung
+still, liegt es häufig an einem hohen Warmwasser-Sollwert oder an einer
+Legionellen-Aufheizung.</p>
+<blockquote>
+<p><strong>Legionellen-Aufheizung:</strong> Sie läuft nur zeitweise und hebt den Sollwert stark
+an. In dieser Zeit kann das Heizen pausieren.</p>
+</blockquote>
+<hr>
+<h2>5. Vorlauf und Rücklauf prüfen</h2>
+<p>Die beiden Temperaturen zeigen, ob die erzeugte Wärme überhaupt abgegeben wird.</p>
+<table>
+<thead>
+<tr>
+<th>Temperatur</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vorlauf</td>
+<td>das Wasser, das vom Erzeuger in den Heizkreis geht</td>
+</tr>
+<tr>
+<td>Rücklauf</td>
+<td>das Wasser, das aus dem Heizkreis zurückkommt</td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Beobachtung</th>
+<th>Deutung</th>
+<th>Nächster Schritt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vorlauf deutlich über Rücklauf (etwa 5 bis 15 K)</td>
+<td>Wärme wird abgegeben – normal</td>
+<td>–</td>
+</tr>
+<tr>
+<td>Vorlauf und Rücklauf fast gleich, obwohl geheizt werden soll</td>
+<td>es fließt kein Wasser</td>
+<td>Pumpe, Mischer und Ventile prüfen</td>
+</tr>
+<tr>
+<td>Rücklauf wärmer als Vorlauf</td>
+<td>Fühler vertauscht oder Pumpe steht</td>
+<td>Fachbetrieb</td>
+</tr>
+<tr>
+<td>beide kalt, Sollwert hoch</td>
+<td>die Anlage erzeugt keine Wärme</td>
+<td>Betriebsart, Übersteuerung, Fehlerspeicher</td>
+</tr>
+<tr>
+<td>Vorlauf sehr hoch, Raum bleibt kalt</td>
+<td>die Wärme kommt nicht an</td>
+<td>Verteilung prüfen, siehe nächster Abschnitt</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Ohne Volumenstrom keine Wärmeabgabe.</strong> Auch eine perfekte Vorlauftemperatur
+kommt nicht im Raum an, wenn die Pumpe steht oder ein Ventil geschlossen ist.</p>
+</blockquote>
+<hr>
+<h2>6. Der Zustand des Reglers</h2>
+<p>Der Zustand ist eine interne Zahl des Reglers; ihre Bedeutung ist nicht
+dokumentiert und die Zahlen sind nicht über alle Firmware-Stände gleich.</p>
+<p>Nutzen Sie ihn deshalb als <strong>Verlauf</strong>, nicht als Anzeige:</p>
+<table>
+<thead>
+<tr>
+<th>Beobachtung</th>
+<th>Deutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>der Zustand ändert sich, wenn die Anlage heizen soll</td>
+<td>der Regler arbeitet ein Programm ab</td>
+</tr>
+<tr>
+<td>der Zustand bleibt über Stunden gleich, obwohl es kalt ist</td>
+<td>die Anlage steht – Betriebsart und Übersteuerung prüfen</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>7. Was Sie zuerst prüfen</h2>
+<table>
+<thead>
+<tr>
+<th>Reihenfolge</th>
+<th>Prüfung</th>
+<th>Wenn das die Ursache ist</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Betriebsart</td>
+<td>Standby oder Nur Warmwasser beenden</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Übersteuerung</td>
+<td>Ferien, Eco oder Heizzeiten aus beenden</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Sollwertart und Sollwert</td>
+<td>Zeitprogramm und Raumsollwert anpassen</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Warmwasser-Zustand</td>
+<td>Warmwasser-Sollwert senken, Ladung abwarten</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Vorlauf und Rücklauf</td>
+<td>Pumpe und Ventile prüfen</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Fehlerspeicher am Display</td>
+<td>Störung notieren und Fachbetrieb rufen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bevor Sie an Sollwerten drehen:</strong> Prüfen Sie zuerst die Übersteuerung. Ein
+höherer Sollwert hilft nicht, wenn die Anlage wegen Ferien oder Heizzeiten aus
+gar nicht heizt.</p>
+</blockquote>
+<hr>
+<h2>Wenn nur ein Raum kalt bleibt</h2>
+<p>Die ComfoBox regelt <strong>einen</strong> Heizkreis – sie sieht keine einzelnen Räume. Bleibt
+ein Raum kalt, obwohl die Vorlauftemperatur stimmt:</p>
+<table>
+<thead>
+<tr>
+<th>Ursache</th>
+<th>Erkennungszeichen</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Heizkörper-Thermostat geschlossen</td>
+<td>andere Räume werden warm, dieser nicht</td>
+</tr>
+<tr>
+<td>Ventil hängt oder ist abgesperrt</td>
+<td>Vor- und Rücklauf am Heizkörper kalt</td>
+</tr>
+<tr>
+<td>hydraulischer Abgleich fehlt</td>
+<td>entfernte Räume werden schlechter versorgt</td>
+</tr>
+<tr>
+<td>Luft im Heizkörper</td>
+<td>Heizkörper wird oben warm, unten kalt</td>
+</tr>
+</tbody></table>
+<p>Diese Fälle löst der Fachbetrieb – über das Gateway sind sie nicht behebbar.</p>
+<hr>
+<h2>Wann Sie den Fachbetrieb brauchen</h2>
+<table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Grund</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Übersteuerung „Störung der Wärmepumpe&quot; bleibt stehen</td>
+<td>der Verdichter ist gesperrt</td>
+</tr>
+<tr>
+<td>Rücklauf wärmer als Vorlauf</td>
+<td>Fühler vertauscht oder Pumpe defekt</td>
+</tr>
+<tr>
+<td>Vorlauf und Rücklauf gleich, Pumpe läuft hörbar</td>
+<td>Mischer oder Ventil defekt</td>
+</tr>
+<tr>
+<td>Heizbetrieb, aber keine Wärmeleistung über Stunden</td>
+<td>Kältekreis oder Regelung</td>
+</tr>
+<tr>
+<td>Fehlerspeicher am Display meldet einen Fehler</td>
+<td>Gerätefehler, siehe <a href="fehlersuche.html">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>Bereiten Sie den Anruf vor:</strong> Betriebsart, Übersteuerung, Vorlauf- und
+Rücklauftemperatur sowie die Meldung im Display nennen – damit ist die Ursache
+meist in einem Termin geklärt.</p>
+</blockquote>
+<h2>Nächster Schritt</h2>
+<table>
+<thead>
+<tr>
+<th>Sie möchten …</th>
+<th>Lesen Sie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Verbrauch und Effizienz verstehen</td>
+<td><a href="verbrauch.html">Verbrauch und Effizienz</a></td>
+</tr>
+<tr>
+<td>Sollwerte und Betriebsart ändern</td>
+<td><a href="bedienung.html">Bedienung</a></td>
+</tr>
+<tr>
+<td>systematisch Fehler suchen</td>
+<td><a href="fehlersuche.html">Fehlersuche</a></td>
+</tr>
+</tbody></table>
+
+      </article>
+
+      <footer class="page-footer">
+        <nav class="pager">
+          <a class="nav-prev" href="verbrauch.html">&larr; Verbrauch und Effizienz</a>
+          <span></span>
+        </nav>
+        <p class="version">ComfoBox Gateway 1.0.1</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

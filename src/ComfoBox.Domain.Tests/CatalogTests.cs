@@ -14,10 +14,426 @@ public sealed class CatalogTests
 {
     private static readonly ItemCatalog Catalog = new();
 
+    /// <summary>
+    /// Die Gateway-Status-Topics sind reserviert (Phase 10, §5.4).
+    /// Kein Katalog-Item darf denselben Pfad belegen.
+    /// </summary>
+    private static readonly string[] ReservedTopicPaths =
+    [
+        "Connected",
+        "Version",
+        "Special/NumberOfWritesPer24h",
+        "Status/Health",
+        "Status/Version",
+        "Status/Uptime",
+        "Status/StartedAt",
+        "Status/Writes",
+        "Status/WritesMax",
+        "Status/Bacnet",
+        "Status/Mqtt",
+        "Status/LastError",
+        "Status/Errors",
+        "Status/Restart",
+        "Status/Energy/Available",
+        "Command/Restart",
+    ];
+
     [Fact]
-    public void Catalog_Umfasst_Exakt_127_Items()
+    public void Catalog_Umfasst_Exakt_205_Items()
     {
-        Assert.Equal(127, Catalog.All.Count);
+        // 127 V1-Items (eingefroren) + 78 V2-Items (Phase 10, Wellen 2a/2b/2c).
+        Assert.Equal(205, Catalog.All.Count);
+    }
+
+    [Fact]
+    public void V1_Und_V2_Teilen_Den_Katalog_Vollstaendig_Auf()
+    {
+        Assert.Equal(127, Catalog.V1.Count);
+        Assert.Equal(78, Catalog.V2.Count);
+        Assert.Equal(Catalog.All.Count, Catalog.V1.Count + Catalog.V2.Count);
+
+        Assert.All(Catalog.V1, item => Assert.False(item.IsV2, $"{item.Id} ist V1, trägt aber IsV2."));
+        Assert.All(Catalog.V2, item => Assert.True(item.IsV2, $"{item.Id} ist V2, trägt aber kein IsV2."));
+
+        var v1Pfade = Catalog.V1.Select(i => i.TopicPath).ToHashSet(StringComparer.Ordinal);
+        Assert.False(Catalog.V2.Any(item => v1Pfade.Contains(item.TopicPath)),
+            "Ein V2-Item belegt denselben Topic-Pfad wie ein V1-Item.");
+    }
+
+    [Fact]
+    public void Die_V2_Items_Verteilen_Sich_Auf_Fuenfzehn_Gruppen()
+    {
+        // Welle 2a: Zone, WarmWater, HeatPump, Buffer.
+        // Welle 2b: Energy, Counters, Solar und das Command-Topic.
+        // Welle 2c: sieben Config-Gruppen (nur mit Experten-Modus schreibbar).
+        var gruppen = Catalog.V2.GroupBy(item => item.Group).ToDictionary(g => g.Key, g => g.Count());
+
+        Assert.Equal(15, gruppen.Count);
+        Assert.Equal(4, gruppen["Status/Zone"]);
+        Assert.Equal(4, gruppen["Status/WarmWater"]);
+        Assert.Equal(13, gruppen["Status/HeatPump"]);
+        Assert.Equal(5, gruppen["Status/Buffer"]);
+        Assert.Equal(14, gruppen["Status/Energy"]);
+        Assert.Equal(11, gruppen["Status/Counters"]);
+        Assert.Equal(5, gruppen["Status/Solar"]);
+        Assert.Equal(1, gruppen["Command"]);
+        Assert.Equal(2, gruppen["Config/General"]);
+        Assert.Equal(7, gruppen["Config/EnergyProducer"]);
+        Assert.Equal(2, gruppen["Config/HeatingSystem"]);
+        Assert.Equal(3, gruppen["Config/Warmwater"]);
+        Assert.Equal(2, gruppen["Config/Cooling"]);
+        Assert.Equal(4, gruppen["Config/Ventilation"]);
+        Assert.Equal(1, gruppen["Config/Service"]);
+    }
+
+    [Fact]
+    public void Alle_V2_Status_Items_Sind_Rein_Lesend()
+    {
+        // Bis auf das Command-Topic sind alle V2-Items reine Lesetopics.
+        var statusItems = Catalog.V2
+            .Where(item => item.Group.StartsWith("Status/", StringComparison.Ordinal))
+            .ToList();
+
+        Assert.Equal(56, statusItems.Count);
+        Assert.All(statusItems, item =>
+        {
+            Assert.True(item.IsReadOnly, $"{item.Id} ist ein V2-Lesetopic, aber nicht read-only.");
+            Assert.False(item.IsWritable, $"{item.Id} ist schreibbar.");
+        });
+    }
+
+    [Fact]
+    public void Die_Vierzehn_Energie_Items_Stehen_Unter_Status_Energy()
+    {
+        var energie = Catalog.V2.Where(item => item.Group == "Status/Energy").ToList();
+
+        Assert.Equal(14, energie.Count);
+        Assert.Equal(11, energie.Count(item => item.RequiresEnergyMeasurement));
+        Assert.Equal(3, energie.Count(item => !item.RequiresEnergyMeasurement));
+    }
+
+    [Fact]
+    public void Genau_Die_Elf_Energie_Items_Tragen_Das_Energy_Merkmal()
+    {
+        // Ohne Wärmemengenmessung (DP 3340 = None) werden genau diese Items
+        // gesperrt - Messmodus und Durchflüsse bleiben lesbar.
+        string[] erwartet =
+        [
+            "Status/Energy/HeatingPower",
+            "Status/Energy/WarmWaterPower",
+            "Status/Energy/ThermalEnergyHeating",
+            "Status/Energy/ThermalEnergyWarmWater",
+            "Status/Energy/ThermalEnergyTotal",
+            "Status/Energy/ElectricalEnergyHeating",
+            "Status/Energy/ElectricalEnergyWarmWater",
+            "Status/Energy/ElectricalEnergyTotal",
+            "Status/Energy/CopHeating",
+            "Status/Energy/CopWarmWater",
+            "Status/Energy/CopTotal",
+        ];
+
+        var tatsaechlich = Catalog.All
+            .Where(item => item.RequiresEnergyMeasurement)
+            .Select(item => item.TopicPath)
+            .OrderBy(path => path, StringComparer.Ordinal)
+            .ToList();
+
+        Assert.Equal(erwartet.OrderBy(path => path, StringComparer.Ordinal), tatsaechlich);
+    }
+
+    [Fact]
+    public void Messmodus_Und_Durchfluesse_Sind_Keine_Energie_Items()
+    {
+        foreach (var pfad in new[]
+                 {
+                     "Status/Energy/MeasurementMode",
+                     "Status/Energy/FlowRate",
+                     "Status/Energy/FlowRateWarmWater",
+                 })
+        {
+            var item = Catalog.FindByTopicPath(pfad);
+
+            Assert.NotNull(item);
+            Assert.False(item!.RequiresEnergyMeasurement, $"{pfad} darf nicht gesperrt werden.");
+            Assert.Equal(RefreshPriority.Slow, item.Priority);
+        }
+
+        var messmodus = Catalog.FindByTopicPath("Status/Energy/MeasurementMode");
+        Assert.NotNull(messmodus);
+        Assert.Equal(3340, messmodus!.BacnetObjectId);
+        Assert.Equal(ItemValueKind.Enum, messmodus.Kind);
+        Assert.Same(ItemEnums.EnergyMeasurementModes, messmodus.EnumValues);
+    }
+
+    [Fact]
+    public void Die_Energie_Items_Haben_Einheit_Und_Prioritaet()
+    {
+        var durchfluss = Catalog.FindByTopicPath("Status/Energy/FlowRate");
+        Assert.NotNull(durchfluss);
+        Assert.Equal("m³/h", durchfluss!.Unit);
+
+        var durchflussWw = Catalog.FindByTopicPath("Status/Energy/FlowRateWarmWater");
+        Assert.NotNull(durchflussWw);
+        Assert.Equal("m³/h", durchflussWw!.Unit);
+
+        var copTotal = Catalog.FindByTopicPath("Status/Energy/CopTotal");
+        Assert.NotNull(copTotal);
+        Assert.Null(copTotal!.Unit);
+        Assert.Equal(3357, copTotal.BacnetObjectId);
+
+        var heizleistung = Catalog.FindByTopicPath("Status/Energy/HeatingPower");
+        Assert.NotNull(heizleistung);
+        Assert.Equal(RefreshPriority.Secondary, heizleistung!.Priority);
+        Assert.Equal("kW", heizleistung.Unit);
+
+        var waermemenge = Catalog.FindByTopicPath("Status/Energy/ThermalEnergyTotal");
+        Assert.NotNull(waermemenge);
+        Assert.Equal(RefreshPriority.Slow, waermemenge!.Priority);
+        Assert.Equal("kWh", waermemenge.Unit);
+    }
+
+    [Fact]
+    public void Die_Elf_Zaehler_Items_Sind_Langsam_Und_Kommen_Mit_ServiceHours()
+    {
+        var zaehler = Catalog.V2.Where(item => item.Group == "Status/Counters").ToList();
+
+        Assert.Equal(11, zaehler.Count);
+        Assert.All(zaehler, item => Assert.Equal(RefreshPriority.Slow, item.Priority));
+
+        var service = Catalog.FindByTopicPath("Status/Counters/ServiceHours");
+        Assert.NotNull(service);
+        Assert.Equal(3366, service!.BacnetObjectId);
+        Assert.Equal("h", service.Unit);
+
+        // DP 3365 ist später Config/Service/Interval - kein zweites Status-Topic.
+        Assert.DoesNotContain(Catalog.All,
+            item => item.Group == "Status/Counters" && item.BacnetObjectId == 3365);
+        Assert.DoesNotContain(Catalog.All, item => item.TopicPath == "Status/Counters/ServiceInterval");
+    }
+
+    [Fact]
+    public void Es_Gibt_Genau_Fuenf_Solar_Items()
+    {
+        var solar = Catalog.V2.Where(item => item.Group == "Status/Solar").ToList();
+
+        Assert.Equal(5, solar.Count);
+        Assert.Equal(28, Catalog.FindByTopicPath("Status/Solar/CollectorTemperature")!.BacnetObjectId);
+        Assert.Equal(264, Catalog.FindByTopicPath("Status/Solar/CollectorDeltaTemperature")!.BacnetObjectId);
+        Assert.Equal(36, Catalog.FindByTopicPath("Status/Solar/EnergyTotal")!.BacnetObjectId);
+        Assert.Equal(3911, Catalog.FindByTopicPath("Status/Solar/EnergyToday")!.BacnetObjectId);
+    }
+
+    [Fact]
+    public void Das_Command_Topic_Ist_Nur_Mit_Experten_Modus_Schreibbar()
+    {
+        var item = Catalog.FindByTopicPath("Command/ResetHeatingCurveAdaption");
+
+        Assert.NotNull(item);
+        Assert.Equal(678, item!.BacnetObjectId);
+        Assert.Equal("Command/ResetHeatingCurveAdaption", item.TopicPath);
+        Assert.True(item.IsV2);
+        Assert.True(item.RequiresExpertMode);
+        Assert.True(item.IsWritable);
+        Assert.False(item.IsReadOnly);
+        Assert.Equal(0f, item.Min);
+        Assert.Equal(1f, item.Max);
+        Assert.False(item.IsWritableWithExpertMode(expertModeEnabled: false));
+        Assert.True(item.IsWritableWithExpertMode(expertModeEnabled: true));
+    }
+
+    [Fact]
+    public void Genau_22_V2_Items_Erfordern_Den_Experten_Modus()
+    {
+        // 21 neue Konfigurations-Topics (Welle 2c) plus das Command-Topic.
+        var experten = Catalog.V2.Where(item => item.RequiresExpertMode).ToList();
+
+        Assert.Equal(22, experten.Count);
+        Assert.All(experten, item =>
+        {
+            Assert.True(item.IsWritable, $"{item.Id} ist nicht schreibbar.");
+            Assert.False(item.IsWritableWithExpertMode(expertModeEnabled: false),
+                $"{item.Id} ist ohne Experten-Modus schreibbar.");
+            Assert.True(item.IsWritableWithExpertMode(expertModeEnabled: true),
+                $"{item.Id} ist auch mit Experten-Modus nicht schreibbar.");
+
+            var erlaubt = item.TopicPath.StartsWith("Config/", StringComparison.Ordinal)
+                || item.TopicPath.StartsWith("Command/", StringComparison.Ordinal);
+            Assert.True(erlaubt, $"{item.TopicPath} liegt weder unter Config/ noch unter Command/.");
+        });
+    }
+
+    [Fact]
+    public void Die_Einundzwanzig_Config_Items_Tragen_Ihre_Dokumentierten_Objekt_Ids()
+    {
+        (string TopicPath, int ObjectId)[] erwartet =
+        [
+            ("Config/General/CoolingEnabled", 3118),
+            ("Config/General/PassiveCoolingHydraulics", 572),
+            ("Config/EnergyProducer/SwitchingDifferenceStage2", 141),
+            ("Config/EnergyProducer/RestartDelayStage2", 847),
+            ("Config/EnergyProducer/BivalenceStage2", 803),
+            ("Config/EnergyProducer/CondenserPumpPreRunningTime", 3234),
+            ("Config/EnergyProducer/CondenserPumpPostRunningTime", 188),
+            ("Config/EnergyProducer/FrostProtectionMode", 498),
+            ("Config/EnergyProducer/FrostProtectionTemperature", 446),
+            ("Config/HeatingSystem/MixerDirectOffset", 3608),
+            ("Config/HeatingSystem/SetPointNormalBelowOutdoor", 862),
+            ("Config/Warmwater/Equipment", 117),
+            ("Config/Warmwater/PowerSelection", 195),
+            ("Config/Warmwater/SwitchOverDelay", 848),
+            ("Config/Cooling/PassiveMode", 579),
+            ("Config/Cooling/Release", 571),
+            ("Config/Ventilation/FanControl", 3092),
+            ("Config/Ventilation/SpeedStage1", 3224),
+            ("Config/Ventilation/SpeedStage2", 3225),
+            ("Config/Ventilation/SpeedStage3", 3226),
+            ("Config/Service/Interval", 3365),
+        ];
+
+        Assert.Equal(21, erwartet.Length);
+        Assert.Equal(21, Catalog.V2.Count(item => item.TopicPath.StartsWith("Config/", StringComparison.Ordinal)));
+
+        foreach (var (topicPath, objectId) in erwartet)
+        {
+            var item = Catalog.FindByTopicPath(topicPath);
+
+            Assert.NotNull(item);
+            Assert.True(item!.IsV2, $"{topicPath} ist kein V2-Item.");
+            Assert.Equal(objectId, item.BacnetObjectId);
+            Assert.Equal(RefreshPriority.Secondary, item.Priority);
+            Assert.True(item.RequiresExpertMode, $"{topicPath} erfordert keinen Experten-Modus.");
+            Assert.True(item.IsWritable, $"{topicPath} ist nicht schreibbar.");
+        }
+
+        // DP 846 ist V1 (Config/EnergyComsumer/HeatPump/RestartDelay) und wird nicht verdoppelt.
+        Assert.Null(Catalog.FindByTopicPath("Config/EnergyProducer/RestartDelayStage1"));
+    }
+
+    [Fact]
+    public void Die_Auswahl_Parameter_Haben_Ihre_Erlaubten_Werte()
+    {
+        AssertAllowedValues("Config/General/CoolingEnabled", 0, 1);
+        AssertAllowedValues("Config/General/PassiveCoolingHydraulics", 0, 1, 2, 3, 4, 9);
+        AssertAllowedValues("Config/EnergyProducer/FrostProtectionMode", 0, 1, 2, 3, 10);
+        AssertAllowedValues("Config/Warmwater/Equipment", 0, 1, 2);
+        AssertAllowedValues("Config/Cooling/PassiveMode", 0, 1, 2);
+        AssertAllowedValues("Config/Ventilation/FanControl", 0, 1, 2);
+    }
+
+    [Fact]
+    public void FrostProtectionMode_Lehnt_Nicht_Dokumentierte_Werte_Ab()
+    {
+        var item = Catalog.FindByTopicPath("Config/EnergyProducer/FrostProtectionMode");
+
+        Assert.NotNull(item);
+        Assert.True(item!.IsInRange(5f));      // 5 liegt im Bereich 0 bis 10 ...
+        Assert.False(item.IsValueAllowed(5f)); // ... ist aber kein erlaubter Wert.
+        Assert.True(item.IsValueAllowed(10f));
+    }
+
+    [Fact]
+    public void Config_Service_Interval_Ist_Ein_Experten_Wert_Ohne_Grenzen()
+    {
+        var item = Catalog.FindByTopicPath("Config/Service/Interval");
+
+        Assert.NotNull(item);
+        Assert.Equal(3365, item!.BacnetObjectId);
+        Assert.Equal("h", item.Unit);
+        Assert.Null(item.Min);
+        Assert.Null(item.Max);
+        Assert.Null(item.AllowedValues);
+        Assert.True(item.IsV2);
+        Assert.True(item.RequiresExpertMode);
+        Assert.True(item.IsWritable);
+    }
+
+    private static void AssertAllowedValues(string topicPath, params int[] erwartet)
+    {
+        var item = Catalog.FindByTopicPath(topicPath);
+
+        Assert.NotNull(item);
+        Assert.NotNull(item!.AllowedValues);
+        Assert.Equal(erwartet.Select(value => (float)value).ToArray(), item.AllowedValues!.ToArray());
+    }
+
+    [Fact]
+    public void Die_Enum_Luecken_Der_V2_Zustaende_Bleiben_Erhalten()
+    {
+        // Befund A6: ein Wert, den das Gerät liefert, das Enum aber nicht kennt,
+        // wird nicht auf 0 abgebildet. Deshalb sind die Lücken Vertrag und
+        // dürfen nicht aufgefüllt werden.
+        int[] zoneLuecken = [12, 15, 16, 17, 19, 20];
+        foreach (var wert in zoneLuecken)
+        {
+            Assert.False(ItemEnums.ZoneOverrides.ContainsKey(wert),
+                $"ZoneOverrides kennt den Wert {wert} - den liefert der Regler nicht.");
+        }
+
+        int[] warmWaterLuecken = [2, 4, 6, 7, 8, 11, 12];
+        foreach (var wert in warmWaterLuecken)
+        {
+            Assert.False(ItemEnums.WarmWaterOverrides.ContainsKey(wert),
+                $"WarmWaterOverrides kennt den Wert {wert} - den liefert der Regler nicht.");
+        }
+
+        Assert.Equal("None", ItemEnums.ZoneOverrides[0]);
+        Assert.Equal("AdditionalHeaterOnly", ItemEnums.ZoneOverrides[22]);
+        Assert.Equal("None", ItemEnums.WarmWaterOverrides[0]);
+        Assert.Equal("AdditionalHeaterOnly", ItemEnums.WarmWaterOverrides[22]);
+    }
+
+    [Fact]
+    public void Die_V2_Enum_Items_Nutzen_Die_Neuen_Enum_Werte()
+    {
+        var zoneOverride = Catalog.Find("status.zone.override");
+        Assert.NotNull(zoneOverride);
+        Assert.Equal(ItemValueKind.Enum, zoneOverride!.Kind);
+        Assert.Same(ItemEnums.ZoneOverrides, zoneOverride.EnumValues);
+
+        var warmWaterState = Catalog.Find("status.warm_water.state");
+        Assert.NotNull(warmWaterState);
+        Assert.Same(ItemEnums.WarmWaterStates, warmWaterState!.EnumValues);
+
+        // HeatPumpStatusStage2 nutzt das bestehende Enum der Stufe 1.
+        var stage2 = Catalog.Find("status.heat_pump.heat_pump_status_stage2");
+        Assert.NotNull(stage2);
+        Assert.Same(ItemEnums.HeatPumpStatusEnums, stage2!.EnumValues);
+    }
+
+    [Fact]
+    public void Status_Zone_FlowTemperature_Traegt_Die_Dokumentierte_Objekt_Id()
+    {
+        var item = Catalog.Find("status.zone.flow_temperature");
+
+        Assert.NotNull(item);
+        Assert.Equal("Status/Zone/FlowTemperature", item!.TopicPath);
+        Assert.Equal(14, item.BacnetObjectId);
+        Assert.Equal(RefreshPriority.Primary, item.Priority);
+        Assert.Equal("°C", item.Unit);
+        Assert.Null(item.Min);
+        Assert.Null(item.Max);
+    }
+
+
+    [Fact]
+    public void Die_Statische_V1_Und_V2_Sicht_Entspricht_Dem_Katalog()
+    {
+        // Catalog.V1/Catalog.V2 sind die handgeschriebene Ergänzung zum
+        // generierten Catalog.All - sie dürfen nicht auseinanderlaufen.
+        Assert.Equal(Catalog.V1.Count, ComfoBox.Domain.Items.Catalog.V1.Count);
+        Assert.Equal(Catalog.V2.Count, ComfoBox.Domain.Items.Catalog.V2.Count);
+    }
+
+    [Fact]
+    public void Reservierte_Gateway_Topics_Sind_Keine_Items()
+    {
+        var reserviert = ReservedTopicPaths.ToHashSet(StringComparer.Ordinal);
+
+        foreach (var item in Catalog.All)
+        {
+            Assert.False(reserviert.Contains(item.TopicPath),
+                $"{item.Id} belegt den reservierten Gateway-Pfad {item.TopicPath}.");
+        }
     }
 
     [Fact]

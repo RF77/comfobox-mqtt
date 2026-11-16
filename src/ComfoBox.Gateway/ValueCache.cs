@@ -50,6 +50,18 @@ public interface IValueCache
     bool IsStale(string id);
 
     /// <summary>
+    /// Wurde der Wert durch einen fehlgeschlagenen Read ausdrücklich als
+    /// veraltet markiert?
+    /// </summary>
+    /// <remarks>
+    /// Anders als <see cref="IsStale"/> berücksichtigt diese Abfrage **nicht**
+    /// das Ablauf-Fenster des Caches. Ein stündlich gelesenes Item bleibt damit
+    /// verwendbar, solange kein Read fehlgeschlagen ist.
+    /// </remarks>
+    /// <param name="id">Die Id des Items.</param>
+    bool IsMarkedStale(string id);
+
+    /// <summary>
     /// Liefert alle gecachten Werte.
     /// </summary>
     CachedValue[] Snapshot();
@@ -127,6 +139,10 @@ public sealed class ValueCache : IValueCache
 
     /// <inheritdoc />
     public bool IsStale(string id) => TryGet(id, out var value) && value!.IsStale;
+
+    /// <inheritdoc />
+    public bool IsMarkedStale(string id)
+        => _values.TryGetValue(id, out var stored) && stored.IsStale;
 
     /// <inheritdoc />
     public CachedValue[] Snapshot() => [.. _values.Values];

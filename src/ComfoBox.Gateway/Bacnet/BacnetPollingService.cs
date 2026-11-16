@@ -17,6 +17,7 @@ namespace ComfoBox.Gateway.Bacnet;
 /// <item><c>Once</c> - einmal beim Start (Gerätetyp, Softwareversion, …)</item>
 /// <item><c>Primary</c> - in jedem Zyklus</item>
 /// <item><c>Secondary</c> - alle <c>SecondaryPollFactor</c> Zyklen</item>
+/// <item><c>Slow</c> - stündlich, unabhängig vom Poll-Intervall</item>
 /// </list>
 /// <para>
 /// Innerhalb eines Zyklus werden die primären Items zuerst gelesen - der
@@ -41,6 +42,7 @@ public sealed class BacnetPollingService : BackgroundService
     private readonly ILogger<BacnetPollingService> _logger;
     private readonly TimeSpan _pollInterval;
     private readonly int _secondaryPollFactor;
+    private readonly int _slowPollFactor;
     private int _paused;
 
     /// <summary>
@@ -75,6 +77,9 @@ public sealed class BacnetPollingService : BackgroundService
 
         _pollInterval = TimeSpan.FromSeconds(gatewayOptions.Value.PollIntervalSeconds);
         _secondaryPollFactor = gatewayOptions.Value.SecondaryPollFactor;
+        // Priorität 3 soll stündlich gelesen werden - egal, wie kurz das
+        // Poll-Intervall ist. Bei 60 s sind das 60 Zyklen, bei 30 s 120.
+        _slowPollFactor = Math.Max(1, (int)Math.Round(3600.0 / gatewayOptions.Value.PollIntervalSeconds));
     }
 
     /// <summary>
@@ -98,13 +103,17 @@ public sealed class BacnetPollingService : BackgroundService
         var once = ItemsWith(RefreshPriority.Once);
         var primary = ItemsWith(RefreshPriority.Primary);
         var secondary = ItemsWith(RefreshPriority.Secondary);
+        var slow = ItemsWith(RefreshPriority.Slow);
         var withoutPriority = ItemsWith(RefreshPriority.None);
 
         _logger.LogInformation(
-            "Polling startet: {Once} einmalige, {Primary} primäre, {Secondary} sekundäre, {Other} Items ohne Priorität.",
+            "Polling startet: {Once} einmalige, {Primary} primäre, {Secondary} sekundäre, {Slow} langsame "
+            + "(alle {SlowFactor} Zyklen), {Other} Items ohne Priorität.",
             once.Count,
             primary.Count,
             secondary.Count,
+            slow.Count,
+            _slowPollFactor,
             withoutPriority.Count);
 
         LogSharedBacnetObjects();
@@ -142,7 +151,14 @@ public sealed class BacnetPollingService : BackgroundService
                     await _device.ReadItemsAsync(once, stoppingToken).ConfigureAwait(false);
                 }
 
-                var items = PollPlan.ForCycle(primary, secondary, withoutPriority, cycle, _secondaryPollFactor);
+                var items = PollPlan.ForCycle(
+                    primary,
+                    secondary,
+                    withoutPriority,
+                    slow,
+                    cycle,
+                    _secondaryPollFactor,
+                    _slowPollFactor);
 
                 await _device.ReadItemsAsync(items, stoppingToken).ConfigureAwait(false);
 

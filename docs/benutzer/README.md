@@ -8,7 +8,9 @@ icon: pi pi-book
 # ComfoBox Gateway – Hilfe
 
 Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
-**ComfoBox Gateways** für die Zehnder ComfoBox Series 5 (ELESTA).
+**ComfoBox Gateways** für die Zehnder ComfoBox Series 5 (ELESTA). Sie erklärt
+auch, wie Sie **Verbrauch und Effizienz** ablesen – und warum ein Raum kalt
+bleibt, obwohl die Anlage läuft.
 
 ## Inhaltsverzeichnis
 
@@ -28,6 +30,8 @@ Diese Anleitung begleitet Sie durch die Installation und den Betrieb des
 | [Fehlersuche](09-fehlersuche.md) | Symptom, Ursache und Lösung |
 | [API](10-api.md) | Schnittstelle für eigene Automatisierungen |
 | [KI-Assistenten](11-ki.md) | Werte für KI/MCP bereitstellen – inkl. Sicherheitsregeln |
+| [Verbrauch und Effizienz](12-verbrauch.md) | kWh-Zähler, COP und die Wärmemengenmessung am Gerät |
+| [Warum bleibt ein Raum kalt?](13-warum-bleibt-ein-raum-kalt.md) | Übersteuerung, Sollwertart und Vorlauftemperaturen als Diagnose |
 
 ## Was Sie zuerst brauchen
 

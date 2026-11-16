@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Health;
@@ -16,6 +17,11 @@ namespace ComfoBox.Gateway.Mqtt;
 /// hängt am Experten-Modus - genau wie im Legacy.
 /// </para>
 /// <para>
+/// <b>Experten-Modus zur Laufzeit (Aufgabe 10.13):</b> Wird der Modus
+/// umgeschaltet, bestellt <see cref="RefreshSubscriptionsAsync"/> die alten
+/// Topics ab und die neuen an - ohne Neustart.
+/// </para>
+/// <para>
 /// Der Schreibvorgang läuft **immer** über
 /// <see cref="BacnetDevice.WriteAsync"/>: nur dort wird der 24-h-Zähler
 /// erhöht. Ein Schreibvorgang per MQTT darf den Schreibschutz nicht
@@ -29,6 +35,16 @@ public sealed class MqttSubscriber : IMqttConnectionHandler
     private readonly IErrorCollector _errors;
     private readonly IMqttPublisher _publisher;
     private readonly ILogger<MqttSubscriber> _logger;
+    private readonly object _sync = new();
+
+    // Welche Client-Instanz hat den Nachrichten-Handler schon? Ein Client
+    // entsteht bei jedem Reconnect neu (siehe BrokerConnection) - deshalb
+    // schwache Schlüssel: sonst wüchse die Menge mit jedem Reconnect.
+    private readonly ConditionalWeakTable<IMqttClient, object> _handlerRegistered = new();
+
+    private static readonly object HandlerRegisteredMarker = new();
+
+    private IReadOnlyList<string> _subscribedTopics = [];
 
     /// <summary>
     /// Erzeugt den Subscriber.
@@ -61,23 +77,107 @@ public sealed class MqttSubscriber : IMqttConnectionHandler
     /// <summary>
     /// Die Anzahl der abonnierten Schreib-Topics.
     /// </summary>
-    public int SubscribedCount { get; private set; }
+    public int SubscribedCount
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _subscribedTopics.Count;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Die Topics, die gerade abonniert sind.
+    /// </summary>
+    /// <remarks>
+    /// Die Liste ist die Grundlage für das Abbestehen beim Moduswechsel: der
+    /// Broker kennt keine "alles außer…"-Anfrage, die alten Topics müssen
+    /// einzeln genannt werden.
+    /// </remarks>
+    public IReadOnlyList<string> SubscribedTopics
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _subscribedTopics;
+            }
+        }
+    }
 
     /// <inheritdoc />
     public async Task OnConnectedAsync(IMqttClient client, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(client);
 
-        var writeTopics = _topics.WriteTopics();
-        if (writeTopics.Count == 0)
+        EnsureHandlerRegistered(client);
+
+        await SubscribeAsync(client, _topics.WriteTopics(), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Baut die Abonnements auf allen Clients neu auf (Wechsel des Experten-Modus).
+    /// </summary>
+    /// <param name="clients">Die verbundenen Clients.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der den Umbau abschließt.</returns>
+    /// <remarks>
+    /// Ohne Clients passiert nichts - der nächste Verbindungsaufbau abonniert
+    /// ohnehin den dann gültigen Satz (<see cref="OnConnectedAsync"/>).
+    /// </remarks>
+    public async Task RefreshSubscriptionsAsync(
+        IReadOnlyList<IMqttClient> clients,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(clients);
+
+        var newTopics = _topics.WriteTopics();
+
+        IReadOnlyList<string> oldTopics;
+        lock (_sync)
+        {
+            oldTopics = _subscribedTopics;
+        }
+
+        var unchanged = SameTopics(oldTopics, newTopics);
+
+        foreach (var client in clients)
+        {
+            EnsureHandlerRegistered(client);
+
+            if (!unchanged)
+            {
+                await UnsubscribeAsync(client, oldTopics, cancellationToken).ConfigureAwait(false);
+            }
+
+            await SubscribeAsync(client, newTopics, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Abonniert einen Satz Schreib-Topics auf einem Client.
+    /// </summary>
+    /// <param name="client">Der Client.</param>
+    /// <param name="topics">Die Topics.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der das Abonnement abschließt.</returns>
+    private async Task SubscribeAsync(
+        IMqttClient client,
+        IReadOnlyList<string> topics,
+        CancellationToken cancellationToken)
+    {
+        if (topics.Count == 0)
         {
             _logger.LogInformation("Keine Schreib-Topics - es werden keine /Set-Topics abonniert.");
+            SetSubscribedTopics([]);
             return;
         }
 
         var subscribeOptions = new MqttClientSubscribeOptionsBuilder();
 
-        foreach (var topic in writeTopics)
+        foreach (var topic in topics)
         {
             subscribeOptions.WithTopicFilter(new MqttTopicFilterBuilder()
                 .WithTopic(topic)
@@ -87,13 +187,100 @@ public sealed class MqttSubscriber : IMqttConnectionHandler
 
         var options = subscribeOptions.Build();
 
-        client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
-
         await client.SubscribeAsync(options, cancellationToken).ConfigureAwait(false);
 
-        SubscribedCount = writeTopics.Count;
+        SetSubscribedTopics(topics);
 
-        _logger.LogInformation("{Count} Schreib-Topics abonniert.", writeTopics.Count);
+        _logger.LogInformation("{Count} Schreib-Topics abonniert.", topics.Count);
+    }
+
+    /// <summary>
+    /// Bestellt einen Satz Schreib-Topics auf einem Client ab.
+    /// </summary>
+    /// <param name="client">Der Client.</param>
+    /// <param name="topics">Die Topics.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Ein Task, der das Abbestellen abschließt.</returns>
+    private async Task UnsubscribeAsync(
+        IMqttClient client,
+        IReadOnlyList<string> topics,
+        CancellationToken cancellationToken)
+    {
+        if (topics.Count == 0)
+        {
+            return;
+        }
+
+        var unsubscribeOptions = new MqttClientUnsubscribeOptionsBuilder();
+
+        foreach (var topic in topics)
+        {
+            unsubscribeOptions.WithTopicFilter(topic);
+        }
+
+        await client.UnsubscribeAsync(unsubscribeOptions.Build(), cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("{Count} Schreib-Topics abbestellt.", topics.Count);
+    }
+
+    /// <summary>
+    /// Merkt sich den aktuell abonnierten Satz.
+    /// </summary>
+    /// <param name="topics">Die Topics.</param>
+    private void SetSubscribedTopics(IReadOnlyList<string> topics)
+    {
+        lock (_sync)
+        {
+            _subscribedTopics = topics;
+        }
+    }
+
+    /// <summary>
+    /// Sind zwei Topic-Listen gleich (auch in der Reihenfolge)?
+    /// </summary>
+    /// <param name="left">Die eine Liste.</param>
+    /// <param name="right">Die andere Liste.</param>
+    /// <returns><c>true</c>, wenn sie identisch sind.</returns>
+    private static bool SameTopics(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+
+        for (var i = 0; i < left.Count; i++)
+        {
+            if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Hängt den Nachrichten-Handler **genau einmal** an einen Client.
+    /// </summary>
+    /// <param name="client">Der Client.</param>
+    /// <remarks>
+    /// <see cref="OnConnectedAsync"/> und <see cref="RefreshSubscriptionsAsync"/>
+    /// können für denselben Client laufen. Ohne diesen Schutz hinge der Handler
+    /// zweimal am Client - jede Nachricht würde doppelt verarbeitet und damit
+    /// doppelt geschrieben.
+    /// </remarks>
+    private void EnsureHandlerRegistered(IMqttClient client)
+    {
+        lock (_sync)
+        {
+            if (_handlerRegistered.TryGetValue(client, out _))
+            {
+                return;
+            }
+
+            _handlerRegistered.Add(client, HandlerRegisteredMarker);
+            client.ApplicationMessageReceivedAsync += OnMessageReceivedAsync;
+        }
     }
 
     /// <summary>

@@ -46,6 +46,15 @@ public sealed class MqttSubscriberTests : IDisposable
     }
 
     private MqttSubscriber CreateSubscriber(bool expertMode = false)
+        => CreateSubscriberWithMap(expertMode).Subscriber;
+
+    /// <summary>
+    /// Erzeugt Subscriber **und** Topic-Zuordnung - für die Tests des
+    /// Moduswechsels, die beide brauchen.
+    /// </summary>
+    /// <param name="expertMode">Der Startwert des Experten-Modus.</param>
+    /// <returns>Das Paar aus Subscriber und Zuordnung.</returns>
+    private (MqttSubscriber Subscriber, MqttTopicMap Map) CreateSubscriberWithMap(bool expertMode = false)
     {
         var bacnet = Options.Create(new BacnetOptions
         {
@@ -72,12 +81,16 @@ public sealed class MqttSubscriberTests : IDisposable
             new GatewayRuntimeSettings(expertMode),
             NullLogger<BacnetDevice>.Instance);
 
-        return new MqttSubscriber(
-            new MqttTopicMap(_catalog, "ComfoBox", expertMode),
+        var map = new MqttTopicMap(_catalog, "ComfoBox", expertMode);
+
+        var subscriber = new MqttSubscriber(
+            map,
             device,
             _errors,
             _publisher,
             NullLogger<MqttSubscriber>.Instance);
+
+        return (subscriber, map);
     }
 
     [Fact]
@@ -242,6 +255,102 @@ public sealed class MqttSubscriberTests : IDisposable
         await subscriber.HandleMessageAsync($"ComfoBox/{item.TopicPath}/Set", "1");
 
         Assert.Contains((uint)item.BacnetObjectId, _client.WrittenObjects);
+        Assert.Equal(1, _counter.Count);
+    }
+
+    /// <summary>
+    /// Beim Einschalten des Experten-Modus werden die alten Topics abbestellt
+    /// und die neuen abonniert (Aufgabe 10.13).
+    /// </summary>
+    [Fact]
+    public async Task RefreshSubscriptions_Bestellt_Alte_Topics_Ab_Und_Neue_An()
+    {
+        var (subscriber, map) = CreateSubscriberWithMap(expertMode: false);
+        var client = new NoopMqttClient();
+
+        await subscriber.OnConnectedAsync(client, CancellationToken.None);
+
+        var ohneExperten = map.WriteTopics().Count;
+        Assert.Equal(ohneExperten, subscriber.SubscribedCount);
+        Assert.Empty(client.UnsubscribedTopicFilters);
+
+        var item = _catalog.FindByTopicPath("Config/Ventilation/SpeedStage3");
+        Assert.NotNull(item);
+
+        var setTopic = map.ItemSetTopic(item!);
+        Assert.DoesNotContain(setTopic, client.ActiveSubscriptions);
+
+        // Einschalten: die Zuordnung ändert sich, der Subscriber zieht nach.
+        map.UpdateExpertMode(true);
+        await subscriber.RefreshSubscriptionsAsync([client], CancellationToken.None);
+
+        // Die vorherigen Topics sind abbestellt, die neuen abonniert.
+        Assert.Equal(ohneExperten, client.UnsubscribedTopicFilters.Count);
+        Assert.Equal(map.WriteTopics().Count, subscriber.SubscribedCount);
+
+        // Alle experten-pflichtigen Items kommen hinzu (21 Config + 1 Command
+        // aus V2, 34 aus dem V1-Altbestand).
+        var expertenItems = _catalog.All.Count(i => i.RequiresExpertMode && i.IsWritable);
+        Assert.Equal(ohneExperten + 2 * expertenItems, subscriber.SubscribedCount);
+        Assert.Contains(setTopic, subscriber.SubscribedTopics);
+        Assert.Contains(setTopic, client.ActiveSubscriptions);
+
+        // Ausschalten: das Schreib-Topic verschwindet wieder.
+        map.UpdateExpertMode(false);
+        await subscriber.RefreshSubscriptionsAsync([client], CancellationToken.None);
+
+        Assert.DoesNotContain(setTopic, subscriber.SubscribedTopics);
+        Assert.DoesNotContain(setTopic, client.ActiveSubscriptions);
+        Assert.Equal(ohneExperten, subscriber.SubscribedCount);
+
+        // Die abbestellte Menge enthält beim zweiten Wechsel die Experten-Topics.
+        Assert.Contains(setTopic, client.UnsubscribedTopicFilters);
+    }
+
+    /// <summary>
+    /// Ein Moduswechsel hängt den Nachrichten-Handler nicht ein zweites Mal an.
+    /// </summary>
+    /// <remarks>
+    /// Zwei Handler würden jede Nachricht doppelt verarbeiten - und damit
+    /// zweimal schreiben. Der 24-h-Zähler liefe doppelt hoch.
+    /// </remarks>
+    [Fact]
+    public async Task RefreshSubscriptions_Registriert_Den_Handler_Nur_Einmal()
+    {
+        var (subscriber, map) = CreateSubscriberWithMap(expertMode: true);
+        var client = new NoopMqttClient();
+
+        await subscriber.OnConnectedAsync(client, CancellationToken.None);
+        Assert.Equal(1, client.MessageHandlerCount);
+
+        map.UpdateExpertMode(false);
+        await subscriber.RefreshSubscriptionsAsync([client], CancellationToken.None);
+
+        map.UpdateExpertMode(true);
+        await subscriber.RefreshSubscriptionsAsync([client], CancellationToken.None);
+
+        Assert.Equal(1, client.MessageHandlerCount);
+    }
+
+    /// <summary>
+    /// Nach einem Moduswechsel wird eine Nachricht **einmal** verarbeitet.
+    /// </summary>
+    [Fact]
+    public async Task Nach_Dem_Moduswechsel_Wird_Eine_Nachricht_Nur_Einmal_Verarbeitet()
+    {
+        var (subscriber, map) = CreateSubscriberWithMap(expertMode: true);
+        var client = new NoopMqttClient();
+
+        await subscriber.OnConnectedAsync(client, CancellationToken.None);
+
+        map.UpdateExpertMode(false);
+        await subscriber.RefreshSubscriptionsAsync([client], CancellationToken.None);
+
+        var item = _catalog.All.First(i => i.Id == "zone.set_point_normal");
+
+        await client.RaiseMessageAsync($"ComfoBox/{item.TopicPath}/Set", "21.5");
+
+        Assert.Single(_client.WrittenObjects);
         Assert.Equal(1, _counter.Count);
     }
 }
