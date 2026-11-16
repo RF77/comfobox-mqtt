@@ -11,6 +11,14 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [1.2.0] – 2026-11-16
+
+> **Thema:** Topics V2 – Diagnose, Energie und Experten-Konfiguration
+> (Phase 10, [ADR-014](docs/05-entscheidungen/adr-014-topics-v2-namensraum-und-expertenmodus.md)).
+> **Der V1-Vertrag bleibt unverändert:** `docs/topics.json` und `docs/topics.md`
+> sind byte-identisch, alle 127 bestehenden Topics behalten Adresse, Payload und
+> Enum-Namen. V2 ist rein additiv und hat eine eigene Fixture (`docs/topics-v2.json`).
+
 ### Added
 
 - **Diagnose für Werte außerhalb der Katalog-Grenzen.** Liefert die ComfoBox
