@@ -39,7 +39,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Primary]
             [Description(@"Vorlauftemperatur: Istwert Vorlauf")]
-            public AnalogValue FlowTemperature => new AnalogValue(14, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue FlowTemperature => new AnalogValue(14, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Zustand Zone: Regelungs-Zustand (Werte nicht dokumentiert)
@@ -59,11 +59,11 @@ namespace ComfoBoxLib.Items
                 => new EnumValue<ZoneSetPointTypes?>(398) {IsReadOnly = true};
 
             /// <summary>
-            ///     Zonenï¿½bersteuerung: ï¿½bersteuerungsquelle
+            ///     Zonenübersteuerung: Übersteuerungsquelle
             /// </summary>
             [V2]
             [Secondary]
-            [Description(@"Zonenï¿½bersteuerung: ï¿½bersteuerungsquelle")]
+            [Description(@"Zonenübersteuerung: Übersteuerungsquelle")]
             public EnumValue<ZoneOverrides?> Override
                 => new EnumValue<ZoneOverrides?>(676) {IsReadOnly = true};
         }
@@ -75,12 +75,12 @@ namespace ComfoBoxLib.Items
         public class WarmWater
         {
             /// <summary>
-            ///     Warmwassertemperatur 2: WW-Fï¿½hler unten
+            ///     Warmwassertemperatur 2: WW-Fühler unten
             /// </summary>
             [V2]
             [Secondary]
-            [Description(@"Warmwassertemperatur 2: WW-Fï¿½hler unten")]
-            public AnalogValue TemperatureBottom => new AnalogValue(4, "ï¿½C") {IsReadOnly = true};
+            [Description(@"Warmwassertemperatur 2: WW-Fühler unten")]
+            public AnalogValue TemperatureBottom => new AnalogValue(4, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     WW-Sollwert (Typ)
@@ -101,19 +101,19 @@ namespace ComfoBoxLib.Items
                 => new EnumValue<WarmWaterStates?>(2599) {IsReadOnly = true};
 
             /// <summary>
-            ///     WW-ï¿½bersteuerung: ï¿½bersteuerungsquelle
+            ///     WW-Übersteuerung: Übersteuerungsquelle
             /// </summary>
             [V2]
             [Secondary]
-            [Description(@"WW-ï¿½bersteuerung: ï¿½bersteuerungsquelle")]
+            [Description(@"WW-Übersteuerung: Übersteuerungsquelle")]
             public EnumValue<WarmWaterOverrides?> Override
                 => new EnumValue<WarmWaterOverrides?>(2598) {IsReadOnly = true};
         }
 
         /// <summary>
-        ///     Wï¿½rmepumpe
+        ///     Wärmepumpe
         /// </summary>
-        [Description(@"Wï¿½rmepumpe")]
+        [Description(@"Wärmepumpe")]
         public class HeatPump
         {
             /// <summary>
@@ -122,23 +122,23 @@ namespace ComfoBoxLib.Items
             [V2]
             [Primary]
             [Description(@"Energieerzeugertemperatur: Istwert der WP-Regelung")]
-            public AnalogValue EnergyProducerTemperature => new AnalogValue(21, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue EnergyProducerTemperature => new AnalogValue(21, "°C") {IsReadOnly = true};
 
             /// <summary>
-            ///     WP-Rï¿½cklauftemperatur: Istwert Rï¿½cklauf
+            ///     WP-Rücklauftemperatur: Istwert Rücklauf
             /// </summary>
             [V2]
             [Primary]
-            [Description(@"WP-Rï¿½cklauftemperatur: Istwert Rï¿½cklauf")]
-            public AnalogValue ReturnTemperature => new AnalogValue(3468, "ï¿½C") {IsReadOnly = true};
+            [Description(@"WP-Rücklauftemperatur: Istwert Rücklauf")]
+            public AnalogValue ReturnTemperature => new AnalogValue(3468, "°C") {IsReadOnly = true};
 
             /// <summary>
-            ///     Primï¿½rvorlauftemperatur: Vorlauf im Primï¿½rkreis
+            ///     Primärvorlauftemperatur: Vorlauf im Primärkreis
             /// </summary>
             [V2]
             [Secondary]
-            [Description(@"Primï¿½rvorlauftemperatur: Vorlauf im Primï¿½rkreis")]
-            public AnalogValue PrimaryFlowTemperature => new AnalogValue(3209, "ï¿½C") {IsReadOnly = true};
+            [Description(@"Primärvorlauftemperatur: Vorlauf im Primärkreis")]
+            public AnalogValue PrimaryFlowTemperature => new AnalogValue(3209, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Verdampfertemperatur: Verdampfer
@@ -146,7 +146,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Verdampfertemperatur: Verdampfer")]
-            public AnalogValue EvaporatorTemperature => new AnalogValue(660, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue EvaporatorTemperature => new AnalogValue(660, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Sauggastemperatur: Sauggas
@@ -154,7 +154,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Sauggastemperatur: Sauggas")]
-            public AnalogValue SuctionGasTemperature => new AnalogValue(641, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue SuctionGasTemperature => new AnalogValue(641, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Heissgastemperatur: Heissgas
@@ -162,7 +162,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Heissgastemperatur: Heissgas")]
-            public AnalogValue HotGasTemperature => new AnalogValue(3228, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue HotGasTemperature => new AnalogValue(3228, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Kondensatortemperatur: Kondensator
@@ -170,7 +170,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Kondensatortemperatur: Kondensator")]
-            public AnalogValue CondenserTemperature => new AnalogValue(666, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue CondenserTemperature => new AnalogValue(666, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Kondensationstemperatur: aus Hochdrucksensor gerechnet
@@ -178,7 +178,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Slow]
             [Description(@"Kondensationstemperatur: aus Hochdrucksensor gerechnet")]
-            public AnalogValue CondensationTemperature => new AnalogValue(3475, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue CondensationTemperature => new AnalogValue(3475, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Verdampfungstemperatur: aus Niederdrucksensor gerechnet
@@ -186,7 +186,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Slow]
             [Description(@"Verdampfungstemperatur: aus Niederdrucksensor gerechnet")]
-            public AnalogValue EvaporationTemperature => new AnalogValue(3598, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue EvaporationTemperature => new AnalogValue(3598, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     WP2: Betriebszustand Stufe 2
@@ -214,11 +214,11 @@ namespace ComfoBoxLib.Items
             public AnalogValue DefrostDeltaReference => new AnalogValue(3110, "K") {IsReadOnly = true};
 
             /// <summary>
-            ///     Referenzdifferenz korrigiert: gï¿½ltige dT fï¿½r ï¿½berwachung
+            ///     Referenzdifferenz korrigiert: gültige dT für Überwachung
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Referenzdifferenz korrigiert: gï¿½ltige dT fï¿½r ï¿½berwachung")]
+            [Description(@"Referenzdifferenz korrigiert: gültige dT für Überwachung")]
             public AnalogValue DefrostDeltaCorrected => new AnalogValue(643, "K") {IsReadOnly = true};
         }
 
@@ -234,7 +234,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Pufferspeichertemperatur oben")]
-            public AnalogValue TemperatureTop => new AnalogValue(24, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue TemperatureTop => new AnalogValue(24, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Pufferspeichertemperatur unten
@@ -242,7 +242,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Pufferspeichertemperatur unten")]
-            public AnalogValue TemperatureBottom => new AnalogValue(25, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue TemperatureBottom => new AnalogValue(25, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Pufferspeichersollwert
@@ -250,23 +250,23 @@ namespace ComfoBoxLib.Items
             [V2]
             [Secondary]
             [Description(@"Pufferspeichersollwert")]
-            public AnalogValue SetPoint => new AnalogValue(281, "ï¿½C") {IsReadOnly = true};
+            public AnalogValue SetPoint => new AnalogValue(281, "°C") {IsReadOnly = true};
 
             /// <summary>
-            ///     Kï¿½hlpufferspeichertemperatur oben
+            ///     Kühlpufferspeichertemperatur oben
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Kï¿½hlpufferspeichertemperatur oben")]
-            public AnalogValue CoolingTemperatureTop => new AnalogValue(3925, "ï¿½C") {IsReadOnly = true};
+            [Description(@"Kühlpufferspeichertemperatur oben")]
+            public AnalogValue CoolingTemperatureTop => new AnalogValue(3925, "°C") {IsReadOnly = true};
 
             /// <summary>
-            ///     Kï¿½hlpufferspeichertemperatur unten
+            ///     Kühlpufferspeichertemperatur unten
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Kï¿½hlpufferspeichertemperatur unten")]
-            public AnalogValue CoolingTemperatureBottom => new AnalogValue(3924, "ï¿½C") {IsReadOnly = true};
+            [Description(@"Kühlpufferspeichertemperatur unten")]
+            public AnalogValue CoolingTemperatureBottom => new AnalogValue(3924, "°C") {IsReadOnly = true};
         }
 
         /// <summary>
@@ -303,7 +303,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Wï¿½rmemenge Heizen: thermischer Zï¿½hler Heizen")]
+            [Description(@"Wärmemenge Heizen: thermischer Zähler Heizen")]
             public AnalogValue ThermalEnergyHeating => new AnalogValue(3343, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -312,7 +312,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Wï¿½rmemenge Warmwasser: thermischer Zï¿½hler Warmwasser")]
+            [Description(@"Wärmemenge Warmwasser: thermischer Zähler Warmwasser")]
             public AnalogValue ThermalEnergyWarmWater => new AnalogValue(3347, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -321,7 +321,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Wï¿½rmemenge gesamt: thermischer Zï¿½hler gesamt")]
+            [Description(@"Wärmemenge gesamt: thermischer Zähler gesamt")]
             public AnalogValue ThermalEnergyTotal => new AnalogValue(3349, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -330,7 +330,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Strommenge Heizen: elektrischer Zï¿½hler Heizen")]
+            [Description(@"Strommenge Heizen: elektrischer Zähler Heizen")]
             public AnalogValue ElectricalEnergyHeating => new AnalogValue(3344, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -339,7 +339,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Strommenge Warmwasser: elektrischer Zï¿½hler Warmwasser")]
+            [Description(@"Strommenge Warmwasser: elektrischer Zähler Warmwasser")]
             public AnalogValue ElectricalEnergyWarmWater => new AnalogValue(3354, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -348,7 +348,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"Strommenge gesamt: elektrischer Zï¿½hler gesamt")]
+            [Description(@"Strommenge gesamt: elektrischer Zähler gesamt")]
             public AnalogValue ElectricalEnergyTotal => new AnalogValue(3355, "kWh") {IsReadOnly = true};
 
             /// <summary>
@@ -357,7 +357,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"COP Heizen: Gï¿½tezahl Heizen (Laufzeitmittel)")]
+            [Description(@"COP Heizen: Gütezahl Heizen (Laufzeitmittel)")]
             public AnalogValue CopHeating => new AnalogValue(3345, null) {IsReadOnly = true};
 
             /// <summary>
@@ -366,7 +366,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"COP Warmwasser: Gï¿½tezahl Warmwasser (Laufzeitmittel)")]
+            [Description(@"COP Warmwasser: Gütezahl Warmwasser (Laufzeitmittel)")]
             public AnalogValue CopWarmWater => new AnalogValue(3356, null) {IsReadOnly = true};
 
             /// <summary>
@@ -375,7 +375,7 @@ namespace ComfoBoxLib.Items
             [V2]
             [Energy]
             [Slow]
-            [Description(@"COP gesamt: Gï¿½tezahl gesamt (Laufzeitmittel)")]
+            [Description(@"COP gesamt: Gütezahl gesamt (Laufzeitmittel)")]
             public AnalogValue CopTotal => new AnalogValue(3357, null) {IsReadOnly = true};
 
             /// <summary>
@@ -383,7 +383,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Wï¿½rmemengenmessung: Betriebsart der Wï¿½rmemengenmessung")]
+            [Description(@"Wärmemengenmessung: Betriebsart der Wärmemengenmessung")]
             public EnumValue<EnergyMeasurementModes?> MeasurementMode
                 => new EnumValue<EnergyMeasurementModes?>(3340) {IsReadOnly = true};
 
@@ -392,22 +392,22 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Durchfluss Heizen: Volumenstrom des Wï¿½rmemengenzï¿½hlers")]
-            public AnalogValue FlowRate => new AnalogValue(3341, "mï¿½/h") {IsReadOnly = true};
+            [Description(@"Durchfluss Heizen: Volumenstrom des Wärmemengenzählers")]
+            public AnalogValue FlowRate => new AnalogValue(3341, "m³/h") {IsReadOnly = true};
 
             /// <summary>
             ///     Durchfluss Warmwasser: Volumenstrom des WW-Waermemengenzaehlers
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Durchfluss Warmwasser: Volumenstrom des WW-Wï¿½rmemengenzï¿½hlers")]
-            public AnalogValue FlowRateWarmWater => new AnalogValue(3348, "mï¿½/h") {IsReadOnly = true};
+            [Description(@"Durchfluss Warmwasser: Volumenstrom des WW-Wärmemengenzählers")]
+            public AnalogValue FlowRateWarmWater => new AnalogValue(3348, "m³/h") {IsReadOnly = true};
         }
 
         /// <summary>
         ///     Zaehler und Wartung
         /// </summary>
-        [Description(@"Zï¿½hler und Wartung")]
+        [Description(@"Zähler und Wartung")]
         public class Counters
         {
             /// <summary>
@@ -464,7 +464,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Betriebsstunden aktives Kï¿½hlen")]
+            [Description(@"Betriebsstunden aktives Kühlen")]
             public AnalogValue ActiveCoolingOperatingHours => new AnalogValue(3362, "h") {IsReadOnly = true};
 
             /// <summary>
@@ -472,7 +472,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Betriebsstunden passives Kï¿½hlen")]
+            [Description(@"Betriebsstunden passives Kühlen")]
             public AnalogValue PassiveCoolingOperatingHours => new AnalogValue(3363, "h") {IsReadOnly = true};
 
             /// <summary>
@@ -480,7 +480,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Abtauungen: Anzahl der Abtauvorgï¿½nge")]
+            [Description(@"Abtauungen: Anzahl der Abtauvorgänge")]
             public AnalogValue DefrostCycles => new AnalogValue(3485, null) {IsReadOnly = true};
 
             /// <summary>
@@ -511,17 +511,17 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Secondary]
-            [Description(@"Kollektortemperatur: Fï¿½hler am Kollektor")]
-            public AnalogValue CollectorTemperature => new AnalogValue(28, "ï¿½C") {IsReadOnly = true};
+            [Description(@"Kollektortemperatur: Fühler am Kollektor")]
+            public AnalogValue CollectorTemperature => new AnalogValue(28, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Kollektorwaermetauschertemperatur
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Kollektorwï¿½rmetauschertemperatur")]
+            [Description(@"Kollektorwärmetauschertemperatur")]
             public AnalogValue CollectorHeatExchangerTemperature
-                => new AnalogValue(3903, "ï¿½C") {IsReadOnly = true};
+                => new AnalogValue(3903, "°C") {IsReadOnly = true};
 
             /// <summary>
             ///     Kollektor-Differenztemperatur (dT)
@@ -536,7 +536,7 @@ namespace ComfoBoxLib.Items
             /// </summary>
             [V2]
             [Slow]
-            [Description(@"Solarenergie gesamt: Ertragszï¿½hler gesamt")]
+            [Description(@"Solarenergie gesamt: Ertragszähler gesamt")]
             public AnalogValue EnergyTotal => new AnalogValue(36, "kWh") {IsReadOnly = true};
 
             /// <summary>

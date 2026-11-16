@@ -15,7 +15,7 @@ namespace ComfoBoxLib.Attributes
 {
     /// <summary>
     ///     Markiert Energie- und COP-Items.
-    ///     Ohne Wï¿½rmemengenmessung (DP 3340 = None) duerfen diese Items nicht
+    ///     Ohne Wärmemengenmessung (DP 3340 = None) duerfen diese Items nicht
     ///     als 0 publiziert werden - der Gateway sperrt sie stattdessen.
     ///     Nur Deklaration - src_old/ wird nicht kompiliert.
     /// </summary>
