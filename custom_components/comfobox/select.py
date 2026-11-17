@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -49,7 +47,7 @@ def _description(item: ComfoBoxItem) -> SelectEntityDescription:
         key=item.id,
         name=item.display_name,
         translation_key=slugify(f"{item.group}_{item.name}"),
-        options=list(item.enum_values),
+        options=item.enum_names,
     )
 
 
@@ -59,8 +57,7 @@ class ComfoBoxSelect(ComfoBoxEntity, SelectEntity):
     @property
     def current_option(self) -> str | None:
         """Der aktuell gesetzte Enum-Name."""
-        value: Any = self.item.value
-        return str(value) if value is not None else None
+        return self.item.enum_name
 
     async def async_select_option(self, option: str) -> None:
         """Schreibt den Enum-Wert."""

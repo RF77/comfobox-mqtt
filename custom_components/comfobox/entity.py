@@ -55,6 +55,45 @@ class ComfoBoxEntity(CoordinatorEntity[ComfoBoxCoordinator]):
         return super().available and not self.item.is_stale
 
     @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Die Katalog-Metadaten des Werts.
+
+        Home Assistant kennt keinen Tooltip. Damit die Beschreibung, der
+        erlaubte Bereich und die Enum-Werte trotzdem sichtbar sind, stehen sie
+        im Dialog der Entitaet unter „Attribute". `min`/`max` und `options`
+        zeigen Number und Select ohnehin schon an - hier kommen sie fuer
+        Sensoren und Schalter hinzu.
+        """
+        item = self.item
+        attributes: dict[str, Any] = {}
+
+        if item.description:
+            attributes["description"] = item.description
+
+        # Bei einem Schalter (0/1) waeren `min`/`max` nur Rauschen.
+        if not item.is_boolean:
+            if item.min_value is not None:
+                attributes["min"] = item.min_value
+            if item.max_value is not None:
+                attributes["max"] = item.max_value
+
+        if item.enum_values:
+            attributes["enum_values"] = {
+                str(number): name for number, name in item.enum_values.items()
+            }
+
+        return attributes
+
+    @property
     def native_value(self) -> Any:
-        """Der Wert aus dem Coordinator-Cache."""
-        return self.item.value
+        """Der Wert aus dem Coordinator-Cache.
+
+        Enum-Werte traegt das Gateway als Namen (`valueText`) - die Zahl waere
+        als Zustand unbrauchbar.
+        """
+        item = self.item
+
+        if item.is_enum:
+            return item.enum_name
+
+        return item.value

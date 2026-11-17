@@ -67,6 +67,23 @@ dessen Werte, nicht eine Liste von Geräten.
 | Spalte **Bereich** | kleinster und größter erlaubter Wert |
 | Spalte **Schreibbar** | Ja/Nein |
 
+### Was bedeutet ein Wert?
+
+Fahren Sie mit der Maus über den **Namen** eines Werts (oder fokussieren Sie ihn
+mit der Tastatur). Dann erscheint ein Hinweis mit
+
+| Zeile | Inhalt |
+|---|---|
+| 1 | die Beschreibung des Werts aus dem Katalog der Anlage |
+| 2 | der erlaubte **Bereich**, z. B. „Bereich: 5 … 35 °C“ |
+| 3 | bei Auswahlwerten die **möglichen Werte**, z. B. „Werte: 0 = Normal · 1 = Reduziert“ |
+| 4 | das **MQTT-Topic** des Werts |
+
+Der Bereich steht zusätzlich dauerhaft unter dem Wert. Bei Auswahlwerten nennt
+der Hinweis zu jedem Namen die zugehörige Zahl – das ist der Wert, den die
+Anlage über MQTT unter `…/AsNumber` führt. Geschrieben wird in der Oberfläche
+und in Home Assistant immer der **Name**.
+
 ### Werte schreiben
 
 | Werttyp | Bedienung |

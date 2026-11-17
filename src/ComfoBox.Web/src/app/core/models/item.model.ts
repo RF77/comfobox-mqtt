@@ -21,10 +21,9 @@ export interface ItemDto {
   /**
    * Die vollständige Beschreibung aus dem Katalog.
    *
-   * <p>Optional: das Gateway liefert das Feld derzeit **nicht** – die
-   * Oberfläche fällt dann auf {@link displayName} zurück. Sobald der
-   * REST-Vertrag das Feld liefert, erscheint es ohne weitere Änderung als
-   * Tooltip an den Werten.</p>
+   * <p>Das Gateway liefert sie seit Phase 10 (`ItemDto.Description`); fehlt
+   * sie, fällt die Oberfläche auf {@link displayName} zurück. Sie steht im
+   * Tooltip der Werte-Karten.</p>
    */
   readonly description?: string | null;
   /** Die Art des Werts. */

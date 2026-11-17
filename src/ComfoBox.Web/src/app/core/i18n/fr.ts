@@ -114,6 +114,10 @@ export const FR: Translations = {
     readonly: 'Lecture seule',
     newValue: (name) => `Nouvelle valeur pour ${name}`,
     topic: (topic) => `Topic MQTT : ${topic}`,
+    range: (range) => `Plage : ${range}`,
+    rangeFrom: (min) => `à partir de ${min}`,
+    rangeTo: (max) => `jusqu'à ${max}`,
+    values: (values) => `Valeurs : ${values}`,
   },
 
   config: {

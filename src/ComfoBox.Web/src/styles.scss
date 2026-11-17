@@ -54,6 +54,20 @@ a {
   color: var(--p-primary-color, var(--p-highlight-background));
 }
 
+/*
+ * Die Tooltips der Werte-Karten tragen mehrere Zeilen (Beschreibung, Bereich,
+ * Enum-Werte, Topic). Der Tooltip wird an `body` gehängt - die Regel muss
+ * deshalb global stehen und nicht in der Komponente.
+ */
+.cb-item-tooltip {
+  max-width: 34rem;
+}
+
+.cb-item-tooltip .p-tooltip-text {
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
 /* Der Fokus bleibt sichtbar - die Oberfläche ist per Tastatur bedienbar. */
 :focus-visible {
   outline: 2px solid var(--p-primary-color, var(--p-highlight-background));

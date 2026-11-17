@@ -78,27 +78,32 @@ async def test_get_items_liest_den_katalog(client):
                     "id": "zone_setpoint_normal",
                     "group": "Zone",
                     "name": "SetPointNormal",
+                    "displayName": "Zone: Raumsollwert normal",
                     "description": "Raumsollwert Normal",
-                    "valueType": "float",
+                    "kind": "analog",
+                    "valueText": "21,5 °C",
                     "unit": "°C",
-                    "isReadOnly": False,
+                    "writable": True,
                     "min": 5.0,
                     "max": 35.0,
                     "value": 21.5,
                     "lastUpdated": "2026-10-31T10:00:00Z",
-                    "isStale": False,
+                    "stale": False,
+                    "enumValues": {},
                 },
                 {
                     "id": "zone_operation_mode",
                     "group": "Zone",
                     "name": "OperationMode",
+                    "displayName": "Zone: Betriebsart",
                     "description": None,
-                    "valueType": "enum",
+                    "kind": "enum",
+                    "valueText": "Normal",
                     "unit": None,
-                    "isReadOnly": False,
-                    "enumValues": ["Normal", "Reduced"],
-                    "value": "Normal",
-                    "isStale": True,
+                    "writable": True,
+                    "enumValues": {"0": "Normal", "1": "Reduced"},
+                    "value": 0,
+                    "stale": True,
                 },
             ],
         )
@@ -111,11 +116,12 @@ async def test_get_items_liest_den_katalog(client):
     assert analog.id == "zone_setpoint_normal"
     assert analog.group == "Zone"
     assert analog.name == "SetPointNormal"
-    assert analog.display_name == "Raumsollwert Normal"
-    assert analog.value_type == "float"
+    assert analog.display_name == "Zone: Raumsollwert normal"
+    assert analog.description == "Raumsollwert Normal"
+    assert analog.kind == "analog"
     assert analog.unit == "°C"
-    assert analog.is_read_only is False
     assert analog.writable is True
+    assert analog.is_read_only is False
     assert analog.min_value == 5.0
     assert analog.max_value == 35.0
     assert analog.value == 21.5
@@ -123,8 +129,10 @@ async def test_get_items_liest_den_katalog(client):
     assert analog.is_enum is False
 
     enum = items[1]
-    assert enum.display_name == "OperationMode"
-    assert enum.enum_values == ["Normal", "Reduced"]
+    assert enum.display_name == "Zone: Betriebsart"
+    assert enum.enum_values == {0: "Normal", 1: "Reduced"}
+    assert enum.enum_names == ["Normal", "Reduced"]
+    assert enum.enum_name == "Normal"
     assert enum.is_enum is True
     assert enum.is_stale is True
 

@@ -126,6 +126,37 @@ dessen Werte, nicht eine Liste von Geräten.</p>
 <td>Ja/Nein</td>
 </tr>
 </tbody></table>
+<h3 id="was-bedeutet-ein-wert">Was bedeutet ein Wert?</h3>
+<p>Fahren Sie mit der Maus über den <strong>Namen</strong> eines Werts (oder fokussieren Sie ihn
+mit der Tastatur). Dann erscheint ein Hinweis mit</p>
+<table>
+<thead>
+<tr>
+<th>Zeile</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>die Beschreibung des Werts aus dem Katalog der Anlage</td>
+</tr>
+<tr>
+<td>2</td>
+<td>der erlaubte <strong>Bereich</strong>, z. B. „Bereich: 5 … 35 °C“</td>
+</tr>
+<tr>
+<td>3</td>
+<td>bei Auswahlwerten die <strong>möglichen Werte</strong>, z. B. „Werte: 0 = Normal · 1 = Reduziert“</td>
+</tr>
+<tr>
+<td>4</td>
+<td>das <strong>MQTT-Topic</strong> des Werts</td>
+</tr>
+</tbody></table>
+<p>Der Bereich steht zusätzlich dauerhaft unter dem Wert. Bei Auswahlwerten nennt
+der Hinweis zu jedem Namen die zugehörige Zahl – das ist der Wert, den die
+Anlage über MQTT unter <code>…/AsNumber</code> führt. Geschrieben wird in der Oberfläche
+und in Home Assistant immer der <strong>Name</strong>.</p>
 <h3 id="werte-schreiben">Werte schreiben</h3>
 <table>
 <thead>

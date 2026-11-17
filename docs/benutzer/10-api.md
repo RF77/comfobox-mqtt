@@ -84,6 +84,7 @@ Antwort (gekürzt):
     "group": "Zone",
     "name": "SetPointNormal",
     "displayName": "Raumsollwert normal",
+    "description": "Raumsollwert Normalbetrieb der Zone",
     "kind": "analog",
     "value": 21.5,
     "valueText": "21,5 °C",
@@ -104,6 +105,8 @@ Antwort (gekürzt):
 | Feld | Bedeutung |
 |---|---|
 | `id` | stabiler Schlüssel – für Schreibvorgänge verwenden |
+| `displayName` | Anzeigename für die Oberfläche |
+| `description` | die vollständige Beschreibung aus dem Katalog (Tooltip) |
 | `kind` | `analog`, `enum` oder `date` |
 | `min` / `max` | gültiger Bereich (bei `null`: kein Limit) |
 | `writable` | `true` = schreibbar (Experten-Modus berücksichtigt) |

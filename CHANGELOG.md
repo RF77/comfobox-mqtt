@@ -11,6 +11,32 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added
+
+- **Beschreibung, Bereich und Auswahlwerte an jedem Wert.** In der Web-Oberfläche
+  trägt der Name eines Werts jetzt einen Tooltip mit der vollständigen
+  Katalog-Beschreibung, dem erlaubten Bereich („Bereich: 5 … 35 °C"), den
+  möglichen Auswahlwerten („Werte: 0 = Normal · 1 = Reduziert") und dem
+  MQTT-Topic. Der Bereich steht zusätzlich dauerhaft unter dem Wert.
+- **Dieselben Angaben in Home Assistant.** Die HACS-Integration legt
+  `description`, `min`/`max` und `enum_values` als Attribute an jede Entität –
+  sichtbar im Entitäts-Dialog unter „Attribute" und in Vorlagen über
+  `state_attr(…)` lesbar. Number und Select zeigen Bereich und Auswahl
+  unverändert zusätzlich nativ an.
+
+### Fixed
+
+- **Die HACS-Integration las veraltete API-Feldnamen.** Sie fragte `valueType`,
+  `isReadOnly` und `isStale` ab, das Gateway liefert aber `kind`, `writable` und
+  `stale` (und `enumValues` als Objekt `{Zahl: Name}`). Folge: Jeder Wert kam als
+  **schreibgeschützter Sensor** an, Auswahlwerte hatten keine Optionen und
+  Schalter wurden nie angelegt. Die Integration folgt jetzt dem REST-Vertrag;
+  als Entitätsname dient `displayName` statt des vollen Beschreibungstexts.
+- **Auswahlwerte zeigten die Zahl statt des Namens.** Der Zustand einer
+  Select-Entität ist jetzt der Enum-Name (`valueText`) – vorher stand dort die
+  Zahl, die in der Optionsliste nicht vorkam. Sensoren mit Auswahlwerten zeigen
+  ebenfalls den Namen.
+
 ## [1.2.0] – 2026-11-16
 
 > **Thema:** Topics V2 – Diagnose, Energie und Experten-Konfiguration

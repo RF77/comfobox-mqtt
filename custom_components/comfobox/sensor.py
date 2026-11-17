@@ -59,12 +59,11 @@ async def async_setup_entry(
 
 
 class ComfoBoxSensor(ComfoBoxEntity, SensorEntity):
-    """Ein schreibgeschuetzter Wert."""
+    """Ein schreibgeschuetzter Wert.
 
-    @property
-    def native_value(self) -> Any:
-        """Der Wert aus dem Coordinator-Cache."""
-        return self.item.value
+    Den Zustand liefert `ComfoBoxEntity.native_value` - bei Enums ist das der
+    Name (z. B. ``Normal``), sonst die Zahl.
+    """
 
 
 def _description_for(item: ComfoBoxItem) -> SensorEntityDescription:
@@ -80,7 +79,7 @@ def _description_for(item: ComfoBoxItem) -> SensorEntityDescription:
         kwargs["device_class"] = device_class
     if item.unit is not None:
         kwargs["native_unit_of_measurement"] = item.unit
-    if item.value_type == "float":
+    if item.kind == "analog":
         kwargs["state_class"] = SensorStateClass.MEASUREMENT
 
     return SensorEntityDescription(**kwargs)

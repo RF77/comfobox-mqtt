@@ -112,6 +112,10 @@ export const DE: Translations = {
     readonly: 'Nur lesbar',
     newValue: (name) => `Neuer Wert für ${name}`,
     topic: (topic) => `MQTT-Topic: ${topic}`,
+    range: (range) => `Bereich: ${range}`,
+    rangeFrom: (min) => `ab ${min}`,
+    rangeTo: (max) => `bis ${max}`,
+    values: (values) => `Werte: ${values}`,
   },
 
   config: {

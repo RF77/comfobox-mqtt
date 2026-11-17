@@ -16,60 +16,69 @@ from custom_components.comfobox.const import MANUFACTURER, MODEL
 
 @pytest.fixture
 def mock_items():
-    """Ein Katalog mit allen Item-Arten."""
+    """Ein Katalog mit allen Item-Arten (echter REST-Vertrag des Gateways)."""
     return [
         {
             "id": "zone_setpoint_normal",
             "group": "Zone",
             "name": "SetPointNormal",
+            "displayName": "Zone: Raumsollwert normal",
             "description": "Raumsollwert Normal",
-            "valueType": "float",
+            "kind": "analog",
+            "valueText": "21,5 °C",
             "unit": "°C",
-            "isReadOnly": False,
+            "writable": True,
             "min": 5.0,
             "max": 35.0,
             "value": 21.5,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
+            "enumValues": {},
         },
         {
             "id": "zone_operation_mode",
             "group": "Zone",
             "name": "OperationMode",
+            "displayName": "Zone: Betriebsart",
             "description": "Betriebsart",
-            "valueType": "enum",
+            "kind": "enum",
+            "valueText": "Normal",
             "unit": None,
-            "isReadOnly": False,
-            "enumValues": ["Normal", "Reduced", "FrostProtection"],
-            "value": "Normal",
+            "writable": True,
+            "enumValues": {"0": "Normal", "1": "Reduced", "2": "FrostProtection"},
+            "value": 0,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
         },
         {
             "id": "states_heat_pump_operating_hours",
             "group": "States",
             "name": "HeatPumpOperatingHours",
+            "displayName": "States: Betriebsstunden Wärmepumpe",
             "description": "Betriebsstunden Wärmepumpe",
-            "valueType": "float",
+            "kind": "analog",
+            "valueText": "12345 h",
             "unit": "h",
-            "isReadOnly": True,
+            "writable": False,
             "value": 12345.0,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
         },
         {
             "id": "warmwater_do_heat_water_now",
             "group": "WarmWater",
             "name": "DoHeatWaterNow",
+            "displayName": "WarmWater: Warmwasser erhitzen",
             "description": "Warmwasser erhitzen",
-            "valueType": "bool",
+            "kind": "analog",
+            "valueText": "0",
             "unit": None,
-            "isReadOnly": False,
+            "writable": True,
             "min": 0.0,
             "max": 1.0,
             "value": 0.0,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
         },
     ]
 
@@ -146,6 +155,54 @@ async def test_ein_bool_wert_wird_ein_switch(hass, mock_config_entry, mock_api):
     state = hass.states.get(entry.entity_id)
     assert state is not None
     assert state.state == "off"
+
+
+async def test_die_beschreibung_steht_als_attribut_an_der_entitaet(
+    hass, mock_config_entry, mock_api
+):
+    """Home Assistant kennt keinen Tooltip - die Beschreibung ist ein Attribut.
+
+    Sie steht damit im Dialog der Entitaet unter „Attribute" und ist fuer
+    Vorlagen (``state_attr(...)``) auswertbar.
+    """
+    entries = await _setup(hass, mock_config_entry, mock_api)
+
+    state = hass.states.get(
+        entries["comfobox1_states_heat_pump_operating_hours"].entity_id
+    )
+
+    assert state is not None
+    assert state.attributes["description"] == "Betriebsstunden Wärmepumpe"
+
+
+async def test_ein_enum_traegt_seine_werte_als_attribut(
+    hass, mock_config_entry, mock_api
+):
+    """Die Enum-Werte stehen als ``Zahl -> Name`` im Attribut ``enum_values``."""
+    entries = await _setup(hass, mock_config_entry, mock_api)
+
+    state = hass.states.get(entries["comfobox1_zone_operation_mode"].entity_id)
+
+    assert state is not None
+    assert state.attributes["enum_values"] == {
+        "0": "Normal",
+        "1": "Reduced",
+        "2": "FrostProtection",
+    }
+
+
+async def test_ein_schalter_traegt_keinen_bereich(
+    hass, mock_config_entry, mock_api
+):
+    """Bei einem 0/1-Wert waeren ``min``/``max`` nur Rauschen."""
+    entries = await _setup(hass, mock_config_entry, mock_api)
+
+    state = hass.states.get(entries["comfobox1_warmwater_do_heat_water_now"].entity_id)
+
+    assert state is not None
+    assert "min" not in state.attributes
+    assert "max" not in state.attributes
+    assert state.attributes["description"] == "Warmwasser erhitzen"
 
 
 async def test_der_status_liefert_zwei_binary_sensoren(
@@ -226,12 +283,14 @@ def _stale_items():
                 "id": "states_heat_pump_operating_hours",
                 "group": "States",
                 "name": "HeatPumpOperatingHours",
+                "displayName": "States: Betriebsstunden Wärmepumpe",
                 "description": "Betriebsstunden Wärmepumpe",
-                "valueType": "float",
+                "kind": "analog",
+                "valueText": "12345 h",
                 "unit": "h",
-                "isReadOnly": True,
+                "writable": False,
                 "value": 12345.0,
-                "isStale": True,
+                "stale": True,
             }
         ]
     )

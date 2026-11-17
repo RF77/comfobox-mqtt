@@ -73,12 +73,25 @@ Die Zuordnung Item → HA-Plattform ergibt sich **aus den Metadaten** des Gatewa
 
 | Item-Merkmal | HA-Plattform | Beispiel |
 |---|---|---|
-| `isReadOnly = true`, Typ `float` | `sensor` | `sensor.comfobox_heat_pump_operating_hours` |
-| `isReadOnly = false`, Typ `float`, Min/Max vorhanden | `number` | `number.comfobox_zone_setpoint_normal` |
-| `isReadOnly = false`, Typ `float`, Min/Max **fehlen** | `number` ohne Bereich (nur wenn `writable`) | `number.comfobox_zone_party_time` |
-| `isReadOnly = false`, Typ Enum | `select` | `select.comfobox_zone_operation_mode` |
-| `isReadOnly = true`, Typ Enum | `sensor` mit Options-Liste | `sensor.comfobox_zone_operation_mode_state` |
-| `isReadOnly = false`, `0/1`-Analog | `switch` bzw. `number` | `switch.comfobox_warmwater_do_heat_water_now` |
+| `writable = false`, `kind = analog` | `sensor` | `sensor.comfobox_heat_pump_operating_hours` |
+| `writable = true`, `kind = analog`, Min/Max vorhanden | `number` | `number.comfobox_zone_setpoint_normal` |
+| `writable = true`, `kind = analog`, Min/Max **fehlen** | `number` ohne Bereich | `number.comfobox_zone_party_time` |
+| `writable = true`, `kind = enum` | `select` | `select.comfobox_zone_operation_mode` |
+| `writable = false`, `kind = enum` | `sensor` (Zustand = Enum-Name) | `sensor.comfobox_zone_operation_mode_state` |
+| `writable = true`, `kind = analog`, `0…1` | `switch` | `switch.comfobox_warmwater_do_heat_water_now` |
+
+> **Feldnamen:** `writable`, `kind` und `stale` sind der REST-Vertrag des Gateways
+> (`ItemDto`). `writable` berücksichtigt den Experten-Modus – ein Experten-Item ohne
+> Experten-Modus kommt als Sensor an.
+
+**Katalog-Angaben an der Entität.** Home Assistant kennt keinen Tooltip. Beschreibung,
+Bereich und Auswahlwerte stehen deshalb als Attribute im Entitäts-Dialog:
+
+| Attribut | Quelle |
+|---|---|
+| `description` | `description` (voller Katalogtext) |
+| `min` / `max` | `min` / `max` (entfällt bei Schaltern) |
+| `enum_values` | `enumValues` als `{ "Zahl": "Name" }` |
 
 > **Nicht 1:1 mit dem MQTT-Schema:** Die MQTT-Discovery kennt nur `sensor`/`number`/`select`.
 > Die Integration darf **mehr** anbieten (z. B. `switch` für boolesche Items), weil sie das
@@ -89,7 +102,7 @@ Die Zuordnung Item → HA-Plattform ergibt sich **aus den Metadaten** des Gatewa
 | Teil | Regel | Beispiel |
 |---|---|---|
 | `entity_id` | `comfobox_` + `group` + `name` in snake_case | `comfobox_zone_setpoint_normal` |
-| Anzeigename | `Description` aus dem Katalog, Fallback `Name` | „Raumsollwert Normal" |
+| Anzeigename | `displayName` aus dem Gateway, Fallback `name` | „Zone: Raumsollwert normal" |
 | `unique_id` | `{deviceId}_{itemId}` | `comfobox1_zone_setpoint_normal` |
 | `translation_key` | `{group}_{name}` (für spätere Core-Übernahme) | `zone_setpoint_normal` |
 | Geräteklasse | aus der Einheit abgeleitet | `°C` → `temperature`, `h` → `duration`, `%` → `humidity` |
@@ -256,7 +269,7 @@ class ComfoBoxCoordinator(DataUpdateCoordinator[dict[str, ComfoBoxItem]]):
 |---|---|
 | Intervall | **10 s** (konfigurierbar, Minimum 5 s) |
 | „Letzter bekannter Wert" | Der Coordinator behält die letzten Werte → Entitäten zeigen nicht sofort `unknown` |
-| `stale` | Items mit `isStale = true` werden als `unavailable` markiert (Wert älter als 3 Poll-Zyklen) |
+| `stale` | Items mit `stale = true` werden als `unavailable` markiert (Wert älter als 3 Poll-Zyklen) |
 | Schreibfehler | `UpdateFailed` → alle Entitäten `unavailable`, aber der **letzte Wert** bleibt sichtbar (`available`-Status bleibt, `state` wird `unknown`) |
 
 > **Wichtig:** Bei einem Gateway-Ausfall sollen die Entitäten **nicht** flackern.

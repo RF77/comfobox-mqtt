@@ -13,6 +13,7 @@ import { ButtonModule } from '@openng/optimus-ui/button';
 import { InputNumberModule } from '@openng/optimus-ui/inputnumber';
 import { SelectModule } from '@openng/optimus-ui/select';
 import { TagModule } from '@openng/optimus-ui/tag';
+import { TooltipModule } from '@openng/optimus-ui/tooltip';
 
 import type { EnumOption, ItemDto } from '../../core/models/item.model';
 import { I18n } from '../../core/i18n/i18n';
@@ -26,13 +27,32 @@ import { formatNumber, formatRelative } from '../../core/util/format';
  */
 @Component({
   selector: 'app-item-value',
-  imports: [ButtonModule, FormsModule, InputNumberModule, SelectModule, TagModule],
+  imports: [
+    ButtonModule,
+    FormsModule,
+    InputNumberModule,
+    SelectModule,
+    TagModule,
+    TooltipModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="cb-item">
       <div class="cb-item-head">
-        <!-- Der Tooltip trägt die Katalog-Beschreibung (REST) und das Topic. -->
-        <span class="cb-item-name" [title]="tooltip()">{{ item().displayName }}</span>
+        <!--
+          Der Tooltip trägt die Katalog-Beschreibung, den erlaubten Bereich,
+          die Enum-Werte und das Topic (alles aus GET /api/items).
+        -->
+        <span
+          class="cb-item-name"
+          tabindex="0"
+          [pTooltip]="tooltip()"
+          tooltipPosition="top"
+          tooltipEvent="both"
+          tooltipStyleClass="cb-item-tooltip"
+          [showDelay]="250"
+          >{{ item().displayName }}</span
+        >
         @if (item().stale) {
           <p-tag [value]="t().item.stale" severity="warn" />
         }
@@ -45,6 +65,10 @@ import { formatNumber, formatRelative } from '../../core/util/format';
         <span class="cb-item-current">{{ display() ?? t().common.dash }}</span>
         <span class="cb-item-age">{{ age() }}</span>
       </div>
+
+      @if (rangeHint(); as hint) {
+        <span class="cb-item-range">{{ hint }}</span>
+      }
 
       @if (item().writable && item().kind === 'analog') {
         <div class="cb-item-editor">
@@ -141,7 +165,8 @@ import { formatNumber, formatRelative } from '../../core/util/format';
     }
 
     .cb-item-age,
-    .cb-item-readonly {
+    .cb-item-readonly,
+    .cb-item-range {
       font-size: 0.8rem;
       color: var(--p-text-muted-color, inherit);
     }
@@ -194,17 +219,65 @@ export class ItemValueComponent {
   readonly age = computed(() => formatRelative(this.item().lastUpdated));
 
   /**
+   * Der erlaubte Bereich als Text („5 … 35 °C", „ab 5 °C", „bis 35 °C").
+   *
+   * <p>`min` und `max` sind **Bereiche**, keine Pflichtwerte – fehlt eine
+   * Grenze, nennt der Text nur die vorhandene.</p>
+   */
+  readonly rangeHint = computed<string | null>(() => {
+    const item = this.item();
+
+    if (item.kind !== 'analog') {
+      return null;
+    }
+
+    const unit = item.unit ? ` ${item.unit}` : '';
+    const min = item.min === null ? null : `${formatNumber(item.min)}${unit}`;
+    const max = item.max === null ? null : `${formatNumber(item.max)}${unit}`;
+
+    if (min !== null && max !== null) {
+      return `${min} … ${max}`;
+    }
+
+    if (min !== null) {
+      return this.t().item.rangeFrom(min);
+    }
+
+    return max === null ? null : this.t().item.rangeTo(max);
+  });
+
+  /**
    * Der Tooltip des Items.
    *
-   * <p>Basis ist die Katalog-Beschreibung. Liefert das Gateway sie nicht
-   * (derzeit der Fall), steht dort der Anzeigename - in jedem Fall gefolgt
-   * vom MQTT-Topic.</p>
+   * <p>Basis ist die Katalog-Beschreibung, gefolgt vom erlaubten Bereich, den
+   * Enum-Werten (als `Zahl = Name` – die Zahl ist der MQTT-Wert von
+   * `/AsNumber`) und dem Topic. Fehlt die Beschreibung, steht dort der
+   * Anzeigename. Die Zeilenumbrüche macht die globale Tooltip-Regel sichtbar.</p>
    */
   readonly tooltip = computed(() => {
     const item = this.item();
-    const description = item.description ?? item.displayName;
+    const lines: string[] = [item.description?.trim() || item.displayName];
+    const range = this.rangeHint();
 
-    return item.stateTopic ? `${description}\n${item.stateTopic}` : description;
+    if (range) {
+      lines.push(this.t().item.range(range));
+    }
+
+    if (item.kind === 'enum') {
+      const values = this.options()
+        .map((option) => `${option.value} = ${option.label}`)
+        .join(' · ');
+
+      if (values) {
+        lines.push(this.t().item.values(values));
+      }
+    }
+
+    if (item.stateTopic) {
+      lines.push(this.t().item.topic(item.stateTopic));
+    }
+
+    return lines.join('\n');
   });
 
   /**

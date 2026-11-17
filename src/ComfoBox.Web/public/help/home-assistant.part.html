@@ -159,6 +159,34 @@ nicht mehr abrufbar. Bewahren Sie ihn sicher auf.</p>
 <p><strong>Der gültige Bereich kommt direkt aus dem Gateway</strong> – die Integration erfindet
 keine Grenzen. So kann kein Wert außerhalb des erlaubten Bereichs gesetzt werden.</p>
 </blockquote>
+<h3 id="was-bedeutet-ein-wert">Was bedeutet ein Wert?</h3>
+<p>Home Assistant kennt keinen Tooltip. Die Angaben aus dem Katalog stehen deshalb
+als <strong>Attribute</strong> an jeder Entität und erscheinen im Dialog der Entität unter
+„Attribute“:</p>
+<table>
+<thead>
+<tr>
+<th>Attribut</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>description</code></td>
+<td>die Beschreibung des Werts aus dem Katalog der Anlage</td>
+</tr>
+<tr>
+<td><code>min</code> / <code>max</code></td>
+<td>der erlaubte Bereich (bei Schaltern entfällt er)</td>
+</tr>
+<tr>
+<td><code>enum_values</code></td>
+<td>bei Auswahlwerten alle Namen als <code>{ &quot;Zahl&quot;: &quot;Name&quot; }</code></td>
+</tr>
+</tbody></table>
+<p>Bei Number- und Select-Entitäten zeigt Home Assistant den Bereich und die
+Auswahl ohnehin schon an – die Attribute sind vor allem für <strong>Sensoren</strong>
+nützlich. In Automatisierungen und Vorlagen sind sie über
+<code>state_attr(&#39;sensor.…&#39;, &#39;description&#39;)</code> lesbar.</p>
 <h3 id="schreibvorgänge">Schreibvorgänge</h3>
 <p>Auch über die Integration greift der Schreibschutz:</p>
 <table>

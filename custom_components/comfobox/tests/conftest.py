@@ -99,46 +99,57 @@ def mock_status():
 
 @pytest.fixture
 def mock_items():
-    """Ein simulierter Item-Katalog."""
+    """Ein simulierter Item-Katalog.
+
+    Die Feldnamen sind der **echte** REST-Vertrag des Gateways
+    (`kind`, `writable`, `stale`, `enumValues` als Objekt).
+    """
     return [
         {
             "id": "zone_setpoint_normal",
             "group": "Zone",
             "name": "SetPointNormal",
+            "displayName": "Zone: Raumsollwert normal",
             "description": "Raumsollwert Normal",
-            "valueType": "float",
+            "kind": "analog",
+            "valueText": "21,5 °C",
             "unit": "°C",
-            "isReadOnly": False,
+            "writable": True,
             "min": 5.0,
             "max": 35.0,
             "value": 21.5,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
+            "enumValues": {},
         },
         {
             "id": "zone_operation_mode",
             "group": "Zone",
             "name": "OperationMode",
+            "displayName": "Zone: Betriebsart",
             "description": "Betriebsart",
-            "valueType": "enum",
+            "kind": "enum",
+            "valueText": "Normal",
             "unit": None,
-            "isReadOnly": False,
-            "enumValues": ["Normal", "Reduced", "FrostProtection"],
-            "value": "Normal",
+            "writable": True,
+            "enumValues": {"0": "Normal", "1": "Reduced", "2": "FrostProtection"},
+            "value": 0,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
         },
         {
             "id": "states_heat_pump_operating_hours",
             "group": "States",
             "name": "HeatPumpOperatingHours",
+            "displayName": "States: Betriebsstunden Wärmepumpe",
             "description": "Betriebsstunden Wärmepumpe",
-            "valueType": "float",
+            "kind": "analog",
+            "valueText": "12345 h",
             "unit": "h",
-            "isReadOnly": True,
+            "writable": False,
             "value": 12345.0,
             "lastUpdated": "2026-10-31T10:00:00Z",
-            "isStale": False,
+            "stale": False,
         },
     ]
 

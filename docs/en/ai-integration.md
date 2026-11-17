@@ -46,6 +46,7 @@ Every item has this shape (field names are stable):
   "group": "Zone",
   "name": "SetPointNormal",
   "displayName": "Raumsollwert normal",
+  "description": "Raumsollwert Normalbetrieb der Zone",
   "kind": "analog",
   "value": 21.5,
   "valueText": "21,5 °C",

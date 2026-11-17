@@ -105,6 +105,23 @@ Fertig. Das Gerät **ComfoBox ELESTA** erscheint mit allen Werten.
 > **Der gültige Bereich kommt direkt aus dem Gateway** – die Integration erfindet
 > keine Grenzen. So kann kein Wert außerhalb des erlaubten Bereichs gesetzt werden.
 
+### Was bedeutet ein Wert?
+
+Home Assistant kennt keinen Tooltip. Die Angaben aus dem Katalog stehen deshalb
+als **Attribute** an jeder Entität und erscheinen im Dialog der Entität unter
+„Attribute“:
+
+| Attribut | Inhalt |
+|---|---|
+| `description` | die Beschreibung des Werts aus dem Katalog der Anlage |
+| `min` / `max` | der erlaubte Bereich (bei Schaltern entfällt er) |
+| `enum_values` | bei Auswahlwerten alle Namen als `{ "Zahl": "Name" }` |
+
+Bei Number- und Select-Entitäten zeigt Home Assistant den Bereich und die
+Auswahl ohnehin schon an – die Attribute sind vor allem für **Sensoren**
+nützlich. In Automatisierungen und Vorlagen sind sie über
+`state_attr('sensor.…', 'description')` lesbar.
+
 ### Schreibvorgänge
 
 Auch über die Integration greift der Schreibschutz:

@@ -28,66 +28,105 @@ class ConnectionFailed(ComfoBoxError):
 
 @dataclass(slots=True)
 class ComfoBoxItem:
-    """Ein Item aus dem Katalog des Gateways."""
+    """Ein Item aus dem Katalog des Gateways.
+
+    Die Feldnamen folgen dem REST-Vertrag des Gateways
+    (``src/ComfoBox.Gateway/Api/Models/ItemDto.cs``): ``kind``, ``writable``,
+    ``stale`` und ``enumValues`` als Objekt ``{Zahl: Name}``.
+    """
 
     id: str
     group: str
     name: str
+    display_name: str
     description: str | None
-    value_type: str
+    kind: str
     unit: str | None
-    is_read_only: bool
+    writable: bool
     min_value: float | None
     max_value: float | None
-    enum_values: list[str] = field(default_factory=list)
+    enum_values: dict[int, str] = field(default_factory=dict)
     value: Any = None
+    value_text: str | None = None
     last_updated: str | None = None
     is_stale: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ComfoBoxItem:
         """Baut ein Item aus einem API-Dict."""
+        description = data.get("description")
+        display_name = (data.get("displayName") or "").strip()
+
+        if not display_name:
+            # Aeltere Gateways liefern kein `displayName` - dann dient die
+            # erste Zeile der Beschreibung als Name.
+            first_line = (description or "").strip().splitlines()
+            display_name = (
+                first_line[0] if first_line else data.get("name", data["id"])
+            )
+
         return cls(
             id=data["id"],
             group=data.get("group", ""),
             name=data.get("name", data["id"]),
-            description=data.get("description"),
-            value_type=data.get("valueType", "float"),
+            display_name=display_name,
+            description=description,
+            kind=data.get("kind") or "analog",
             unit=data.get("unit"),
-            is_read_only=bool(data.get("isReadOnly", True)),
+            writable=bool(data.get("writable", False)),
             min_value=data.get("min"),
             max_value=data.get("max"),
-            enum_values=list(data.get("enumValues") or []),
+            enum_values={
+                int(number): name
+                for number, name in (data.get("enumValues") or {}).items()
+            },
             value=data.get("value"),
+            value_text=data.get("valueText"),
             last_updated=data.get("lastUpdated"),
-            is_stale=bool(data.get("isStale", False)),
+            is_stale=bool(data.get("stale", False)),
         )
 
     @property
-    def display_name(self) -> str:
-        """Anzeigename: Beschreibung bevorzugt, sonst Name."""
-        return self.description or self.name
-
-    @property
-    def writable(self) -> bool:
-        """Ist der Wert schreibbar?"""
-        return not self.is_read_only
+    def is_read_only(self) -> bool:
+        """Ist der Wert (in dieser Betriebsart) nicht schreibbar?"""
+        return not self.writable
 
     @property
     def is_enum(self) -> bool:
         """Ist der Wert ein Enum?"""
-        return self.value_type == "enum" or bool(self.enum_values)
+        return self.kind == "enum" or bool(self.enum_values)
 
     @property
     def is_boolean(self) -> bool:
         """Ist der Wert ein boolescher 0/1-Wert?"""
         return (
-            self.value_type == "bool"
+            self.kind == "analog"
             and self.min_value is not None
             and self.max_value is not None
             and self.min_value == 0
             and self.max_value == 1
         )
+
+    @property
+    def enum_names(self) -> list[str]:
+        """Die Enum-Namen in der Reihenfolge ihrer Zahlen.
+
+        Die Namen sind Teil des MQTT-Vertrags und werden **unveraendert**
+        uebernommen - nicht uebersetzt und nicht umbenannt.
+        """
+        return [self.enum_values[number] for number in sorted(self.enum_values)]
+
+    @property
+    def enum_name(self) -> str | None:
+        """Der Name des aktuellen Enum-Werts (oder ``None``)."""
+        if self.value_text:
+            return self.value_text
+        if self.value is None:
+            return None
+        try:
+            return self.enum_values.get(int(float(self.value)))
+        except (TypeError, ValueError):
+            return None
 
 
 @dataclass(slots=True)

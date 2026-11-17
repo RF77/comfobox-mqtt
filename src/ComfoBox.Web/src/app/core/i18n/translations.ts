@@ -131,6 +131,14 @@ export interface Translations {
     readonly readonly: string;
     readonly newValue: (name: string) => string;
     readonly topic: (topic: string) => string;
+    /** „Bereich: 5 … 35 °C" – der erlaubte Wertebereich. */
+    readonly range: (range: string) => string;
+    /** „ab 5 °C" – nur eine untere Grenze. */
+    readonly rangeFrom: (min: string) => string;
+    /** „bis 35 °C" – nur eine obere Grenze. */
+    readonly rangeTo: (max: string) => string;
+    /** „Werte: 0 = Normal · 1 = Reduziert" – die Enum-Werte. */
+    readonly values: (values: string) => string;
   };
 
   readonly config: {
