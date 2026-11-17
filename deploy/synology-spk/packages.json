@@ -9,6 +9,12 @@
   "packages": [
     {
       "arch": "noarch",
+      "version": "1.2.0-0001",
+      "url": "https://github.com/RF77/comfobox-mqtt/releases/download/v1.2.0/ComfoBoxGateway_noarch-dsm7_1.2.0-0001.spk",
+      "checksum": "fe15d0f4fa0291f38b743de7b6dfcb13"
+    },
+    {
+      "arch": "noarch",
       "version": "1.1.0-0001",
       "url": "https://github.com/RF77/comfobox-mqtt/releases/download/v1.1.0/ComfoBoxGateway_noarch-dsm7_1.1.0-0001.spk",
       "checksum": "63ef5edf2e0f0b1538c73c8da1424286"
