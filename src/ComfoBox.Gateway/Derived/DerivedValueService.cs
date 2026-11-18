@@ -13,7 +13,8 @@ namespace ComfoBox.Gateway.Derived;
 /// <remarks>
 /// <para>
 /// Der Dienst hört auf den Wert-Cache und rechnet **nur die betroffenen**
-/// Definitionen neu - eine Änderung von DP 24 löst keine COP-Rechnung aus.
+/// Definitionen neu - eine Änderung von DP 24 löst keine Neuberechnung des
+/// Pufferdeltas aller anderen Definitionen aus.
 /// Publiziert wird nur, wenn sich die Payload geändert hat (kein Spam).
 /// </para>
 /// <para>
@@ -25,12 +26,6 @@ namespace ComfoBox.Gateway.Derived;
 /// Das Topic ist <c>{BaseTopic}/Status/{TopicPath}</c>, z. B.
 /// <c>ComfoBox/Status/Derived/Superheat</c>. Abgeleitete Werte sind nie
 /// schreibbar - es gibt kein <c>/Set</c>-Topic.
-/// </para>
-/// <para>
-/// <c>Status/Derived/CopInstant</c> ist der einzige zustandsbehaftete Wert: er
-/// braucht zwei Proben, die mindestens eine Stunde auseinanderliegen. Die
-/// Historie lebt **nur** in diesem Dienst - nach einem Neustart ist der Wert
-/// deshalb <c>unknown</c>, bis ein Fenster geschlossen ist.
 /// </para>
 /// </remarks>
 public sealed class DerivedValueService : BackgroundService
@@ -44,11 +39,6 @@ public sealed class DerivedValueService : BackgroundService
     /// </remarks>
     public const string UnknownPayload = "unknown";
 
-    /// <summary>
-    /// Die Mindestlänge des Fensters für den Momentan-COP.
-    /// </summary>
-    public static readonly TimeSpan CopInstantWindow = TimeSpan.FromHours(1);
-
     private readonly IValueCache _cache;
     private readonly IItemCatalog _catalog;
     private readonly IMqttPublisher _publisher;
@@ -61,16 +51,6 @@ public sealed class DerivedValueService : BackgroundService
     private readonly IReadOnlyList<DerivedValueDefinition> _definitions = DerivedValues.All;
     private readonly Dictionary<int, ItemDefinition> _itemsByObjectId;
     private readonly Dictionary<string, string> _lastPayloads = new(StringComparer.Ordinal);
-
-    /// <summary>
-    /// Die erste Probe des COP-Fensters (beim Start <c>null</c>).
-    /// </summary>
-    private CopSample? _baseline;
-
-    /// <summary>
-    /// Der zuletzt berechnete COP (bleibt zwischen zwei Fenstern stehen).
-    /// </summary>
-    private float? _lastCop;
 
     /// <summary>
     /// Erzeugt den Dienst.
@@ -245,12 +225,7 @@ public sealed class DerivedValueService : BackgroundService
     {
         var inputs = ReadInputs(definition);
 
-        if (definition.RequiresHistory)
-        {
-            return EvaluateCopInstant(inputs);
-        }
-
-        return definition.Compute?.Invoke(inputs);
+        return definition.Compute(inputs);
     }
 
     /// <summary>
@@ -350,65 +325,4 @@ public sealed class DerivedValueService : BackgroundService
 
         return TimeSpan.FromSeconds(3.0 * seconds);
     }
-
-    /// <summary>
-    /// Der Momentan-COP aus zwei Proben, die mindestens eine Stunde auseinanderliegen.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Beim ersten Aufruf wird nur die erste Probe gemerkt - der Wert ist dann
-    /// <c>unknown</c> (auch nach jedem Neustart, weil die Historie nur im
-    /// Prozess lebt). Liegt die neue Probe weniger als eine Stunde nach der
-    /// ersten, bleibt der zuletzt berechnete COP stehen: das Fenster ist
-    /// „mindestens 1 h", nicht „genau 1 h".
-    /// </para>
-    /// <para>
-    /// Nach jeder Rechnung wird die neue Probe zur Basis - damit bezieht sich
-    /// jeder Wert auf ein frisches Fenster und nicht auf den Zählerstand von
-    /// vor Tagen.
-    /// </para>
-    /// </remarks>
-    private float? EvaluateCopInstant(IReadOnlyDictionary<int, float?> inputs)
-    {
-        var thermal = Input(inputs, DerivedValues.ThermalEnergyTotalObjectId);
-        var electrical = Input(inputs, DerivedValues.ElectricalEnergyTotalObjectId);
-
-        if (thermal is null || electrical is null)
-        {
-            // Ein Eingang fehlt oder ist veraltet: keine Aussage, keine 0.
-            return null;
-        }
-
-        var now = _timeProvider.GetUtcNow();
-
-        if (_baseline is null)
-        {
-            _baseline = new CopSample(now, thermal.Value, electrical.Value);
-            return null;
-        }
-
-        if (now - _baseline.Timestamp < CopInstantWindow)
-        {
-            return _lastCop;
-        }
-
-        var thermalDelta = (double)thermal.Value - _baseline.Thermal;
-        var electricalDelta = (double)electrical.Value - _baseline.Electrical;
-
-        _baseline = new CopSample(now, thermal.Value, electrical.Value);
-        _lastCop = DerivedValues.CopInstant(thermalDelta, electricalDelta);
-
-        return _lastCop;
-    }
-
-    /// <summary>
-    /// Liest einen Eingang aus den bereits gelesenen Werten.
-    /// </summary>
-    private static float? Input(IReadOnlyDictionary<int, float?> inputs, int objectId)
-        => inputs.TryGetValue(objectId, out var value) ? value : null;
-
-    /// <summary>
-    /// Eine Probe des COP-Fensters (Zeitpunkt und beide Zählerstände).
-    /// </summary>
-    private sealed record CopSample(DateTimeOffset Timestamp, double Thermal, double Electrical);
 }

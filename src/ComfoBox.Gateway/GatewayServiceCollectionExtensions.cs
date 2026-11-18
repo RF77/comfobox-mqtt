@@ -4,7 +4,7 @@ using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
 using ComfoBox.Gateway.Derived;
-using ComfoBox.Gateway.Energy;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Logging;
 using ComfoBox.Gateway.Mqtt;
@@ -269,7 +269,7 @@ public static class GatewayServiceCollectionExtensions
         // es anfordert - und niemand fordert es an. Bei MQTT:Enabled=false
         // gibt es keine Topics und keine Discovery; dann entfällt er.
         services.AddSingleton<ExpertModeCoordinator>();
-        services.AddSingleton<EnergyMeasurementGate>();
+        services.AddSingleton<HardwareAvailabilityGate>();
         services.AddSingleton<MqttStatePublisher>();
         services.AddSingleton<DerivedValueService>();
         services.AddSingleton<MqttStatusPublisher>();
@@ -283,7 +283,7 @@ public static class GatewayServiceCollectionExtensions
         // auf ihre Availability.
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttSubscriber>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatusPublisher>());
-        services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<EnergyMeasurementGate>());
+        services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HardwareAvailabilityGate>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantDiscovery>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<MqttStatePublisher>());
         services.AddSingleton<IMqttConnectionHandler>(sp => sp.GetRequiredService<HomeAssistantBirthHandler>());
@@ -294,9 +294,9 @@ public static class GatewayServiceCollectionExtensions
             // er muss nur **existieren**, damit das Ereignis abonniert ist.
             services.AddHostedService(sp => sp.GetRequiredService<ExpertModeCoordinator>());
 
-            // Das Gate startet **vor** dem Werte-Publisher: es muss den
-            // Energie-Zustand kennen, bevor die ersten Werte publiziert werden.
-            services.AddHostedService(sp => sp.GetRequiredService<EnergyMeasurementGate>());
+            // Das Gate startet **vor** dem Werte-Publisher: es muss die
+            // Baugruppen kennen, bevor die ersten Werte publiziert werden.
+            services.AddHostedService(sp => sp.GetRequiredService<HardwareAvailabilityGate>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatePublisher>());
             services.AddHostedService(sp => sp.GetRequiredService<DerivedValueService>());
             services.AddHostedService(sp => sp.GetRequiredService<MqttStatusPublisher>());

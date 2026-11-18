@@ -1,7 +1,7 @@
 using ComfoBox.Domain.Items;
 using ComfoBox.Domain.Values;
 using ComfoBox.Gateway.Configuration;
-using ComfoBox.Gateway.Energy;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Mqtt;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -117,9 +117,10 @@ public sealed class HomeAssistantBirthHandlerTests
     }
 
     /// <summary>
-    /// Das Gate für die Tests - der Cache ist leer, also bleibt es gesperrt.
+    /// Das Gate für die Tests - der Cache ist leer, also sind alle Baugruppen
+    /// unbekannt.
     /// </summary>
-    private static EnergyMeasurementGate CreateGate(IValueCache cache, MqttTopicMap topics, MqttOptions options)
+    private static HardwareAvailabilityGate CreateGate(IValueCache cache, MqttTopicMap topics, MqttOptions options)
         => new(
             cache,
             Catalog,
@@ -127,5 +128,5 @@ public sealed class HomeAssistantBirthHandlerTests
             new RecordingMqttPublisher(),
             new ErrorCollector(),
             options,
-            NullLogger<EnergyMeasurementGate>.Instance);
+            NullLogger<HardwareAvailabilityGate>.Instance);
 }

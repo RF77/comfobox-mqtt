@@ -1,6 +1,6 @@
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Configuration;
-using ComfoBox.Gateway.Energy;
+using ComfoBox.Gateway.Hardware;
 using MQTTnet;
 using MQTTnet.Protocol;
 
@@ -21,10 +21,10 @@ namespace ComfoBox.Gateway.Mqtt;
 /// aktuellen Stand.
 /// </para>
 /// <para>
-/// Items mit <see cref="ItemDefinition.RequiresEnergyMeasurement"/> werden
-/// **übersprungen**, solange <see cref="EnergyMeasurementGate.IsAvailable"/>
-/// <c>false</c> ist: ohne Wärmemengenmessung (DP 3340) sind kWh-Zähler und COP
-/// ohne Aussage - sie dürfen nicht als <c>0</c> erscheinen.
+/// Items einer nicht vorhandenen Baugruppe (Pufferspeicher, Solarkreis, …)
+/// und Items ohne angeschlossenen Fühler werden **übersprungen**: ohne
+/// Baugruppe liefert der Regler den Sentinel <c>32767</c>, und der ist keine
+/// Aussage.
 /// </para>
 /// </remarks>
 public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandler
@@ -33,7 +33,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     private readonly IItemCatalog _catalog;
     private readonly MqttTopicMap _topics;
     private readonly IMqttPublisher _publisher;
-    private readonly EnergyMeasurementGate _gate;
+    private readonly HardwareAvailabilityGate _gate;
     private readonly MqttOptions _options;
     private readonly ILogger<MqttStatePublisher> _logger;
 
@@ -44,7 +44,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     /// <param name="catalog">Der Item-Katalog.</param>
     /// <param name="topics">Die Topic-Zuordnung.</param>
     /// <param name="publisher">Der Publisher.</param>
-    /// <param name="gate">Das DP-3340-Gate.</param>
+    /// <param name="gate">Das Gate der Baugruppen-Verfügbarkeit.</param>
     /// <param name="options">Die MQTT-Einstellungen.</param>
     /// <param name="logger">Logger.</param>
     public MqttStatePublisher(
@@ -52,7 +52,7 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
         IItemCatalog catalog,
         MqttTopicMap topics,
         IMqttPublisher publisher,
-        EnergyMeasurementGate gate,
+        HardwareAvailabilityGate gate,
         MqttOptions options,
         ILogger<MqttStatePublisher> logger)
     {
@@ -216,9 +216,8 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     /// </summary>
     /// <param name="item">Das Item.</param>
     /// <returns>
-    /// <c>true</c> für Energie-Items, solange die Wärmemengenmessung nicht
-    /// nachweislich eingeschaltet ist (DP 3340 fehlt, ist <c>0</c> oder der
-    /// Wert ist veraltet).
+    /// <c>true</c>, wenn die Baugruppe fehlt oder der Regler für das Item
+    /// keinen Fühler meldet.
     /// </returns>
     /// <remarks>
     /// Die Prüfung sitzt in **beiden** Publish-Pfaden (Cache-Änderung und
@@ -226,5 +225,5 @@ public sealed class MqttStatePublisher : BackgroundService, IMqttConnectionHandl
     /// gesperrter Wert über den Umweg des Reconnects doch in den Broker.
     /// </remarks>
     private bool IsSuppressed(ItemDefinition item)
-        => item.RequiresEnergyMeasurement && !_gate.IsAvailable;
+        => !_gate.IsAvailable(item.Id) || _gate.IsNoSensor(item.Id);
 }

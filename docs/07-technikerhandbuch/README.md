@@ -59,7 +59,7 @@ von Hand kuratiert.
 |---|---|
 | [datenpunkt-register.md](datenpunkt-register.md) | **Alle** Parameter des Reglers als Register: DP, Bezeichnung, Bereich/Werte, Einheit, Kapitel, Seite |
 | [review-ist-implementierung.md](review-ist-implementierung.md) | Abgleich des Item-Katalogs gegen das Handbuch – Fehler, Abweichungen, offene Fragen |
-| [nicht-verbaute-sensoren.md](nicht-verbaute-sensoren.md) | Items ohne Messwert an der Referenzanlage (`32767`, fehlende BACnet-Objekte, Wärmemengenmessung) – Grundlage für Verfügbarkeits-Gates |
+| [nicht-verbaute-sensoren.md](nicht-verbaute-sensoren.md) | Items ohne Messwert an der Referenzanlage (`32767`, fehlende BACnet-Objekte, entfernter Energie-Block) – Grundlage des Baugruppen-Gates |
 | [verbesserungen-und-neue-topics.md](verbesserungen-und-neue-topics.md) | Vorschläge für zusätzliche (überwiegend lesende) Topics |
 | [../topics-v2.md](../topics-v2.md) | Der **neue Topic-Vertrag** (V2) – bestehende Topics unverändert plus Ergänzungen |
 

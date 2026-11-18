@@ -109,6 +109,9 @@ export const FR: Translations = {
     stale: 'obsolète',
     expert: 'Mode expert',
     expertRequired: 'Mode expert requis',
+    notInstalled: 'non installé',
+    noSensor: 'aucun capteur',
+    hardwareUnknown: 'matériel inconnu',
     save: 'Enregistrer',
     choose: 'Choisir une valeur',
     readonly: 'Lecture seule',
@@ -365,31 +368,6 @@ export const FR: Translations = {
       + 'par exemple pour Home Assistant. La formule figure dans l’infobulle.',
     superheatFormula:
       'Surchauffe = température du gaz aspiré (DP 641) − température d’évaporation (DP 660)',
-    energyCard: 'Consommation et efficacité',
-    energyLead:
-      'Compteurs de chaleur et d’électricité du régulateur. Le COP est une moyenne de fonctionnement, pas une valeur instantanée.',
-    energyBanner:
-      'La mesure de chaleur est désactivée sur l’appareil (DP 3340 = 0). Les compteurs kWh et le '
-      + 'COP ne fournissent donc aucune valeur. Réglez « Mesure de chaleur » sur 1 ou 2 sur le '
-      + 'régulateur et vérifiez la sonde de débit.',
-    energyHelpLink: 'Aide : consommation et efficacité',
-    measurementMode: 'Mesure de chaleur (DP 3340)',
-    energyAvailable: 'Mesure active',
-    energyUnavailable: 'Mesure désactivée',
-    energyAvailableNote:
-      'Home Assistant voit la même information via le topic MQTT ComfoBox/Status/Energy/Available '
-      + '(1 = disponible, 0 = non disponible). Ce topic n’existe pas sur l’interface REST.',
-    heatingPower: 'Puissance de chauffage',
-    warmWaterPower: 'Puissance eau chaude',
-    thermalEnergyHeating: 'Énergie thermique chauffage',
-    thermalEnergyWarmWater: 'Énergie thermique eau chaude',
-    thermalEnergyTotal: 'Énergie thermique totale',
-    electricalEnergyHeating: 'Énergie électrique chauffage',
-    electricalEnergyWarmWater: 'Énergie électrique eau chaude',
-    electricalEnergyTotal: 'Énergie électrique totale',
-    copHeating: 'COP chauffage (moyenne)',
-    copWarmWater: 'COP eau chaude (moyenne)',
-    copTotal: 'COP total (moyenne)',
   },
 
   logs: {

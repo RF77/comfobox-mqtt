@@ -117,6 +117,16 @@ public sealed record ItemDto
     public bool Stale { get; init; }
 
     /// <summary>
+    /// Der Grund, warum das Item keinen Wert liefert (oder <c>null</c>).
+    /// </summary>
+    /// <remarks>
+    /// <c>not_installed</c> = die Baugruppe fehlt am Regler (Typ-Parameter),
+    /// <c>no_sensor</c> = der Regler meldet den Sentinel <c>32767</c>,
+    /// <c>unknown</c> = der Typ-Parameter wurde noch nicht gelesen.
+    /// </remarks>
+    public string? UnavailableReason { get; init; }
+
+    /// <summary>
     /// Die Enum-Werte (Wert → Name) - nur bei Enum-Items.
     /// </summary>
     public IReadOnlyDictionary<int, string> EnumValues { get; init; } =
@@ -129,12 +139,14 @@ public sealed record ItemDto
     /// <param name="cached">Der gecachte Wert (oder <c>null</c>).</param>
     /// <param name="topics">Die Topic-Zuordnung.</param>
     /// <param name="expertModeEnabled">Ist der Experten-Modus aktiv?</param>
+    /// <param name="unavailableReason">Der Grund für einen fehlenden Wert (oder <c>null</c>).</param>
     /// <returns>Die Beschreibung.</returns>
     public static ItemDto From(
         ItemDefinition item,
         CachedValue? cached,
         MqttTopicMap topics,
-        bool expertModeEnabled)
+        bool expertModeEnabled,
+        string? unavailableReason = null)
     {
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(topics);
@@ -160,6 +172,7 @@ public sealed record ItemDto
             SetTopic = writable ? topics.ItemSetTopic(item) : null,
             LastUpdated = cached?.Timestamp,
             Stale = cached?.IsStale ?? false,
+            UnavailableReason = unavailableReason,
             EnumValues = item.EnumValues,
         };
     }

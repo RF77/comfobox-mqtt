@@ -16,8 +16,8 @@ namespace ComfoBox.Contract.Tests;
 /// </para>
 /// <para>
 /// Die Anzahl wird **nicht** fest verdrahtet: sie ergibt sich aus der Fixture.
-/// Stand Welle 2c (2026-11-16) sind es 78 Items - 56 Status-Topics, ein
-/// Command-Topic und 21 Konfigurations-Topics.
+/// Stand 2026-11-18 sind es 67 Items - 42 Status-Topics, ein Command-Topic
+/// und 24 Konfigurations-Topics (davon vier rein lesende Typ-Parameter).
 /// </para>
 /// </remarks>
 public sealed class V2TopicContractTests
@@ -29,13 +29,13 @@ public sealed class V2TopicContractTests
     private static readonly IReadOnlyList<ItemDefinition> V2Items = ComfoBox.Domain.Items.Catalog.V2;
 
     [Fact]
-    public void Die_Aktuellen_Wellen_Umfassen_78_V2_Items()
+    public void Die_Aktuellen_Wellen_Umfassen_67_V2_Items()
     {
-        // Momentaufnahme der Wellen 2a/2b/2c: sie fällt auf, wenn Fixture oder
-        // Katalog versehentlich wachsen. Der eigentliche Vertrag bleibt der
-        // Abgleich Fixture ↔ Katalog weiter unten.
-        Assert.Equal(78, Fixture.Length);
-        Assert.Equal(78, V2Items.Count);
+        // Momentaufnahme der Wellen 2a/2b/2c ohne Energiemessung: sie fällt auf,
+        // wenn Fixture oder Katalog versehentlich wachsen. Der eigentliche
+        // Vertrag bleibt der Abgleich Fixture ↔ Katalog weiter unten.
+        Assert.Equal(67, Fixture.Length);
+        Assert.Equal(67, V2Items.Count);
     }
 
     [Fact]

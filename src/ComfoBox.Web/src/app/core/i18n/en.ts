@@ -109,6 +109,9 @@ export const EN: Translations = {
     stale: 'stale',
     expert: 'Expert mode',
     expertRequired: 'Expert mode required',
+    notInstalled: 'not installed',
+    noSensor: 'no sensor',
+    hardwareUnknown: 'hardware unknown',
     save: 'Save',
     choose: 'Choose a value',
     readonly: 'Read only',
@@ -361,31 +364,6 @@ export const EN: Translations = {
       + 'for example for Home Assistant. The formula is in the tooltip.',
     superheatFormula:
       'Superheat = suction gas temperature (DP 641) − evaporator temperature (DP 660)',
-    energyCard: 'Consumption and efficiency',
-    energyLead:
-      'Heat and electricity meters of the controller. The COP is a runtime average, not an instantaneous value.',
-    energyBanner:
-      'Heat metering is switched off on the unit (DP 3340 = 0). The kWh meters and the COP '
-      + 'therefore return no values. Set "Heat metering" to 1 or 2 on the controller and '
-      + 'check the flow sensor.',
-    energyHelpLink: 'Help: consumption and efficiency',
-    measurementMode: 'Heat metering (DP 3340)',
-    energyAvailable: 'Metering active',
-    energyUnavailable: 'Metering off',
-    energyAvailableNote:
-      'Home Assistant sees the same statement as the MQTT topic ComfoBox/Status/Energy/Available '
-      + '(1 = available, 0 = not available). This topic does not exist on the REST interface.',
-    heatingPower: 'Heating power',
-    warmWaterPower: 'Domestic hot water power',
-    thermalEnergyHeating: 'Thermal energy heating',
-    thermalEnergyWarmWater: 'Thermal energy hot water',
-    thermalEnergyTotal: 'Thermal energy total',
-    electricalEnergyHeating: 'Electrical energy heating',
-    electricalEnergyWarmWater: 'Electrical energy hot water',
-    electricalEnergyTotal: 'Electrical energy total',
-    copHeating: 'COP heating (runtime average)',
-    copWarmWater: 'COP hot water (runtime average)',
-    copTotal: 'COP total (runtime average)',
   },
 
   logs: {

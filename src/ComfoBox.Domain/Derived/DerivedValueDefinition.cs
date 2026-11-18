@@ -68,31 +68,13 @@ public sealed record DerivedValueDefinition
     public required IReadOnlyList<int> InputObjectIds { get; init; }
 
     /// <summary>
-    /// Braucht der Wert einen Verlauf (zwei Zeitpunkte)?
-    /// </summary>
-    /// <remarks>
-    /// Nur <c>Status/Derived/CopInstant</c> ist zustandsbehaftet: er vergleicht
-    /// zwei Zählerstände, die mindestens eine Stunde auseinanderliegen. Ein
-    /// solcher Wert hat keine reine Rechenfunktion - die Historie führt der
-    /// <c>DerivedValueService</c> im Gateway.
-    /// </remarks>
-    public bool RequiresHistory { get; init; }
-
-    /// <summary>
     /// Die reine Rechenfunktion (Eingänge nach Objekt-Id → Wert).
     /// </summary>
     /// <remarks>
-    /// <para>
     /// Die Funktion liefert <c>null</c>, wenn ein Eingang fehlt oder der Wert
     /// nicht berechenbar ist (z. B. Nenner 0). <c>null</c> bedeutet
     /// <c>unbekannt</c> und wird als <c>unknown</c> publiziert - **nie** als
     /// <c>0</c>.
-    /// </para>
-    /// <para>
-    /// Bei <see cref="RequiresHistory"/> ist die Funktion <c>null</c>: ein
-    /// zustandsbehafteter Wert kann aus einem einzelnen Satz Eingänge nicht
-    /// berechnet werden.
-    /// </para>
     /// </remarks>
-    public Func<IReadOnlyDictionary<int, float?>, float?>? Compute { get; init; }
+    public required Func<IReadOnlyDictionary<int, float?>, float?> Compute { get; init; }
 }

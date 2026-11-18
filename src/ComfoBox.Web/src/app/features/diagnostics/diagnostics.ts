@@ -166,15 +166,6 @@ export class DiagnosticsComponent {
    */
   readonly superheatTopic = 'ComfoBox/Status/Derived/Superheat';
 
-  /**
-   * Der Pfad der Hilfeseite „Verbrauch und Effizienz".
-   *
-   * <p>Die Quelle heißt `docs/benutzer/12-verbrauch.md`; `tools/build-docs.mjs`
-   * entfernt beim Bilden des Slugs das führende Zahlenpräfix. Die SPA-Route
-   * ist deshalb `/help/verbrauch` (nicht `/help/12-verbrauch`).</p>
-   */
-  readonly energyHelpLink = '/help/verbrauch';
-
   /** Der Pfad der Hilfeseite „Warum bleibt ein Raum kalt?". */
   readonly heatingHelpLink = '/help/warum-bleibt-ein-raum-kalt';
 
@@ -217,70 +208,6 @@ export class DiagnosticsComponent {
       this.row(byId.get('status.heat_pump.condenser_temperature'), labels.condenserTemperature),
       this.row(byId.get('status.heat_pump.defrost_delta_actual'), labels.defrostDeltaActual),
     ].filter((row): row is ValueRow => row !== null);
-  });
-
-  /** Die Werte der Karte „Verbrauch und Effizienz". */
-  readonly energyRows = computed<ValueRow[]>(() => {
-    const labels = this.t().diagnostics;
-    const byId = this.itemsById();
-
-    return [
-      this.row(byId.get('status.energy.heating_power'), labels.heatingPower),
-      this.row(byId.get('status.energy.warm_water_power'), labels.warmWaterPower),
-      this.row(byId.get('status.energy.thermal_energy_heating'), labels.thermalEnergyHeating),
-      this.row(byId.get('status.energy.thermal_energy_warm_water'), labels.thermalEnergyWarmWater),
-      this.row(byId.get('status.energy.thermal_energy_total'), labels.thermalEnergyTotal),
-      this.row(byId.get('status.energy.electrical_energy_heating'), labels.electricalEnergyHeating),
-      this.row(
-        byId.get('status.energy.electrical_energy_warm_water'),
-        labels.electricalEnergyWarmWater,
-      ),
-      this.row(byId.get('status.energy.electrical_energy_total'), labels.electricalEnergyTotal),
-      this.row(byId.get('status.energy.cop_heating'), labels.copHeating),
-      this.row(byId.get('status.energy.cop_warm_water'), labels.copWarmWater),
-      this.row(byId.get('status.energy.cop_total'), labels.copTotal),
-    ].filter((row): row is ValueRow => row !== null);
-  });
-
-  /** Der Zustand der Wärmemengenmessung (`Status/Energy/MeasurementMode`). */
-  readonly measurementMode = computed(() => this.itemsById().get('status.energy.measurement_mode'));
-
-  /** Der Zustand der Wärmemengenmessung als lesbarer Name. */
-  readonly measurementModeText = computed(
-    () => this.measurementMode()?.valueText ?? this.t().common.dash,
-  );
-
-  /**
-   * Ist der Zustand der Wärmemengenmessung bekannt?
-   *
-   * <p>Vor dem ersten erfolgreichen Lesen ist der Wert `null`. Dann darf die
-   * Oberfläche **nicht** „Messung aktiv" behaupten.</p>
-   */
-  readonly measurementModeKnown = computed(() => {
-    const mode = this.measurementMode();
-
-    return mode !== undefined && mode.value !== null;
-  });
-
-  /**
-   * Ist die Wärmemengenmessung am Gerät ausgeschaltet (DP 3340 = `None`)?
-   *
-   * <p>Ohne diese Messung publiziert der Gateway **keine** kWh- und
-   * COP-Werte. Der Banner erklärt dann, was am Regler einzustellen ist.</p>
-   */
-  readonly energyMeasurementOff = computed(() => {
-    const mode = this.measurementMode();
-
-    if (!mode || mode.value === null) {
-      return false;
-    }
-
-    const name = mode.enumValues[String(mode.value)] ?? mode.valueText;
-
-    // Der Enum-Name ist Teil des MQTT-Vertrags - verglichen wird deshalb
-    // der Name, nicht die Nummer. Die 0 ist nur der Rückfall, falls der
-    // Katalog die Namen (noch) nicht liefert.
-    return name === 'None' || (name === null && mode.value === 0);
   });
 
   /** Sind die Werte der Anlage schon geladen? */

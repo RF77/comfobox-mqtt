@@ -34,22 +34,28 @@ public sealed class CatalogTests
         "Status/LastError",
         "Status/Errors",
         "Status/Restart",
-        "Status/Energy/Available",
+        "Status/Hardware/BufferTop",
+        "Status/Hardware/BufferBottom",
+        "Status/Hardware/CoolingBufferTop",
+        "Status/Hardware/CoolingBufferBottom",
+        "Status/Hardware/Solar",
+        "Status/Hardware/HeatPumpSensors",
+        "Status/Hardware/WarmWaterBottom",
         "Command/Restart",
     ];
 
     [Fact]
-    public void Catalog_Umfasst_Exakt_205_Items()
+    public void Catalog_Umfasst_Exakt_194_Items()
     {
-        // 127 V1-Items (eingefroren) + 78 V2-Items (Phase 10, Wellen 2a/2b/2c).
-        Assert.Equal(205, Catalog.All.Count);
+        // 127 V1-Items (eingefroren) + 67 V2-Items (Phase 10 ohne Energiemessung).
+        Assert.Equal(194, Catalog.All.Count);
     }
 
     [Fact]
     public void V1_Und_V2_Teilen_Den_Katalog_Vollstaendig_Auf()
     {
         Assert.Equal(127, Catalog.V1.Count);
-        Assert.Equal(78, Catalog.V2.Count);
+        Assert.Equal(67, Catalog.V2.Count);
         Assert.Equal(Catalog.All.Count, Catalog.V1.Count + Catalog.V2.Count);
 
         Assert.All(Catalog.V1, item => Assert.False(item.IsV2, $"{item.Id} ist V1, trägt aber IsV2."));
@@ -61,25 +67,24 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void Die_V2_Items_Verteilen_Sich_Auf_Fuenfzehn_Gruppen()
+    public void Die_V2_Items_Verteilen_Sich_Auf_Vierzehn_Gruppen()
     {
         // Welle 2a: Zone, WarmWater, HeatPump, Buffer.
-        // Welle 2b: Energy, Counters, Solar und das Command-Topic.
+        // Welle 2b: Counters, Solar und das Command-Topic (ohne Energiemessung).
         // Welle 2c: sieben Config-Gruppen (nur mit Experten-Modus schreibbar).
         var gruppen = Catalog.V2.GroupBy(item => item.Group).ToDictionary(g => g.Key, g => g.Count());
 
-        Assert.Equal(15, gruppen.Count);
+        Assert.Equal(14, gruppen.Count);
         Assert.Equal(4, gruppen["Status/Zone"]);
         Assert.Equal(4, gruppen["Status/WarmWater"]);
         Assert.Equal(13, gruppen["Status/HeatPump"]);
         Assert.Equal(5, gruppen["Status/Buffer"]);
-        Assert.Equal(14, gruppen["Status/Energy"]);
         Assert.Equal(11, gruppen["Status/Counters"]);
         Assert.Equal(5, gruppen["Status/Solar"]);
         Assert.Equal(1, gruppen["Command"]);
-        Assert.Equal(2, gruppen["Config/General"]);
+        Assert.Equal(6, gruppen["Config/General"]);
         Assert.Equal(7, gruppen["Config/EnergyProducer"]);
-        Assert.Equal(2, gruppen["Config/HeatingSystem"]);
+        Assert.Equal(1, gruppen["Config/HeatingSystem"]);
         Assert.Equal(3, gruppen["Config/Warmwater"]);
         Assert.Equal(2, gruppen["Config/Cooling"]);
         Assert.Equal(4, gruppen["Config/Ventilation"]);
@@ -94,7 +99,7 @@ public sealed class CatalogTests
             .Where(item => item.Group.StartsWith("Status/", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Equal(56, statusItems.Count);
+        Assert.Equal(42, statusItems.Count);
         Assert.All(statusItems, item =>
         {
             Assert.True(item.IsReadOnly, $"{item.Id} ist ein V2-Lesetopic, aber nicht read-only.");
@@ -103,93 +108,95 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void Die_Vierzehn_Energie_Items_Stehen_Unter_Status_Energy()
+    public void Die_Energiemessung_Ist_Nicht_Teil_Des_Katalogs()
     {
-        var energie = Catalog.V2.Where(item => item.Group == "Status/Energy").ToList();
+        // Die ComfoBox Series 5 hat keinen Wärmemengenzähler. Die Items des
+        // Handbuchs (§4.8) sind deshalb bewusst nicht im Katalog: sie liefern
+        // dauerhaft 0 und wären in Home Assistant nur irreführend.
+        Assert.DoesNotContain(Catalog.All, item => item.Group == "Status/Energy");
 
-        Assert.Equal(14, energie.Count);
-        Assert.Equal(11, energie.Count(item => item.RequiresEnergyMeasurement));
-        Assert.Equal(3, energie.Count(item => !item.RequiresEnergyMeasurement));
+        foreach (var objectId in new[] { 3340, 3341, 3342, 3343, 3344, 3345, 3346, 3347, 3348, 3349, 3354, 3355, 3356, 3357 })
+        {
+            Assert.DoesNotContain(Catalog.All, item => item.BacnetObjectId == objectId);
+        }
     }
 
     [Fact]
-    public void Genau_Die_Elf_Energie_Items_Tragen_Das_Energy_Merkmal()
+    public void Die_Vier_Typ_Parameter_Sind_Rein_Lesend_Und_Langsam()
     {
-        // Ohne Wärmemengenmessung (DP 3340 = None) werden genau diese Items
-        // gesperrt - Messmodus und Durchflüsse bleiben lesbar.
-        string[] erwartet =
+        // Sie deklarieren, welche Baugruppen die Anlage hat - daraus leitet
+        // das Gateway ab, welche Items es überhaupt liest.
+        (string TopicPath, int ObjectId, string Enum)[] erwartet =
         [
-            "Status/Energy/HeatingPower",
-            "Status/Energy/WarmWaterPower",
-            "Status/Energy/ThermalEnergyHeating",
-            "Status/Energy/ThermalEnergyWarmWater",
-            "Status/Energy/ThermalEnergyTotal",
-            "Status/Energy/ElectricalEnergyHeating",
-            "Status/Energy/ElectricalEnergyWarmWater",
-            "Status/Energy/ElectricalEnergyTotal",
-            "Status/Energy/CopHeating",
-            "Status/Energy/CopWarmWater",
-            "Status/Energy/CopTotal",
+            ("Config/General/BufferType", 805, "BufferTypes"),
+            ("Config/General/CoolingBufferType", 3918, "BufferTypes"),
+            ("Config/General/SolarHydraulics", 807, "SolarHydraulicsTypes"),
+            ("Config/General/HeatPumpSensor", 2800, "PresenceTypes"),
         ];
 
-        var tatsaechlich = Catalog.All
-            .Where(item => item.RequiresEnergyMeasurement)
-            .Select(item => item.TopicPath)
-            .OrderBy(path => path, StringComparer.Ordinal)
-            .ToList();
-
-        Assert.Equal(erwartet.OrderBy(path => path, StringComparer.Ordinal), tatsaechlich);
-    }
-
-    [Fact]
-    public void Messmodus_Und_Durchfluesse_Sind_Keine_Energie_Items()
-    {
-        foreach (var pfad in new[]
-                 {
-                     "Status/Energy/MeasurementMode",
-                     "Status/Energy/FlowRate",
-                     "Status/Energy/FlowRateWarmWater",
-                 })
+        foreach (var (topicPath, objectId, _) in erwartet)
         {
-            var item = Catalog.FindByTopicPath(pfad);
+            var item = Catalog.FindByTopicPath(topicPath);
 
             Assert.NotNull(item);
-            Assert.False(item!.RequiresEnergyMeasurement, $"{pfad} darf nicht gesperrt werden.");
+            Assert.True(item!.IsV2, $"{topicPath} ist kein V2-Item.");
+            Assert.Equal(objectId, item.BacnetObjectId);
+            Assert.Equal(ItemValueKind.Enum, item.Kind);
+            Assert.True(item.IsReadOnly, $"{topicPath} ist schreibbar.");
             Assert.Equal(RefreshPriority.Slow, item.Priority);
+            Assert.True(HardwareRequirements.IsDetector(item.Id), $"{topicPath} ist kein Typ-Parameter.");
         }
 
-        var messmodus = Catalog.FindByTopicPath("Status/Energy/MeasurementMode");
-        Assert.NotNull(messmodus);
-        Assert.Equal(3340, messmodus!.BacnetObjectId);
-        Assert.Equal(ItemValueKind.Enum, messmodus.Kind);
-        Assert.Same(ItemEnums.EnergyMeasurementModes, messmodus.EnumValues);
+        Assert.Same(ItemEnums.BufferTypes, Catalog.FindByTopicPath("Config/General/BufferType")!.EnumValues);
+        Assert.Same(ItemEnums.BufferTypes, Catalog.FindByTopicPath("Config/General/CoolingBufferType")!.EnumValues);
+        Assert.Same(ItemEnums.SolarHydraulicsTypes, Catalog.FindByTopicPath("Config/General/SolarHydraulics")!.EnumValues);
+        Assert.Same(ItemEnums.PresenceTypes, Catalog.FindByTopicPath("Config/General/HeatPumpSensor")!.EnumValues);
     }
 
     [Fact]
-    public void Die_Energie_Items_Haben_Einheit_Und_Prioritaet()
+    public void Die_Baugruppen_Verweisen_Auf_Vorhandene_Items()
     {
-        var durchfluss = Catalog.FindByTopicPath("Status/Energy/FlowRate");
-        Assert.NotNull(durchfluss);
-        Assert.Equal("m³/h", durchfluss!.Unit);
+        // Das Gate liest und sperrt genau diese Ids - ein Tippfehler würde
+        // dazu führen, dass ein Item nie gesperrt wird.
+        var ids = Catalog.All.Select(item => item.Id).ToHashSet(StringComparer.Ordinal);
 
-        var durchflussWw = Catalog.FindByTopicPath("Status/Energy/FlowRateWarmWater");
-        Assert.NotNull(durchflussWw);
-        Assert.Equal("m³/h", durchflussWw!.Unit);
+        foreach (var requirement in HardwareRequirements.All)
+        {
+            Assert.True(
+                ids.Contains(requirement.DetectorItemId),
+                $"{requirement.Key}: Typ-Parameter {requirement.DetectorItemId} fehlt im Katalog.");
 
-        var copTotal = Catalog.FindByTopicPath("Status/Energy/CopTotal");
-        Assert.NotNull(copTotal);
-        Assert.Null(copTotal!.Unit);
-        Assert.Equal(3357, copTotal.BacnetObjectId);
+            Assert.NotEmpty(requirement.ItemIds);
+            Assert.NotEmpty(requirement.PresentValues);
 
-        var heizleistung = Catalog.FindByTopicPath("Status/Energy/HeatingPower");
-        Assert.NotNull(heizleistung);
-        Assert.Equal(RefreshPriority.Secondary, heizleistung!.Priority);
-        Assert.Equal("kW", heizleistung.Unit);
+            foreach (var itemId in requirement.ItemIds)
+            {
+                Assert.True(
+                    ids.Contains(itemId),
+                    $"{requirement.Key}: Item {itemId} fehlt im Katalog.");
+            }
+        }
 
-        var waermemenge = Catalog.FindByTopicPath("Status/Energy/ThermalEnergyTotal");
-        Assert.NotNull(waermemenge);
-        Assert.Equal(RefreshPriority.Slow, waermemenge!.Priority);
-        Assert.Equal("kWh", waermemenge.Unit);
+        // Jedes Item gehört höchstens zu einer Baugruppe.
+        var gated = HardwareRequirements.All.SelectMany(requirement => requirement.ItemIds).ToList();
+        Assert.Equal(gated.Count, gated.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    [Fact]
+    public void Die_Typ_Parameter_Werte_Stimmen_Mit_Dem_Handbuch()
+    {
+        Assert.Equal(3, ItemEnums.BufferTypes.Count);
+        Assert.Equal("None", ItemEnums.BufferTypes[0]);
+        Assert.Equal("OneSensor", ItemEnums.BufferTypes[1]);
+        Assert.Equal("TwoSensors", ItemEnums.BufferTypes[11]);
+
+        Assert.Equal(7, ItemEnums.SolarHydraulicsTypes.Count);
+        Assert.Equal("None", ItemEnums.SolarHydraulicsTypes[0]);
+        Assert.Equal("PumpToBuffer", ItemEnums.SolarHydraulicsTypes[1]);
+        Assert.Equal("PumpWarmWaterThenBufferWithHeatExchanger", ItemEnums.SolarHydraulicsTypes[24]);
+
+        Assert.Equal("NotInstalled", ItemEnums.PresenceTypes[0]);
+        Assert.Equal("Installed", ItemEnums.PresenceTypes[1]);
     }
 
     [Fact]
@@ -242,12 +249,13 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void Genau_22_V2_Items_Erfordern_Den_Experten_Modus()
+    public void Genau_21_V2_Items_Erfordern_Den_Experten_Modus()
     {
-        // 21 neue Konfigurations-Topics (Welle 2c) plus das Command-Topic.
+        // 20 Konfigurations-Topics (Welle 2c ohne MixerDirectOffset) plus das
+        // Command-Topic. Die Typ-Parameter sind read-only und brauchen ihn nicht.
         var experten = Catalog.V2.Where(item => item.RequiresExpertMode).ToList();
 
-        Assert.Equal(22, experten.Count);
+        Assert.Equal(21, experten.Count);
         Assert.All(experten, item =>
         {
             Assert.True(item.IsWritable, $"{item.Id} ist nicht schreibbar.");
@@ -263,7 +271,7 @@ public sealed class CatalogTests
     }
 
     [Fact]
-    public void Die_Einundzwanzig_Config_Items_Tragen_Ihre_Dokumentierten_Objekt_Ids()
+    public void Die_Zwanzig_Config_Items_Tragen_Ihre_Dokumentierten_Objekt_Ids()
     {
         (string TopicPath, int ObjectId)[] erwartet =
         [
@@ -276,7 +284,6 @@ public sealed class CatalogTests
             ("Config/EnergyProducer/CondenserPumpPostRunningTime", 188),
             ("Config/EnergyProducer/FrostProtectionMode", 498),
             ("Config/EnergyProducer/FrostProtectionTemperature", 446),
-            ("Config/HeatingSystem/MixerDirectOffset", 3608),
             ("Config/HeatingSystem/SetPointNormalBelowOutdoor", 862),
             ("Config/Warmwater/Equipment", 117),
             ("Config/Warmwater/PowerSelection", 195),
@@ -290,8 +297,10 @@ public sealed class CatalogTests
             ("Config/Service/Interval", 3365),
         ];
 
-        Assert.Equal(21, erwartet.Length);
-        Assert.Equal(21, Catalog.V2.Count(item => item.TopicPath.StartsWith("Config/", StringComparison.Ordinal)));
+        Assert.Equal(20, erwartet.Length);
+
+        // 20 schreibbare Config-Items plus die vier rein lesenden Typ-Parameter.
+        Assert.Equal(24, Catalog.V2.Count(item => item.TopicPath.StartsWith("Config/", StringComparison.Ordinal)));
 
         foreach (var (topicPath, objectId) in erwartet)
         {

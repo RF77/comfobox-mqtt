@@ -33,14 +33,14 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     private const string Model = "ComfoBox Series 5 (ELESTA)";
     private const string OriginName = "comfobox-gateway";
 
-    // Die Payloads der Energie-Availability (Status/Energy/Available).
-    private const string EnergyAvailablePayload = "1";
-    private const string EnergyUnavailablePayload = "0";
+    // Die Payloads der Baugruppen-Availability (Status/Hardware/…).
+    private const string HardwareAvailablePayload = "1";
+    private const string HardwareUnavailablePayload = "0";
 
     private const string CoolingActiveDerivedId = "derived.cooling_active";
 
     /// <summary>
-    /// Die deutschen Anzeigenamen der sieben abgeleiteten Werte.
+    /// Die deutschen Anzeigenamen der abgeleiteten Werte.
     /// </summary>
     /// <remarks>
     /// Die Namen stehen hier und nicht in der Domäne: die Domäne beschreibt
@@ -54,7 +54,6 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             ["derived.buffer_delta"] = "Puffer-Schichtung",
             ["derived.runtime_ratio"] = "Laufzeitverhältnis",
             ["derived.service_due"] = "Wartung fällig",
-            [DerivedValues.CopInstantId] = "Momentan-COP",
             [CoolingActiveDerivedId] = "Kühlung aktiv",
         };
 
@@ -327,19 +326,25 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        // Die Energie-Entitäten hängen an der Wärmemengenmessung (DP 3340),
-        // nicht am Gateway-Health: ohne Messung liefert der Regler keine
-        // kWh-Werte und keinen COP.
-        var energyGated = item.RequiresEnergyMeasurement;
+        // Items einer Baugruppe (Pufferspeicher, Solarkreis, …) hängen an der
+        // Verfügbarkeit dieser Baugruppe, nicht am Gateway-Health: fehlt die
+        // Baugruppe, liefert der Regler nur den Sentinel 32767.
+        var requirement = HardwareRequirements.ForItem(item.Id);
 
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
         {
             ["name"] = MqttValueFormatter.DisplayName(item),
             ["unique_id"] = UniqueId(item),
             ["state_topic"] = _topics.ItemTopic(item),
-            ["availability_topic"] = energyGated ? _topics.EnergyAvailableTopic : _topics.HealthTopic,
-            ["payload_available"] = energyGated ? EnergyAvailablePayload : "online",
-            ["payload_not_available"] = energyGated ? EnergyUnavailablePayload : "offline",
+            ["availability_topic"] = requirement is null
+                ? _topics.HealthTopic
+                : _topics.HardwareTopic(requirement),
+            ["payload_available"] = requirement is null
+                ? "online"
+                : HardwareAvailablePayload,
+            ["payload_not_available"] = requirement is null
+                ? "offline"
+                : HardwareUnavailablePayload,
             ["device"] = BuildDevice(),
             ["origin"] = BuildOrigin(),
         };
@@ -376,9 +381,8 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             payload["unit_of_measurement"] = item.Unit;
         }
 
-        // Ein COP ist ein Verhältnis, keine Temperatur oder Leistung: Home
-        // Assistant kennt dafür keine Geräteklasse.
-        var deviceClass = IsCop(item) ? null : DeviceClassFor(item.Unit);
+        // Die Geräteklasse hängt an der Einheit (°C, kWh, kW).
+        var deviceClass = DeviceClassFor(item.Unit);
         if (deviceClass is not null)
         {
             payload["device_class"] = deviceClass;
@@ -597,15 +601,6 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
         => string.Equals(item.Unit, "kWh", StringComparison.Ordinal)
             ? "total_increasing"
             : "measurement";
-
-    /// <summary>
-    /// Ist das Item ein COP (Gütezahl)?
-    /// </summary>
-    /// <param name="item">Das Item.</param>
-    /// <returns><c>true</c> für <c>Status/Energy/Cop…</c>.</returns>
-    private static bool IsCop(ItemDefinition item)
-        => string.Equals(item.Group, "Status/Energy", StringComparison.Ordinal)
-            && item.Name.StartsWith("Cop", StringComparison.Ordinal);
 
     /// <summary>
     /// Gehört die Gruppe in die Diagnose-Kategorie?

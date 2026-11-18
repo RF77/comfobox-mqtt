@@ -24,21 +24,6 @@ namespace ComfoBox.Domain.Derived;
 /// </remarks>
 public static class DerivedValues
 {
-    /// <summary>
-    /// Die Id des Momentan-COP (<c>Status/Derived/CopInstant</c>).
-    /// </summary>
-    public const string CopInstantId = "derived.cop_instant";
-
-    /// <summary>
-    /// Das BACnet-Objekt des Wärmezählers (DP 3349, <c>ThermalEnergyTotal</c>).
-    /// </summary>
-    public const int ThermalEnergyTotalObjectId = 3349;
-
-    /// <summary>
-    /// Das BACnet-Objekt des Stromzählers (DP 3355, <c>ElectricalEnergyTotal</c>).
-    /// </summary>
-    public const int ElectricalEnergyTotalObjectId = 3355;
-
     // Die Eingänge der abgeleiteten Werte (Datenpunkt-Nummern des Handbuchs).
     private const int SuctionGasTemperatureObjectId = 641;
     private const int EvaporatorTemperatureObjectId = 660;
@@ -140,16 +125,6 @@ public static class DerivedValues
         },
         new()
         {
-            Id = CopInstantId,
-            TopicPath = "Derived/CopInstant",
-            Formula =
-                "Δ DP 3349 / Δ DP 3355 über mindestens 1 h. Zwei Proben sind nötig; beim Start "
-                + "und nach einem Neustart ist der Wert unbekannt. Δelektrisch = 0 ⇒ unbekannt.",
-            InputObjectIds = [ThermalEnergyTotalObjectId, ElectricalEnergyTotalObjectId],
-            RequiresHistory = true,
-        },
-        new()
-        {
             Id = "derived.cooling_active",
             TopicPath = "Derived/CoolingActive",
             Formula =
@@ -161,39 +136,6 @@ public static class DerivedValues
                 inputs, HeatPumpStatusObjectId, CoolingFlowTemperatureObjectId),
         },
     ];
-
-    /// <summary>
-    /// Der Momentan-COP aus zwei Zählerdifferenzen.
-    /// </summary>
-    /// <param name="thermalDelta">Die Änderung des Wärmezählers (DP 3349).</param>
-    /// <param name="electricalDelta">Die Änderung des Stromzählers (DP 3355).</param>
-    /// <returns>Der COP oder <c>null</c>, wenn er nicht berechenbar ist.</returns>
-    /// <remarks>
-    /// <para>
-    /// Ohne verbrauchten Strom gibt es keinen COP: <c>Δelektrisch = 0</c> ergibt
-    /// <c>null</c> (= unbekannt), nicht <c>0</c>. Ein **negatives** Delta ist
-    /// ebenfalls <c>null</c>: ein Zähler, der rückwärts läuft, bedeutet eine
-    /// Rücksetzung des Geräts - über diesen Zeitraum ist keine Aussage möglich.
-    /// </para>
-    /// <para>
-    /// Der Zählerstand ist monoton steigend; ein negatives Wärme-Delta bleibt
-    /// dagegen erlaubt (Kühlbetrieb) und ergibt einen negativen Wert.
-    /// </para>
-    /// </remarks>
-    public static float? CopInstant(double thermalDelta, double electricalDelta)
-    {
-        if (!double.IsFinite(thermalDelta) || !double.IsFinite(electricalDelta))
-        {
-            return null;
-        }
-
-        if (electricalDelta <= 0d)
-        {
-            return null;
-        }
-
-        return (float)(thermalDelta / electricalDelta);
-    }
 
     /// <summary>
     /// Liest einen Eingang (fehlender Schlüssel oder <c>null</c> ⇒ unbekannt).

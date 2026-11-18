@@ -1,5 +1,11 @@
 # Verbesserungsvorschläge und neue Topics
 
+> **Teilweise überholt (2026-11-18):** Der Block **Energie und COP** ist **nicht**
+> umgesetzt – die ComfoBox Series 5 hat keinen Wärmemengenzähler
+> ([ADR-015](../05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)). Die
+> Abschnitte dazu (§4.3, §6.1) bleiben als Begründung stehen. Maßgeblich ist
+> [../topics-v2.md](../topics-v2.md).
+
 Was der Gateway **zusätzlich** können sollte – mit Begründung, Aufwand und Reihenfolge.
 Die verbindlichen Adressen stehen in [../topics-v2.md](../topics-v2.md); dieses Dokument
 erklärt das **Warum** und ergänzt Vorschläge, die (noch) nicht im Vertrag stehen.
@@ -22,7 +28,7 @@ Heute beantwortet der Gateway nur Frage 1.
 | 1 | `Status/Zone/Override` | 676 | beantwortet „warum heizt es nicht" in **einem** Wert |
 | 2 | `Status/WarmWater/State` + `Override` | 2599 / 2598 | dasselbe für Warmwasser |
 | 3 | `Status/HeatPump/HotGasTemperature` + `SuctionGasTemperature` | 3228 / 641 | Kältekreis-Frühwarnung, bevor die Störung kommt |
-| 4 | `Status/Energy/CopTotal` + drei kWh-Zähler | 3357 / 3343·3347·3349 | Verbrauch und Effizienz in Home Assistant |
+| 4 | ~~`Status/Energy/CopTotal` + drei kWh-Zähler~~ | ~~3357 / 3343·3347·3349~~ | **verworfen** – kein Wärmemengenzähler ([ADR-015](../05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)) |
 | 5 | `Status/HeatPump/ReturnTemperature` | 3468 | ohne Rücklauf ist die Spreizung unbekannt – und die ist der beste Effizienzindikator |
 
 Alle fünf sind **rein lesend**, kosten keinen Schreibvorgang und keine EEPROM-Zyklen.
@@ -102,7 +108,12 @@ Priorität 1 – das ist ein **bewusster** Kompromiss, kein Versehen.
 
 ### 4.3 Energie und Effizienz (Aufwand: klein, Nutzen: hoch)
 
-Siehe [../topics-v2.md §5.5](../topics-v2.md#55-status--energie-und-cop).
+> **Nicht umgesetzt (2026-11-18):** Die ComfoBox hat keinen Wärmemengenzähler. Der
+> Block ist aus dem Katalog entfernt – siehe
+> [ADR-015](../05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md). Der Abschnitt
+> bleibt als Begründung der ursprünglichen Idee stehen.
+
+Siehe [../topics-v2.md §5.5](../topics-v2.md#55-status--baugruppen-typ-parameter-und-ihre-verfügbarkeit).
 
 **Home-Assistant-Einordnung:**
 
@@ -230,6 +241,10 @@ Damit niemand Zeit in Sackgassen steckt:
 > Funktion, die alle erwarten und niemand liefern kann.
 
 ### 6.1 DP 3340 – warum ohne Wärmemengenmessung keine kWh und kein COP entstehen
+
+> **Entscheidung 2026-11-18:** Der Block wird **nicht** geliefert. Statt zu sperren
+> wird er weggelassen – die Messung ist an dieser Gerätefamilie nie verfügbar
+> ([ADR-015](../05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)).
 
 **Der Datenpunkt.** Das Handbuch führt die Wärmemengenmessung in §6.3.14 (Seite 74):
 

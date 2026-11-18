@@ -119,20 +119,19 @@ public sealed class HomeAssistantDiscoveryTests
         foreach (var item in Catalog.All)
         {
             var payload = discovery.BuildItemPayload(item, item.IsWritableWithExpertMode(expertModeEnabled: false));
+            var requirement = HardwareRequirements.ForItem(item.Id);
 
-            if (item.RequiresEnergyMeasurement)
-            {
-                // Die 11 Energie-Items hängen an der Wärmemengenmessung
-                // (DP 3340) - nicht am Gateway-Health.
-                Assert.Equal("ComfoBox/Status/Energy/Available", payload["availability_topic"]);
-                Assert.Equal("1", payload["payload_available"]);
-                Assert.Equal("0", payload["payload_not_available"]);
-            }
-            else
+            if (requirement is null)
             {
                 Assert.Equal("ComfoBox/Status/Health", payload["availability_topic"]);
                 Assert.Equal("online", payload["payload_available"]);
                 Assert.Equal("offline", payload["payload_not_available"]);
+            }
+            else
+            {
+                Assert.Equal($"ComfoBox/Status/{requirement.TopicPath}", payload["availability_topic"]);
+                Assert.Equal("1", payload["payload_available"]);
+                Assert.Equal("0", payload["payload_not_available"]);
             }
         }
     }
@@ -380,57 +379,53 @@ public sealed class HomeAssistantDiscoveryTests
     }
 
     [Fact]
-    public void Die_Energie_Items_Tragen_Die_Energie_Availability()
+    public void Die_Fuehler_Items_Tragen_Die_Availability_Ihrer_Baugruppe()
     {
         var discovery = CreateDiscovery();
+        var requirement = HardwareRequirements.HeatPumpSensors;
 
-        var energy = Catalog.All.Where(i => i.RequiresEnergyMeasurement).ToList();
+        Assert.Equal(9, requirement.ItemIds.Count);
 
-        Assert.Equal(11, energy.Count);
-
-        foreach (var item in energy)
+        foreach (var itemId in requirement.ItemIds)
         {
+            var item = Catalog.All.Single(i => i.Id == itemId);
             var payload = discovery.BuildItemPayload(item, writable: false);
 
-            Assert.Equal("ComfoBox/Status/Energy/Available", payload["availability_topic"]);
+            Assert.Equal("ComfoBox/Status/Hardware/HeatPumpSensors", payload["availability_topic"]);
             Assert.Equal("1", payload["payload_available"]);
             Assert.Equal("0", payload["payload_not_available"]);
         }
     }
 
     [Fact]
-    public void Die_Energie_Zaehler_Sind_Energy_Total_Increasing()
+    public void Jedes_Item_Einer_Baugruppe_Haengt_An_Deren_Topic()
     {
         var discovery = CreateDiscovery();
 
-        var total = Catalog.All.Single(i => i.TopicPath == "Status/Energy/ThermalEnergyTotal");
-        var totalPayload = discovery.BuildItemPayload(total, writable: false);
+        foreach (var requirement in HardwareRequirements.All)
+        {
+            foreach (var itemId in requirement.ItemIds)
+            {
+                var item = Catalog.All.Single(i => i.Id == itemId);
+                var payload = discovery.BuildItemPayload(item, writable: false);
 
-        Assert.Equal("kWh", totalPayload["unit_of_measurement"]);
-        Assert.Equal("energy", totalPayload["device_class"]);
-        Assert.Equal("total_increasing", totalPayload["state_class"]);
-
-        var power = Catalog.All.Single(i => i.TopicPath == "Status/Energy/HeatingPower");
-        var powerPayload = discovery.BuildItemPayload(power, writable: false);
-
-        Assert.Equal("kW", powerPayload["unit_of_measurement"]);
-        Assert.Equal("power", powerPayload["device_class"]);
-        Assert.Equal("measurement", powerPayload["state_class"]);
+                Assert.Equal($"ComfoBox/Status/{requirement.TopicPath}", payload["availability_topic"]);
+            }
+        }
     }
 
     [Fact]
-    public void Der_Cop_Traegt_Keine_Geraeteklasse()
+    public void Das_Analoge_Config_Item_Traegt_Die_Einheit()
     {
-        // Ein COP ist ein Verhältnis - Home Assistant kennt dafür keine
-        // Geräteklasse. Er bleibt eine Messung.
+        // Die Typ-Parameter (Enum, read-only) erzeugen einen Sensor ohne
+        // Geräteklasse; ein analoges Config-Item bleibt eine Zahl mit Einheit.
         var discovery = CreateDiscovery();
-        var cop = Catalog.All.Single(i => i.TopicPath == "Status/Energy/CopHeating");
+        var equipment = Catalog.All.Single(i => i.TopicPath == "Config/Warmwater/Equipment");
 
-        var payload = discovery.BuildItemPayload(cop, writable: false);
+        var payload = discovery.BuildItemPayload(equipment, writable: true);
 
         Assert.False(payload.ContainsKey("device_class"));
         Assert.False(payload.ContainsKey("unit_of_measurement"));
-        Assert.Equal("measurement", payload["state_class"]);
     }
 
     [Fact]
@@ -440,6 +435,7 @@ public sealed class HomeAssistantDiscoveryTests
         var ohneExperten = CreateDiscovery(expertMode: false);
 
         var configItems = Catalog.V2
+            .Where(i => i.IsWritable)
             .Where(i => i.Group.StartsWith("Config/", StringComparison.Ordinal))
             .ToList();
 
@@ -463,14 +459,14 @@ public sealed class HomeAssistantDiscoveryTests
     }
 
     [Fact]
-    public void Die_Sieben_Abgeleiteten_Werte_Werden_Angekuendigt()
+    public void Die_Sechs_Abgeleiteten_Werte_Werden_Angekuendigt()
     {
         var discovery = CreateDiscovery();
 
         var payloads = discovery.BuildDerivedPayloads();
 
-        Assert.Equal(7, payloads.Count);
-        Assert.Equal(7, payloads.Select(p => p.Key).Distinct(StringComparer.Ordinal).Count());
+        Assert.Equal(6, payloads.Count);
+        Assert.Equal(6, payloads.Select(p => p.Key).Distinct(StringComparer.Ordinal).Count());
 
         var names = payloads.Select(p => Assert.IsType<string>(p.Value["name"])).ToList();
         string[] erwarteteNamen =
@@ -480,7 +476,6 @@ public sealed class HomeAssistantDiscoveryTests
             "Puffer-Schichtung",
             "Laufzeitverhältnis",
             "Wartung fällig",
-            "Momentan-COP",
             "Kühlung aktiv",
         ];
         Assert.Equal(erwarteteNamen, names);
@@ -640,7 +635,7 @@ public sealed class HomeAssistantDiscoveryTests
             .Select(p => Assert.IsType<string>(p.Value["unique_id"]))
             .ToList();
 
-        Assert.Equal(7, ids.Count);
+        Assert.Equal(6, ids.Count);
         Assert.Contains("comfobox_derived_superheat", ids);
         Assert.DoesNotContain("comfobox_derived_derived_superheat", ids);
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());

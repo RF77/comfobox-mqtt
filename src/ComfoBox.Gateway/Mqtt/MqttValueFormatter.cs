@@ -45,7 +45,6 @@ public static partial class MqttValueFormatter
             ["Status/WarmWater"] = "Diagnose Warmwasser",
             ["Status/HeatPump"] = "Kältekreis",
             ["Status/Buffer"] = "Pufferspeicher",
-            ["Status/Energy"] = "Energie",
             ["Status/Counters"] = "Zähler",
             ["Status/Solar"] = "Solar",
             ["Config/Warmwater"] = "Warmwasser",
@@ -188,7 +187,7 @@ public static partial class MqttValueFormatter
     /// </summary>
     /// <remarks>
     /// Bei mehreren Präfix-Treffern gewinnt der längste - so kann später eine
-    /// Untergruppe (<c>Status/Energy/…</c>) einen eigenen Namen bekommen,
+    /// Untergruppe (<c>Status/Counters/…</c>) einen eigenen Namen bekommen,
     /// ohne die übergeordnete Gruppe zu ändern.
     /// </remarks>
     private static string? GroupLabelFor(string group)

@@ -98,16 +98,6 @@ public sealed record ItemDefinition
     public bool IsV2 { get; init; }
 
     /// <summary>
-    /// Das Item liefert nur mit Wärmemengenmessung (DP 3340) einen sinnvollen Wert.
-    /// </summary>
-    /// <remarks>
-    /// Ohne Wärmemengenmessung werden Energie- und COP-Werte nicht als <c>0</c>
-    /// publiziert, sondern gesperrt. Das Flag ändert weder <see cref="TopicPath"/>
-    /// noch <see cref="IsWritable"/>.
-    /// </remarks>
-    public bool RequiresEnergyMeasurement { get; init; }
-
-    /// <summary>
     /// Die Lese-Priorität des Items.
     /// </summary>
     public RefreshPriority Priority { get; init; } = RefreshPriority.Secondary;

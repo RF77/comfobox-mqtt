@@ -50,6 +50,14 @@ export interface ItemDto {
   readonly lastUpdated: string | null;
   /** Ist der Wert veraltet? */
   readonly stale: boolean;
+  /**
+   * Der Grund, warum das Item keinen Wert liefert (oder `null`).
+   *
+   * <p>`not_installed` = die Baugruppe fehlt am Regler, `no_sensor` = der
+   * Regler meldet den Sentinel 32767, `unknown` = der Typ-Parameter wurde
+   * noch nicht gelesen.</p>
+   */
+  readonly unavailableReason?: 'not_installed' | 'no_sensor' | 'unknown' | null;
   /** Die Enum-Werte (Nummer → Name) - nur bei Enum-Items. */
   readonly enumValues: Readonly<Record<string, string>>;
 }

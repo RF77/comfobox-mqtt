@@ -126,6 +126,12 @@ export interface Translations {
     readonly stale: string;
     readonly expert: string;
     readonly expertRequired: string;
+    /** „nicht verbaut" – die Baugruppe fehlt am Regler. */
+    readonly notInstalled: string;
+    /** „kein Fühler" – der Regler liefert den Sentinel 32767. */
+    readonly noSensor: string;
+    /** „Hardware unbekannt" – der Typ-Parameter wurde noch nicht gelesen. */
+    readonly hardwareUnknown: string;
     readonly save: string;
     readonly choose: string;
     readonly readonly: string;
@@ -353,25 +359,6 @@ export interface Translations {
     readonly defrostDeltaActual: string;
     readonly superheatHint: string;
     readonly superheatFormula: string;
-    readonly energyCard: string;
-    readonly energyLead: string;
-    readonly energyBanner: string;
-    readonly energyHelpLink: string;
-    readonly measurementMode: string;
-    readonly energyAvailable: string;
-    readonly energyUnavailable: string;
-    readonly energyAvailableNote: string;
-    readonly heatingPower: string;
-    readonly warmWaterPower: string;
-    readonly thermalEnergyHeating: string;
-    readonly thermalEnergyWarmWater: string;
-    readonly thermalEnergyTotal: string;
-    readonly electricalEnergyHeating: string;
-    readonly electricalEnergyWarmWater: string;
-    readonly electricalEnergyTotal: string;
-    readonly copHeating: string;
-    readonly copWarmWater: string;
-    readonly copTotal: string;
   };
 
   readonly logs: {

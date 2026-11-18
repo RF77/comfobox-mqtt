@@ -58,18 +58,6 @@ public sealed class DerivedValueTests
     public void Kuehlung_Ist_Bei_Warmem_Kuehlvorlauf_Aktiv()
         => Assert.Equal(1f, Compute("derived.cooling_active", (662, 5f), (3098, 12.5f)));
 
-    [Fact]
-    public void Cop_Instant_Ist_Der_Quotient()
-        => Assert.Equal(5f, DerivedValues.CopInstant(thermalDelta: 10d, electricalDelta: 2d));
-
-    [Fact]
-    public void Cop_Instant_Ohne_Strom_Ist_Unbekannt()
-        => Assert.Null(DerivedValues.CopInstant(thermalDelta: 10d, electricalDelta: 0d));
-
-    [Fact]
-    public void Cop_Instant_Ohne_Waerme_Ist_Null()
-        => Assert.Equal(0f, DerivedValues.CopInstant(thermalDelta: 0d, electricalDelta: 2d));
-
     /// <summary>
     /// Fehlt ein Eingang, ist der Wert unbekannt - in **jeder** Definition und
     /// für **jeden** Eingang.
@@ -77,10 +65,9 @@ public sealed class DerivedValueTests
     [Fact]
     public void Fehlender_Eingang_Ergibt_Unbekannt()
     {
-        foreach (var definition in DerivedValues.All.Where(static value => !value.RequiresHistory))
+        foreach (var definition in DerivedValues.All)
         {
             var compute = definition.Compute;
-            Assert.NotNull(compute);
 
             foreach (var objectId in definition.InputObjectIds)
             {
@@ -93,12 +80,12 @@ public sealed class DerivedValueTests
     }
 
     /// <summary>
-    /// Es gibt genau sieben abgeleitete Werte - und jeder ist vollständig beschrieben.
+    /// Es gibt genau sechs abgeleitete Werte - und jeder ist vollständig beschrieben.
     /// </summary>
     [Fact]
-    public void Es_Gibt_Sieben_Vollstaendige_Definitionen()
+    public void Es_Gibt_Sechs_Vollstaendige_Definitionen()
     {
-        Assert.Equal(7, DerivedValues.All.Count);
+        Assert.Equal(6, DerivedValues.All.Count);
 
         var ids = DerivedValues.All.Select(definition => definition.Id).ToList();
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.Ordinal).Count());
@@ -119,20 +106,11 @@ public sealed class DerivedValueTests
         => Assert.All(DerivedValues.All, definition => Assert.StartsWith("Derived/", definition.TopicPath));
 
     /// <summary>
-    /// Nur der Momentan-COP braucht einen Verlauf - er hat keine reine Rechenfunktion.
+    /// Jeder abgeleitete Wert hat eine reine Rechenfunktion (keine Historie).
     /// </summary>
     [Fact]
-    public void Nur_Der_Momentan_Cop_Braucht_Einen_Verlauf()
-    {
-        var historical = Assert.Single(DerivedValues.All, definition => definition.RequiresHistory);
-
-        Assert.Equal(DerivedValues.CopInstantId, historical.Id);
-        Assert.Null(historical.Compute);
-
-        Assert.All(
-            DerivedValues.All.Where(static definition => !definition.RequiresHistory),
-            definition => Assert.NotNull(definition.Compute));
-    }
+    public void Jeder_Wert_Hat_Eine_Rechenfunktion()
+        => Assert.All(DerivedValues.All, definition => Assert.NotNull(definition.Compute));
 
     /// <summary>
     /// Kein abgeleiteter Wert verdeckt ein Katalog-Item (Id oder Topic-Pfad).

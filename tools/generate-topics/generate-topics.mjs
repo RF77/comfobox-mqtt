@@ -209,9 +209,6 @@ const EXPERT_RE = /\[ExpertMode\]/gu;
 /** V2-Attribut: Item gehört zum additiven V2-Vertrag. */
 const V2_RE = /\[V2\]/gu;
 
-/** Energy-Attribut: Item ist ohne DP 3340 nicht publizierbar. */
-const ENERGY_RE = /\[Energy\]/gu;
-
 /**
  * Erlaubte Werte eines Auswahl-Parameters, z. B. `[Values(0, 3)]`.
  * Min/Max sind Bereiche, keine Wertelisten - das Gerät kennt bei
@@ -513,25 +510,15 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
     return found;
   });
 
-  // [V2] und [Energy] werden genauso je Segment eingesammelt wie die
-  // übrigen Attribute: nur ein Treffer zwischen der vorigen Property und
-  // dieser zählt, sonst erbt ein Item das Attribut seines Vorgängers.
+  // [V2] wird je Segment eingesammelt wie die übrigen Attribute: nur ein
+  // Treffer zwischen der vorigen Property und dieser zählt, sonst erbt ein
+  // Item das Attribut seines Vorgängers.
   const v2BySegment = ownSegment.map((segment) => {
     const found = [];
     V2_RE.lastIndex = 0;
     let v2;
     while ((v2 = V2_RE.exec(segment)) !== null) {
       found.push({ index: v2.index });
-    }
-    return found;
-  });
-
-  const energyBySegment = ownSegment.map((segment) => {
-    const found = [];
-    ENERGY_RE.lastIndex = 0;
-    let energy;
-    while ((energy = ENERGY_RE.exec(segment)) !== null) {
-      found.push({ index: energy.index });
     }
     return found;
   });
@@ -543,7 +530,6 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
     const experts = expertsBySegment[segmentIndex];
     const values = valuesBySegment[segmentIndex];
     const v2Attributes = v2BySegment[segmentIndex];
-    const energyAttributes = energyBySegment[segmentIndex];
     PROP_RE.lastIndex = 0;
     let prop;
     let lastPropEnd = 0;
@@ -568,7 +554,6 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
       const expertCandidates = experts.filter((e) => e.index >= lastPropEnd && e.index < prop.index);
 
       const v2Candidates = v2Attributes.filter((a) => a.index >= lastPropEnd && a.index < prop.index);
-      const energyCandidates = energyAttributes.filter((a) => a.index >= lastPropEnd && a.index < prop.index);
 
       // Dasselbe für die erlaubten Werte: nur ein Attribut zwischen der
       // vorigen Property und dieser zählt (sonst erbt ein Item die Liste
@@ -598,7 +583,6 @@ function parseClass(text, bodyStart, bodyEnd, path, items) {
         IsReadOnlyLiteral: isReadOnlyLiteral(initializer),
         Priority: priority,
         IsV2: v2Candidates.length > 0,
-        RequiresEnergyMeasurement: energyCandidates.length > 0,
         Ctor: ctor,
         EnumType: ctor === 'EnumValue' ? enumTypeOf(generic) : null,
         Min: min,
@@ -756,7 +740,6 @@ export function emitCatalog(items) {
     if (item.RequiresExpertMode) lines.push('            RequiresExpertMode = true,');
     lines.push(`            Priority = RefreshPriority.${item.Priority},`);
     if (item.IsV2) lines.push('            IsV2 = true,');
-    if (item.RequiresEnergyMeasurement) lines.push('            RequiresEnergyMeasurement = true,');
     if (item.Description !== null) lines.push(`            Description = ${escapeCsString(item.Description)},`);
     if (kind === 'Enum') lines.push(`            EnumValues = ItemEnums.${item.EnumType},`);
     lines.push('        },');
@@ -834,10 +817,10 @@ export function diff(expected, actual) {
       continue;
     }
     for (const field of Object.keys(want)) {
-      // IsV2/RequiresEnergyMeasurement sind Katalog-Metadaten, kein
-      // Fixture-Feld – die V1-Fixture kennt sie nicht.
+      // IsV2 ist Katalog-Metadaten, kein Fixture-Feld – die V1-Fixture kennt
+      // es nicht.
       if (field === 'DeclaredType' || field === 'BacnetId') continue;
-      if (field === 'IsV2' || field === 'RequiresEnergyMeasurement') continue;
+      if (field === 'IsV2') continue;
       const a = want[field];
       const b = got[field];
       if (a === null && b === null) continue;

@@ -85,6 +85,41 @@ Die Funktion definiert eine Zeit zur Entlüftung des Sekundärkreises (Energieabna
 der eingestellten Zeit laufen alle Zonenpumpen, sowie die Pufferladepumpe (resp.
 Kondensatorpumpe).")]
             public AnalogValue EntlueftungSekundaerkreis => new AnalogValue(3400, "h");
+            /// <summary>
+            ///     Pufferspeichertyp: Art der Pufferspeicherfuehlung
+            /// </summary>
+            [V2]
+            [Slow]
+            [Description(@"Pufferspeichertyp: 0 = keine Funktion, 1 = ein Fühler, 11 = zwei Fühler")]
+            public EnumValue<BufferTypes?> BufferType
+                => new EnumValue<BufferTypes?>(805) {IsReadOnly = true};
+
+            /// <summary>
+            ///     Kuehlpufferspeichertyp: Art der Kuehlpufferspeicherfuehlung
+            /// </summary>
+            [V2]
+            [Slow]
+            [Description(@"Kühlpufferspeichertyp: 0 = keine Funktion, 1 = ein Fühler, 11 = zwei Fühler")]
+            public EnumValue<BufferTypes?> CoolingBufferType
+                => new EnumValue<BufferTypes?>(3918) {IsReadOnly = true};
+
+            /// <summary>
+            ///     Sonnenkollektor Hydraulik: Art der Solarhydraulik
+            /// </summary>
+            [V2]
+            [Slow]
+            [Description(@"Sonnenkollektor Hydraulik: 0 = keine Funktion (0, 1, 2, 4, 21, 22 oder 24)")]
+            public EnumValue<SolarHydraulicsTypes?> SolarHydraulics
+                => new EnumValue<SolarHydraulicsTypes?>(807) {IsReadOnly = true};
+
+            /// <summary>
+            ///     Fuehler zu WP-Regelung: ist der Fuehler der Waermepumpe angeschlossen
+            /// </summary>
+            [V2]
+            [Slow]
+            [Description(@"Fühler zu WP-Regelung: 0 = nicht vorhanden, 1 = vorhanden")]
+            public EnumValue<PresenceTypes?> HeatPumpSensor
+                => new EnumValue<PresenceTypes?>(2800) {IsReadOnly = true};
         }
 
         [Description(@"Einstellung für Solekreispumpe")]
@@ -251,16 +286,6 @@ Definiert, in welchem Zustand die Pumpe ist, wenn sie auf 'Aus' gestellt ist
         [Description(@"Heizen System")]
         public class HeatingSystem
         {
-            /// <summary>
-            ///     Mischerabgleich des direkten Heizkreises
-            /// </summary>
-            [V2]
-            [Secondary]
-            [ExpertMode]
-            [Description(@"Mischerabgleich des direkten Heizkreises in Kelvin")]
-            public AnalogValue MixerDirectOffset
-                => new AnalogValue(3608, "K", 0, 20) {IsReadOnly = !Settings.Default.ExpertMode};
-
             /// <summary>
             ///     Normalsollwert unterhalb der Aussentemperaturgrenze
             /// </summary>

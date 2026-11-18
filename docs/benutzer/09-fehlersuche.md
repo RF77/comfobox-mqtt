@@ -482,36 +482,6 @@ Entität `unavailable`.
 
 ---
 
-## Die Energie-Werte fehlen oder stehen auf 0
-
-**Symptom:** Wärmemenge, Stromzähler und COP fehlen in der Web-Oberfläche, oder
-sie stehen dauerhaft auf 0. In Home Assistant sind die Energie-Entitäten „nicht
-verfügbar".
-
-**Ursache:** Der Regler **rechnet** die Wärme, er misst sie nicht. Er tut das nur,
-wenn am Gerät die **Wärmemengenmessung** eingeschaltet ist (Datenpunkt 3340). Bei
-Einstellung `0` rechnet er nicht: Die Wärmemengen bleiben an ihrem Startwert
-stehen, der COP bleibt leer.
-
-Der Gateway erkennt das und veröffentlicht **keine 0**. Er markiert die
-Energie-Werte als nicht verfügbar und schreibt einmal pro Wechsel einen Hinweis in
-die Fehlerhistorie – sonst wäre die Energie-Statistik in Home Assistant dauerhaft
-verfälscht.
-
-**Lösung:**
-
-| Schritt | Was zu tun ist |
-|---|---|
-| 1 | am Regler auf der Service- bzw. Inbetriebnahme-Ebene die Wärmemengenmessung auf **1** oder **2** stellen |
-| 2 | prüfen, ob der Durchfluss bei laufender Pumpe größer 0 ist |
-| 3 | dem Zähler Zeit geben – er beginnt bei 0 |
-
-> **Der häufigste Grund** ist die ausgeschaltete Wärmemengenmessung. Die
-> vollständige Anleitung steht unter
-> [Verbrauch und Effizienz](12-verbrauch.md).
-
----
-
 ## Expertenmodus
 
 Der Expertenmodus gibt zusätzliche Parameter frei, die das Regelverhalten der

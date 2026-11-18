@@ -250,6 +250,5 @@ Diese Fälle löst der Fachbetrieb – über das Gateway sind sie nicht behebbar
 
 | Sie möchten … | Lesen Sie |
 |---|---|
-| Verbrauch und Effizienz verstehen | [Verbrauch und Effizienz](12-verbrauch.md) |
 | Sollwerte und Betriebsart ändern | [Bedienung](06-bedienung.md) |
 | systematisch Fehler suchen | [Fehlersuche](09-fehlersuche.md) |

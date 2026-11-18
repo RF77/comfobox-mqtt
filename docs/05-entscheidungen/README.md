@@ -33,6 +33,7 @@ ihre Konsequenzen. Ein ADR ist **unveränderlich** – eine geänderte Entscheid
 | [ADR-012](adr-012-api-zugriffskontrolle.md) | Zugriffskontrolle der REST-API: Bearer-Token, Administrator, LAN-Modus | Accepted |
 | [ADR-013](adr-013-vergleich-ohne-geraet.md) | Vergleich ohne Gerät: Simulationsbetrieb im Gateway + Golden-Master-Vergleich | Accepted |
 | [ADR-014](adr-014-topics-v2-namensraum-und-expertenmodus.md) | Topics V2: Namensraum `Status/`/`Config/` und Experten-Modus für neue schreibbare Topics | Accepted |
+| [ADR-015](adr-015-baugruppen-verfuegbarkeit.md) | Baugruppen-Verfügbarkeit statt Energie- und COP-Topics (Typ-Parameter, Sentinel 32767) | Accepted |
 
 ## 3. Offene Entscheidungen (noch kein ADR)
 

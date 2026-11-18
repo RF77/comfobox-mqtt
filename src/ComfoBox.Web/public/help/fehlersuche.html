@@ -27,7 +27,6 @@
         <li><a href="monitoring.html">Monitoring und Alarmierung</a></li>
         <li><a href="api.html">API</a></li>
         <li><a href="ki.html">KI-Assistenten</a></li>
-        <li><a href="verbrauch.html">Verbrauch und Effizienz</a></li>
         <li><a href="warum-bleibt-ein-raum-kalt.html">Warum bleibt ein Raum kalt?</a></li>
       </ul>
     </nav>
@@ -714,45 +713,6 @@ Entität <code>unavailable</code>.</p>
 <blockquote>
 <p><strong>Der Gateway kennzeichnet veraltete Werte</strong> (älter als drei Abfragezyklen) und
 zeigt sie als „veraltet&quot; an – nicht als aktuellen Wert. Das ist Absicht.</p>
-</blockquote>
-<hr>
-<h2>Die Energie-Werte fehlen oder stehen auf 0</h2>
-<p><strong>Symptom:</strong> Wärmemenge, Stromzähler und COP fehlen in der Web-Oberfläche, oder
-sie stehen dauerhaft auf 0. In Home Assistant sind die Energie-Entitäten „nicht
-verfügbar&quot;.</p>
-<p><strong>Ursache:</strong> Der Regler <strong>rechnet</strong> die Wärme, er misst sie nicht. Er tut das nur,
-wenn am Gerät die <strong>Wärmemengenmessung</strong> eingeschaltet ist (Datenpunkt 3340). Bei
-Einstellung <code>0</code> rechnet er nicht: Die Wärmemengen bleiben an ihrem Startwert
-stehen, der COP bleibt leer.</p>
-<p>Der Gateway erkennt das und veröffentlicht <strong>keine 0</strong>. Er markiert die
-Energie-Werte als nicht verfügbar und schreibt einmal pro Wechsel einen Hinweis in
-die Fehlerhistorie – sonst wäre die Energie-Statistik in Home Assistant dauerhaft
-verfälscht.</p>
-<p><strong>Lösung:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Schritt</th>
-<th>Was zu tun ist</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>1</td>
-<td>am Regler auf der Service- bzw. Inbetriebnahme-Ebene die Wärmemengenmessung auf <strong>1</strong> oder <strong>2</strong> stellen</td>
-</tr>
-<tr>
-<td>2</td>
-<td>prüfen, ob der Durchfluss bei laufender Pumpe größer 0 ist</td>
-</tr>
-<tr>
-<td>3</td>
-<td>dem Zähler Zeit geben – er beginnt bei 0</td>
-</tr>
-</tbody></table>
-<blockquote>
-<p><strong>Der häufigste Grund</strong> ist die ausgeschaltete Wärmemengenmessung. Die
-vollständige Anleitung steht unter
-<a href="verbrauch.html">Verbrauch und Effizienz</a>.</p>
 </blockquote>
 <hr>
 <h2>Expertenmodus</h2>

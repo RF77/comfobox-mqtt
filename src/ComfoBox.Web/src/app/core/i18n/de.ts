@@ -108,6 +108,9 @@ export const DE: Translations = {
   item: {
     stale: 'veraltet',
     expert: 'Expertenmodus',    expertRequired: 'Experten-Modus erforderlich',    save: 'Speichern',
+    notInstalled: 'nicht verbaut',
+    noSensor: 'kein Fühler',
+    hardwareUnknown: 'Hardware unbekannt',
     choose: 'Wert wählen',
     readonly: 'Nur lesbar',
     newValue: (name) => `Neuer Wert für ${name}`,
@@ -361,31 +364,6 @@ export const DE: Translations = {
       + 'etwa für Home Assistant. Die Formel steht im Tooltip.',
     superheatFormula:
       'Überhitzung = Sauggastemperatur (DP 641) − Verdampfertemperatur (DP 660)',
-    energyCard: 'Verbrauch und Effizienz',
-    energyLead:
-      'Wärmemengen- und Stromzähler des Reglers. Der COP ist ein Laufzeitmittel, kein Momentanwert.',
-    energyBanner:
-      'Die Wärmemengenmessung ist am Gerät ausgeschaltet (DP 3340 = 0). Die kWh-Zähler und der '
-      + 'COP liefern deshalb keine Werte. Am Regler unter „Wärmemengenmessung“ auf 1 oder 2 '
-      + 'stellen und den Durchflussfühler prüfen.',
-    energyHelpLink: 'Hilfe: Verbrauch und Effizienz',
-    measurementMode: 'Wärmemengenmessung (DP 3340)',
-    energyAvailable: 'Messung aktiv',
-    energyUnavailable: 'Messung aus',
-    energyAvailableNote:
-      'Home Assistant sieht dieselbe Aussage als MQTT-Topic ComfoBox/Status/Energy/Available '
-      + '(1 = verfügbar, 0 = nicht verfügbar). Über die REST-Schnittstelle gibt es dieses Topic nicht.',
-    heatingPower: 'Heizleistung',
-    warmWaterPower: 'Warmwasserleistung',
-    thermalEnergyHeating: 'Wärmemenge Heizen',
-    thermalEnergyWarmWater: 'Wärmemenge Warmwasser',
-    thermalEnergyTotal: 'Wärmemenge gesamt',
-    electricalEnergyHeating: 'Strommenge Heizen',
-    electricalEnergyWarmWater: 'Strommenge Warmwasser',
-    electricalEnergyTotal: 'Strommenge gesamt',
-    copHeating: 'COP Heizen (Laufzeitmittel)',
-    copWarmWater: 'COP Warmwasser (Laufzeitmittel)',
-    copTotal: 'COP gesamt (Laufzeitmittel)',
   },
 
   logs: {

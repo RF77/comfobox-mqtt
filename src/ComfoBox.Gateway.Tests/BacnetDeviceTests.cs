@@ -142,6 +142,59 @@ public sealed class BacnetDeviceTests : IDisposable
     }
 
     [Fact]
+    public async Task Der_Sentinel_32767_Wird_Nicht_Als_Wert_Gespeichert()
+    {
+        // Der Regler meldet einen nicht vorhandenen Fühler mit dem
+        // INT16-Maximum. Der Wert ist keine Aussage und darf nirgends
+        // auftauchen - weder im Cache noch als Fehler im Ringpuffer.
+        _client.Values[24] = HardwareRequirements.NoSensorValue;
+        var device = CreateDevice();
+
+        var temperature = new ItemDefinition
+        {
+            Id = "status.buffer.temperature_top",
+            Group = "Status/Buffer",
+            Name = "TemperatureTop",
+            BacnetObjectId = 24,
+            Kind = ItemValueKind.Analog,
+            Unit = "°C",
+            IsReadOnly = true,
+        };
+
+        var gelesen = await device.ReadItemsAsync([temperature], CancellationToken.None);
+
+        Assert.Empty(gelesen);
+        Assert.False(_cache.TryGet(temperature.Id, out _));
+        Assert.Empty(_errors.Snapshot());
+    }
+
+    [Fact]
+    public async Task Ein_Grosser_Zaehlerstand_Ist_Kein_Sentinel()
+    {
+        // Nur Temperaturfühler liefern 32767. Ein Zähler mit diesem Stand
+        // (Betriebsstunden) ist ein echter Wert.
+        _client.Values[211] = 32767f;
+        var device = CreateDevice();
+
+        var hours = new ItemDefinition
+        {
+            Id = "states.controller.operating_hours",
+            Group = "States/Controller",
+            Name = "OperatingHours",
+            BacnetObjectId = 211,
+            Kind = ItemValueKind.Analog,
+            Unit = "h",
+            IsReadOnly = true,
+        };
+
+        var gelesen = await device.ReadItemsAsync([hours], CancellationToken.None);
+
+        Assert.Single(gelesen);
+        Assert.True(_cache.TryGet(hours.Id, out var wert));
+        Assert.Equal(32767f, ((AnalogValue)wert!.Value!).Value);
+    }
+
+    [Fact]
     public async Task Ein_Enum_Item_Wird_Ueber_Den_Namen_Identifiziert()
     {
         _client.Values[830] = 6f;

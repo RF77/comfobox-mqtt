@@ -202,10 +202,11 @@ public sealed class MqttTopicMapTests
     public void Die_Config_Topics_Existieren_Nur_Mit_Experten_Modus_Als_Set()
     {
         var configItems = Catalog.V2
+            .Where(item => item.IsWritable)
             .Where(item => item.TopicPath.StartsWith("Config/", StringComparison.Ordinal))
             .ToList();
 
-        Assert.Equal(21, configItems.Count);
+        Assert.Equal(20, configItems.Count);
 
         var ohneExperten = CreateMap(expertMode: false);
         var mitExperten = CreateMap(expertMode: true);
@@ -223,22 +224,31 @@ public sealed class MqttTopicMapTests
     }
 
     /// <summary>
-    /// Das Availability-Topic der Energiemessung ist ein Gateway-Topic.
+    /// Die Availability-Topics der Baugruppen sind Gateway-Topics.
     /// </summary>
     /// <remarks>
-    /// <c>Status/Energy/Available</c> hat kein BACnet-Objekt - es wird aus
-    /// DP 3340 gebildet (siehe <c>EnergyMeasurementGate</c>).
+    /// <c>Status/Hardware/…</c> hat kein BACnet-Objekt - es wird aus den
+    /// Typ-Parametern gebildet (siehe <c>HardwareAvailabilityGate</c>).
     /// </remarks>
     [Fact]
-    public void EnergyAvailableTopic_Zeigt_Auf_Status_Energy_Available()
+    public void HardwareTopics_Liegen_Unter_Status_Hardware()
     {
         var map = CreateMap();
 
-        Assert.Equal("ComfoBox/Status/Energy/Available", map.EnergyAvailableTopic);
+        Assert.Equal(
+            "ComfoBox/Status/Hardware/HeatPumpSensors",
+            map.HardwareTopic(HardwareRequirements.HeatPumpSensors));
+        Assert.Equal(
+            "ComfoBox/Status/Hardware/BufferBottom",
+            map.HardwareTopic(HardwareRequirements.BufferBottom));
 
-        // Kein Katalog-Item trägt diesen Pfad - das Topic gehört dem Gateway.
-        Assert.DoesNotContain(Catalog.All, item => item.TopicPath == "Status/Energy/Available");
-        Assert.Null(Catalog.FindByTopicPath("Status/Energy/Available"));
+        // Kein Katalog-Item trägt einen dieser Pfade - sie gehören dem Gateway.
+        foreach (var requirement in HardwareRequirements.All)
+        {
+            var path = $"Status/{requirement.TopicPath}";
+            Assert.DoesNotContain(Catalog.All, item => item.TopicPath == path);
+            Assert.Null(Catalog.FindByTopicPath(path));
+        }
     }
 
     /// <summary>
@@ -266,18 +276,18 @@ public sealed class MqttTopicMapTests
 
         Assert.True(map.ExpertModeEnabled);
 
-        // Die 21 Config-Topics + das Command-Topic sind jetzt schreibbar.
+        // Die 20 Config-Topics + das Command-Topic sind jetzt schreibbar.
         var v2SetTopics = Catalog.V2
             .Where(i => i.IsWritableWithExpertMode(expertModeEnabled: true))
             .Select(i => map.ItemSetTopic(i))
             .ToList();
 
-        Assert.Equal(22, v2SetTopics.Count);
+        Assert.Equal(21, v2SetTopics.Count);
 
         // Dazu kommen die 34 V1-Items, die schon im Legacy experten-pflichtig
-        // waren - zusammen 56 Items mit je zwei Schreib-Topics.
+        // waren - zusammen 55 Items mit je zwei Schreib-Topics.
         var expertenItems = Catalog.All.Count(i => i.RequiresExpertMode && i.IsWritable);
-        Assert.Equal(56, expertenItems);
+        Assert.Equal(55, expertenItems);
         Assert.Equal(vorher + expertenItems, map.SetTopics().Count);
         Assert.Equal((vorher + expertenItems) * 2, map.WriteTopics().Count);
 

@@ -17,8 +17,9 @@ public sealed class ItemsApiTests
     /// Der Katalog liefert alle Items mit den unveränderten Metadaten.
     /// </summary>
     /// <remarks>
-    /// 127 V1-Items plus die 78 V2-Items der Wellen 2a/2b/2c. Der Endpunkt
-    /// liefert <see cref="ComfoBox.Domain.Items.Catalog.All"/> – V2 ist rein
+    /// 127 V1-Items plus die 67 V2-Items der Wellen 2a/2b/2c (ohne
+    /// Energiemessung). Der Endpunkt liefert
+    /// <see cref="ComfoBox.Domain.Items.Catalog.All"/> – V2 ist rein
     /// additiv, die V1-Einträge bleiben unverändert.
     /// </remarks>
     [Fact]
@@ -30,7 +31,7 @@ public sealed class ItemsApiTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         var items = await GatewayApiFixture.ReadJsonAsync(response);
-        Assert.Equal(205, items.GetArrayLength());
+        Assert.Equal(194, items.GetArrayLength());
 
         var first = items[0];
         Assert.Equal("zone.operation_mode", first.GetProperty("id").GetString());

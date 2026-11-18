@@ -25,11 +25,27 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   unverändert zusätzlich nativ an.
 - **Dokumentation „Nicht verbaute Sensoren"** (`docs/07-technikerhandbuch/nicht-verbaute-sensoren.md`).
   Sie hält fest, welche Items der Referenzanlage keinen Messwert liefern und
-  warum: 14 × Sentinel `32767` (Fühler nicht verbaut), 5 × BACnet-Objekt
-  existiert nicht (`ERROR_CODE_UNKNOWN_OBJECT`), 3 × Regler-Metadaten ohne
-  interpretierbaren Wert und die ausgeschaltete Wärmemengenmessung (DP 3340).
+  warum: Sentinel `32767` (Fühler nicht verbaut), fehlende BACnet-Objekte
+  (`ERROR_CODE_UNKNOWN_OBJECT`) und Regler-Metadaten ohne interpretierbaren Wert.
   Die Echtwerte selbst stehen bewusst nur in der lokalen, per `.gitignore`
   ausgeschlossenen Momentaufnahme unter `privat/`.
+- **Der Gateway kennt die verbaute Hardware.** Vier neue, rein lesende
+  Typ-Parameter (DP 805 Pufferspeichertyp, DP 3918 Kühlpufferspeichertyp,
+  DP 807 Sonnenkollektor-Hydraulik, DP 2800 Fühler zu WP-Regelung) stehen unter
+  `Config/General/*`. Aus ihnen und aus DP 117 leitet der Gateway ab, welche
+  Baugruppe vorhanden ist.
+- **Items einer fehlenden Baugruppe werden weder gelesen noch publiziert.**
+  Bisher erzeugte jedes solche Objekt bei jedem Poll einen Fehler
+  (`ERROR_CODE_UNKNOWN_OBJECT`) und belegte den Bus. Je Baugruppe gibt es jetzt
+  ein retained Topic `ComfoBox/Status/Hardware/…` (`1`/`0`), das zugleich die
+  `availability_topic` der zugehörigen Home-Assistant-Entitäten ist
+  ([ADR-015](docs/05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)).
+- **Sentinel `32767` wird nicht mehr als Wert publiziert.** Meldet der Regler für
+  einen Temperaturfühler das INT16-Maximum, ist kein Fühler angeschlossen: der
+  Wert wird verworfen, retained geleert und **einmal** je Item in
+  `Status/Errors` gemeldet.
+- **Die Seite „Werte" kennzeichnet solche Items:** `nicht verbaut`, `kein Fühler`
+  oder `Hardware unbekannt` (Typ-Parameter noch nicht gelesen).
 
 ### Changed
 
@@ -37,6 +53,22 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   folgten sie der Katalogreihenfolge und standen an zweiter Stelle, direkt nach
   „Zone". Katalog, MQTT-Topics und Home Assistant bleiben unverändert – nur die
   Darstellung ist sortiert.
+
+### Removed
+
+- **Der komplette Block „Energie und COP" ist aus dem Katalog entfernt**
+  (14 Topics `Status/Energy/*`, DP 3340–3357) samt `Status/Energy/Available`,
+  `RequiresEnergyMeasurement`, dem Legacy-Attribut `[Energy]` und dem
+  abgeleiteten Wert `Status/Derived/CopInstant`. Die ComfoBox Series 5 hat
+  **keinen Wärmemengenzähler** – die Items lieferten dauerhaft `0` und waren in
+  Home Assistant nur irreführend ([ADR-015](docs/05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)).
+  Die Benutzerdoc-Seite „Verbrauch und Effizienz" und die Energie-Karte der
+  Diagnoseseite entfallen entsprechend.
+- **`Config/HeatingSystem/MixerDirectOffset` (DP 3608) ist entfernt.** Das
+  Objekt existiert am Regler nicht; das Item erzeugte 35 von 50 Einträgen im
+  Fehler-Ringpuffer und verdrängte damit jede andere Meldung.
+- **Vertragsfolge für V2:** 67 statt 78 Items. Bereits angelegte
+  Home-Assistant-Entitäten der entfallenen Topics müssen einmal gelöscht werden.
 
 ### Fixed
 

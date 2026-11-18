@@ -33,8 +33,7 @@ public sealed class DerivedValueServiceTests
 
     /// <summary>
     /// Ein realistischer Satz Eingänge: Überhitzung 7 K, Spreizung 7 K,
-    /// Schichtung 8 K, Laufzeit 75 %, Wartung fällig, keine Kühlung,
-    /// 1000 kWh Wärme und 100 kWh Strom.
+    /// Schichtung 8 K, Laufzeit 75 %, Wartung fällig, keine Kühlung.
     /// </summary>
     private static readonly (int ObjectId, float Value)[] SampleValues =
     [
@@ -49,32 +48,18 @@ public sealed class DerivedValueServiceTests
         (3060, 2000f),  // Heizstunden
         (3366, 5000f),  // Service-Stunden
         (3365, 4000f),  // Wartungsintervall
-        (3349, 1000f),  // Wärmezähler
-        (3355, 100f),   // Stromzähler
         (662, 10f),     // HeatPumpStatus (HeatingWithHeatPump)
         (3098, 0f),     // Kühlvorlauf
     ];
 
     /// <summary>
-    /// Alle Eingänge liegen frisch im Cache; der COP bekommt zwei Proben.
+    /// Alle Eingänge liegen frisch im Cache.
     /// </summary>
     [Fact]
-    public async Task Alle_Eingaenge_Frisch_Publizieren_Sieben_Zahlen()
+    public async Task Alle_Eingaenge_Frisch_Publizieren_Sechs_Zahlen()
     {
         var harness = Harness.Create();
         FillAllInputs(harness.Cache);
-
-        // Erste Probe: der Momentan-COP ist noch unbekannt (kein Fenster).
-        await harness.Service.PublishAllAsync(CancellationToken.None);
-        Assert.Equal(DerivedValueService.UnknownPayload, harness.Publisher.LastPayloadFor(TopicOf(DerivedValues.CopInstantId)));
-
-        // Eine Stunde später schließt sich das Fenster: ΔWärme 300, ΔStrom 30.
-        // (Der Poller liest in dieser Zeit alle Eingänge neu - der Test
-        // schreibt sie deshalb mit frischem Zeitstempel.)
-        harness.Time.Advance(TimeSpan.FromHours(1));
-        FillAllInputs(harness.Cache);
-        Update(harness.Cache, 3349, 1300f);
-        Update(harness.Cache, 3355, 130f);
 
         await harness.Service.PublishAllAsync(CancellationToken.None);
 
@@ -83,7 +68,6 @@ public sealed class DerivedValueServiceTests
         Assert.Equal("8", harness.Publisher.LastPayloadFor(TopicOf(BufferDelta)));
         Assert.Equal("75", harness.Publisher.LastPayloadFor(TopicOf(RuntimeRatio)));
         Assert.Equal("1", harness.Publisher.LastPayloadFor(TopicOf(ServiceDue)));
-        Assert.Equal("10", harness.Publisher.LastPayloadFor(TopicOf(DerivedValues.CopInstantId)));
         Assert.Equal("0", harness.Publisher.LastPayloadFor(TopicOf(CoolingActive)));
 
         // Die Topics liegen genau dort, wo der Vertrag sie verlangt.
@@ -126,29 +110,29 @@ public sealed class DerivedValueServiceTests
     }
 
     /// <summary>
-    /// Stündlich gelesene Eingänge bleiben in **ihrem** Fenster verwendbar,
-    /// auch wenn das Ablauf-Fenster des Caches sie längst ablaufen lässt.
+    /// Eingänge bleiben in **ihrem** Prioritäts-Fenster verwendbar, auch wenn
+    /// das Ablauf-Fenster des Caches sie längst ablaufen lässt.
     /// </summary>
     /// <remarks>
-    /// Ohne diese Regel wäre der Momentan-COP nie berechenbar: seine Eingänge
-    /// werden stündlich gelesen, das Cache-Fenster liegt bei drei Zyklen der
-    /// sekundären Priorität (15 Minuten).
+    /// Ohne diese Regel wären die Werte mit langsamen Eingängen nie
+    /// berechenbar: das Cache-Fenster ist auf drei Zyklen der sekundären
+    /// Priorität ausgelegt (hier bewusst nur 3 Minuten).
     /// </remarks>
     [Fact]
-    public async Task Langsame_Eingaenge_Ueberleben_Das_Cache_Fenster()
+    public async Task Eingaenge_Ueberleben_Das_Cache_Fenster()
     {
         var harness = Harness.Create(TimeSpan.FromMinutes(3));
         FillAllInputs(harness.Cache);
 
+        // 10 Minuten später: der Cache hält die Werte längst für veraltet, das
+        // Fenster der sekundären Priorität (3 × 60 s × Faktor 5 = 15 min) ist
+        // aber offen.
+        harness.Time.Advance(TimeSpan.FromMinutes(10));
+        Update(harness.Cache, 24, 51f);
+
         await harness.Service.PublishAllAsync(CancellationToken.None);
 
-        harness.Time.Advance(TimeSpan.FromHours(1));
-        Update(harness.Cache, 3349, 1300f);
-        Update(harness.Cache, 3355, 130f);
-
-        await harness.Service.PublishAllAsync(CancellationToken.None);
-
-        Assert.Equal("10", harness.Publisher.LastPayloadFor(TopicOf(DerivedValues.CopInstantId)));
+        Assert.Equal("9", harness.Publisher.LastPayloadFor(TopicOf(BufferDelta)));
     }
 
     /// <summary>
@@ -161,21 +145,14 @@ public sealed class DerivedValueServiceTests
         FillAllInputs(harness.Cache);
 
         await harness.Service.PublishAllAsync(CancellationToken.None);
-
-        harness.Time.Advance(TimeSpan.FromHours(1));
-        FillAllInputs(harness.Cache);
-        Update(harness.Cache, 3349, 1300f);
-        Update(harness.Cache, 3355, 130f);
-
-        await harness.Service.PublishAllAsync(CancellationToken.None);
-        Assert.Equal("10", harness.Publisher.LastPayloadFor(TopicOf(DerivedValues.CopInstantId)));
+        Assert.Equal("1", harness.Publisher.LastPayloadFor(TopicOf(ServiceDue)));
 
         // Vier Stunden ohne neuen Read: das Slow-Fenster (3 h) ist zu.
         harness.Time.Advance(TimeSpan.FromHours(4));
 
         await harness.Service.PublishAllAsync(CancellationToken.None);
 
-        Assert.Equal(DerivedValueService.UnknownPayload, harness.Publisher.LastPayloadFor(TopicOf(DerivedValues.CopInstantId)));
+        Assert.Equal(DerivedValueService.UnknownPayload, harness.Publisher.LastPayloadFor(TopicOf(ServiceDue)));
     }
 
     /// <summary>
@@ -225,7 +202,7 @@ public sealed class DerivedValueServiceTests
 
         await harness.Service.PublishAllAsync(CancellationToken.None);
 
-        Assert.Equal(7, harness.Publisher.Messages.Count);
+        Assert.Equal(6, harness.Publisher.Messages.Count);
         Assert.All(harness.Publisher.Messages, message => Assert.True(message.Retain));
     }
 
@@ -246,7 +223,7 @@ public sealed class DerivedValueServiceTests
         harness.Publisher.Fail = false;
         await harness.Service.PublishAllAsync(CancellationToken.None);
 
-        Assert.Equal(7, harness.Publisher.Messages.Count);
+        Assert.Equal(6, harness.Publisher.Messages.Count);
     }
 
     /// <summary>

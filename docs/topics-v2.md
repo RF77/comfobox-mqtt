@@ -411,45 +411,46 @@ Kältemittelmangel bzw. Verschmutzung. `HotGas` > 130 °C ist eine Störung; `Sa
 **Begründung:** ΔT zwischen oben und unten ist der beste Indikator für
 Schichtung/Durchladung und für einen defekten Fühler.
 
-### 5.5 Status – Energie und COP
+### 5.5 Status – Baugruppen (Typ-Parameter) und ihre Verfügbarkeit
 
-Der vollständige Wärmemengen- und Stromzähler-Block (§4.8 des Handbuchs). **Rein lesend,
-sehr hoher Nutzen** für Verbrauchsauswertung in Home Assistant.
+Die ComfoBox Series 5 hat **keinen Wärmemengenzähler**. Der Block „Energie und COP"
+(Handbuch §4.8) ist deshalb **nicht** Teil des Katalogs: die Items liefern dauerhaft `0`
+und wären in Home Assistant nur irreführend. Entschieden am 2026-11-18
+([ADR-015](05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)).
 
-| Topic | DP | Typ | Einheit | P |
+Stattdessen liest der Gateway die **Typ-Parameter**, mit denen der Regler seine verbaute
+Hardware deklariert. Sie sind rein lesend, werden stündlich gelesen (P=3) und entscheiden,
+welche Items überhaupt gelesen werden.
+
+| Topic | DP | Typ | Werte | P |
 |---|---:|---|---|---:|
-| `ComfoBox/Status/Energy/HeatingPower` | 3342 | Analog | kW | 2 |
-| `ComfoBox/Status/Energy/WarmWaterPower` | 3346 | Analog | kW | 2 |
-| `ComfoBox/Status/Energy/ThermalEnergyHeating` | 3343 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/ThermalEnergyWarmWater` | 3347 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/ThermalEnergyTotal` | 3349 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/ElectricalEnergyHeating` | 3344 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/ElectricalEnergyWarmWater` | 3354 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/ElectricalEnergyTotal` | 3355 | Analog | kWh | 3 |
-| `ComfoBox/Status/Energy/CopHeating` | 3345 | Analog | | 3 |
-| `ComfoBox/Status/Energy/CopWarmWater` | 3356 | Analog | | 3 |
-| `ComfoBox/Status/Energy/CopTotal` | 3357 | Analog | | 3 |
-| `ComfoBox/Status/Energy/MeasurementMode` | 3340 | Enum `EnergyMeasurementModes` | | 3 |
-| `ComfoBox/Status/Energy/FlowRate` | 3341 | Analog | m³/h | 3 |
-| `ComfoBox/Status/Energy/FlowRateWarmWater` | 3348 | Analog | m³/h | 3 |
-| `ComfoBox/Status/Energy/Available` | — | abgeleitet | 1/0 | — |
+| `ComfoBox/Config/General/BufferType` | 805 | Enum `BufferTypes` | 0 keine · 1 ein Fühler · 11 zwei Fühler | 3 |
+| `ComfoBox/Config/General/CoolingBufferType` | 3918 | Enum `BufferTypes` | 0 keine · 1 ein Fühler · 11 zwei Fühler | 3 |
+| `ComfoBox/Config/General/SolarHydraulics` | 807 | Enum `SolarHydraulicsTypes` | 0 keine Funktion · 1/2/4/21/22/24 | 3 |
+| `ComfoBox/Config/General/HeatPumpSensor` | 2800 | Enum `PresenceTypes` | 0 nicht vorhanden · 1 vorhanden | 3 |
 
-> **Voraussetzung (DP 3340):** Die kWh-Zähler und der COP sind **nur** aussagekräftig,
-> wenn am Gerät die Wärmemengenmessung aktiviert ist. `MeasurementMode = None` (0) ⇒ der
-> Regler rechnet keine Wärme; die Zähler bleiben ohne Aussage. Der Gateway publiziert dann
-> **keine 0**, sondern markiert die Energie-Entitäten als nicht verfügbar
-> (`Status/Energy/Available = 0`). Details:
-> [07-technikerhandbuch/verbesserungen-und-neue-topics.md §6.1](07-technikerhandbuch/verbesserungen-und-neue-topics.md#61-dp-3340--warum-ohne-wärmemengenmessung-keine-kwh-und-kein-cop-entstehen).
+> **Verfügbarkeit:** Je Baugruppe publiziert der Gateway ein retained Topic unter
+> `ComfoBox/Status/Hardware/…` (`1` = vorhanden, `0` = nicht vorhanden, leer = noch nicht
+> gelesen). Es ist die `availability_topic` der abhängigen Entitäten.
 >
-> `Status/Energy/Available` ist **kein** Katalog-Item (kein BACnet-Objekt). Es wird aus
-> DP 3340 und dem Zustand des Energie-Blocks gebildet und als `availability_topic` der
-> Energie-Entitäten verwendet. Vor dem ersten erfolgreichen Lesen wird es **nicht**
-> publiziert – Home Assistant zeigt die Entitäten dann als nicht verfügbar. Beim Start und
-> beim Wechsel auf `Available = 0` werden die retained Energie-Topics einmal geleert,
-> damit keine veralteten Werte stehen bleiben.
+> | Topic | Typ-Parameter | Abhängige Items |
+> |---|---|---|
+> | `ComfoBox/Status/Hardware/BufferTop` | 805 ∈ {1, 11} | `Status/Buffer/TemperatureTop` (24) |
+> | `ComfoBox/Status/Hardware/BufferBottom` | 805 = 11 | `Status/Buffer/TemperatureBottom` (25) |
+> | `ComfoBox/Status/Hardware/CoolingBufferTop` | 3918 ∈ {1, 11} | `Status/Buffer/CoolingTemperatureTop` (3925) |
+> | `ComfoBox/Status/Hardware/CoolingBufferBottom` | 3918 = 11 | `Status/Buffer/CoolingTemperatureBottom` (3924) |
+> | `ComfoBox/Status/Hardware/Solar` | 807 ≠ 0 | `Status/Solar/CollectorTemperature` (28), `…/CollectorHeatExchangerTemperature` (3903), `…/EnergyToday` (3911) |
+> | `ComfoBox/Status/Hardware/HeatPumpSensors` | 2800 = 1 | die neun Kältekreis-Fühler unter `Status/HeatPump` |
+> | `ComfoBox/Status/Hardware/WarmWaterBottom` | 117 = 2 | `Status/WarmWater/TemperatureBottom` (4) |
 >
-> Der COP ist ein **Durchschnitt** über die Laufzeit, kein Momentanwert. In Home Assistant
-> als `sensor` mit `state_class: measurement` abbilden, nicht als Energiemengen-Zähler.
+> **Ohne** Baugruppe wird ein Item **nicht gelesen**: ein Objekt, das es am Regler nicht
+> gibt, antwortet mit `ERROR_CODE_UNKNOWN_OBJECT` – jede Abfrage erzeugt einen Fehler und
+> belegt den Bus. Die retained Topics der abhängigen Items werden beim Wechsel einmal
+> geleert.
+>
+> **Sentinel `32767`:** Meldet der Regler für einen Temperaturfühler das INT16-Maximum,
+> ist kein Fühler angeschlossen. Der Wert wird **nicht** publiziert (kein Wert ist besser
+> als ein falscher) und einmal je Item in `Status/Errors` gemeldet.
 
 ### 5.6 Status – Zähler und Wartung
 
@@ -525,7 +526,6 @@ Beschriftung der Anlage bekannt ist – daher optional und standardmässig **aus
 | `ComfoBox/Config/Cooling/Release` | 571 | Analog | 0…6 | |
 | `ComfoBox/Config/General/CoolingEnabled` | 3118 | Analog | 0/1 | |
 | `ComfoBox/Config/General/PassiveCoolingHydraulics` | 572 | Analog | 0/1/2/3/4/9 | |
-| `ComfoBox/Config/HeatingSystem/MixerDirectOffset` | 3608 | Analog | 0.0…20.0 | K |
 | `ComfoBox/Config/HeatingSystem/SetPointNormalBelowOutdoor` | 862 | Analog | −30.0…10.0 | °C |
 | `ComfoBox/Config/Ventilation/FanControl` | 3092 | Analog | 0/1/2 | |
 | `ComfoBox/Config/Ventilation/SpeedStage1` | 3224 | Analog | 0.0…100.0 | % |
@@ -575,7 +575,12 @@ Neue Enums, die zu den V2-Topics gehören. Die Namen werden Teil des Vertrags.
 | `WarmWaterSetPointTypes` | `FrostProtection` 0 · `Reduced` 1 · `Normal` 2 · `Legionella` 3 |
 | `WarmWaterStates` | `Off` 0 · `WithEnergyProducer` 1 · `Electrical` 2 · `WithAdditionalHeater` 3 · `DischargeProtection` 4 · `EnergyProducerLock` 5 |
 | `WarmWaterOverrides` | `None` 0 · `Party` 1 · `Holiday` 3 · `ExternalInput` 5 · `HeatPumpFault` 9 · `Optimization` 10 · `SetPointShiftDeltaT` 13 · `TimesOff` 14 · `FlowTemperatureTooHigh` 15 · `Electrical` 17 · `OptimizationElectrical` 19 · `EnergyProducerLock` 20 · `AdditionalHeaterOnly` 22 |
-| `EnergyMeasurementModes` | `None` 0 · `On` 1 · `OnSeparateWarmWater` 2 |
+| `BufferTypes` | `None` 0 · `OneSensor` 1 · `TwoSensors` 11 |
+| `SolarHydraulicsTypes` | `None` 0 · `PumpToBuffer` 1 · `PumpToWarmWater` 2 · `PumpToBufferWithHeatExchanger` 4 · `PumpWarmWaterThenBuffer` 21 · `PumpToWarmWaterWithHeatExchanger` 22 · `PumpWarmWaterThenBufferWithHeatExchanger` 24 |
+| `PresenceTypes` | `NotInstalled` 0 · `Installed` 1 |
+
+> **Entfallen:** `EnergyMeasurementModes` – der Energie-Block ist nicht Teil des
+> Katalogs ([ADR-015](05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md)).
 
 > **Regel:** Ein Enum-Wert, den das Gerät liefert, aber das Enum nicht kennt, wird **nicht**
 > auf `0` abgebildet (Befund A6). Der Publish wird verworfen und ein Fehler protokolliert.
@@ -621,7 +626,8 @@ Reglers. `Config/PrimaryPump/*` bleibt so benannt (R11, nur ein Hinweis).
 | Kategorie | `entity_category: diagnostic` für Zähler, Service, Fehler; `config` für `Config/*` |
 | `entity_registry_enabled_default: false` | für alle Topics mit Poll-Priorität `3` (Zähler, Ein-/Ausgänge) |
 | Neue schreibbare Topics | ohne Experten-Modus **keine** `number`/`select`-Discovery; das Item erscheint als `sensor` |
-| Energie/COP | `availability_topic` = `ComfoBox/Status/Energy/Available` (`1`/`0`); keine 0-Werte bei `MeasurementMode = None` |
+| Energie/COP | **entfällt** – die ComfoBox hat keinen Wärmemengenzähler (ADR-015) |
+| Baugruppen-Fühler | `availability_topic` = `ComfoBox/Status/Hardware/…` (`1`/`0`); ohne Baugruppe wird das Item **nicht gelesen** und sein Wert nicht publiziert |
 
 > **Warum `enabled_default: false`:** jedes aktivierte Topic erzeugt einen zusätzlichen
 > Recorder-Eintrag in Home Assistant. 60 neue Sensoren, die sich einmal pro Stunde ändern,
@@ -637,7 +643,7 @@ Reglers. `Config/PrimaryPump/*` bleibt so benannt (R11, nur ein Hinweis).
 | 4 | `PollPlan` um die neuen Prioritäten erweitern (P1 60 s · P2 5 min · P3 1 h) | Schritt 3 |
 | 5 | Discovery um die neuen Entitäten erweitern, `enabled_default` je Priorität | Schritt 4 |
 | 6 | UI: Diagnoseseite um „Zustand/Warum"-Block erweitern | Schritt 5 |
-| 7 | Benutzerdoku: neue Seiten „Verbrauch auswerten", „Warum bleibt ein Raum kalt" | Schritt 6 |
+| 7 | Benutzerdoku: neue Seite „Warum bleibt ein Raum kalt" | Schritt 6 |
 | 8 | Contract-Test: V1-Fixture **unverändert**, V2 als **zweite** Fixture | durchgehend |
 
 **Nicht** Teil von V2:
@@ -646,6 +652,10 @@ Reglers. `Config/PrimaryPump/*` bleibt so benannt (R11, nur ein Hinweis).
 - Fehlerspeicher (keine DP-Nummern belegt)
 - Zonen 2…7 (nur über das Gerät selbst adressierbar)
 - „Manuell Abtauen" (keine DP-Nummer)
+- **Energie und COP** (DP 3340–3357): die ComfoBox hat keinen Wärmemengenzähler
+  ([ADR-015](05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md))
+- **`Config/HeatingSystem/MixerDirectOffset`** (DP 3608): das Objekt existiert am Regler
+  nicht (`ERROR_CODE_UNKNOWN_OBJECT`) und erzeugte bei jedem Poll einen Fehler
 
 ## 9 Auswirkungen auf den Bus
 
@@ -683,5 +693,5 @@ muss so erweitert werden, dass Priorität 1 weiterhin zuerst und vollständig be
 | 4 | Sollen Zähler standardmässig aktiviert sein? | **Nein** – `enabled_default: false` |
 | 5 | Fehlerspeicher über eine freie Register-/Analogmodul-Konfiguration lesbar machen? | Nur wenn der Nutzer das am Gerät einrichtet – **nicht** automatisch |
 | 6 | Poll-Intervall für Priorität 1? | **60 s** (Default `Gateway:PollIntervalSeconds`) – nicht 30 s |
-| 7 | Wie werden kWh/COP ohne DP 3340 behandelt? | **Nicht als 0 publizieren.** `Status/Energy/MeasurementMode` + `Status/Energy/Available`; Fehler in `Status/Errors`, Hinweis in UI und Doku |
+| 7 | Wie werden kWh/COP ohne DP 3340 behandelt? | **Gar nicht** – der Block ist nicht im Katalog. Die ComfoBox hat keinen Wärmemengenzähler, die Items lieferten dauerhaft `0`. → [ADR-015](05-entscheidungen/adr-015-baugruppen-verfuegbarkeit.md) |
 | 8 | Werden `Status/Outputs/*` zusätzlich zu `States/Outputs/*` angelegt? | **Nein** – Duplikate. `States/Outputs/*` deckt 2779…2790 bereits ab |

@@ -836,7 +836,7 @@ Acht Funktionen mit je fünf Parametern:
 |---:|---|---|---|---:|---|
 | 163 | Energieerz'temp im Auslegep | 20…99 | °C | 80 | ✅ `Config/HeatingSystem/EnergieerzeugerTempImAuslegepunkt` |
 | 166 | Adap En'erz'temp im Auslegep | 20…99 | °C | 80 | ✅ `…/AdaptEnergieerzeugerTempImAuslegepunkt` |
-| 3608 | Überhöh Mischer-Direkt'kreis | 0…20 | K | 80 | ➕ `Config/HeatingSystem/MixerDirectOffset` |
+| 3608 | Überhöh Mischer-Direkt'kreis | 0…20 | K | 80 | — (Objekt existiert am Regler nicht, 2026-11-18 aus dem Katalog entfernt) |
 | 862 | Raumsoll norm nach Aus'temp | −30…10 | °C | 80 | ➕ `Config/HeatingSystem/SetPointNormalBelowOutdoor` |
 | 187 | Anlagenfrostschutz | −15…20 | °C | 80 | ✅ `…/Anlagenfrostschutz` |
 

@@ -208,18 +208,23 @@ public sealed class MqttTopicMap
     public string MqttTopic => $"{BaseTopic}/Status/Mqtt";
 
     /// <summary>
-    /// Das Topic der Verfügbarkeit der Wärmemengenmessung (DP 3340).
+    /// Das Verfügbarkeits-Topic einer Baugruppe.
     /// </summary>
+    /// <param name="requirement">Die Baugruppe.</param>
     /// <remarks>
     /// <para>
     /// Es ist **kein** Katalog-Item - es gibt kein BACnet-Objekt dazu. Der
-    /// Wert wird aus <c>Status/Energy/MeasurementMode</c> gebildet:
-    /// <c>1</c> = verfügbar, <c>0</c> = nicht verfügbar, leere Payload = noch
-    /// nie gelesen. Das Topic ist die Availability der Energie-Entitäten in
-    /// Home Assistant.
+    /// Wert wird aus dem Typ-Parameter gebildet: <c>1</c> = vorhanden,
+    /// <c>0</c> = nicht vorhanden, leere Payload = noch nie gelesen. Das Topic
+    /// ist die Availability der zugehörigen Entitäten in Home Assistant.
     /// </para>
     /// </remarks>
-    public string EnergyAvailableTopic => $"{BaseTopic}/Status/Energy/Available";
+    public string HardwareTopic(HardwareRequirement requirement)
+    {
+        ArgumentNullException.ThrowIfNull(requirement);
+
+        return $"{BaseTopic}/Status/{requirement.TopicPath}";
+    }
 
     /// <summary>
     /// Das Topic des letzten Fehlers.

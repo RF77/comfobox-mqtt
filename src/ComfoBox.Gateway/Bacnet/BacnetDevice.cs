@@ -4,6 +4,7 @@ using ComfoBox.Bacnet.Serialize;
 using ComfoBox.Domain.Items;
 using ComfoBox.Domain.Values;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Protection;
 using Microsoft.Extensions.Options;
@@ -79,6 +80,17 @@ public sealed class BacnetDevice : IDisposable
     private readonly object _rangeWarnedLock = new();
 
     /// <summary>
+    /// Die Items, für die bereits ein Hinweis „kein Fühler" geloggt wurde.
+    /// </summary>
+    private readonly HashSet<string> _noSensorLogged = new(StringComparer.Ordinal);
+    private readonly object _noSensorLock = new();
+
+    /// <summary>
+    /// Das Gate der Baugruppen-Verfügbarkeit (oder <c>null</c> in Tests).
+    /// </summary>
+    private readonly HardwareAvailabilityGate? _hardware;
+
+    /// <summary>
     /// Erzeugt das Gerät.
     /// </summary>
     /// <param name="client">Der BACnet-Client.</param>
@@ -90,6 +102,7 @@ public sealed class BacnetDevice : IDisposable
     /// <param name="runtime">Die zur Laufzeit änderbaren BACnet-Parameter.</param>
     /// <param name="gatewayRuntime">Der zur Laufzeit umschaltbare Experten-Modus.</param>
     /// <param name="logger">Logger.</param>
+    /// <param name="hardware">Das Gate der Baugruppen-Verfügbarkeit (oder <c>null</c>).</param>
     public BacnetDevice(
         IBacnetClient client,
         IValueCache cache,
@@ -99,7 +112,8 @@ public sealed class BacnetDevice : IDisposable
         IOptions<GatewayOptions> gatewayOptions,
         BacnetRuntimeSettings runtime,
         GatewayRuntimeSettings gatewayRuntime,
-        ILogger<BacnetDevice> logger)
+        ILogger<BacnetDevice> logger,
+        HardwareAvailabilityGate? hardware = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(cache);
@@ -118,6 +132,7 @@ public sealed class BacnetDevice : IDisposable
         _runtime = runtime;
         _gateway = gatewayRuntime;
         _logger = logger;
+        _hardware = hardware;
     }
 
     /// <summary>
@@ -319,6 +334,40 @@ public sealed class BacnetDevice : IDisposable
     }
 
     /// <summary>
+    /// Meldet der Regler für dieses Item einen fehlenden Fühler?
+    /// </summary>
+    /// <param name="item">Das Item.</param>
+    /// <param name="value">Der gelesene Wert.</param>
+    /// <remarks>
+    /// Nur Temperaturfühler liefern den Sentinel: die Prüfung ist bewusst auf
+    /// Einheit <c>°C</c> begrenzt, damit ein Zählerstand von zufällig 32767
+    /// (z. B. Betriebsstunden) nicht als fehlender Fühler gilt.
+    /// </remarks>
+    private static bool IsNoSensor(ItemDefinition item, float value)
+        => item.IsReadOnly
+            && string.Equals(item.Unit, "°C", StringComparison.Ordinal)
+            && Math.Abs(value - HardwareRequirements.NoSensorValue) < 0.5f;
+
+    /// <summary>
+    /// Loggt den Hinweis „kein Fühler“ einmal je Item.
+    /// </summary>
+    private void LogNoSensorOnce(ItemDefinition item)
+    {
+        lock (_noSensorLock)
+        {
+            if (!_noSensorLogged.Add(item.Id))
+            {
+                return;
+            }
+        }
+
+        _logger.LogInformation(
+            "{Item} liefert {Sentinel} - es ist kein Fühler angeschlossen.",
+            item.TopicPath,
+            HardwareRequirements.NoSensorValue);
+    }
+
+    /// <summary>
     /// Liest ein Item und schreibt den Wert in den Cache.
     /// </summary>
     /// <returns><c>false</c>, wenn das Item nicht gelesen werden konnte.</returns>
@@ -363,6 +412,19 @@ public sealed class BacnetDevice : IDisposable
                 _logger.LogDebug("Wert von {Item} wird nicht interpretiert (Legacy-DateValue).", item.Id);
                 return true;
             }
+
+            if (IsNoSensor(item, number.Value))
+            {
+                // Der Regler meldet fuer einen nicht vorhandenen Fuehler das
+                // INT16-Maximum. Ein solcher Wert ist keine Aussage - er wird
+                // nicht in den Cache geschrieben und nicht publiziert.
+                _cache.MarkStale(item.Id);
+                _hardware?.ReportNoSensor(item);
+                LogNoSensorOnce(item);
+                return false;
+            }
+
+            _hardware?.ConfirmSensor(item.Id);
 
             ItemValue value = item.Kind == ItemValueKind.Enum
                 ? new EnumValue((int)number.Value, item.EnumValues)

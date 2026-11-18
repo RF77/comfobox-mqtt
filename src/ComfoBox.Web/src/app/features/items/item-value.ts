@@ -56,6 +56,9 @@ import { formatNumber, formatRelative } from '../../core/util/format';
         @if (item().stale) {
           <p-tag [value]="t().item.stale" severity="warn" />
         }
+        @if (unavailableNote(); as note) {
+          <p-tag [value]="note" severity="secondary" />
+        }
         @if (item().requiresExpertMode) {
           <p-tag [value]="t().item.expert" severity="info" />
         }
@@ -66,8 +69,10 @@ import { formatNumber, formatRelative } from '../../core/util/format';
         <span class="cb-item-age">{{ age() }}</span>
       </div>
 
-      @if (rangeHint(); as hint) {
-        <span class="cb-item-range">{{ hint }}</span>
+      @if (!unavailableNote()) {
+        @if (rangeHint(); as hint) {
+          <span class="cb-item-range">{{ hint }}</span>
+        }
       }
 
       @if (item().writable && item().kind === 'analog') {
@@ -217,6 +222,28 @@ export class ItemValueComponent {
 
   /** Das Alter des Werts (als Text). */
   readonly age = computed(() => formatRelative(this.item().lastUpdated));
+
+  /**
+   * Der Hinweis für ein Item ohne Hardware (oder `null`).
+   *
+   * <p>Das Gateway sperrt Items, deren Baugruppe am Regler fehlt
+   * (`not_installed`) oder deren Fühler den Sentinel 32767 liefert
+   * (`no_sensor`). Solange der Typ-Parameter nicht gelesen ist, gilt
+   * `unknown`. Ein gesperrtes Item zeigt **nie** einen Wert – der Regler
+   * hätte keinen.</p>
+   */
+  readonly unavailableNote = computed<string | null>(() => {
+    switch (this.item().unavailableReason) {
+      case 'not_installed':
+        return this.t().item.notInstalled;
+      case 'no_sensor':
+        return this.t().item.noSensor;
+      case 'unknown':
+        return this.t().item.hardwareUnknown;
+      default:
+        return null;
+    }
+  });
 
   /**
    * Der erlaubte Bereich als Text („5 … 35 °C", „ab 5 °C", „bis 35 °C").

@@ -1,6 +1,7 @@
 using ComfoBox.Bacnet;
 using ComfoBox.Domain.Items;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Health;
 using Microsoft.Extensions.Options;
 
@@ -38,6 +39,7 @@ public sealed class BacnetPollingService : BackgroundService
     private readonly BacnetDevice _device;
     private readonly IBacnetClient _client;
     private readonly IItemCatalog _catalog;
+    private readonly HardwareAvailabilityGate _hardware;
     private readonly IHealthReporter _health;
     private readonly ILogger<BacnetPollingService> _logger;
     private readonly TimeSpan _pollInterval;
@@ -51,6 +53,7 @@ public sealed class BacnetPollingService : BackgroundService
     /// <param name="device">Das BACnet-Gerät.</param>
     /// <param name="client">Der BACnet-Client.</param>
     /// <param name="catalog">Der Item-Katalog.</param>
+    /// <param name="hardware">Das Gate der Baugruppen-Verfügbarkeit.</param>
     /// <param name="gatewayOptions">Die Grundeinstellungen.</param>
     /// <param name="health">Der Health-Reporter.</param>
     /// <param name="logger">Logger.</param>
@@ -58,6 +61,7 @@ public sealed class BacnetPollingService : BackgroundService
         BacnetDevice device,
         IBacnetClient client,
         IItemCatalog catalog,
+        HardwareAvailabilityGate hardware,
         IOptions<GatewayOptions> gatewayOptions,
         IHealthReporter health,
         ILogger<BacnetPollingService> logger)
@@ -65,6 +69,7 @@ public sealed class BacnetPollingService : BackgroundService
         ArgumentNullException.ThrowIfNull(device);
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(catalog);
+        ArgumentNullException.ThrowIfNull(hardware);
         ArgumentNullException.ThrowIfNull(gatewayOptions);
         ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(logger);
@@ -72,6 +77,7 @@ public sealed class BacnetPollingService : BackgroundService
         _device = device;
         _client = client;
         _catalog = catalog;
+        _hardware = hardware;
         _health = health;
         _logger = logger;
 
@@ -100,6 +106,7 @@ public sealed class BacnetPollingService : BackgroundService
     /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var detectors = ItemsWith(static item => HardwareRequirements.IsDetector(item.Id));
         var once = ItemsWith(RefreshPriority.Once);
         var primary = ItemsWith(RefreshPriority.Primary);
         var secondary = ItemsWith(RefreshPriority.Secondary);
@@ -108,13 +115,14 @@ public sealed class BacnetPollingService : BackgroundService
 
         _logger.LogInformation(
             "Polling startet: {Once} einmalige, {Primary} primäre, {Secondary} sekundäre, {Slow} langsame "
-            + "(alle {SlowFactor} Zyklen), {Other} Items ohne Priorität.",
+            + "(alle {SlowFactor} Zyklen), {Other} Items ohne Priorität, {Detectors} Typ-Parameter.",
             once.Count,
             primary.Count,
             secondary.Count,
             slow.Count,
             _slowPollFactor,
-            withoutPriority.Count);
+            withoutPriority.Count,
+            detectors.Count);
 
         LogSharedBacnetObjects();
 
@@ -149,6 +157,15 @@ public sealed class BacnetPollingService : BackgroundService
                 if (cycle == 0)
                 {
                     await _device.ReadItemsAsync(once, stoppingToken).ConfigureAwait(false);
+
+                    // Die Typ-Parameter entscheiden, ob die zugehörigen Items
+                    // überhaupt existieren - sie werden deshalb **vor** dem
+                    // ersten regulären Zyklus gelesen.
+                    await _device.ReadItemsAsync(detectors, stoppingToken).ConfigureAwait(false);
+                }
+                else if (cycle % _slowPollFactor == 0)
+                {
+                    await _device.ReadItemsAsync(detectors, stoppingToken).ConfigureAwait(false);
                 }
 
                 var items = PollPlan.ForCycle(
@@ -158,7 +175,11 @@ public sealed class BacnetPollingService : BackgroundService
                     slow,
                     cycle,
                     _secondaryPollFactor,
-                    _slowPollFactor);
+                    _slowPollFactor)
+                    // Die Typ-Parameter haben ihren eigenen Durchlauf oben.
+                    .Where(static item => !HardwareRequirements.IsDetector(item.Id))
+                    .Where(_hardware.ShouldPoll)
+                    .ToList();
 
                 await _device.ReadItemsAsync(items, stoppingToken).ConfigureAwait(false);
 
@@ -203,7 +224,13 @@ public sealed class BacnetPollingService : BackgroundService
     /// Liefert alle Items einer Priorität in Katalog-Reihenfolge.
     /// </summary>
     private List<ItemDefinition> ItemsWith(RefreshPriority priority)
-        => [.. _catalog.All.Where(i => i.Priority == priority)];
+        => ItemsWith(item => item.Priority == priority);
+
+    /// <summary>
+    /// Liefert alle Items, die die Bedingung erfüllen (Katalog-Reihenfolge).
+    /// </summary>
+    private List<ItemDefinition> ItemsWith(Func<ItemDefinition, bool> predicate)
+        => [.. _catalog.All.Where(predicate)];
 
     /// <summary>
     /// Meldet BACnet-Objekte, die von **mehreren** Items gelesen werden.

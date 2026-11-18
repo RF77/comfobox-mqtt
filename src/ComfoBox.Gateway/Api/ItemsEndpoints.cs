@@ -5,6 +5,7 @@ using ComfoBox.Domain.Values;
 using ComfoBox.Gateway.Api.Models;
 using ComfoBox.Gateway.Bacnet;
 using ComfoBox.Gateway.Configuration;
+using ComfoBox.Gateway.Hardware;
 using ComfoBox.Gateway.Health;
 using ComfoBox.Gateway.Mqtt;
 using ComfoBox.Gateway.Protection;
@@ -36,10 +37,16 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
+                HardwareAvailabilityGate hardware,
                 GatewayRuntimeSettings gateway) =>
             {
                 var items = catalog.All
-                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode))
+                    .Select(item => ItemDto.From(
+                        item,
+                        Find(cache, item.Id),
+                        topics,
+                        gateway.ExpertMode,
+                        hardware.UnavailableReason(item.Id)))
                     .ToArray();
 
                 return Results.Ok(items);
@@ -52,10 +59,16 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
+                HardwareAvailabilityGate hardware,
                 GatewayRuntimeSettings gateway) =>
             {
                 var items = catalog.ByGroup(group)
-                    .Select(item => ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode))
+                    .Select(item => ItemDto.From(
+                        item,
+                        Find(cache, item.Id),
+                        topics,
+                        gateway.ExpertMode,
+                        hardware.UnavailableReason(item.Id)))
                     .ToArray();
 
                 return Results.Ok(items);
@@ -68,6 +81,7 @@ internal static class ItemsEndpoints
                 IItemCatalog catalog,
                 IValueCache cache,
                 MqttTopicMap topics,
+                HardwareAvailabilityGate hardware,
                 GatewayRuntimeSettings gateway) =>
             {
                 var item = catalog.Find(id);
@@ -83,7 +97,12 @@ internal static class ItemsEndpoints
                         statusCode: StatusCodes.Status404NotFound);
                 }
 
-                return Results.Ok(ItemDto.From(item, Find(cache, item.Id), topics, gateway.ExpertMode));
+                return Results.Ok(ItemDto.From(
+                    item,
+                    Find(cache, item.Id),
+                    topics,
+                    gateway.ExpertMode,
+                    hardware.UnavailableReason(item.Id)));
             })
             .WithTags("Items")
             .WithName("GetItem");

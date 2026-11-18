@@ -14,13 +14,36 @@ namespace ComfoBox.Domain.Items;
 public static class ItemEnums
 {
     /// <summary>
-    /// Die Werte des Legacy-Enums <c>EnergyMeasurementModes</c>.
+    /// Die Werte des Legacy-Enums <c>BufferTypes</c>.
     /// </summary>
-    public static IReadOnlyDictionary<int, string> EnergyMeasurementModes { get; } = new Dictionary<int, string>
+    public static IReadOnlyDictionary<int, string> BufferTypes { get; } = new Dictionary<int, string>
     {
         [0] = "None",
-        [1] = "On",
-        [2] = "OnSeparateWarmWater",
+        [1] = "OneSensor",
+        [11] = "TwoSensors",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>SolarHydraulicsTypes</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> SolarHydraulicsTypes { get; } = new Dictionary<int, string>
+    {
+        [0] = "None",
+        [1] = "PumpToBuffer",
+        [2] = "PumpToWarmWater",
+        [4] = "PumpToBufferWithHeatExchanger",
+        [21] = "PumpWarmWaterThenBuffer",
+        [22] = "PumpToWarmWaterWithHeatExchanger",
+        [24] = "PumpWarmWaterThenBufferWithHeatExchanger",
+    };
+
+    /// <summary>
+    /// Die Werte des Legacy-Enums <c>PresenceTypes</c>.
+    /// </summary>
+    public static IReadOnlyDictionary<int, string> PresenceTypes { get; } = new Dictionary<int, string>
+    {
+        [0] = "NotInstalled",
+        [1] = "Installed",
     };
 
     /// <summary>
