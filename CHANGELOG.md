@@ -23,9 +23,33 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   sichtbar im Entitäts-Dialog unter „Attribute" und in Vorlagen über
   `state_attr(…)` lesbar. Number und Select zeigen Bereich und Auswahl
   unverändert zusätzlich nativ an.
+- **Dokumentation „Nicht verbaute Sensoren"** (`docs/07-technikerhandbuch/nicht-verbaute-sensoren.md`).
+  Sie hält fest, welche Items der Referenzanlage keinen Messwert liefern und
+  warum: 14 × Sentinel `32767` (Fühler nicht verbaut), 5 × BACnet-Objekt
+  existiert nicht (`ERROR_CODE_UNKNOWN_OBJECT`), 3 × Regler-Metadaten ohne
+  interpretierbaren Wert und die ausgeschaltete Wärmemengenmessung (DP 3340).
+  Die Echtwerte selbst stehen bewusst nur in der lokalen, per `.gitignore`
+  ausgeschlossenen Momentaufnahme unter `privat/`.
+
+### Changed
+
+- **Die Test-Ausgänge stehen auf der Seite „Werte" immer ganz unten.** Bisher
+  folgten sie der Katalogreihenfolge und standen an zweiter Stelle, direkt nach
+  „Zone". Katalog, MQTT-Topics und Home Assistant bleiben unverändert – nur die
+  Darstellung ist sortiert.
 
 ### Fixed
 
+- **Anzeigenamen enthielten die Wert-Erklärung.** Lautete die Katalog-Beschreibung
+  „Titel: Erklärung" (z. B. `Kühlfunktion: 0 = gesperrt, 1 = freigegeben`), wurde
+  der **ganze** Text zum Namen – und Home Assistant baut daraus die Entitäts-Id
+  (`sensor.…_kühlfunktion_0_gesperrt_1_freigegeben`). Jetzt zählt nur der Titel
+  (`Kühlfunktion`); eine Werteliste in Klammern („(0 bis 6)") entfällt ebenfalls.
+  Parenthesen, die zwei Werte unterscheiden („(20 °C)"), bleiben erhalten. Der
+  vollständige Text steht weiterhin im Tooltip bzw. im Attribut `description`.
+  Betroffen sind **beide** Wege: MQTT-Discovery und HACS-Integration. Bereits
+  angelegte Entitäten behalten ihre alte Id – die Korrektur wirkt bei neuen
+  Entitäten; wer aufräumen will, löscht die alten einmal in Home Assistant.
 - **Die HACS-Integration las veraltete API-Feldnamen.** Sie fragte `valueType`,
   `isReadOnly` und `isStale` ab, das Gateway liefert aber `kind`, `writable` und
   `stale` (und `enumValues` als Objekt `{Zahl: Name}`). Folge: Jeder Wert kam als
@@ -36,6 +60,13 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   Select-Entität ist jetzt der Enum-Name (`valueText`) – vorher stand dort die
   Zahl, die in der Optionsliste nicht vorkam. Sensoren mit Auswahlwerten zeigen
   ebenfalls den Namen.
+- **Tippfehler im Katalogtext:** `States/Zone/OutdoorTemperatureBuilding` hieß
+  „ebäudebezogene Aussentemperatur" statt „gebäudebezogene". Korrigiert wurde die
+  Quelle `src_old/ComfoBoxLib/Items/States.cs`; daraus neu erzeugt wurden
+  `Catalog.cs` und die Fixture `docs/topics.json`. Betroffen ist nur die
+  Beschreibung (Tooltip, Attribut `description`) – Topic, Wertebereich und
+  Enum-Namen sind unverändert. `docs/topics.md` bleibt als eingefrorenes
+  V1-Dokument bewusst unverändert.
 
 ## [1.2.0] – 2026-11-16
 

@@ -206,3 +206,6 @@ FakesAssemblies/
 
 # Technikerhandbuch: lokaler Volltext (urheberrechtlich geschuetzt, nie einchecken)
 docs/07-technikerhandbuch/_volltext/
+
+# Lokale Momentaufnahmen der Anlage (Echtwerte = Privatdaten, nie einchecken)
+privat/

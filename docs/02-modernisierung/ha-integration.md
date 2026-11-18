@@ -101,8 +101,8 @@ Bereich und Auswahlwerte stehen deshalb als Attribute im Entitäts-Dialog:
 
 | Teil | Regel | Beispiel |
 |---|---|---|
-| `entity_id` | `comfobox_` + `group` + `name` in snake_case | `comfobox_zone_setpoint_normal` |
-| Anzeigename | `displayName` aus dem Gateway, Fallback `name` | „Zone: Raumsollwert normal" |
+| `entity_id` | bildet Home Assistant aus Gerätename + Anzeigename | `switch.…_kühlfunktion` |
+| Anzeigename | `displayName` aus dem Gateway (Titel der Beschreibung), Fallback `name` | „Kühlfunktion" |
 | `unique_id` | `{deviceId}_{itemId}` | `comfobox1_zone_setpoint_normal` |
 | `translation_key` | `{group}_{name}` (für spätere Core-Übernahme) | `zone_setpoint_normal` |
 | Geräteklasse | aus der Einheit abgeleitet | `°C` → `temperature`, `h` → `duration`, `%` → `humidity` |

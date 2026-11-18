@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using ComfoBox.Domain.Items;
 using ComfoBox.Domain.Values;
 
@@ -14,8 +15,17 @@ namespace ComfoBox.Gateway.Mqtt;
 /// nicht übersetzt werden.
 /// </para>
 /// </remarks>
-public static class MqttValueFormatter
+public static partial class MqttValueFormatter
 {
+    /// <summary>
+    /// Die größte Länge eines Anzeigenamens (in Zeichen).
+    /// </summary>
+    /// <remarks>
+    /// Längere Texte sind als Entitätsname unbrauchbar - Home Assistant baut
+    /// daraus die Entitäts-Id.
+    /// </remarks>
+    private const int MaxNameLength = 48;
+
     /// <summary>
     /// Die Anzeigenamen der Topic-Gruppen (Präfix → Bezeichnung).
     /// </summary>
@@ -83,9 +93,13 @@ public static class MqttValueFormatter
     /// </summary>
     /// <param name="item">Das Item.</param>
     /// <returns>
-    /// Die erste Zeile der Beschreibung, wenn sie kurz genug ist - sonst der
-    /// Topic-Name. Lange Fließtexte sind als Entitätsname unbrauchbar.
+    /// Der Titel aus der Beschreibung (siehe <see cref="BaseDisplayName"/>),
+    /// bei V2-Gruppen mit der Gruppen-Bezeichnung davor.
     /// </returns>
+    /// <remarks>
+    /// Die Gruppen-Vorsilbe entfällt, wenn der Name dadurch zu lang würde -
+    /// Home Assistant bildet aus dem Namen die Entitäts-Id.
+    /// </remarks>
     public static string DisplayName(ItemDefinition item)
     {
         ArgumentNullException.ThrowIfNull(item);
@@ -93,12 +107,31 @@ public static class MqttValueFormatter
         var name = BaseDisplayName(item);
         var label = GroupLabelFor(item.Group);
 
-        return label is null ? name : $"{label}: {name}";
+        if (label is null)
+        {
+            return name;
+        }
+
+        var combined = $"{label}: {name}";
+        return combined.Length <= MaxNameLength ? combined : name;
     }
 
     /// <summary>
     /// Der Anzeigename ohne Gruppen-Vorsilbe.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Viele Beschreibungen im Katalog haben die Form
+    /// <c>Titel: Erklärung</c> - z. B.
+    /// <c>Kühlfunktion: 0 = gesperrt, 1 = freigegeben</c>. Als Name zählt nur
+    /// der <b>Titel</b>, denn der Rest ist eine Erklärung und gehört in den
+    /// Tooltip: Aus einem Namen wird in Home Assistant die Entitäts-Id, und
+    /// „… Kühlfunktion 0 gesperrt 1 freigegeben" ist als Id unbrauchbar.
+    /// </para>
+    /// <para>
+    /// Ist der Titel zu lang, dient der Topic-Name als Ausweg.
+    /// </para>
+    /// </remarks>
     private static string BaseDisplayName(ItemDefinition item)
     {
         var description = item.Description?.Trim();
@@ -108,8 +141,47 @@ public static class MqttValueFormatter
         }
 
         var line = description.Split('\n')[0].Trim();
-        return line.Length <= 48 ? line : item.Name;
+        var title = TitleOf(line);
+
+        return title.Length <= MaxNameLength ? title : item.Name;
     }
+
+    /// <summary>
+    /// Der Titel einer Beschreibungszeile („Titel: Erklärung" → „Titel").
+    /// </summary>
+    /// <param name="line">Die erste Zeile der Beschreibung.</param>
+    /// <returns>Der Titel - oder die unveränderte Zeile, wenn sie keinen hat.</returns>
+    /// <remarks>
+    /// Eine Werteliste in Klammern ist eine Erklärung, kein Namensteil:
+    /// <c>Freigabe der Kühlung (0 bis 6)</c> → <c>Freigabe der Kühlung</c>.
+    /// Ein Parenthese-Wert wie <c>(20 °C)</c> bleibt stehen - er
+    /// unterscheidet zwei Items voneinander.
+    /// </remarks>
+    private static string TitleOf(string line)
+    {
+        var colon = line.IndexOf(':', StringComparison.Ordinal);
+        var title = colon > 0 ? line[..colon].Trim() : line;
+
+        if (title.Length == 0)
+        {
+            return line;
+        }
+
+        var withoutValues = ValueListSuffix().Replace(title, string.Empty).Trim();
+
+        return withoutValues.Length == 0 ? line : withoutValues;
+    }
+
+    /// <summary>
+    /// Eine Werteliste in Klammern am Ende eines Namens („(0, 1 oder 2)").
+    /// </summary>
+    /// <remarks>
+    /// Absichtlich streng: nur Zahlen, getrennt durch Komma oder Schrägstrich,
+    /// optional mit <c>oder</c>/<c>bis</c>/<c>und</c>. <c>(20 °C)</c> oder
+    /// <c>(dT)</c> passen nicht und bleiben erhalten.
+    /// </remarks>
+    [GeneratedRegex(@"\s*\(\s*\d+(\s*[,/]\s*\d+)*(\s*(?:oder|bis|und)\s*\d+)?\s*\)$", RegexOptions.CultureInvariant)]
+    private static partial Regex ValueListSuffix();
 
     /// <summary>
     /// Die Bezeichnung der Gruppe (oder <c>null</c>).

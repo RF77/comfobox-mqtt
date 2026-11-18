@@ -657,7 +657,7 @@ public static partial class Catalog
             Unit = "°C",
             IsReadOnly = true,
             Priority = RefreshPriority.Primary,
-            Description = "ebäudebezogene Aussentemperatur",
+            Description = "gebäudebezogene Aussentemperatur",
         },
         new()
         {

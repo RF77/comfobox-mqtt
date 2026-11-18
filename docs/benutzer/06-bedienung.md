@@ -69,6 +69,10 @@ dessen Werte, nicht eine Liste von Geräten.
 
 ### Was bedeutet ein Wert?
 
+Der **Name** einer Karte ist der Titel des Werts aus dem Katalog – nicht die ganze
+Erklärung. Aus „Kühlfunktion: 0 = gesperrt, 1 = freigegeben“ wird also
+„Kühlfunktion“; die Erklärung steht im Hinweis.
+
 Fahren Sie mit der Maus über den **Namen** eines Werts (oder fokussieren Sie ihn
 mit der Tastatur). Dann erscheint ein Hinweis mit
 

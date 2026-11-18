@@ -5,6 +5,7 @@ import { EventsService } from '../api/events.service';
 import { ItemsService } from '../api/items.service';
 import { toApiError } from '../api/api-client';
 import { formatNumber } from '../util/format';
+import { trailingGroupsLast } from '../util/group-order';
 
 /**
  * Der Zustand des Item-Katalogs.
@@ -83,7 +84,13 @@ export class ItemsStore {
     });
   });
 
-  /** Die sichtbaren Items, gruppiert (in der Reihenfolge des Katalogs). */
+  /**
+   * Die sichtbaren Items, gruppiert.
+   *
+   * <p>Die Gruppen folgen der Katalogreihenfolge; die Test-Ausgänge stehen
+   * jedoch immer am Ende (reine Diagnose-Werte, siehe
+   * {@link trailingGroupsLast}).</p>
+   */
   readonly grouped = computed<{ group: string; items: ItemDto[] }[]>(() => {
     const buckets = new Map<string, ItemDto[]>();
 
@@ -96,10 +103,13 @@ export class ItemsStore {
       }
     }
 
-    return [...buckets.entries()].map(([group, items]) => ({ group, items }));
+    return trailingGroupsLast([...buckets.keys()]).map((group) => ({
+      group,
+      items: buckets.get(group) ?? [],
+    }));
   });
 
-  /** Die verfügbaren Gruppen (für die Navigation). */
+  /** Die verfügbaren Gruppen (für die Navigation) - Test-Gruppen zuletzt. */
   readonly groups = computed<string[]>(() => {
     const seen = new Set<string>();
     const result: string[] = [];
@@ -111,7 +121,7 @@ export class ItemsStore {
       }
     }
 
-    return result;
+    return trailingGroupsLast(result);
   });
 
   /** Die Anzahl der Items insgesamt. */

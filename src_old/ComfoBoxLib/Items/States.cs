@@ -314,7 +314,7 @@ namespace ComfoBoxLib.Items
             ///     Gebäudebezogene Aussentemperatur
             /// </summary>
             [Primary]
-            [Description(@"ebäudebezogene Aussentemperatur")]
+            [Description(@"gebäudebezogene Aussentemperatur")]
             public AnalogValue OutdoorTemperatureBuilding => new AnalogValue(205, "°C") {IsReadOnly = true};
         }
     }

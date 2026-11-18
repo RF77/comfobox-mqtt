@@ -39,13 +39,19 @@ public sealed record ItemDto
     /// <summary>
     /// Der Anzeigename (aus der Beschreibung abgeleitet).
     /// </summary>
+    /// <remarks>
+    /// Enthält <b>nicht</b> den vollen Beschreibungstext: Lautet die
+    /// Beschreibung „Titel: Erklärung", ist der Name nur der Titel
+    /// (z. B. <c>Kühlfunktion</c>). Home Assistant bildet daraus die
+    /// Entitäts-Id.
+    /// </remarks>
     public required string DisplayName { get; init; }
 
     /// <summary>
     /// Die vollständige Beschreibung aus dem Item-Katalog (oder <c>null</c>).
     /// </summary>
     /// <remarks>
-    /// <see cref="DisplayName"/> ist die gekürzte erste Zeile; die
+    /// <see cref="DisplayName"/> ist der Titel der ersten Zeile; die
     /// Beschreibung trägt den vollständigen Text für Tooltips.
     /// </remarks>
     public string? Description { get; init; }

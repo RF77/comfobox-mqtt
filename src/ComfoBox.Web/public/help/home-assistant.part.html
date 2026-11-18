@@ -159,6 +159,10 @@ nicht mehr abrufbar. Bewahren Sie ihn sicher auf.</p>
 <p><strong>Der gültige Bereich kommt direkt aus dem Gateway</strong> – die Integration erfindet
 keine Grenzen. So kann kein Wert außerhalb des erlaubten Bereichs gesetzt werden.</p>
 </blockquote>
+<p><strong>Der Name</strong> einer Entität ist der <strong>Titel</strong> des Werts aus dem Katalog, nicht die
+ganze Erklärung: <code>Kühlfunktion</code> statt <code>Kühlfunktion: 0 = gesperrt, 1 = freigegeben</code>.
+Home Assistant bildet daraus die Entitäts-Id (<code>switch.…_kühlfunktion</code>). Die
+Erklärung steht im Attribut <code>description</code>.</p>
 <h3 id="was-bedeutet-ein-wert">Was bedeutet ein Wert?</h3>
 <p>Home Assistant kennt keinen Tooltip. Die Angaben aus dem Katalog stehen deshalb
 als <strong>Attribute</strong> an jeder Entität und erscheinen im Dialog der Entität unter

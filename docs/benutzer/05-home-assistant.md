@@ -105,6 +105,11 @@ Fertig. Das Gerät **ComfoBox ELESTA** erscheint mit allen Werten.
 > **Der gültige Bereich kommt direkt aus dem Gateway** – die Integration erfindet
 > keine Grenzen. So kann kein Wert außerhalb des erlaubten Bereichs gesetzt werden.
 
+**Der Name** einer Entität ist der **Titel** des Werts aus dem Katalog, nicht die
+ganze Erklärung: `Kühlfunktion` statt `Kühlfunktion: 0 = gesperrt, 1 = freigegeben`.
+Home Assistant bildet daraus die Entitäts-Id (`switch.…_kühlfunktion`). Die
+Erklärung steht im Attribut `description`.
+
 ### Was bedeutet ein Wert?
 
 Home Assistant kennt keinen Tooltip. Die Angaben aus dem Katalog stehen deshalb
