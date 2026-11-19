@@ -636,7 +636,7 @@ app.MapFallbackToFile("index.html");
 ### 11.3 Docker-Stage
 
 ````dockerfile
-FROM node:22-alpine AS web-build
+FROM node:26-alpine AS web-build
 WORKDIR /app
 COPY src/ComfoBox.Web/package*.json ./
 RUN npm ci

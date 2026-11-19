@@ -11,7 +11,30 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
-_Nichts._
+### Changed
+
+- **Abhängigkeiten aktualisiert (2026-11-19).**
+  - .NET: `Microsoft.Extensions.*` und `System.IO.Ports` auf **11.0.0**,
+    `Serilog.AspNetCore` / `Serilog.Extensions.Hosting` auf **11.0.0**,
+    `Serilog.Sinks.File` auf **7.0.0**, `Swashbuckle.AspNetCore` auf **11.0.1**,
+    `Microsoft.NET.Test.Sdk` auf **18.12.0**, `xunit.runner.visualstudio` auf
+    **4.0.1**, `coverlet.collector` auf **10.1.1**.
+  - Web: Angular auf **22.3.0**, `@angular-eslint` auf **22.8.0**, ESLint auf
+    **10.15.0**, `typescript-eslint` auf **8.73.0**, Vitest auf **5.1.1**,
+    jsdom auf **31.0.1**, `globals` auf **17.14.0**, `marked` auf **18.2.1**,
+    Prettier auf **3.10.1**. TypeScript bleibt bei **6.0.3** – Angular 22
+    erlaubt `>=6.0 <6.1`.
+  - CI/Image: Actions auf `checkout@v7`, `setup-dotnet@v6`,
+    `setup-node@v7`, `upload-artifact@v7`, `download-artifact@v8`,
+    `codeql-action@v4`, `dependency-review-action@v5`,
+    `action-gh-release@v3` sowie Docker-Actions `qemu@v4`, `buildx@v4`,
+    `login@v4`, `metadata@v6`, `build-push@v7`. Node **26** in Workflows
+    und im Image-Build (`node:26-alpine`).
+
+### Fixed
+
+- **ESLint 10:** `no-useless-assignment` in `help-page.ts` behoben
+  (redundante Zuweisung im `catch`-Zweig).
 
 ## [1.3.0] – 2026-11-19
 

@@ -120,7 +120,7 @@ export class HelpPageComponent implements OnInit {
     afterNextRender(
       () => {
         // `decodeURIComponent` - der Anker darf URL-kodiert sein.
-        let id = anchor;
+        let id: string;
 
         try {
           id = decodeURIComponent(anchor);

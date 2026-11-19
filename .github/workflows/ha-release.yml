@@ -36,7 +36,7 @@ jobs:
       addon: ${{ steps.version.outputs.addon }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Versionen ermitteln und vergleichen
         id: version
@@ -129,7 +129,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Das Archiv enthält die Dateien des Add-ons - der Supervisor lädt es
       # aus dem Release, wenn der Nutzer eine bestimmte Version installiert.
@@ -180,7 +180,7 @@ jobs:
       # Release mit der Add-on-Version. Beides ist dieselbe Version → also
       # **ein** Release mit **beiden** Assets.
       - name: Release (HACS-Integration + Add-on)
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.validate.outputs.integration }}
           target_commitish: ${{ github.sha }}

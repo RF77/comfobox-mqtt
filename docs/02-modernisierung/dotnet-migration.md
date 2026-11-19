@@ -18,10 +18,10 @@ ohne Windows möglich.
 | Fasterflect 2.1.3 | — (entfällt) | deklarativer Item-Katalog, siehe [datenmodell-und-api](datenmodell-und-api.md) |
 | Newtonsoft.Json 8.0.3 | — (entfällt) | `System.Text.Json` |
 | Nito.AsyncEx 3.0.1 | — (entfällt) | `Microsoft.Extensions.Hosting` |
-| — | `System.IO.Ports` 10.0.x | **neu** – `System.IO.Ports` ist nicht in der BCL |
-| — | `Microsoft.Extensions.Hosting` 10.0.x | neu |
-| — | `Microsoft.Extensions.Configuration.*` 10.0.x | neu |
-| — | `Swashbuckle.AspNetCore` 9.x | neu, OpenAPI |
+| — | `System.IO.Ports` 11.0.x | **neu** – `System.IO.Ports` ist nicht in der BCL |
+| — | `Microsoft.Extensions.Hosting` 11.0.x | neu |
+| — | `Microsoft.Extensions.Configuration.*` 11.0.x | neu |
+| — | `Swashbuckle.AspNetCore` 11.x | neu, OpenAPI |
 
 ### Central Package Management
 
@@ -35,8 +35,8 @@ ohne Windows möglich.
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
-    <PackageVersion Include="System.IO.Ports" Version="10.0.0" />
-    <PackageVersion Include="Serilog.Extensions.Hosting" Version="9.0.0" />
+    <PackageVersion Include="System.IO.Ports" Version="11.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="11.0.0" />
     <!-- … -->
   </ItemGroup>
 </Project>

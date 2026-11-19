@@ -35,7 +35,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Angular-Build
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:22-alpine AS web-build
+FROM node:26-alpine AS web-build
 WORKDIR /app
 
 # package*.json zuerst → Layer-Cache

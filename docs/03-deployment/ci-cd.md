@@ -103,9 +103,9 @@ jobs:
     name: Build & Test (.NET)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '10.0.x'
           cache: true
@@ -128,7 +128,7 @@ jobs:
           fi
 
       - name: Upload coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: '**/TestResults/**'
@@ -140,10 +140,10 @@ jobs:
       run:
         working-directory: src/ComfoBox.Web
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '26'
           cache: npm
           cache-dependency-path: src/ComfoBox.Web/package-lock.json
       - run: npm ci
@@ -183,20 +183,20 @@ jobs:
       contents: write
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway
           tags: |
@@ -204,7 +204,7 @@ jobs:
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/heads/main') }}
             type=sha,format=long
 
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         with:
           # Der Kontext ist das Repository-Wurzelverzeichnis: das Image
           # braucht das .NET-Projekt UND die Angular-Oberfläche.
@@ -218,7 +218,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=gateway
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/comfobox-gateway:${{ github.ref_name }}
           severity: CRITICAL,HIGH

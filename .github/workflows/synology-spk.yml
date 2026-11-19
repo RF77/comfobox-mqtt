@@ -90,7 +90,7 @@ jobs:
       checksum: ${{ steps.build.outputs.checksum }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # Die Version aus dem Tag ("v1.2.3" → 1.2.3) oder aus dem Dispatch.
       #
@@ -186,7 +186,7 @@ jobs:
 
       # Artefakte des Laufs – befristet, nicht Teil des Repositorys.
       - name: Artefakte hochladen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spk-${{ steps.version.outputs.version }}-${{ steps.version.outputs.revision }}
           path: |
@@ -203,7 +203,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Artefakt herunterladen
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: spk-${{ needs.spk.outputs.version }}-${{ needs.spk.outputs.revision }}
           path: dist
@@ -286,7 +286,7 @@ jobs:
     # übersprungen - der Schritt darf den Lauf nicht rot machen.
     steps:
       - name: Artefakt herunterladen
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: spk-${{ needs.spk.outputs.version }}-${{ needs.spk.outputs.revision }}
           path: dist
