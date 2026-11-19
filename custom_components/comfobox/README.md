@@ -54,6 +54,27 @@ HACS → Integration → ComfoBox → Hinzufügen
 | `comfobox.set_value` | Wert schreiben |
 | `comfobox.restart` | Gateway neu starten |
 | `comfobox.read_all` | alle Werte sofort neu lesen |
+| `comfobox.cleanup_legacy_entities` | alte Entitäten aus früheren Versionen entfernen (liefert `removed`) |
+
+## Update von einer früheren Version
+
+Die Integration ordnet die Werte seit 1.3 nach ihrer **Bedeutung** ein (Rolle im
+Katalog statt Datentyp). Dadurch wechseln manche Entitäten ihre Domain
+(`number` → `switch`, `select`, `binary_sensor`, `button`) oder entfallen.
+
+Home Assistant lässt solche Entitäten stehen – samt Aufzeichnungen. Deshalb meldet
+die Integration sie nach dem Setup als **Reparatur**:
+
+> Einstellungen → System → Reparaturen → **Alte ComfoBox-Entitäten** → Bestätigen
+
+Das entfernt die alten Entitäten samt Zustandsverlauf und Langzeitstatistik.
+Entitäten, die es weiterhin gibt, bleiben unberührt. Alternativ lässt sich das
+Aufräumen in einer Automation über `comfobox.cleanup_legacy_entities` auslösen –
+eine Integration kann selbst keine Automation anlegen.
+
+> **Eine Entität mit neuem Typ hat eine neue `entity_id`** – Automationen und
+> Dashboards, die auf die alte zeigen, müssen einmal angepasst werden. Der
+> `unique_id` bleibt gleich, solange Domain und Plattform gleich bleiben.
 
 ## Quellen
 

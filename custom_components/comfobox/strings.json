@@ -44,6 +44,23 @@
       "mqtt_connected": { "name": "Broker verbunden" }
     }
   },
+  "issues": {
+    "legacy_entities": {
+      "title": "Alte ComfoBox-Entitäten",
+      "description": "Nach dem Update gibt es noch {count} Entität(en) aus einer früheren Version. Sie werden nicht mehr geliefert und füllen mit ihren Aufzeichnungen die Datenbank.\n\nDie Reparatur entfernt sie samt Zustandsverlauf und Langzeitstatistik. Das lässt sich nicht rückgängig machen.\n\nWer einen Blick darauf werfen will: Einstellungen → Entitäten, Filter „ComfoBox ELESTA“, Spalte „Status“ zeigt „nicht verfügbar“.\n\nAlternativ steht der Dienst `comfobox.cleanup_legacy_entities` bereit."
+    }
+  },
+  "fix_flow": {
+    "step": {
+      "confirm": {
+        "title": "Alte ComfoBox-Entitäten entfernen",
+        "description": "Es werden {count} Entität(en) entfernt, zusammen mit ihrem Zustandsverlauf und ihrer Langzeitstatistik.\n\nEntitäten, die es weiterhin gibt, bleiben unberührt.\n\nFortfahren?"
+      }
+    },
+    "abort": {
+      "not_loaded": "Die ComfoBox-Integration ist nicht geladen. Bitte den Eintrag unter „Geräte & Dienste“ einmal neu laden."
+    }
+  },
   "services": {
     "set_value": {
       "name": "Wert setzen",
@@ -59,6 +76,10 @@
     "read_all": {
       "name": "Alle Werte neu lesen",
       "description": "Liest alle Items sofort neu vom Gateway."
+    },
+    "cleanup_legacy_entities": {
+      "name": "Alte Entitäten aufräumen",
+      "description": "Entfernt Entitäten aus früheren Versionen samt Zustandsverlauf und Langzeitstatistik. Liefert die Anzahl der entfernten Entitäten zurück."
     }
   }
 }

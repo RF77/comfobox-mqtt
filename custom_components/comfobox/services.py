@@ -6,11 +6,12 @@ import logging
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 
+from .cleanup import async_check_legacy_entities, async_remove_legacy_entities
 from .const import DOMAIN, STATUS_KEY
 from .coordinator import ComfoBoxCoordinator
 
@@ -22,6 +23,7 @@ ATTR_VALUE = "value"
 SERVICE_SET_VALUE = "set_value"
 SERVICE_RESTART = "restart"
 SERVICE_READ_ALL = "read_all"
+SERVICE_CLEANUP = "cleanup_legacy_entities"
 
 SET_VALUE_SCHEMA = vol.Schema(
     {
@@ -60,9 +62,7 @@ def _item_id_for(coordinator: ComfoBoxCoordinator, entity_id: str) -> str:
         if not hasattr(item, "id"):
             continue
 
-        device_id = getattr(
-            coordinator.data.get(STATUS_KEY), "device_id", "comfobox"
-        )
+        device_id = getattr(coordinator.data.get(STATUS_KEY), "device_id", "comfobox")
 
         if f"{device_id}_{item.id}" == unique_id:
             return item.id
@@ -102,8 +102,29 @@ async def async_setup_services(hass: HomeAssistant, entry: ConfigEntry) -> None:
         coordinator: ComfoBoxCoordinator = entry.runtime_data
         await coordinator.async_request_refresh()
 
+    async def async_cleanup(call: ServiceCall) -> dict[str, int]:
+        """Entfernt Entitäten, die es nicht mehr gibt – samt Aufzeichnungen.
+
+        Der Dienst ist der Weg für alle, die nicht auf den Reparatur-Hinweis
+        warten wollen – etwa in einem Skript oder einer Automation, die nach
+        dem Update einmal läuft.
+        """
+        coordinator: ComfoBoxCoordinator = entry.runtime_data
+        removed = await async_remove_legacy_entities(hass, entry, coordinator)
+
+        # Der Hinweis verschwindet mit dem letzten veralteten Eintrag.
+        await async_check_legacy_entities(hass, entry, coordinator)
+
+        return {"removed": removed}
+
     hass.services.async_register(
         DOMAIN, SERVICE_SET_VALUE, async_set_value, schema=SET_VALUE_SCHEMA
     )
     hass.services.async_register(DOMAIN, SERVICE_RESTART, async_restart)
     hass.services.async_register(DOMAIN, SERVICE_READ_ALL, async_read_all)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CLEANUP,
+        async_cleanup,
+        supports_response=SupportsResponse.OPTIONAL,
+    )

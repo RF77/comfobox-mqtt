@@ -35,3 +35,10 @@ restart:
 read_all:
   name: Alle Werte neu lesen
   description: Liest alle Items sofort neu vom Gateway.
+cleanup_legacy_entities:
+  name: Alte Entitäten aufräumen
+  description: >-
+    Entfernt Entitäten aus früheren Versionen samt Zustandsverlauf und
+    Langzeitstatistik. Nötig nach einem Update, wenn Werte entfallen sind oder
+    ihre Plattform gewechselt haben (z. B. Number → Schalter). Liefert die
+    Anzahl der entfernten Entitäten zurück.

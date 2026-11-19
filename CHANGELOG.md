@@ -87,6 +87,18 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Added
 
+- **Die Integration meldet alte Entitäten als Reparatur und räumt sie auf Wunsch auf.**
+  Nach dem Update bleiben Entitäten übrig, deren Wert entfallen ist oder deren
+  Plattform gewechselt hat (`number` → `switch`, `select`, `binary_sensor`,
+  `button`, `sensor`). Home Assistant lässt sie als „wiederhergestellt" stehen –
+  samt Aufzeichnungen, die weiter in die Datenbank wachsen. Unter
+  *Einstellungen → System → Reparaturen* erscheint jetzt „Alte ComfoBox-Entitäten";
+  ein Klick entfernt sie **nach Bestätigung** samt Zustandsverlauf und
+  Langzeitstatistik. Entitäten, die es weiterhin gibt, bleiben unberührt, und
+  fremde Kennungen (andere Geräte-Id, andere Integration) werden nie angefasst.
+  Dazu der Dienst `comfobox.cleanup_legacy_entities` – für alle, die das Aufräumen
+  in einer Automation auslösen wollen. Eine Integration kann selbst keine
+  Automation anlegen: Automatisierungen sind Konfiguration, keine Entitäten.
 - **Der Ereignis-Strom schickt die Werte eines Auslesezyklus gesammelt.** Bisher erzeugte
   jeder gelesene Wert ein eigenes `event: value` – bei 35 Werten je Zyklus und 160 im
   Sekundärzyklus. Jetzt sammelt der Gateway und sendet ein `event: values` mit einem

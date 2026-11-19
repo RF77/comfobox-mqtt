@@ -151,6 +151,7 @@ Sollwert wäre gefährlicher als ein sichtbarer Ausfall.
 | `comfobox.set_value` | Wert schreiben |
 | `comfobox.restart` | Gateway neu starten |
 | `comfobox.read_all` | alle Werte sofort neu lesen |
+| `comfobox.cleanup_legacy_entities` | alte Entitäten aus früheren Versionen entfernen (siehe unten) |
 
 Beispiel:
 
@@ -161,6 +162,58 @@ target:
 data:
   value: 21.5
 ````
+
+---
+
+## Nach einem Update: alte Entitäten aufräumen
+
+Mit Version 1.3 hat die Integration ihre Werte **genauer** eingeordnet. Ein
+0/1-Wert ist jetzt ein Schalter statt einer Zahl, eine Auswahlliste (etwa
+„Kühlfunktion“) eine Auswahl statt einer Zahl, und einige Werte entfallen ganz.
+
+Home Assistant lässt die alten Entitäten stehen. Sie werden nicht mehr geliefert,
+sind aber **nicht verfügbar** – ihre Aufzeichnungen wachsen weiter in der Datenbank
+und ihre Langzeitstatistik bleibt für immer stehen.
+
+### Der Weg über „Reparaturen“
+
+| Schritt | Was |
+|---|---|
+| 1 | Gateway aktualisieren und starten |
+| 2 | Integration in HACS aktualisieren, Home Assistant neu starten |
+| 3 | **Einstellungen → System → Reparaturen** – dort steht „Alte ComfoBox-Entitäten“ |
+| 4 | Öffnen, Anzahl prüfen, **Bestätigen** |
+
+Entfernt werden die alten Entitäten **samt Zustandsverlauf und Langzeitstatistik**.
+Entitäten, die es weiterhin gibt, bleiben unberührt. Der Hinweis verschwindet, sobald
+nichts mehr übrig ist.
+
+> **Das Löschen lässt sich nicht rückgängig machen.** Wer vorher nachsehen will:
+> *Einstellungen → Entitäten*, Filter „ComfoBox ELESTA“, Spalte *Status* zeigt
+> „nicht verfügbar“.
+
+### Der Weg über eine Automation
+
+Eine Integration kann **keine** Automation anlegen – Automatisierungen sind
+Konfiguration, keine Entitäten. Der Dienst lässt sich aber in einer Automation oder
+einem Skript aufrufen, wenn Sie das Aufräumen planbar auslösen wollen:
+
+````yaml
+action: comfobox.cleanup_legacy_entities
+response_variable: aufgeraeumt
+````
+
+Der Dienst liefert die Anzahl der entfernten Entitäten zurück
+(`{{ aufgeraeumt.removed }}`). Für ein einmaliges Aufräumen nach dem Update genügt
+aber der Reparatur-Dialog – man muss ihn nicht selbst bauen.
+
+### Wenn etwas liegen bleibt
+
+| Symptom | Ursache und Lösung |
+|---|---|
+| Entität weiter „nicht verfügbar“ | Sie gehört zu einer **anderen** Integration oder zu einem Gateway mit anderer Geräte-Id. Der Reparatur-Dialog rührt sie nicht an; bitte von Hand löschen. |
+| Statistik zeigt „kein Zustand verfügbar“ | Die Langzeitstatistik einer entfernten Entität steht noch. *Einstellungen → Werkzeuge → Statistik*, Auswahlmodus, Einträge mit Hinweis markieren, **Löschen**. |
+| Datenbank bleibt groß | `action: recorder.purge` mit `keep_days` und `repack: true` – das schreibt die Datenbank neu und gibt den Platz frei. |
 
 ---
 

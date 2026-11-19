@@ -16,6 +16,7 @@ from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.device_registry import DeviceInfo
 
 from .api import ComfoBoxApiClient
+from .cleanup import async_check_legacy_entities
 from .const import (
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -63,6 +64,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Erst wenn die Entitäten stehen: die Push-Schleifen starten. Sonst
     # treffen Werte ein, für die es noch keine Entität gibt.
     await coordinator.async_start_stream()
+
+    # Nach einem Update bleiben Entitäten übrig, die es nicht mehr gibt (Wert
+    # entfallen oder Plattform gewechselt). Sie werden gemeldet, nicht
+    # gelöscht - Löschen ist nicht umkehrbar.
+    await async_check_legacy_entities(hass, entry, coordinator)
+
     return True
 
 
