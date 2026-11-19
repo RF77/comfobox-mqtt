@@ -50,16 +50,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
 
     coordinator = ComfoBoxCoordinator(hass, client, interval)
+
+    # Der Erststart liest Katalog und Status; danach übernimmt der
+    # Ereignis-Strom die Werte.
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_setup_services(hass, entry)
+
+    # Erst wenn die Entitäten stehen: die Push-Schleifen starten. Sonst
+    # treffen Werte ein, für die es noch keine Entität gibt.
+    await coordinator.async_start_stream()
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Entlaedt die Integration."""
+    coordinator: ComfoBoxCoordinator | None = entry.runtime_data
+    if coordinator is not None:
+        await coordinator.async_stop_stream()
+
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unloaded:
         entry.runtime_data = None

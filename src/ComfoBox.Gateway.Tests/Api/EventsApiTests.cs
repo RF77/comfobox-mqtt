@@ -70,9 +70,77 @@ public sealed class EventsApiTests
     }
 
     /// <summary>
+    /// Ein fehlgeschlagener Read wird als Ereignis gemeldet.
+    /// </summary>
+    /// <remarks>
+    /// Ohne dieses Ereignis bliebe der Wechsel auf „veraltet“ für die
+    /// Push-Clients unsichtbar, bis der nächste Wert eintrifft - bei einem
+    /// stündlich gelesenen Item also bis zu eine Stunde lang.
+    /// </remarks>
+    [Fact]
+    public async Task Eine_Fehlgeschlagene_Lesung_Erzeugt_Ein_Ereignis()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var cache = fixture.Services.GetRequiredService<IValueCache>();
+        cache.Update("zone.set_point_normal", new AnalogValue(21.5f, 5f, 30f, "°C"));
+
+        using var response = await fixture.Client.GetAsync(
+            "/api/events",
+            HttpCompletionOption.ResponseHeadersRead);
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+
+        var snapshot = await ReadEventAsync(stream);
+        Assert.StartsWith("event: snapshot", snapshot, StringComparison.Ordinal);
+
+        cache.MarkStale("zone.set_point_normal");
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var change = await ReadEventAsync(stream, timeout.Token);
+
+        Assert.StartsWith("event: value", change, StringComparison.Ordinal);
+        Assert.Contains("\"isStale\":true", change, StringComparison.Ordinal);
+        Assert.Contains("21.5", change, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Ein stiller Stream schickt Lebenszeichen.
+    /// </summary>
+    /// <remarks>
+    /// Ohne sie fällt die Verbindung hinter einem Proxy unbemerkt weg: der
+    /// Client merkt es erst, wenn er wieder Werte erwartet.
+    /// </remarks>
+    [Fact]
+    public async Task Ein_Stiller_Stream_Schickt_Lebenszeichen()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync(
+            new Dictionary<string, string?>(StringComparer.Ordinal)
+            {
+                ["Api:SseHeartbeatSeconds"] = "1",
+            });
+
+        using var response = await fixture.Client.GetAsync(
+            "/api/events",
+            HttpCompletionOption.ResponseHeadersRead);
+
+        await using var stream = await response.Content.ReadAsStreamAsync();
+
+        var snapshot = await ReadEventAsync(stream);
+        Assert.StartsWith("event: snapshot", snapshot, StringComparison.Ordinal);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var ping = await ReadEventAsync(stream, timeout.Token);
+
+        Assert.StartsWith(": ping", ping, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Liest das nächste SSE-Ereignis.
     /// </summary>
-    private static async Task<string> ReadEventAsync(Stream stream)
+    private static async Task<string> ReadEventAsync(
+        Stream stream,
+        CancellationToken cancellationToken = default)
     {
         var builder = new StringBuilder();
         var buffer = new byte[1];
@@ -81,7 +149,7 @@ public sealed class EventsApiTests
         {
             try
             {
-                await stream.ReadExactlyAsync(buffer.AsMemory(0, 1), CancellationToken.None);
+                await stream.ReadExactlyAsync(buffer.AsMemory(0, 1), cancellationToken);
             }
             catch (EndOfStreamException)
             {

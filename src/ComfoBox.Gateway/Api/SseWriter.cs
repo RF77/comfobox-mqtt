@@ -31,6 +31,28 @@ public static class SseWriter
     }
 
     /// <summary>
+    /// Schreibt eine Kommentarzeile in den SSE-Stream.
+    /// </summary>
+    /// <param name="context">Der HTTP-Kontext.</param>
+    /// <param name="comment">Der Text hinter dem Doppelpunkt.</param>
+    /// <param name="cancellationToken">Abbruchsignal.</param>
+    /// <returns>Aufgabe, die das Schreiben abschließt.</returns>
+    /// <remarks>
+    /// Eine Kommentarzeile (<c>: ping</c>) ist kein Ereignis: sie löst beim
+    /// Client keinen Handler aus, hält aber die TCP-Verbindung offen. Ohne sie
+    /// fällt ein stiller Stream hinter einem Proxy unbemerkt weg.
+    /// </remarks>
+    public static Task WriteCommentAsync(
+        HttpContext context,
+        string comment,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        return context.Response.WriteAsync($": {comment}\n\n", cancellationToken);
+    }
+
+    /// <summary>
     /// Setzt die Header für einen SSE-Stream und schickt sie sofort.
     /// </summary>
     /// <param name="context">Der HTTP-Kontext.</param>

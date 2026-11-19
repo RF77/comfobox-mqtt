@@ -6,12 +6,20 @@ Grund: das Gateway ist der einzige Master am MS/TP-Bus und hält den Schreibschu
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import json
+from collections.abc import AsyncIterator
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 import aiohttp
 
-from .const import API_PATH_ITEMS, API_PATH_RESTART, API_PATH_STATUS
+from .const import (
+    API_PATH_EVENTS,
+    API_PATH_ITEMS,
+    API_PATH_RESTART,
+    API_PATH_STATUS,
+    SSE_READ_TIMEOUT,
+)
 
 
 class ComfoBoxError(Exception):
@@ -24,6 +32,10 @@ class AuthenticationError(ComfoBoxError):
 
 class ConnectionFailed(ComfoBoxError):
     """Das Gateway ist nicht erreichbar."""
+
+
+class EventsNotSupported(ComfoBoxError):
+    """Das Gateway kennt den Ereignis-Strom nicht (zu alt)."""
 
 
 @dataclass(slots=True)
@@ -61,9 +73,7 @@ class ComfoBoxItem:
             # Aeltere Gateways liefern kein `displayName` - dann dient die
             # erste Zeile der Beschreibung als Name.
             first_line = (description or "").strip().splitlines()
-            display_name = (
-                first_line[0] if first_line else data.get("name", data["id"])
-            )
+            display_name = first_line[0] if first_line else data.get("name", data["id"])
 
         return cls(
             id=data["id"],
@@ -127,6 +137,26 @@ class ComfoBoxItem:
             return self.enum_values.get(int(float(self.value)))
         except (TypeError, ValueError):
             return None
+
+    def with_value(
+        self,
+        value: Any,
+        value_text: str | None = None,
+        last_updated: str | None = None,
+        is_stale: bool = False,
+    ) -> ComfoBoxItem:
+        """Gibt eine Kopie mit neuem Wert zurück.
+
+        Die Metadaten (Name, Einheit, Enum-Werte, Grenzen) bleiben unverändert -
+        sie kommen aus dem Katalog und ändern sich im Betrieb nicht.
+        """
+        return replace(
+            self,
+            value=value,
+            value_text=value_text,
+            last_updated=last_updated,
+            is_stale=is_stale,
+        )
 
 
 @dataclass(slots=True)
@@ -214,10 +244,93 @@ class ComfoBoxApiClient:
 
     async def write_item(self, item_id: str, value: Any) -> None:
         """Schreibt einen Wert. Der Schreibschutz liegt im Gateway."""
-        await self._request(
-            "PUT", f"{API_PATH_ITEMS}/{item_id}", json={"value": value}
-        )
+        await self._request("PUT", f"{API_PATH_ITEMS}/{item_id}", json={"value": value})
 
     async def restart(self) -> None:
         """Startet das Gateway neu."""
         await self._request("POST", API_PATH_RESTART)
+
+    async def stream_events(self) -> AsyncIterator[tuple[str, Any]]:
+        """Liest den Ereignis-Strom des Gateways (Server-Sent Events).
+
+        Liefert ``(event, payload)``-Paare:
+
+        ``snapshot``
+            Alle aktuell bekannten Werte - einmalig nach dem Verbinden.
+        ``value``
+            Eine einzelne Wertänderung (auch der Wechsel auf „veraltet“).
+        ``heartbeat``
+            Ein Lebenszeichen (``: ping``), Nutzlast ``None``.
+
+        Der Aufruf kehrt erst zurück, wenn die Verbindung endet - entweder,
+        weil das Gateway sie schließt, oder weil der Aufrufer abbricht.
+
+        Raises:
+            AuthenticationError: Der Token wurde abgelehnt.
+            EventsNotSupported: Das Gateway kennt ``/api/events`` nicht.
+            ConnectionFailed: Das Gateway ist nicht erreichbar.
+        """
+        url = f"{self._host}{API_PATH_EVENTS}"
+
+        # Kein Gesamt-Timeout: der Strom ist dazu gedacht, offen zu bleiben.
+        # `sock_read` greift nur, wenn **nichts** mehr kommt - der Gateway
+        # schickt alle 30 s ein Lebenszeichen.
+        timeout = aiohttp.ClientTimeout(
+            total=None,
+            connect=self._timeout.total or 10,
+            sock_read=SSE_READ_TIMEOUT,
+        )
+
+        try:
+            async with self._session.get(
+                url, headers=self._headers(), timeout=timeout
+            ) as resp:
+                if resp.status in (401, 403):
+                    raise AuthenticationError("Ungültiger API-Token")
+                if resp.status == 404:
+                    raise EventsNotSupported(
+                        "Das Gateway kennt den Ereignis-Strom /api/events nicht."
+                    )
+                if resp.status >= 400:
+                    detail = await resp.text()
+                    raise ComfoBoxError(
+                        f"Gateway antwortete mit {resp.status}: {detail[:200]}"
+                    )
+
+                event = "message"
+                data: list[str] = []
+
+                async for raw in resp.content:
+                    line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+
+                    if not line:
+                        # Eine Leerzeile schließt das Ereignis ab.
+                        if data:
+                            yield event, _parse_event(event, data)
+                        event, data = "message", []
+                        continue
+
+                    if line.startswith(":"):
+                        # Kommentarzeile - der Gateway nutzt sie als Lebenszeichen.
+                        yield "heartbeat", None
+                        continue
+
+                    field, _, value = line.partition(":")
+                    value = value.removeprefix(" ")
+
+                    if field == "event":
+                        event = value
+                    elif field == "data":
+                        data.append(value)
+        except (TimeoutError, aiohttp.ClientError) as err:
+            raise ConnectionFailed(f"Gateway nicht erreichbar: {err}") from err
+
+
+def _parse_event(event: str, data: list[str]) -> Any:
+    """Wandelt die Nutzlast eines Ereignisses in JSON um."""
+    try:
+        return json.loads("\n".join(data))
+    except ValueError as err:
+        raise ComfoBoxError(
+            f"Ungültige Nutzlast im Ereignis '{event}' des Gateways."
+        ) from err

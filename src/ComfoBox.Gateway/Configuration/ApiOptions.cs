@@ -57,4 +57,23 @@ public sealed class ApiOptions
     /// </remarks>
     [Range(1, 10_080)]
     public int SessionLifetimeMinutes { get; init; } = 480;
+
+    /// <summary>
+    /// Der Abstand der Lebenszeichen im SSE-Stream (Sekunden, <c>0</c> = aus).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Der Stream schickt bei jeder Wertänderung ein Ereignis; bei ruhigem Bus
+    /// entsteht minutenlang keine einzige Zeile. Ein Proxy (oder eine
+    /// Firewall) verwirft eine solche Verbindung stillschweigend - der Client
+    /// merkt es erst, wenn er wieder Werte erwartet.
+    /// </para>
+    /// <para>
+    /// Deshalb schickt der Gateway in diesem Abstand eine Kommentarzeile
+    /// (<c>: ping</c>). Sie ist kein Ereignis und wird von Browsern wie von
+    /// <c>aiohttp</c> ignoriert, hält aber die Verbindung wach.
+    /// </para>
+    /// </remarks>
+    [Range(0, 600)]
+    public int SseHeartbeatSeconds { get; init; } = 30;
 }

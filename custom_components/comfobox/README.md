@@ -37,7 +37,8 @@ HACS → Integration → ComfoBox → Hinzufügen
 | MQTT-Broker | **nicht** erforderlich |
 | Bacnet-Zugriff | nur über das Gateway (es ist der einzige Master am Bus) |
 | Schreibschutz | liegt im Gateway (24-h-Limit) – die Integration umgeht ihn nicht |
-| Aktualisierung | 10 s (konfigurierbar, Minimum 5 s) |
+| Aktualisierung | **Push** über `/api/events` (SSE) – kein Poll-Takt für die Werte |
+| Statusabfrage | 60 s (einstellbar 15 … 3600 s, Optionen der Integration) |
 | Bei Gateway-Ausfall | Entitäten werden `unavailable` – **kein** Flackern |
 
 ## Services

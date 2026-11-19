@@ -1,14 +1,14 @@
 """Tests des Coordinators der ComfoBox-Integration.
 
-Der Coordinator fragt Status und Items gemeinsam ab. Bei einem Fehler
-behält er den letzten bekannten Stand - die Entitäten flackern nicht.
+Der Coordinator liest beim Start Katalog und Status. Danach kommen die Werte
+per Ereignis-Strom (SSE); gepollt wird nur noch der Gateway-Status. Bei einem
+Fehler bleibt der letzte bekannte Stand stehen - die Entitäten flackern nicht.
 """
 
 from __future__ import annotations
 
 from unittest.mock import AsyncMock
 
-import pytest
 from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from custom_components.comfobox.api import AuthenticationError, ConnectionFailed
@@ -27,8 +27,8 @@ def _client(mock_status, mock_items) -> AsyncMock:
 
 
 async def test_der_normalfall_liefert_status_und_items(hass, mock_status, mock_items):
-    """Status und Items werden gemeinsam aktualisiert."""
-    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 10)
+    """Status und Items werden beim Start gelesen."""
+    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 60)
 
     await coordinator.async_refresh()
 
@@ -49,7 +49,7 @@ async def test_der_status_liegt_unter_dem_reservierten_schluessel(
     hass, mock_status, mock_items
 ):
     """Der Status darf mit keiner Item-Id kollidieren."""
-    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 10)
+    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 60)
 
     await coordinator.async_refresh()
 
@@ -63,7 +63,7 @@ async def test_ein_abgelehnter_token_startet_die_neuauthentifizierung(
     client = _client(mock_status, mock_items)
     client.get_status = AsyncMock(side_effect=AuthenticationError("Ungültiger Token"))
 
-    coordinator = ComfoBoxCoordinator(hass, client, 10)
+    coordinator = ComfoBoxCoordinator(hass, client, 60)
 
     await coordinator.async_refresh()
 
@@ -78,7 +78,7 @@ async def test_ein_ausfall_wird_als_update_failed_gememeldet(
     client = _client(mock_status, mock_items)
     client.get_items = AsyncMock(side_effect=ConnectionFailed("Zeitüberschreitung"))
 
-    coordinator = ComfoBoxCoordinator(hass, client, 10)
+    coordinator = ComfoBoxCoordinator(hass, client, 60)
 
     await coordinator.async_refresh()
 
@@ -90,7 +90,7 @@ async def test_ein_ausfall_wird_als_update_failed_gememeldet(
 async def test_der_letzte_stand_bleibt_erhalten(hass, mock_status, mock_items):
     """Nach einem Ausfall bleibt der letzte bekannte Wert stehen."""
     client = _client(mock_status, mock_items)
-    coordinator = ComfoBoxCoordinator(hass, client, 10)
+    coordinator = ComfoBoxCoordinator(hass, client, 60)
 
     await coordinator.async_refresh()
     assert coordinator.last_update_success is True
@@ -103,23 +103,21 @@ async def test_der_letzte_stand_bleibt_erhalten(hass, mock_status, mock_items):
     assert coordinator.data == vorher
 
 
-async def test_das_intervall_wird_uebernommen(hass, mock_status, mock_items):
-    """Das Intervall kommt aus der Konfiguration."""
+async def test_der_coordinator_plant_keine_eigenen_aktualisierungen(
+    hass, mock_status, mock_items
+):
+    """Kein ``update_interval`` - sonst würde jeder Push die Statusabfrage verschieben.
+
+    Der Status wird aus einer eigenen Schleife gelesen (``status_interval``).
+    """
     coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 30)
 
-    assert coordinator.update_interval is not None
-    assert coordinator.update_interval.total_seconds() == 30
+    assert coordinator.update_interval is None
+    assert coordinator.status_interval == 30
 
 
-@pytest.mark.parametrize("intervall", [0, -5, 1])
-async def test_ein_zu_kleines_intervall_wird_verworfen(
-    hass, mock_status, mock_items, intervall
-):
-    """Das Intervall muss mindestens fünf Sekunden betragen."""
-    from custom_components.comfobox import MIN_SCAN_INTERVAL
+async def test_ein_ungueltiges_intervall_wird_begrenzt(hass, mock_status, mock_items):
+    """Ein Intervall von 0 würde die Statusabfrage zur Endlosschleife machen."""
+    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), 0)
 
-    effektiv = max(MIN_SCAN_INTERVAL, intervall)
-    coordinator = ComfoBoxCoordinator(hass, _client(mock_status, mock_items), effektiv)
-
-    assert coordinator.update_interval is not None
-    assert coordinator.update_interval.total_seconds() == effektiv
+    assert coordinator.status_interval == 1

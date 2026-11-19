@@ -27,6 +27,17 @@
       "already_configured": "This gateway is already set up."
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ComfoBox settings",
+        "description": "Values are pushed by the gateway's event stream. This only sets how often the gateway status (connections, write counter) is polled.",
+        "data": {
+          "scan_interval": "Status interval (seconds)"
+        }
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "bacnet_connected": { "name": "BACnet connected" },

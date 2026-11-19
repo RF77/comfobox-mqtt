@@ -130,4 +130,42 @@ public sealed class ValueCacheTests
 
         Assert.Equal(2, cache.Snapshot().Length);
     }
+
+    [Fact]
+    public async Task Der_Wechsel_Auf_Veraltet_Wird_Einmal_Gemeldet()
+    {
+        // Der Abonnent wird schon beim Aufruf registriert - die Ereignisse
+        // dürfen deshalb vor dem Lesen entstehen.
+        var cache = new ValueCache();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var abochnung = cache.SubscribeAsync(cts.Token);
+
+        cache.Update("a", new AnalogValue(1f, null, null, null));
+        cache.MarkStale("a");
+
+        // Ein zweiter fehlgeschlagener Read ist kein neues Ereignis.
+        cache.MarkStale("a");
+        cache.Update("a", new AnalogValue(2f, null, null, null));
+
+        var empfangen = new List<CachedValue>();
+        await foreach (var value in abochnung.WithCancellation(cts.Token))
+        {
+            empfangen.Add(value);
+
+            if (empfangen.Count == 3)
+            {
+                break;
+            }
+        }
+
+        Assert.Equal(3, empfangen.Count);
+        Assert.False(empfangen[0].IsStale);
+
+        // Der veraltete Wert behält den letzten Stand - die UI zeigt ihn weiter.
+        Assert.True(empfangen[1].IsStale);
+        Assert.Equal(1f, ((AnalogValue)empfangen[1].Value!).Value);
+
+        Assert.False(empfangen[2].IsStale);
+        Assert.Equal(2f, ((AnalogValue)empfangen[2].Value!).Value);
+    }
 }

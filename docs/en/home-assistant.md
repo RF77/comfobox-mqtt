@@ -104,11 +104,18 @@ to write. That is intentional — the scope is the outer limit.
 A token can expire. When it does, the integration shows a **reauth** prompt: enter a new token,
 no need to delete and re-add the integration.
 
-### Polling
+### Push, not polling
 
-`DEFAULT_SCAN_INTERVAL = 10` seconds. The gateway caches values, so polling does not hammer the
-BACnet bus. The bus itself is polled with `Gateway:PollIntervalSeconds` (default 3600 s).
-Writing a value updates the cache immediately.
+Values are **pushed** over Server-Sent Events (`GET /api/events`): the integration reads the item
+catalogue once at setup and then receives every change. That is why the manifest declares
+`iot_class: local_push`.
+
+Only the gateway status (BACnet/MQTT connection, write counter) is still polled — every 60 seconds
+by default, configurable between 15 and 3600 seconds in the integration options.
+
+The gateway itself polls the BACnet bus with `Gateway:PollIntervalSeconds` (default 60 s), so
+asking for values more often than that cannot produce new data. Writing a value updates the cache
+immediately and therefore shows up in Home Assistant right away.
 
 ---
 

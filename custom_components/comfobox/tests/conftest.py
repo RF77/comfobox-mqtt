@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import aiohttp
@@ -79,7 +81,7 @@ def mock_config_entry() -> MockConfigEntry:
             "token": "test-token",
             "verify_ssl": True,
         },
-        options={"scan_interval": 10},
+        options={"scan_interval": 60},
         title="ComfoBox (http://comfobox.local:8099)",
         unique_id="comfobox1",
     )
@@ -156,18 +158,37 @@ def mock_items():
 
 @pytest.fixture
 def mock_api(mock_status, mock_items):
-    """Patcht den API-Client mit simulierten Antworten."""
-    with patch(
-        "custom_components.comfobox.api.ComfoBoxApiClient.get_status",
-        AsyncMock(return_value=_status_obj(mock_status)),
-    ), patch(
-        "custom_components.comfobox.api.ComfoBoxApiClient.get_items",
-        AsyncMock(return_value=_items_obj(mock_items)),
-    ), patch(
-        "custom_components.comfobox.api.ComfoBoxApiClient.write_item",
-        AsyncMock(return_value=None),
+    """Patcht den API-Client mit simulierten Antworten.
+
+    Der Ereignis-Strom wird **stillgelegt**: er würde sonst eine echte
+    HTTP-Verbindung zum (nicht existierenden) Gateway aufbauen und im
+    Wiederverbindungs-Backoff landen.
+    """
+    with (
+        patch(
+            "custom_components.comfobox.api.ComfoBoxApiClient.get_status",
+            AsyncMock(return_value=_status_obj(mock_status)),
+        ),
+        patch(
+            "custom_components.comfobox.api.ComfoBoxApiClient.get_items",
+            AsyncMock(return_value=_items_obj(mock_items)),
+        ),
+        patch(
+            "custom_components.comfobox.api.ComfoBoxApiClient.write_item",
+            AsyncMock(return_value=None),
+        ),
+        patch(
+            "custom_components.comfobox.api.ComfoBoxApiClient.stream_events",
+            new=_idle_stream,
+        ),
     ):
         yield
+
+
+async def _idle_stream(self: Any):
+    """Ein Strom, der nichts liefert und auf den Abbruch wartet."""
+    await asyncio.Event().wait()
+    yield  # pragma: no cover - macht die Funktion zum Generator
 
 
 def _status_obj(data):

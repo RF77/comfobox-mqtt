@@ -129,12 +129,23 @@ public sealed class ValueCache : IValueCache
     }
 
     /// <inheritdoc />
+    /// <remarks>
+    /// Der Wechsel auf „veraltet“ wird **einmal** publiziert: sonst bliebe er
+    /// für die UI und die Push-Clients unsichtbar, bis der nächste Wert eintrifft
+    /// - bei einem stündlich gelesenen Item also bis zu eine Stunde lang. Ein
+    /// bereits veralteter Wert erzeugt kein zweites Ereignis (der nächste
+    /// fehlgeschlagene Read soll nicht erneut publizieren).
+    /// </remarks>
     public void MarkStale(string id)
     {
-        if (_values.TryGetValue(id, out var stored))
+        if (!_values.TryGetValue(id, out var stored) || stored.IsStale)
         {
-            _values[id] = stored with { IsStale = true };
+            return;
         }
+
+        var stale = stored with { IsStale = true };
+        _values[id] = stale;
+        Publish(stale);
     }
 
     /// <inheritdoc />

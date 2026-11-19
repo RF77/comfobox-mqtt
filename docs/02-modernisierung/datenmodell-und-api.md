@@ -195,6 +195,12 @@ internal sealed class ValueCache
 >
 > Der Wert bleibt im Cache, wenn ein Read fehlschlägt – die UI zeigt „Wert
 > veraltet". So bleibt der letzte bekannte Stand sichtbar.
+>
+> **Der Wechsel auf „veraltet" wird publiziert** (`MarkStale` → `SubscribeAsync`),
+> aber nur **einmal** je Fehlerserie: sonst bliebe er für UI und Push-Clients
+> unsichtbar, bis der nächste Wert eintrifft – bei einem stündlich gelesenen
+> Item also bis zu eine Stunde lang. Die **Ablauf**-Schwelle (`staleAfter`) hat
+> keinen Timer und wird deshalb erst mit dem nächsten Ereignis sichtbar.
 
 ## 3. REST-API
 
@@ -227,7 +233,7 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 | `GET` | `/api/items/{id}` | Ein Item inkl. aktuellem Wert | `ItemDto` |
 | `PUT` | `/api/items/{id}` | Wert schreiben | `204` / `4xx` |
 | `GET` | `/api/items/group/{group}` | Items einer Gruppe | `ItemDto[]` |
-| `GET` | `/api/events` | SSE-Stream (Wertänderungen, Health) | `text/event-stream` |
+| `GET` | `/api/events` | SSE-Stream: `snapshot` beim Verbinden, danach `value` je Änderung; alle 30 s `: ping` | `text/event-stream` |
 | `GET` | `/api/config` | Aktuelle Konfiguration (ohne Secrets) | `ConfigDto` |
 | `PUT` | `/api/config` | Konfiguration ändern (reload) | `204` |
 | `GET` | `/api/config/serial-ports` | Erkannte serielle Ports (Hotplug) | `SerialPort[]` |

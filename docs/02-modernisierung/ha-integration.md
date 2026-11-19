@@ -43,11 +43,11 @@ Dieses Dokument spezifiziert eine **Home-Assistant-Integration** (`comfobox`), d
 
 | Punkt | Entscheidung |
 |---|---|
-| Transport | **REST** für Anlage/Abfrage/Schreiben, **SSE** später für Live-Werte |
+| Transport | **REST** für Metadaten/Schreiben, **SSE** (`/api/events`) für die Werte |
 | Master am Bus | **ausschließlich** das Gateway |
 | Metadaten-Quelle | der Item-Katalog im Gateway (`/api/items`) – die Integration erfindet **keine** Min/Max/Enum-Werte |
 | Broker | **nicht** erforderlich |
-| Version | v1: `local_polling`; v2: `local_push` (SSE) |
+| Version | `local_push` (SSE) |
 
 ## 3. Gerät und Entitäten
 
@@ -241,35 +241,49 @@ class ComfoBoxApiClient:
 > - `Authorization: Bearer <token>` – **nie** im Log, **nie** in der Exception-Meldung.
 > - Ein **einziger** `aiohttp.ClientSession` für die gesamte Integration (Performance-Regel von HA).
 > - Timeout: 10 s für normale Aufrufe, 30 s für Schreibvorgänge (BACnet-Timeout).
+> - Der Ereignis-Strom hat **kein** Gesamt-Timeout; gelesen wird mit `sock_read = 90 s`.
+>   Der Gateway schickt alle 30 s ein Lebenszeichen (`: ping`), sonst gilt die Verbindung
+>   als tot und wird neu aufgebaut.
 
 ## 6. Coordinator
 
-````python
-class ComfoBoxCoordinator(DataUpdateCoordinator[dict[str, ComfoBoxItem]]):
-    def __init__(self, hass: HomeAssistant, client: ComfoBoxApiClient, interval: int) -> None:
-        super().__init__(
-            hass,
-            _LOGGER,
-            name=DOMAIN,
-            update_interval=timedelta(seconds=interval),
-        )
-        self._client = client
+Die Werte kommen **gepusht**: der Katalog wird beim Einrichten **einmal** gelesen
+(`GET /api/items`), danach schickt das Gateway jede Änderung über `GET /api/events`.
+Damit ist die Integration `local_push` – der Bus wird nicht durch HTTP-Abfragen
+belastet, und ein Wert steht in Home Assistant, sobald das Gateway ihn gelesen hat.
 
-    async def _async_update_data(self) -> dict[str, ComfoBoxItem]:
-        try:
-            items = await self._client.get_items()
-        except AuthenticationError as err:
-            raise ConfigEntryAuthFailed from err
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
-            raise UpdateFailed(f"Gateway nicht erreichbar: {err}") from err
-        return {item.id: item for item in items}
+````python
+class ComfoBoxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    def __init__(self, hass, client, status_interval: int) -> None:
+        # Kein `update_interval`: gepusht wird aus dem Ereignis-Strom, der
+        # Status kommt aus einer eigenen Schleife.
+        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=None)
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Erststart (und Poll-Rückfall): Katalog + Status."""
+        status, items = await asyncio.gather(
+            self._client.get_status(), self._client.get_items()
+        )
+        ...
+
+    async def _async_stream_loop(self) -> None:
+        """Hält den Strom offen und verbindet mit Backoff neu."""
+        async for event, payload in self._client.stream_events():
+            if event == "snapshot":
+                self._apply_snapshot(payload)
+            elif event == "value":
+                self._apply_values([payload])
 ````
 
 | Aspekt | Entscheidung |
 |---|---|
-| Intervall | **10 s** (konfigurierbar, Minimum 5 s) |
+| Werte | **Push** über `/api/events` (`snapshot` beim Verbinden, danach `value`) |
+| Metadaten | `GET /api/items` beim Einrichten und nach jedem Wiederverbinden |
+| Status | eigene Schleife, `scan_interval` aus den Optionen (Standard **60 s**, 15 … 3600 s) |
 | „Letzter bekannter Wert" | Der Coordinator behält die letzten Werte → Entitäten zeigen nicht sofort `unknown` |
-| `stale` | Items mit `stale = true` werden als `unavailable` markiert (Wert älter als 3 Poll-Zyklen) |
+| `stale` | Der Gateway publiziert den Wechsel auf „veraltet“ als eigenes `value`-Ereignis; solche Items werden `unavailable` |
+| Verbindungsabbruch | Wiederverbinden mit Backoff 1 s → 60 s; nach **3** erfolglosen Versuchen werden die Entitäten `unavailable` |
+| Alter Gateway ohne `/api/events` | `404` → dauerhafter Rückfall auf zyklisches `GET /api/items` |
 | Schreibfehler | `UpdateFailed` → alle Entitäten `unavailable`, aber der **letzte Wert** bleibt sichtbar (`available`-Status bleibt, `state` wird `unknown`) |
 
 > **Wichtig:** Bei einem Gateway-Ausfall sollen die Entitäten **nicht** flackern.

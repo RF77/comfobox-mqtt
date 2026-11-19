@@ -53,6 +53,31 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
   folgten sie der Katalogreihenfolge und standen an zweiter Stelle, direkt nach
   „Zone". Katalog, MQTT-Topics und Home Assistant bleiben unverändert – nur die
   Darstellung ist sortiert.
+- **Die HACS-Integration arbeitet jetzt mit Push statt Polling**
+  (`iot_class: local_push`). Sie liest den Katalog beim Einrichten **einmal** und
+  bezieht alle Werte danach über `GET /api/events` (Server-Sent Events). Der
+  bisherige 10-Sekunden-Takt entfiel: das Gateway liest den Bus selbst nur alle
+  60 s (primär) bzw. 300 s (sekundär) – häufigere Abfragen lieferten keine neuen
+  Werte, sondern übertrugen rund 0,9 GB pro Tag. Gepollt wird nur noch der
+  Gateway-Status (Standard 60 s, einstellbar 15 … 3600 s über die Optionen der
+  Integration). Fällt der Strom aus, wird mit Backoff (1 s → 60 s) neu
+  verbunden; nach drei erfolglosen Versuchen gelten die Entitäten als
+  `unavailable`. Kennt ein älteres Gateway `/api/events` nicht (`404`), fällt die
+  Integration selbsttätig auf zyklisches Abfragen zurück.
+
+### Added
+
+- **Lebenszeichen im SSE-Stream.** `GET /api/events` schickt bei ruhigem Bus
+  alle 30 s eine Kommentarzeile (`: ping`, einstellbar über
+  `Api:SseHeartbeatSeconds`, `0` schaltet sie ab). Ohne sie fällt eine stille
+  Verbindung hinter einem Proxy unbemerkt weg – der Client merkt es erst, wenn
+  er wieder Werte erwartet.
+- **Der Wechsel auf „Wert veraltet" wird als Ereignis gemeldet.** Bisher blieb
+  `MarkStale` für UI und Push-Clients unsichtbar, bis der nächste Wert eintraf –
+  bei einem stündlich gelesenen Item also bis zu eine Stunde lang. Das Ereignis
+  entsteht **einmal** je Fehlerserie, nicht bei jedem fehlgeschlagenen Read.
+- **Options-Flow der Integration.** Das Status-Intervall war bisher fest
+  verdrahtet (kein `OptionsFlow`); jetzt ist es in Home Assistant einstellbar.
 
 ### Removed
 
