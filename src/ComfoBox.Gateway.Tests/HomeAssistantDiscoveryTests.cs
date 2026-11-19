@@ -249,6 +249,65 @@ public sealed class HomeAssistantDiscoveryTests
         Assert.True((double)payload["step"]! > 0);
     }
 
+    /// <summary>
+    /// Ein lesendes Enum wird ein Text-Zustand, keine Zahl.
+    /// </summary>
+    /// <remarks>
+    /// Der Zustand ist im MQTT-Payload der Enum-**Name**. Ohne
+    /// <c>device_class: enum</c> und <c>options</c> zeigt Home Assistant ihn
+    /// zwar an, kann ihn aber nicht einordnen (keine Übersetzung, kein
+    /// Histogramm).
+    /// </remarks>
+    [Fact]
+    public void Ein_Lesendes_Enum_Bekommt_Device_Class_Und_Optionen()
+    {
+        var discovery = CreateDiscovery();
+
+        var item = Catalog.All.First(i => i.Kind == ItemValueKind.Enum && i.IsReadOnly);
+        var payload = discovery.BuildItemPayload(item, writable: false);
+
+        Assert.Equal("enum", payload["device_class"]);
+
+        var optionen = Assert.IsType<string[]>(payload["options"]);
+        Assert.Equal(item.EnumValues.Count, optionen.Length);
+        Assert.False(payload.ContainsKey("state_class"));
+    }
+
+    /// <summary>
+    /// Nur Messgrößen und Zähler tragen eine <c>state_class</c>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Regression (2026-11-19):</b> Jeder gelesene Analogwert bekam
+    /// <c>measurement</c> - auch Testausgänge, Reglertypen und Rohzustände.
+    /// In Home Assistant entstand daraus für jeden dieser Werte eine
+    /// Langzeitstatistik.
+    /// </remarks>
+    [Theory]
+    [InlineData("states.zone.room_temperature", "measurement")]
+    [InlineData("states.counters.heat_pump_operating_cycles", "total_increasing")]
+    [InlineData("status.solar.energy_today", "total_increasing")]
+    [InlineData("tests.outputs_inactive", null)]
+    [InlineData("states.outputs.y1_primary_pump", null)]
+    [InlineData("states.controller.software_version", null)]
+    [InlineData("status.zone.state", null)]
+    public void Nur_Messgroessen_Und_Zaehler_Tragen_Eine_State_Class(
+        string id,
+        string? erwartet)
+    {
+        var discovery = CreateDiscovery();
+
+        var item = Catalog.All.Single(i => i.Id == id);
+        var payload = discovery.BuildItemPayload(item, writable: false);
+
+        if (erwartet is null)
+        {
+            Assert.False(payload.ContainsKey("state_class"), $"{id} trägt eine state_class.");
+            return;
+        }
+
+        Assert.Equal(erwartet, payload["state_class"]);
+    }
+
     [Fact]
     public void Die_Unique_Id_Ist_Stabil_Und_Eindeutig()
     {

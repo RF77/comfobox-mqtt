@@ -49,6 +49,26 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Changed
 
+- **Die HACS-Integration bildet jeden Wert seiner Bedeutung nach ab.** Maßgeblich ist
+  jetzt `role` aus dem Gateway statt `kind`: jeder 0/1-Wert wird **entweder** ein
+  `switch` **oder** ein `binary_sensor` (bisher wurde er als `number` **und** als
+  `switch` angelegt – zwei Entitäten, doppelte Aufzeichnungen), ein Kodewert wie
+  `Cooling` (0/1/3) wird ein `select` statt einer Number, ein Auslöser wie
+  „Warmwasser erhitzen“ ein `button`, ein lesendes Enum ein Text-Sensor. Für die
+  Auswahl werden die Beschriftungen aus der Katalog-Beschreibung gelesen
+  („Leichte Bauweise“ statt 1); geschrieben wird immer die Zahl.
+- **Nur Messgrößen und Zähler erzeugen noch eine Langzeitstatistik.** Bisher trug jeder
+  gelesene Analogwert `state_class: measurement` – auch Testausgänge, Reglertypen und
+  Rohzustände. Betroffen sind **beide** Wege (HACS-Integration und MQTT-Discovery); in
+  der MQTT-Discovery sind lesende Enums jetzt zusätzlich `device_class: enum` mit
+  `options`, also Text statt Zahl.
+- **Testausgänge, expertenpflichtige Einstellungen und stündlich gelesene Werte** werden
+  angelegt, aber standardmäßig ausgeschaltet. `Config/*` ist `entity_category: config`,
+  `Tests/*` und Zähler sind `diagnostic`. Eine gewöhnliche Einstellung wie der
+  Warmwasser-Sollwert bleibt sichtbar.
+- **Keine Luftfeuchte mehr aus Prozentwerten.** Im Katalog sind Prozentwerte
+  Pumpenleistungen, Ventilatorstufen und Raumeinflüsse; auch Kelvin-Werte sind
+  Differenzen. Beides trägt keine Geräteklasse mehr (`humidity`/`temperature` war falsch).
 - **Die Test-Ausgänge stehen auf der Seite „Werte" immer ganz unten.** Bisher
   folgten sie der Katalogreihenfolge und standen an zweiter Stelle, direkt nach
   „Zone". Katalog, MQTT-Topics und Home Assistant bleiben unverändert – nur die
@@ -67,6 +87,13 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Added
 
+- **`GET /api/events` ist jetzt die Push-Schnittstelle für Clienten.** Jedes Ereignis
+  wird sofort geflusht (vorher blieb der Snapshot im Puffer, bis der nächste Wert
+  eintraf), und der Abonnent wird **vor** dem Snapshot registriert – eine Änderung
+  zwischen Snapshot und Registrierung ging vorher verloren.
+- **Das Gateway beschreibt die Bedeutung eines Werts.** `ItemDto` liefert zusätzlich
+  `role`, `priority`, `allowedValues` und `valueLabels`; abgeleitet aus dem Katalog
+  über `ItemSemanticsRules` und `ItemValueLabels` (Domäne, ohne Handpflege).
 - **Lebenszeichen im SSE-Stream.** `GET /api/events` schickt bei ruhigem Bus
   alle 30 s eine Kommentarzeile (`: ping`, einstellbar über
   `Api:SseHeartbeatSeconds`, `0` schaltet sie ab). Ohne sie fällt eine stille

@@ -396,13 +396,28 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
             }
             else
             {
-                payload["state_class"] = StateClassFor(item);
+                var stateClass = StateClassFor(item);
+                if (stateClass is not null)
+                {
+                    payload["state_class"] = stateClass;
+                }
             }
         }
         else if (item.Kind == ItemValueKind.Enum)
         {
             if (writable)
             {
+                payload["options"] = item.EnumValues
+                    .OrderBy(e => e.Key)
+                    .Select(e => e.Value)
+                    .ToArray();
+            }
+            else
+            {
+                // Ein lesendes Enum ist ein Text-Zustand: `device_class: enum`
+                // mit den Vertragsnamen als Optionen. Ohne sie zeigt Home
+                // Assistant eine Zahl, die niemand deuten kann.
+                payload["device_class"] = "enum";
                 payload["options"] = item.EnumValues
                     .OrderBy(e => e.Key)
                     .Select(e => e.Value)
@@ -593,14 +608,37 @@ public sealed class HomeAssistantDiscovery : IMqttConnectionHandler
         };
 
     /// <summary>
-    /// Die <c>state_class</c> eines read-only Analogwerts.
+    /// Die <c>state_class</c> eines read-only Analogwerts (oder <c>null</c>).
     /// </summary>
     /// <param name="item">Das Item.</param>
-    /// <returns><c>total_increasing</c> für kWh-Zähler, sonst <c>measurement</c>.</returns>
-    private static string StateClassFor(ItemDefinition item)
-        => string.Equals(item.Unit, "kWh", StringComparison.Ordinal)
+    /// <returns>
+    /// <c>total_increasing</c> für Zähler und kWh-Stände,
+    /// <c>measurement</c> für Messgrößen - und <c>null</c> für alles, was keine
+    /// Messung ist (Testausgang, Reglertyp, Rohzustand).
+    /// </returns>
+    /// <remarks>
+    /// Ohne diese Einschränkung erzeugte jeder Rohzustand eine
+    /// Langzeitstatistik: „Messwerte" eines Reglertyps machen die
+    /// Statistik-Seite unbrauchbar.
+    /// </remarks>
+    private static string? StateClassFor(ItemDefinition item)
+    {
+        var semantics = ItemSemanticsRules.Of(item);
+
+        if (semantics == ItemSemantics.Counter)
+        {
+            return "total_increasing";
+        }
+
+        if (semantics != ItemSemantics.Measurement)
+        {
+            return null;
+        }
+
+        return string.Equals(item.Unit, "kWh", StringComparison.Ordinal)
             ? "total_increasing"
             : "measurement";
+    }
 
     /// <summary>
     /// Gehört die Gruppe in die Diagnose-Kategorie?

@@ -268,9 +268,11 @@ GET /api/items/zone.set_point_normal
   "id": "zone.set_point_normal",
   "group": "Zone",
   "name": "SetPointNormal",
-  "displayName": "Raumsollwert Normalbetrieb",
-  "description": "Raumsollwert Normalbetrieb der Zone",
+  "displayName": "Raumsollwert normal",
+  "description": "Raumsollwert normal 5.0..30.0",
   "kind": "analog",
+  "role": "setpoint",
+  "priority": "primary",
   "value": 21.5,
   "valueText": "21,5 °C",
   "unit": "°C",
@@ -284,6 +286,17 @@ GET /api/items/zone.set_point_normal
   "stale": false
 }
 ````
+
+> **`kind` vs. `role`:** `kind` sagt, **wie** der Wert kodiert ist (`analog`, `enum`,
+> `date`). `role` sagt, **was** er bedeutet: `measurement`, `setpoint`, `flag`, `code`,
+> `choice`, `counter`, `info`, `command` oder `date`. Erst damit lässt sich eine Zahl
+> richtig darstellen – `Cooling` (0/1/3) ist eine Auswahl, `SoftwareVersion` eine
+> Geräteangabe und `R4ZonePump` ein Zustand, obwohl alle drei als Analogwert ankommen.
+>
+> Ein Kodewert bringt zusätzlich `allowedValues` (die **erlaubte Liste**, nicht nur den
+> Bereich) und `valueLabels` (`{ "1": "Leichte Bauweise" }`, reiner Anzeigetext aus der
+> Beschreibung) mit. `priority` nennt den Leseabstand: `primary` (jeder Zyklus),
+> `secondary`, `slow` (stündlich), `once`, `none`.
 
 > **Hinweis:** `value` ist immer **InvariantCulture** (JSON-Zahlen). `valueText` ist die
 > lokalisierte Darstellung **nur für die Anzeige**.

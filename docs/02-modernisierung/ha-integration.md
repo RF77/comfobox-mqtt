@@ -69,20 +69,47 @@ Die Integration legt **ein** Gerät im Device-Registry an:
 
 ### 3.2 Entitäten-Mapping
 
-Die Zuordnung Item → HA-Plattform ergibt sich **aus den Metadaten** des Gateways:
+Die Zuordnung Item → HA-Plattform ergibt sich **aus den Metadaten** des Gateways.
+Maßgeblich ist `role`, nicht `kind`: eine Zahl kann ein Sollwert, ein Schalter, eine
+Auswahl, ein Zähler oder eine Geräteangabe sein.
 
-| Item-Merkmal | HA-Plattform | Beispiel |
-|---|---|---|
-| `writable = false`, `kind = analog` | `sensor` | `sensor.comfobox_heat_pump_operating_hours` |
-| `writable = true`, `kind = analog`, Min/Max vorhanden | `number` | `number.comfobox_zone_setpoint_normal` |
-| `writable = true`, `kind = analog`, Min/Max **fehlen** | `number` ohne Bereich | `number.comfobox_zone_party_time` |
-| `writable = true`, `kind = enum` | `select` | `select.comfobox_zone_operation_mode` |
-| `writable = false`, `kind = enum` | `sensor` (Zustand = Enum-Name) | `sensor.comfobox_zone_operation_mode_state` |
-| `writable = true`, `kind = analog`, `0…1` | `switch` | `switch.comfobox_warmwater_do_heat_water_now` |
+| `role` | Bedingung | HA-Plattform | Beispiel |
+|---|---|---|---|
+| `setpoint` | schreibbar | `number` (Min/Max aus dem Katalog) | `number.…_raumsollwert_normal` |
+| `setpoint` | nicht schreibbar (Experten-Modus aus) | `sensor` | – |
+| `measurement` | – | `sensor` mit `state_class: measurement` | `sensor.…_raumtemperatur` |
+| `counter` | – | `sensor` mit `state_class: total_increasing` | `sensor.…_schaltspiele` |
+| `info` | – | `sensor` **ohne** Statistik | `sensor.…_softwarestand` |
+| `choice` | schreibbar | `select` mit den Enum-Namen | `select.…_betriebsart` |
+| `choice` | nicht schreibbar | `sensor` mit `device_class: enum` + `options` | `sensor.…_status_wärmepumpe` |
+| `code` | schreibbar | `select` mit den Beschriftungen (sonst Zahlen) | `select.…_lüfterregelung` |
+| `code` | nicht schreibbar | `sensor` mit `device_class: enum` + `options` | – |
+| `flag` | schreibbar | `switch` | `switch.…_sommerknick` |
+| `flag` | nicht schreibbar | `binary_sensor` | `binary_sensor.…_zonenpumpe` |
+| `command` | schreibbar | `button` (schreibt `1`) | `button.…_warmwasser_erhitzen` |
+| `date` | – | **keine Entität** (Befund A20) | – |
 
-> **Feldnamen:** `writable`, `kind` und `stale` sind der REST-Vertrag des Gateways
-> (`ItemDto`). `writable` berücksichtigt den Experten-Modus – ein Experten-Item ohne
-> Experten-Modus kommt als Sensor an.
+> **Genau eine Plattform je Item.** Vorher wurde jeder 0/1-Wert als `number` **und** als
+> `switch` angelegt – zwei Entitäten mit demselben Präfix und jede Zustandsänderung doppelt
+> in der Datenbank.
+>
+> **Feldnamen:** `role`, `priority`, `allowedValues` und `valueLabels` sind der REST-Vertrag
+> des Gateways (`ItemDto`). `writable` berücksichtigt den Experten-Modus – ein Experten-Item
+> ohne Experten-Modus kommt als Sensor an und wird beim Umschalten neu angelegt.
+
+**Auswahlwerte.** Ein Kodewert (`Cooling` 0/1/3) wird zur Auswahl, nicht zur Zahl: die
+Optionen sind die Beschriftungen aus der Katalog-Beschreibung (`1 = „Leichte Bauweise“`),
+sonst die erlaubten Zahlen. Geschrieben wird immer die **Zahl** – die Beschriftung ist
+reiner Anzeigetext. Bei einem Enum bleibt der **Name** der Vertrag, auch beim Schreiben.
+
+**Statistik.** Nur `measurement` und `counter` tragen eine `state_class`. Ein Reglertyp,
+ein Softwarestand oder ein Testausgang ist keine Messung; eine „Messung“ davon füllt nur die
+Datenbank und macht die Statistik-Seite unbrauchbar.
+
+**Standardmäßig ausgeschaltet** (angelegt, aber `disabled_by: integration`): Testausgänge,
+expertenpflichtige Einstellungen und stündlich gelesene Werte (`priority = slow`).
+**Kategorien:** `Config/*` → `config`, `Tests/*` und Zähler → `diagnostic`.
+Eine gewöhnliche Einstellung (Warmwasser-Sollwert) bleibt sichtbar.
 
 **Katalog-Angaben an der Entität.** Home Assistant kennt keinen Tooltip. Beschreibung,
 Bereich und Auswahlwerte stehen deshalb als Attribute im Entitäts-Dialog:
@@ -92,9 +119,11 @@ Bereich und Auswahlwerte stehen deshalb als Attribute im Entitäts-Dialog:
 | `description` | `description` (voller Katalogtext) |
 | `min` / `max` | `min` / `max` (entfällt bei Schaltern) |
 | `enum_values` | `enumValues` als `{ "Zahl": "Name" }` |
+| `value_labels` | `valueLabels` als `{ "Zahl": "Beschriftung" }` |
+| `role`, `read_priority` | `role` / `priority` – erklärt, warum ein Wert alt aussieht |
 
 > **Nicht 1:1 mit dem MQTT-Schema:** Die MQTT-Discovery kennt nur `sensor`/`number`/`select`.
-> Die Integration darf **mehr** anbieten (z. B. `switch` für boolesche Items), weil sie das
+> Die Integration darf **mehr** anbieten (Schalter, Taster, Enum-Sensoren), weil sie das
 > Item-Modell direkt sieht. Das ist einer der Mehrwerte gegenüber der reinen MQTT-Variante.
 
 ### 3.3 Namensschema
@@ -105,7 +134,11 @@ Bereich und Auswahlwerte stehen deshalb als Attribute im Entitäts-Dialog:
 | Anzeigename | `displayName` aus dem Gateway (Titel der Beschreibung), Fallback `name` | „Kühlfunktion" |
 | `unique_id` | `{deviceId}_{itemId}` | `comfobox1_zone_setpoint_normal` |
 | `translation_key` | `{group}_{name}` (für spätere Core-Übernahme) | `zone_setpoint_normal` |
-| Geräteklasse | aus der Einheit abgeleitet | `°C` → `temperature`, `h` → `duration`, `%` → `humidity` |
+| Geräteklasse | aus der Einheit abgeleitet | `°C` → `temperature`, `h` → `duration`, `kWh` → `energy` |
+
+> **Keine Geräteklasse für `%` und `K`:** Im Katalog sind Prozentwerte Pumpenleistungen,
+> Ventilatorstufen und Raumeinflüsse (keine Luftfeuchte); Kelvin-Werte sind immer
+> **Differenzen**. `humidity` bzw. `temperature` wären dort falsch.
 
 > **Wichtig:** Die `entity_id`s werden **nicht** umbenannt, wenn sich der MQTT-Topic ändert –
 > sie leiten sich aus dem **Item-Katalog** ab, nicht aus dem Topic. Das entkoppelt die

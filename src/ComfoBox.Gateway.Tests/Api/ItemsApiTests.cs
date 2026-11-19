@@ -477,6 +477,82 @@ public sealed class ItemsApiTests
     }
 
     /// <summary>
+    /// Die Bedeutung des Werts steht als <c>role</c> in der Antwort.
+    /// </summary>
+    /// <remarks>
+    /// <c>kind</c> sagt nur, **wie** der Wert kodiert ist (Zahl, Enum, Datum).
+    /// Die Home-Assistant-Integration wählt ihre Plattform nach <c>role</c> -
+    /// ohne dieses Feld müsste sie die Bedeutung raten und legte jeden
+    /// 0/1-Wert doppelt an.
+    /// </remarks>
+    [Theory]
+    [InlineData("zone.set_point_normal", "setpoint", "primary")]
+    [InlineData("states.zone.room_temperature", "measurement", "primary")]
+    [InlineData("zone.operation_mode", "choice", "primary")]
+    [InlineData("states.outputs.r4_zone_pump", "flag", "primary")]
+    [InlineData("config.energy_comsumer.cooling_zone.cooling", "code", "secondary")]
+    [InlineData("states.counters.heat_pump_operating_cycles", "counter", "secondary")]
+    [InlineData("states.controller.controller_type", "info", "once")]
+    [InlineData("warmwater.do_heat_water_now", "command", "none")]
+    public async Task Die_Rolle_Steht_In_Der_Antwort(
+        string id,
+        string role,
+        string priority)
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var item = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.GetAsync($"/api/items/{id}"));
+
+        Assert.Equal(role, item.GetProperty("role").GetString());
+        Assert.Equal(priority, item.GetProperty("priority").GetString());
+    }
+
+    /// <summary>
+    /// Ein Kodewert liefert seine erlaubten Werte und deren Beschriftungen.
+    /// </summary>
+    /// <remarks>
+    /// <c>Cooling</c> erlaubt 0, 1 und 3 - der Bereich 0…3 allein würde den
+    /// Wert 2 zulassen, den das Gerät nicht kennt.
+    /// </remarks>
+    [Fact]
+    public async Task Ein_Kodewert_Liefert_Werteliste_Und_Beschriftungen()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var cooling = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.GetAsync("/api/items/config.energy_comsumer.cooling_zone.cooling"));
+
+        Assert.Equal("code", cooling.GetProperty("role").GetString());
+        Assert.Equal(
+            [0d, 1d, 3d],
+            cooling.GetProperty("allowedValues").EnumerateArray().Select(v => v.GetDouble()).ToArray());
+
+        // Beschriftungen dürfen fehlen - sie sind Anzeigetext, kein Vertrag.
+        var traegheit = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.GetAsync("/api/items/config.energy_comsumer.zone.gebäudeträgheit"));
+
+        var labels = traegheit.GetProperty("valueLabels");
+        Assert.Equal("Leichte Bauweise", labels.GetProperty("1").GetString());
+        Assert.Equal("Schwere Bauweise", labels.GetProperty("3").GetString());
+    }
+
+    /// <summary>
+    /// Ein Enum trägt keine geparsten Beschriftungen - sein Name ist der Vertrag.
+    /// </summary>
+    [Fact]
+    public async Task Ein_Enum_Traegt_Keine_Zusaetzlichen_Beschriftungen()
+    {
+        await using var fixture = await GatewayApiFixture.StartAsync();
+
+        var item = await GatewayApiFixture.ReadJsonAsync(
+            await fixture.Client.GetAsync("/api/items/zone.operation_mode"));
+
+        Assert.Equal("choice", item.GetProperty("role").GetString());
+        Assert.Empty(item.GetProperty("valueLabels").EnumerateObject());
+    }
+
+    /// <summary>
     /// Erzeugt einen JSON-Body.
     /// </summary>
     private static StringContent Json(string body) => new(body, Encoding.UTF8, "application/json");

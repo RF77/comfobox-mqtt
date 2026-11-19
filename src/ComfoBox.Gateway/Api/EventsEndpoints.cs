@@ -28,8 +28,20 @@ internal static class EventsEndpoints
                 IOptions<ApiOptions> options,
                 CancellationToken cancellationToken) =>
             {
+                // Der Abonnent wird beim **ersten** Schritt des Iterators
+                // synchron registriert. Deshalb entsteht er, bevor der
+                // Snapshot geschrieben wird: sonst ginge eine Änderung
+                // verloren, die genau zwischen Snapshot und Registrierung
+                // passiert - der Client sähe den alten Wert bis zur nächsten
+                // Änderung.
+                var enumerator = cache
+                    .SubscribeAsync(cancellationToken)
+                    .GetAsyncEnumerator(cancellationToken);
+
                 try
                 {
+                    var pending = enumerator.MoveNextAsync().AsTask();
+
                     await SseWriter.PrepareAsync(context, cancellationToken).ConfigureAwait(false);
 
                     // Der Snapshot: alle aktuell bekannten Werte, einmalig.
@@ -37,36 +49,28 @@ internal static class EventsEndpoints
                         .Select(CachedValueDto.From)
                         .ToArray();
 
-                    await SseWriter.WriteAsync(context, "snapshot", snapshot, cancellationToken).ConfigureAwait(false);
+                    await SseWriter.WriteAsync(context, "snapshot", snapshot, cancellationToken)
+                        .ConfigureAwait(false);
 
                     var heartbeat = TimeSpan.FromSeconds(options.Value.SseHeartbeatSeconds);
-                    if (heartbeat > TimeSpan.Zero)
-                    {
-                        await StreamWithHeartbeatAsync(context, cache, heartbeat, cancellationToken)
-                            .ConfigureAwait(false);
-                        return;
-                    }
 
-                    // Danach nur noch die Änderungen.
-                    await foreach (var value in cache.SubscribeAsync(cancellationToken).ConfigureAwait(false))
-                    {
-                        await SseWriter.WriteAsync(
-                            context,
-                            "value",
-                            CachedValueDto.From(value),
-                            cancellationToken).ConfigureAwait(false);
-                    }
+                    await PumpAsync(context, enumerator, pending, heartbeat, cancellationToken)
+                        .ConfigureAwait(false);
                 }
                 catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
                 {
                     // Der Client hat die Verbindung geschlossen (oder der Host
-                    // fährt herunter). Der Abonnent wird in `ValueCache`
-                    // abgemeldet - hier ist nichts zu tun.
+                    // fährt herunter). Der Abonnent wird beim Entsorgen des
+                    // Iterators abgemeldet.
                 }
                 catch (IOException)
                 {
                     // Die Gegenstelle ist weg, ohne den Request abzubrechen
                     // (abgerissene TCP-Verbindung).
+                }
+                finally
+                {
+                    await enumerator.DisposeAsync().ConfigureAwait(false);
                 }
             })
             .WithTags("Ereignisse")
@@ -74,65 +78,56 @@ internal static class EventsEndpoints
     }
 
     /// <summary>
-    /// Schreibt die Wertänderungen und dazwischen ein Lebenszeichen.
+    /// Schreibt die Wertänderungen - und dazwischen ein Lebenszeichen.
     /// </summary>
     /// <param name="context">Der HTTP-Kontext.</param>
-    /// <param name="cache">Der Wert-Cache.</param>
-    /// <param name="heartbeat">Der Abstand der Lebenszeichen.</param>
+    /// <param name="enumerator">Der laufende Abonnent.</param>
+    /// <param name="pending">Der bereits gestartete erste Schritt des Iterators.</param>
+    /// <param name="heartbeat">Der Abstand der Lebenszeichen (<c>0</c> = aus).</param>
     /// <param name="cancellationToken">Abbruchsignal.</param>
     /// <returns>Aufgabe, die den Stream abschließt.</returns>
     /// <remarks>
     /// Das Lebenszeichen darf kein Ereignis verschlucken: das Warten auf den
-    /// nächsten Wert läuft **weiter**, während der Timer abläuft. Deshalb wird
-    /// das eine Warten nicht abgebrochen, sondern gegen den Timer „gerannt“.
+    /// nächsten Wert läuft **weiter**, während der Timer abläuft - es wird
+    /// gegen ihn „gerannt“, nicht abgebrochen.
     /// </remarks>
-    private static async Task StreamWithHeartbeatAsync(
+    private static async Task PumpAsync(
         HttpContext context,
-        IValueCache cache,
+        IAsyncEnumerator<CachedValue> enumerator,
+        Task<bool> pending,
         TimeSpan heartbeat,
         CancellationToken cancellationToken)
     {
-        var enumerator = cache
-            .SubscribeAsync(cancellationToken)
-            .GetAsyncEnumerator(cancellationToken);
-
-        try
+        while (!cancellationToken.IsCancellationRequested)
         {
-            var pending = enumerator.MoveNextAsync().AsTask();
+            var valueAvailable = pending;
 
-            while (!cancellationToken.IsCancellationRequested)
+            if (heartbeat > TimeSpan.Zero)
             {
                 var tick = Task.Delay(heartbeat, cancellationToken);
                 var finished = await Task.WhenAny(pending, tick).ConfigureAwait(false);
 
-                if (finished == pending)
+                if (finished != pending)
                 {
-                    if (!await pending.ConfigureAwait(false))
-                    {
-                        // Der Cache hat den Abonnenten beendet (Shutdown).
-                        break;
-                    }
-
-                    var value = enumerator.Current;
-                    pending = enumerator.MoveNextAsync().AsTask();
-
-                    await SseWriter.WriteAsync(
-                        context,
-                        "value",
-                        CachedValueDto.From(value),
-                        cancellationToken).ConfigureAwait(false);
-
+                    // Der Timer ist abgelaufen (`await` wirft bei Abbruch).
+                    await tick.ConfigureAwait(false);
+                    await SseWriter.WriteCommentAsync(context, "ping", cancellationToken)
+                        .ConfigureAwait(false);
                     continue;
                 }
-
-                // Der Timer ist abgelaufen (`await` wirft bei Abbruch).
-                await tick.ConfigureAwait(false);
-                await SseWriter.WriteCommentAsync(context, "ping", cancellationToken).ConfigureAwait(false);
             }
-        }
-        finally
-        {
-            await enumerator.DisposeAsync().ConfigureAwait(false);
+
+            if (!await valueAvailable.ConfigureAwait(false))
+            {
+                // Der Cache hat den Abonnenten beendet (Shutdown).
+                return;
+            }
+
+            var value = enumerator.Current;
+            pending = enumerator.MoveNextAsync().AsTask();
+
+            await SseWriter.WriteAsync(context, "value", CachedValueDto.From(value), cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 }

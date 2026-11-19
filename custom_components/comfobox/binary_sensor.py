@@ -1,7 +1,11 @@
-"""Binary-Sensor-Plattform der ComfoBox-Integration (Sonder-Entitaeten).
+"""Binary-Sensor-Plattform der ComfoBox-Integration.
 
-Diese Entitaeten stammen nicht aus dem Item-Katalog, sondern aus dem
-Gateway-Status (`/api/status`).
+Zwei Quellen:
+
+* der **Gateway-Status** (`/api/status`) – BACnet- und Broker-Verbindung,
+* die **0/1-Zustände** des Katalogs – Ausgänge (`R1`…`R10`, `Y1`, `Y2`),
+  Testausgänge und Freigaben. Sie sind Meldungen, keine Messwerte, und
+  erzeugen deshalb keine Statistik.
 """
 
 from __future__ import annotations
@@ -20,8 +24,10 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import device_info
+from .api import ComfoBoxItem
 from .const import STATUS_KEY
 from .coordinator import ComfoBoxCoordinator
+from .entity import ComfoBoxEntity, slugify
 
 DESCRIPTIONS: tuple[BinarySensorEntityDescription, ...] = (
     BinarySensorEntityDescription(
@@ -49,10 +55,47 @@ async def async_setup_entry(
     status = await coordinator.client.get_status()
     info = device_info(entry, status)
 
-    async_add_entities(
+    entities: list[Any] = [
         ComfoBoxStatusBinarySensor(coordinator, info, description)
         for description in DESCRIPTIONS
+    ]
+
+    for item in coordinator.data.values():
+        # Der Status liegt unter dem reservierten Schluessel - er ist kein Item.
+        if not isinstance(item, ComfoBoxItem):
+            continue
+
+        if item.platform != "binary_sensor":
+            continue
+
+        entities.append(
+            ComfoBoxFlagBinarySensor(coordinator, item, info, _description(item))
+        )
+
+    async_add_entities(entities)
+
+
+def _description(item: ComfoBoxItem) -> BinarySensorEntityDescription:
+    """Erzeugt die Entity-Beschreibung eines 0/1-Zustands."""
+    return BinarySensorEntityDescription(
+        key=item.id,
+        name=item.display_name,
+        translation_key=slugify(f"{item.group}_{item.name}"),
+        # Ein Ausgang ist ein laufender Zustand, keine Störung.
+        device_class=BinarySensorDeviceClass.RUNNING,
     )
+
+
+class ComfoBoxFlagBinarySensor(ComfoBoxEntity, BinarySensorEntity):
+    """Ein lesender 0/1-Zustand aus dem Katalog."""
+
+    @property
+    def is_on(self) -> bool | None:
+        """Ist der Zustand aktiv?"""
+        value = self.item.value
+        if value is None:
+            return None
+        return float(value) != 0.0
 
 
 class ComfoBoxStatusBinarySensor(

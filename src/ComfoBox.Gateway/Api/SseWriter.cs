@@ -28,6 +28,11 @@ public static class SseWriter
         await context.Response
             .WriteAsync($"event: {eventName}\ndata: {json}\n\n", cancellationToken)
             .ConfigureAwait(false);
+
+        // Ohne den Flush bleibt das Ereignis im Puffer, bis die Nutzlast eine
+        // Puffergrenze erreicht - der Client sähe den Snapshot erst mit der
+        // nächsten Wertänderung (oder gar nicht).
+        await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -42,14 +47,17 @@ public static class SseWriter
     /// Client keinen Handler aus, hält aber die TCP-Verbindung offen. Ohne sie
     /// fällt ein stiller Stream hinter einem Proxy unbemerkt weg.
     /// </remarks>
-    public static Task WriteCommentAsync(
+    public static async Task WriteCommentAsync(
         HttpContext context,
         string comment,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        return context.Response.WriteAsync($": {comment}\n\n", cancellationToken);
+        await context.Response
+            .WriteAsync($": {comment}\n\n", cancellationToken)
+            .ConfigureAwait(false);
+        await context.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

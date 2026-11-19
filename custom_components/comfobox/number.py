@@ -1,4 +1,4 @@
-"""Number-Plattform der ComfoBox-Integration (schreibbare Analogwerte)."""
+"""Number-Plattform der ComfoBox-Integration (schreibbare Sollwerte)."""
 
 from __future__ import annotations
 
@@ -30,8 +30,11 @@ async def async_setup_entry(
         if not isinstance(item, ComfoBoxItem):
             continue
 
-        if item.is_read_only or item.is_enum:
+        # Nur Sollwerte mit Einheit. Alles andere ist ein Schalter, eine
+        # Auswahl, ein Taster oder ein Sensor - die Plattform entscheidet.
+        if item.platform != "number":
             continue
+
         entities.append(ComfoBoxNumber(coordinator, item, info, _description(item)))
 
     async_add_entities(entities)
@@ -49,14 +52,28 @@ def _description(item: ComfoBoxItem) -> NumberEntityDescription:
         translation_key=slugify(f"{item.group}_{item.name}"),
         native_min_value=item.min_value,
         native_max_value=item.max_value,
-        native_step=0.1,
+        native_step=_step(item),
         native_unit_of_measurement=item.unit,
         mode="box",
     )
 
 
+def _step(item: ComfoBoxItem) -> float:
+    """Die Schrittweite im Eingabefeld.
+
+    Ein Temperatursollwert wird in Zehnteln gesetzt, ein Zeitraum in Stunden
+    dagegen in ganzen Schritten - sonst steht im Feld „2,0 h" für eine
+    Partytime von zwei Stunden.
+    """
+    if item.unit in ("°C", "K"):
+        return 0.1
+    if item.min_value is not None and item.max_value is not None:
+        return 1.0 if item.max_value - item.min_value > 5 else 0.5
+    return 0.5
+
+
 class ComfoBoxNumber(ComfoBoxEntity, NumberEntity):
-    """Ein schreibbarer Analogwert."""
+    """Ein schreibbarer Sollwert."""
 
     async def async_set_native_value(self, value: float) -> None:
         """Schreibt den Wert. Der Schreibschutz liegt im Gateway."""

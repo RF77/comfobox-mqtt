@@ -103,8 +103,10 @@ def mock_status():
 def mock_items():
     """Ein simulierter Item-Katalog.
 
-    Die Feldnamen sind der **echte** REST-Vertrag des Gateways
-    (`kind`, `writable`, `stale`, `enumValues` als Objekt).
+    Die Feldnamen sind der **echte** REST-Vertrag des Gateways: ``kind``,
+    ``role``, ``writable``, ``stale``, ``enumValues`` und ``valueLabels``.
+    ``role`` entscheidet über die Plattform – fehlt sie, fällt die Integration
+    auf eine eigene Ableitung zurück und prüft damit nur sich selbst.
     """
     return [
         {
@@ -114,6 +116,8 @@ def mock_items():
             "displayName": "Zone: Raumsollwert normal",
             "description": "Raumsollwert Normal",
             "kind": "analog",
+            "role": "setpoint",
+            "priority": "primary",
             "valueText": "21,5 °C",
             "unit": "°C",
             "writable": True,
@@ -131,6 +135,8 @@ def mock_items():
             "displayName": "Zone: Betriebsart",
             "description": "Betriebsart",
             "kind": "enum",
+            "role": "choice",
+            "priority": "primary",
             "valueText": "Normal",
             "unit": None,
             "writable": True,
@@ -146,6 +152,8 @@ def mock_items():
             "displayName": "States: Betriebsstunden Wärmepumpe",
             "description": "Betriebsstunden Wärmepumpe",
             "kind": "analog",
+            "role": "measurement",
+            "priority": "secondary",
             "valueText": "12345 h",
             "unit": "h",
             "writable": False,

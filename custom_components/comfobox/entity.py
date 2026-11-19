@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.const import EntityCategory
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -12,11 +13,55 @@ from .api import ComfoBoxItem
 from .const import STATUS_KEY
 from .coordinator import ComfoBoxCoordinator
 
+#: Gruppen, die reine Diagnose sind (Testausgänge, Zähler).
+DIAGNOSTIC_GROUPS: tuple[str, ...] = ("Tests", "States/Counters", "Status/Counters")
+
+#: Gruppen, deren Werte die Anlage verstellen – sie sind Konfiguration.
+CONFIG_GROUP_PREFIX: str = "Config/"
+
 
 def slugify(value: str) -> str:
     """Wandelt einen Namen in snake_case."""
     cleaned = "".join(ch if ch.isalnum() else "_" for ch in value)
     return "_".join(part for part in cleaned.split("_") if part)
+
+
+def entity_category(item: ComfoBoxItem) -> EntityCategory | None:
+    """Die Kategorie einer Entität (oder ``None``).
+
+    * `Config/*` – die Anlage verstellende Parameter (Konfiguration)
+    * `Tests/*`, Zähler – reine Diagnose
+
+    Messwerte und Zustände bleiben in der normalen Liste; sonst wäre die
+    Raumtemperatur unter „Diagnose" versteckt.
+    """
+    if item.group.startswith(CONFIG_GROUP_PREFIX):
+        return EntityCategory.CONFIG
+
+    if any(item.group.startswith(group) for group in DIAGNOSTIC_GROUPS):
+        return EntityCategory.DIAGNOSTIC
+
+    return None
+
+
+def is_expert_hidden(item: ComfoBoxItem) -> bool:
+    """Wird die Entität standardmäßig ausgeschaltet angelegt?
+
+    Spiegelt die MQTT-Discovery: Testausgänge, **expertenpflichtige**
+    Einstellungen und stündlich gelesene Werte erzeugen sonst Hunderte
+    Entitäten und Aufzeichnungen, die niemand braucht.
+
+    Eine gewöhnliche Einstellung wie der Warmwasser-Sollwert bleibt sichtbar -
+    nur Werte, die der Regler ohnehin nur im Experten-Modus freigibt, sind
+    ausgeschaltet.
+    """
+    if item.group.startswith("Tests"):
+        return True
+
+    if item.writable and item.requires_expert_mode:
+        return True
+
+    return item.priority == "slow"
 
 
 class ComfoBoxEntity(CoordinatorEntity[ComfoBoxCoordinator]):
@@ -37,6 +82,17 @@ class ComfoBoxEntity(CoordinatorEntity[ComfoBoxCoordinator]):
         self._attr_unique_id = f"{self._device_id}_{item.id}"
         self._attr_device_info = device_info
         self.entity_description = description
+
+        category = entity_category(item)
+        if category is not None:
+            self._attr_entity_category = category
+
+        # Ein Test-Ausgang, ein Experten-Parameter oder ein stündlich
+        # gelesener Wert soll die Entitätsliste nicht fluten: er wird
+        # angelegt, aber standardmäßig ausgeschaltet. Der Nutzer schaltet ihn
+        # bewusst ein - dann erst entstehen Aufzeichnungen.
+        if is_expert_hidden(item):
+            self._attr_entity_registry_enabled_default = False
 
     @property
     def _device_id(self) -> str:
@@ -59,13 +115,16 @@ class ComfoBoxEntity(CoordinatorEntity[ComfoBoxCoordinator]):
         """Die Katalog-Metadaten des Werts.
 
         Home Assistant kennt keinen Tooltip. Damit die Beschreibung, der
-        erlaubte Bereich und die Enum-Werte trotzdem sichtbar sind, stehen sie
-        im Dialog der Entitaet unter „Attribute". `min`/`max` und `options`
+        erlaubte Bereich und die Auswahlwerte trotzdem sichtbar sind, stehen
+        sie im Dialog der Entitaet unter „Attribute". `min`/`max` und `options`
         zeigen Number und Select ohnehin schon an - hier kommen sie fuer
         Sensoren und Schalter hinzu.
+
+        Die Rolle und das Leseverhalten stehen ebenfalls dabei: „slow" erklärt,
+        warum ein Wert alt aussieht.
         """
         item = self.item
-        attributes: dict[str, Any] = {}
+        attributes: dict[str, Any] = {"role": item.role, "read_priority": item.priority}
 
         if item.description:
             attributes["description"] = item.description
@@ -82,18 +141,25 @@ class ComfoBoxEntity(CoordinatorEntity[ComfoBoxCoordinator]):
                 str(number): name for number, name in item.enum_values.items()
             }
 
+        if item.value_labels:
+            attributes["value_labels"] = {
+                str(number): label for number, label in item.value_labels.items()
+            }
+
         return attributes
 
     @property
     def native_value(self) -> Any:
         """Der Wert aus dem Coordinator-Cache.
 
-        Enum-Werte traegt das Gateway als Namen (`valueText`) - die Zahl waere
-        als Zustand unbrauchbar.
+        Auswahlwerte tragen Text: bei einem Enum den Vertragsnamen, bei einem
+        Kodewert die Beschriftung aus dem Katalog (sonst die Zahl). Messgrößen,
+        Zähler und Reglerangaben bleiben Zahlen.
         """
         item = self.item
 
-        if item.is_enum:
-            return item.enum_name
+        text = item.state_text
+        if text is not None:
+            return text
 
         return item.value

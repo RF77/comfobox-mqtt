@@ -24,11 +24,17 @@ HACS → Integration → ComfoBox → Hinzufügen
 
 | Plattform | Inhalt |
 |---|---|
-| `sensor` | alle schreibgeschützten Analog- und Enum-Werte |
-| `number` | alle schreibbaren Analog-Werte mit **exaktem** Min/Max aus dem Katalog |
-| `select` | alle schreibbaren Enum-Werte mit den **exakten** Enum-Namen |
+| `sensor` | Messgrößen, Zähler, Reglerangaben und lesende Auswahlwerte (als Text) |
+| `number` | schreibbare Sollwerte mit **exaktem** Min/Max aus dem Katalog |
+| `select` | schreibbare Enum- und Kodewerte (Beschriftung aus dem Katalog, geschrieben wird die Zahl) |
 | `switch` | schreibbare 0/1-Werte |
-| `binary_sensor` | BACnet-Verbindung, Broker-Verbindung |
+| `button` | Auslöser wie „Warmwasser erhitzen“ |
+| `binary_sensor` | lesende 0/1-Zustände (Ausgänge, Freigaben), BACnet- und Broker-Verbindung |
+
+> **Genau eine Entität je Wert.** Ein 0/1-Wert ist ein `switch` **oder** ein
+> `binary_sensor` – nie beides. Nur Messgrößen und Zähler erzeugen eine
+> Langzeitstatistik; Testausgänge und expertenpflichtige Einstellungen sind
+> standardmäßig ausgeschaltet.
 
 ## Wichtige Eigenschaften
 

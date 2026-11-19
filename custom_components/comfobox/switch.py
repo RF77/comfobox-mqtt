@@ -30,8 +30,9 @@ async def async_setup_entry(
         if not isinstance(item, ComfoBoxItem):
             continue
 
-        if item.is_read_only or not item.is_boolean:
+        if item.platform != "switch":
             continue
+
         entities.append(ComfoBoxSwitch(coordinator, item, info, _description(item)))
 
     async_add_entities(entities)

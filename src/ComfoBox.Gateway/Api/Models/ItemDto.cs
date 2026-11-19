@@ -133,6 +133,56 @@ public sealed record ItemDto
         new Dictionary<int, string>();
 
     /// <summary>
+    /// Die Bedeutung des Werts: <c>measurement</c>, <c>setpoint</c>, <c>flag</c>,
+    /// <c>code</c>, <c>choice</c>, <c>counter</c>, <c>info</c>, <c>command</c>
+    /// oder <c>date</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Kind"/> sagt nur, **wie** der Wert kodiert ist - <c>role</c>
+    /// sagt, **was** er bedeutet. Die Home-Assistant-Integration wählt daraus
+    /// die Plattform (Sensor, Schalter, Auswahl, Zahl oder Taster) und
+    /// entscheidet, ob der Wert eine Langzeitstatistik erzeugen darf.
+    /// </para>
+    /// <para>
+    /// Abgeleitet aus dem Katalog über <see cref="ItemSemanticsRules.Of"/>.
+    /// </para>
+    /// </remarks>
+    public required string Role { get; init; }
+
+    /// <summary>
+    /// Die Lese-Priorität: <c>primary</c> (jeder Zyklus), <c>secondary</c>,
+    /// <c>slow</c> (stündlich), <c>once</c> oder <c>none</c>.
+    /// </summary>
+    /// <remarks>
+    /// Sie bestimmt, wie alt ein Wert im schlechtesten Fall ist. Die
+    /// Integration nutzt sie, um selten gelesene Werte standardmäßig
+    /// ausgeschaltet anzulegen.
+    /// </remarks>
+    public required string Priority { get; init; }
+
+    /// <summary>
+    /// Die erlaubten Werte eines Auswahl-Parameters (oder <c>null</c>).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Min"/> und <see cref="Max"/> sind ein **Bereich**, keine
+    /// Werteliste: <c>Cooling</c> erlaubt 0…3, das Gerät kennt aber nur 0, 1
+    /// und 3. Ein Schreibvorgang mit 2 wird vom Gateway abgelehnt.
+    /// </remarks>
+    public IReadOnlyList<float>? AllowedValues { get; init; }
+
+    /// <summary>
+    /// Die Beschriftungen der erlaubten Werte (Zahl → Text).
+    /// </summary>
+    /// <remarks>
+    /// Reiner Anzeigetext aus der Katalog-Beschreibung („Leichte Bauweise" für
+    /// 1) - <b>kein</b> Vertrag und nur bei <c>role = code</c> gefüllt. Fehlt
+    /// eine Beschriftung, bleibt es bei der Zahl.
+    /// </remarks>
+    public IReadOnlyDictionary<int, string> ValueLabels { get; init; } =
+        new Dictionary<int, string>();
+
+    /// <summary>
     /// Erzeugt die Beschreibung eines Items.
     /// </summary>
     /// <param name="item">Das Item.</param>
@@ -152,6 +202,7 @@ public sealed record ItemDto
         ArgumentNullException.ThrowIfNull(topics);
 
         var writable = item.IsWritableWithExpertMode(expertModeEnabled);
+        var role = ItemSemanticsRules.Of(item);
 
         return new ItemDto
         {
@@ -174,7 +225,98 @@ public sealed record ItemDto
             Stale = cached?.IsStale ?? false,
             UnavailableReason = unavailableReason,
             EnumValues = item.EnumValues,
+            Role = RoleOf(role),
+            Priority = PriorityOf(item.Priority),
+            AllowedValues = item.AllowedValues,
+            ValueLabels = LabelsOf(item, role),
         };
+    }
+
+    /// <summary>
+    /// Der Name der Rolle für den REST-Vertrag.
+    /// </summary>
+    private static string RoleOf(ItemSemantics semantics) => semantics switch
+    {
+        ItemSemantics.Measurement => "measurement",
+        ItemSemantics.Setpoint => "setpoint",
+        ItemSemantics.Flag => "flag",
+        ItemSemantics.Code => "code",
+        ItemSemantics.Choice => "choice",
+        ItemSemantics.Counter => "counter",
+        ItemSemantics.Command => "command",
+        ItemSemantics.Date => "date",
+        _ => "info",
+    };
+
+    /// <summary>
+    /// Der Name der Lese-Priorität für den REST-Vertrag.
+    /// </summary>
+    private static string PriorityOf(RefreshPriority priority) => priority switch
+    {
+        RefreshPriority.Primary => "primary",
+        RefreshPriority.Slow => "slow",
+        RefreshPriority.Once => "once",
+        RefreshPriority.None => "none",
+        _ => "secondary",
+    };
+
+    /// <summary>
+    /// Die Beschriftungen der erlaubten Werte - nur für Kodewerte.
+    /// </summary>
+    /// <remarks>
+    /// Bei einem Enum ist der Name im <c>enumValues</c>-Objekt bereits der
+    /// Vertrag; bei allen anderen Rollen gibt es nichts zu beschriften.
+    /// Treffer außerhalb der erlaubten Werte werden verworfen (Schreibschutz
+    /// bleibt die Wahrheit).
+    /// </remarks>
+    private static IReadOnlyDictionary<int, string> LabelsOf(
+        ItemDefinition item,
+        ItemSemantics role)
+    {
+        if (role != ItemSemantics.Code)
+        {
+            return new Dictionary<int, string>();
+        }
+
+        var labels = ItemValueLabels.FromDescription(item.Description);
+        if (labels.Count == 0)
+        {
+            return labels;
+        }
+
+        var allowed = AllowedNumbers(item);
+        if (allowed is null)
+        {
+            return labels;
+        }
+
+        return labels
+            .Where(entry => allowed.Contains(entry.Key))
+            .ToDictionary(entry => entry.Key, entry => entry.Value);
+    }
+
+    /// <summary>
+    /// Die Zahlenwerte, die das Item überhaupt annehmen darf (oder <c>null</c>).
+    /// </summary>
+    private static HashSet<int>? AllowedNumbers(ItemDefinition item)
+    {
+        if (item.AllowedValues is { Count: > 0 } values)
+        {
+            return [.. values.Select(value => (int)value)];
+        }
+
+        if (item.Min is null || item.Max is null || !ItemSemanticsRules.IsCodeRange(item))
+        {
+            return null;
+        }
+
+        var numbers = new HashSet<int>();
+        for (var number = (int)item.Min.Value; number <= (int)item.Max.Value; number++)
+        {
+            numbers.Add(number);
+        }
+
+        return numbers;
     }
 
     /// <summary>
