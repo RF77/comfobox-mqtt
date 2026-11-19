@@ -307,8 +307,13 @@ jobs:
       - name: Format (ruff)
         run: ruff format --check custom_components/comfobox
 
+      # `python -m pytest`, **nicht** `pytest`: nur so liegt das
+      # Repository-Wurzelverzeichnis in `sys.path` und der Import
+      # `custom_components.comfobox` funktioniert. Ein nacktes `pytest`
+      # scheitert mit "No module named 'custom_components'" - genau das ist
+      # beim ersten Lauf dieses Jobs passiert.
       - name: Test (pytest)
-        run: pytest custom_components/comfobox/tests -q
+        run: python -m pytest custom_components/comfobox/tests -q
 
       # Prüft Manifest, Translations, Abhängigkeiten und die Verzeichnisstruktur
       # mit demselben Werkzeug, das auch der Release-Job nutzt. Das Image ist
