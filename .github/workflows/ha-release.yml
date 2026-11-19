@@ -29,7 +29,7 @@ permissions:
 
 jobs:
   validate:
-    name: Versionen prüfen (HACS + Add-on)
+    name: Versionen prüfen (Tag, Integration, Add-on, SPK, Gateway)
     runs-on: ubuntu-latest
     outputs:
       integration: ${{ steps.version.outputs.integration }}
@@ -43,17 +43,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          INTEGRATION=$(jq -r .version custom_components/comfobox/manifest.json)
+          # Kein `jq`: die Datei hat genau ein `"version"`-Feld, und grep/sed
+          # sind auf jedem Läufer und in der Git-Bash vorhanden.
+          INTEGRATION=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]*"' \
+            custom_components/comfobox/manifest.json | head -1 \
+            | sed -E 's/.*"([^"]*)"$/\1/')
           ADDON=$(grep -E '^version:' deploy/ha-addon/comfobox/config.yaml \
             | head -1 | sed -E 's/^version:[[:space:]]*"?([^"]*)"?[[:space:]]*$/\1/')
           IMAGE=$(grep -E '^image:' deploy/ha-addon/comfobox/config.yaml \
             | head -1 | sed -E 's/^image:[[:space:]]*"([^"]*)".*$/\1/')
+          SPK=$(tr -d '[:space:]' < deploy/synology-spk/src/VERSION)
+          GATEWAY=$(grep -oE '<Version>[^<]+</Version>' src/Directory.Build.props \
+            | head -1 | sed -E 's#</?Version>##g')
 
-          echo "Integration (manifest.json): ${INTEGRATION}"
-          echo "Add-on      (config.yaml) : ${ADDON}"
-          echo "Image      (config.yaml) : ${IMAGE}"
+          echo "Integration (manifest.json)    : ${INTEGRATION}"
+          echo "Add-on      (config.yaml)     : ${ADDON}"
+          echo "Image       (config.yaml)     : ${IMAGE}"
+          echo "SPK         (src/VERSION)     : ${SPK}"
+          echo "Gateway     (Build.props)     : ${GATEWAY}"
 
-          if [ -z "${INTEGRATION}" ] || [ -z "${ADDON}" ]; then
+          if [ -z "${INTEGRATION}" ] || [ -z "${ADDON}" ] \
+            || [ -z "${SPK}" ] || [ -z "${GATEWAY}" ]; then
             echo "::error::Die Versionen konnten nicht gelesen werden."
             exit 1
           fi
@@ -66,15 +76,30 @@ jobs:
             EXPECTED="${GITHUB_REF_NAME#v}"
           fi
 
-          if [ "${EXPECTED}" != "${INTEGRATION}" ]; then
-            echo "::error::Der Tag (${EXPECTED}) passt nicht zur Version der Integration (${INTEGRATION})."
-            exit 1
-          fi
+          # **Ein** Tag löst **alle** Release-Workflows aus. Weicht eine der
+          # fünf Stellen ab, entsteht ein Paket mit der falschen Version:
+          #
+          #   * Integration  → HACS findet den Tag nicht (Release-Tag = version)
+          #   * Add-on       → der Supervisor findet das Image nicht
+          #   * SPK          → das Paketcenter weist das Paket ab
+          #   * Gateway      → `ComfoBox/Version` meldet eine falsche Version
+          #     (so meldete das Image :1.0.3 die Version 1.0.1)
+          #
+          # Deshalb bricht der Lauf bei der **ersten** Abweichung ab - erst
+          # nachdem alle fünf Werte im Log stehen.
+          FAILED=0
 
-          if [ "${EXPECTED}" != "${ADDON}" ]; then
-            echo "::error::Der Tag (${EXPECTED}) passt nicht zur Version des Add-ons (${ADDON})."
-            exit 1
-          fi
+          check() {
+            if [ "${EXPECTED}" != "$2" ]; then
+              echo "::error::Der Tag (${EXPECTED}) passt nicht zu $1 (${2:-leer})."
+              FAILED=1
+            fi
+          }
+
+          check "der Integration (manifest.json)" "${INTEGRATION}"
+          check "dem Add-on (config.yaml)" "${ADDON}"
+          check "der SPK (deploy/synology-spk/src/VERSION)" "${SPK}"
+          check "dem Gateway (src/Directory.Build.props)" "${GATEWAY}"
 
           # Der Supervisor zieht das Image mit dem Versions-Tag - ohne ihn
           # findet er das Image nicht.
@@ -82,9 +107,14 @@ jobs:
             *":${ADDON}") ;;
             *)
               echo "::error::Das Image (${IMAGE}) traegt nicht den Versions-Tag des Add-ons (:${ADDON})."
-              exit 1
+              FAILED=1
               ;;
           esac
+
+          if [ "${FAILED}" -ne 0 ]; then
+            echo "::error::Bitte alle fuenf Stellen auf ${EXPECTED} setzen und den Tag neu setzen."
+            exit 1
+          fi
 
           echo "integration=${INTEGRATION}" >> "$GITHUB_OUTPUT"
           echo "addon=${ADDON}" >> "$GITHUB_OUTPUT"
@@ -98,8 +128,8 @@ jobs:
       # HACS-Default-Repository geprüft. Deshalb blockiert die Prüfung das
       # Release nicht (continue-on-error), der Fehler bleibt aber sichtbar.
       #
-      # Nötige Topics (Repository-Einstellungen): `home-assistant`,
-      # `hacs`, `custom-component`, `mqtt`, `climate`.
+      # Nötige Topics (Repository-Einstellungen): `hacs` und `integration`
+      # (nicht `custom-component` - das ist die alte Schreibweise).
       - name: HACS prüfen
         id: hacs
         continue-on-error: true
@@ -111,7 +141,7 @@ jobs:
       - name: HACS-Hinweis
         if: steps.hacs.outcome == 'failure'
         run: |
-          echo "::warning::Die HACS-Prüfung ist fehlgeschlagen. Typischer Grund: Das Repository hat keine Topics. Unter 'Settings → General → Topics' bitte eintragen: home-assistant, hacs, custom-component, mqtt, climate. Für die Installation aus einem eigenen HACS-Repository sind die Topics nicht erforderlich - deshalb blockiert der Fehler das Release nicht."
+          echo "::warning::Die HACS-Prüfung ist fehlgeschlagen. Typischer Grund: Das Repository hat keine Topics. Unter 'Settings → General → Topics' bitte eintragen: hacs, integration, home-assistant. Für die Installation aus einem eigenen HACS-Repository sind die Topics nicht erforderlich - deshalb blockiert der Fehler das Release nicht."
 
       - name: Add-on prüfen (hassfest)
         uses: home-assistant/actions/hassfest@master

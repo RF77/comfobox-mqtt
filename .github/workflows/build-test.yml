@@ -276,3 +276,42 @@ jobs:
           echo "Shutdown über SIGTERM: OK"
 
           docker rm -f comfobox-ci
+
+  # Die Home-Assistant-Integration hatte **keine** Prüfung in der CI. Die
+  # Folgen waren teuer: hassfest beanstandete `fix_flow`, die Manifest-Reihenfolge
+  # und die fehlende `after_dependencies` - alles erst beim Tag-Push, also
+  # mitten im Release. Genauso blieb `ruff` und `pytest` ungeprüft.
+  #
+  # Deshalb läuft hier bei **jedem** Push und jedem Pull Request, was Home
+  # Assistant selbst prüft. Ein Fehler fällt damit im PR auf, nicht im Release.
+  ha-integration:
+    name: HA-Integration (ruff, pytest, hassfest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: custom_components/comfobox/requirements_test.txt
+
+      - name: Abhängigkeiten installieren
+        run: pip install -r custom_components/comfobox/requirements_test.txt
+
+      - name: Lint (ruff)
+        run: ruff check custom_components/comfobox
+
+      - name: Format (ruff)
+        run: ruff format --check custom_components/comfobox
+
+      - name: Test (pytest)
+        run: pytest custom_components/comfobox/tests -q
+
+      # Prüft Manifest, Translations, Abhängigkeiten und die Verzeichnisstruktur
+      # mit demselben Werkzeug, das auch der Release-Job nutzt. Das Image ist
+      # klein; der Schritt dauert rund eine Minute.
+      - name: Hassfest
+        uses: home-assistant/actions/hassfest@master
