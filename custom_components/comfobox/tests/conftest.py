@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
@@ -44,22 +43,24 @@ pytest_socket.disable_socket = _allow_socket_creation
 
 @pytest.fixture(autouse=True)
 def use_threaded_resolver(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Nutzt unter Windows den Thread-Resolver statt aiodns.
+    """Nutzt in den Tests den Thread-Resolver statt aiodns.
 
-    Home Assistant setzt im TCP-Connector fest ``AsyncResolver`` (aiodns).
-    aiodns verlangt unter Windows jedoch einen ``SelectorEventLoop`` – HA
-    nutzt dort standardmaessig den Proactor. Der Aufruf von
-    ``async_create_clientsession`` scheitert dann mit::
+    Zwei Gründe – der zweite gilt auch unter Linux:
 
-        RuntimeError: aiodns needs a SelectorEventLoop on Windows.
+    1. **Windows:** aiodns verlangt einen ``SelectorEventLoop``, Home
+       Assistant nutzt dort den Proactor. ``async_create_clientsession``
+       scheitert mit ``RuntimeError: aiodns needs a SelectorEventLoop``.
 
-    Der ``ThreadedResolver`` loest die Namen im Thread auf und funktioniert
-    auf allen Plattformen. Im **Produktivbetrieb** (Linux-Container) bleibt
-    der aiodns-Resolver unveraendert – dieser Patch gilt nur den Tests.
+    2. **CI unter Linux:** pycares (der Motor von aiodns) startet beim ersten
+       Gebrauch einen Hintergrund-Thread (``_run_safe_shutdown_loop``). Der
+       Thread-Check von ``pytest_homeassistant_custom_component`` schlaegt am
+       Testende an – ``AssertionError: assert (False or False)``, obwohl alle
+       Tests bestanden sind. Ein ``ThreadedResolver`` loest im Thread-Pool
+       auf und hinterlaesst nichts.
+
+    Im **Produktivbetrieb** (Linux-Container) bleibt der aiodns-Resolver
+    unveraendert – dieser Patch gilt nur den Tests.
     """
-    if sys.platform != "win32":
-        return
-
     import homeassistant.helpers.aiohttp_client as ha_client
 
     monkeypatch.setattr(ha_client, "AsyncResolver", aiohttp.ThreadedResolver)
