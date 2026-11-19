@@ -95,6 +95,23 @@ export class EventsService {
       });
     });
 
+    // Der Regelfall: der Gateway schickt die Werte eines Auslesezyklus
+    // gesammelt. Eine Änderung im Map pro Ereignis - nicht pro Wert.
+    source.addEventListener('values', (event) => {
+      const payload = this.parse<CachedValueDto[]>(event as MessageEvent<string>);
+      if (!payload) {
+        return;
+      }
+
+      this.values.update((current) => {
+        const next = new Map(current);
+        for (const entry of payload) {
+          next.set(entry.id, entry);
+        }
+        return next;
+      });
+    });
+
     source.addEventListener('error', () => {
       this.lastError.set('Die Verbindung zum Gateway wurde unterbrochen.');
 

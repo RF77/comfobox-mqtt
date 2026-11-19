@@ -87,6 +87,16 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ### Added
 
+- **Der Ereignis-Strom schickt die Werte eines Auslesezyklus gesammelt.** Bisher erzeugte
+  jeder gelesene Wert ein eigenes `event: value` – bei 35 Werten je Zyklus und 160 im
+  Sekundärzyklus. Jetzt sammelt der Gateway und sendet ein `event: values` mit einem
+  Array (Ruhe 200 ms nach dem letzten Wert, spätestens 1 s nach dem ersten; einstellbar
+  über `Api:SseBatchQuietMs` und `Api:SseBatchMaxDelayMs`, beide `0` = altes Verhalten).
+  **Gemessen** (Simulation, 5-s-Zyklus, 24 s): 300 Werte in **5** Ereignissen statt in 300.
+  Für die Home-Assistant-Integration zählt das doppelt: sie benachrichtigt bei jeder
+  Nachricht **alle** Entitäten – das waren bis zu 25 000 Zustands-Aktualisierungen je
+  Sekundärzyklus. Beide Clients (Web-UI und Integration) verstehen weiterhin das alte
+  `value`-Ereignis, ein neuer Client läuft also auch gegen einen älteren Gateway.
 - **`GET /api/events` ist jetzt die Push-Schnittstelle für Clienten.** Jedes Ereignis
   wird sofort geflusht (vorher blieb der Snapshot im Puffer, bis der nächste Wert
   eintraf), und der Abonnent wird **vor** dem Snapshot registriert – eine Änderung

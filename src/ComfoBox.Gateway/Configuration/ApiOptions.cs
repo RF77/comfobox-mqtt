@@ -76,4 +76,40 @@ public sealed class ApiOptions
     /// </remarks>
     [Range(0, 600)]
     public int SseHeartbeatSeconds { get; init; } = 30;
+
+    /// <summary>
+    /// Ruhezeit, nach der ein Sammel-Ereignis abgeschickt wird (Millisekunden).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Ein Poll-Zyklus liest die Items **nacheinander** über den Bus - 35
+    /// Änderungen entstehen dabei innerhalb von Sekunden, ein
+    /// Sekundärzyklus bringt 160. Ein Ereignis je Wert hieße: der Empfänger
+    /// verarbeitet jeden Zyklus in Dutzenden Runden (die HA-Integration
+    /// benachrichtigt bei jeder Nachricht **alle** Entitäten).
+    /// </para>
+    /// <para>
+    /// Deshalb sammelt der Stream die Werte: er schickt sie gebündelt
+    /// (<c>event: values</c> mit einem Array), sobald diese Zeit lang **kein**
+    /// neuer Wert mehr kam. <c>0</c> schickt jedes Ereignis sofort.
+    /// </para>
+    /// </remarks>
+    [Range(0, 5_000)]
+    public int SseBatchQuietMs { get; init; } = 200;
+
+    /// <summary>
+    /// Die längste Verzögerung, die ein Wert im Sammelfenster wartet (Millisekunden).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Ohne diese Obergrenze würde ein dauerhaft fließender Strom nie
+    /// abgeschickt. Sie begrenzt zugleich die Latenz eines einzelnen Werts.
+    /// </para>
+    /// <para>
+    /// <c>0</c> zusammen mit <see cref="SseBatchQuietMs"/> = <c>0</c> stellt das
+    /// Verhalten vor dem Sammelfenster wieder her (ein Ereignis je Wert).
+    /// </para>
+    /// </remarks>
+    [Range(0, 60_000)]
+    public int SseBatchMaxDelayMs { get; init; } = 1_000;
 }

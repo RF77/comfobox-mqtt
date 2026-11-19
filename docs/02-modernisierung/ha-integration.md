@@ -304,13 +304,13 @@ class ComfoBoxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async for event, payload in self._client.stream_events():
             if event == "snapshot":
                 self._apply_snapshot(payload)
-            elif event == "value":
-                self._apply_values([payload])
+            elif event in ("values", "value"):
+                self._apply_values(payload)
 ````
 
 | Aspekt | Entscheidung |
 |---|---|
-| Werte | **Push** über `/api/events` (`snapshot` beim Verbinden, danach `value`) |
+| Werte | **Push** über `/api/events`: `snapshot` beim Verbinden, danach `values` (Array, gesammelt je Auslesezyklus) |
 | Metadaten | `GET /api/items` beim Einrichten und nach jedem Wiederverbinden |
 | Status | eigene Schleife, `scan_interval` aus den Optionen (Standard **60 s**, 15 … 3600 s) |
 | „Letzter bekannter Wert" | Der Coordinator behält die letzten Werte → Entitäten zeigen nicht sofort `unknown` |

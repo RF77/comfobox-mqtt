@@ -110,6 +110,11 @@ Values are **pushed** over Server-Sent Events (`GET /api/events`): the integrati
 catalogue once at setup and then receives every change. That is why the manifest declares
 `iot_class: local_push`.
 
+The gateway **batches** the values of one poll cycle into a single `values` event: a cycle reads
+the items one after another from the bus, so 35 (secondary cycle: 160) changes arrive within a
+second and belong together. Without batching the coordinator would notify every entity once per
+value — up to 25 000 state writes per secondary cycle.
+
 Only the gateway status (BACnet/MQTT connection, write counter) is still polled — every 60 seconds
 by default, configurable between 15 and 3600 seconds in the integration options.
 

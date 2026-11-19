@@ -190,7 +190,9 @@ class ComfoBoxCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
             if event == "snapshot":
                 self._apply_snapshot(payload)
-            elif event == "value":
+            elif event in ("values", "value"):
+                # `values` ist der Regelfall (der Gateway schickt die Werte eines
+                # Auslesezyklus gesammelt); `value` bleibt für ältere Gateways.
                 self._apply_values(payload)
             # `heartbeat` trägt keine Nutzlast - er hält nur die Verbindung.
 

@@ -415,8 +415,11 @@ class ComfoBoxApiClient:
 
         ``snapshot``
             Alle aktuell bekannten Werte - einmalig nach dem Verbinden.
+        ``values``
+            Die geänderten Werte eines Auslesezyklus (Array). Der Gateway
+            schickt sie gesammelt, weil ein Zyklus Dutzende Werte liefert.
         ``value``
-            Eine einzelne Wertänderung (auch der Wechsel auf „veraltet“).
+            Ein einzelner Wert - nur ältere Gateways senden so.
         ``heartbeat``
             Ein Lebenszeichen (``: ping``), Nutzlast ``None``.
 

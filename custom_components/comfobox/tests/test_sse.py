@@ -128,7 +128,7 @@ async def test_der_snapshot_setzt_die_werte_ohne_polling(hass, mock_status, mock
 
 
 async def test_eine_einzelne_aenderung_wird_uebernommen(hass, mock_status, mock_items):
-    """Ein ``value``-Ereignis ersetzt genau ein Item."""
+    """Ein ``value``-Ereignis ersetzt genau ein Item (ältere Gateways)."""
     client = PushClient(_status_obj(mock_status), _items_obj(mock_items))
     coordinator = await _start(hass, client)
 
@@ -154,6 +154,57 @@ async def test_eine_einzelne_aenderung_wird_uebernommen(hass, mock_status, mock_
 
         # Die übrigen Items behalten ihren Stand.
         assert coordinator.data["zone_setpoint_normal"].value == 21.5
+    finally:
+        await coordinator.async_stop_stream()
+
+
+async def test_ein_sammel_ereignis_setzt_mehrere_werte(hass, mock_status, mock_items):
+    """Ein ``values``-Ereignis setzt alle Werte eines Auslesezyklus.
+
+    Der Gateway schickt sie gesammelt, weil ein Zyklus über den Bus Dutzende
+    Werte liefert. Entscheidend ist, dass der Coordinator **einmal**
+    benachrichtigt - sonst aktualisiert Home Assistant alle Entitäten je Wert.
+    """
+    client = PushClient(_status_obj(mock_status), _items_obj(mock_items))
+    coordinator = await _start(hass, client)
+
+    calls = 0
+    updated = asyncio.Event()
+
+    def listener() -> None:
+        nonlocal calls
+        calls += 1
+        updated.set()
+
+    coordinator.async_add_listener(listener)
+
+    try:
+        client.events.put_nowait(
+            (
+                "values",
+                [
+                    {
+                        "id": "states_heat_pump_operating_hours",
+                        "value": 12346,
+                        "timestamp": "2026-11-19T10:01:00+00:00",
+                        "isStale": False,
+                    },
+                    {
+                        "id": "zone_operation_mode",
+                        "value": 2,
+                        "valueName": "FrostProtection",
+                        "timestamp": "2026-11-19T10:01:00+00:00",
+                        "isStale": False,
+                    },
+                ],
+            )
+        )
+
+        await asyncio.wait_for(updated.wait(), TIMEOUT)
+
+        assert coordinator.data["states_heat_pump_operating_hours"].value == 12346
+        assert coordinator.data["zone_operation_mode"].value_text == "FrostProtection"
+        assert calls == 1
     finally:
         await coordinator.async_stop_stream()
 
@@ -270,8 +321,8 @@ async def test_der_client_liest_das_sse_format():
         await response.prepare(request)
         await response.write(b'event: snapshot\ndata: [{"id": "a", "value": 1}]\n\n')
         await response.write(b": ping\n\n")
-        await response.write(b'event: value\ndata: {"id": "a",\n')
-        await response.write(b'data: "value": 2}\n\n')
+        await response.write(b'event: values\ndata: [{"id": "a",\n')
+        await response.write(b'data: "value": 2}]\n\n')
         await response.write_eof()
         return response
 
@@ -293,7 +344,7 @@ async def test_der_client_liest_das_sse_format():
     assert events == [
         ("snapshot", [{"id": "a", "value": 1}]),
         ("heartbeat", None),
-        ("value", {"id": "a", "value": 2}),
+        ("values", [{"id": "a", "value": 2}]),
     ]
 
 

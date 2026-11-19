@@ -233,7 +233,7 @@ Basis-URL: `/api`. Authentifizierung: **optional** (siehe
 | `GET` | `/api/items/{id}` | Ein Item inkl. aktuellem Wert | `ItemDto` |
 | `PUT` | `/api/items/{id}` | Wert schreiben | `204` / `4xx` |
 | `GET` | `/api/items/group/{group}` | Items einer Gruppe | `ItemDto[]` |
-| `GET` | `/api/events` | SSE-Stream: `snapshot` beim Verbinden, danach `value` je Änderung; alle 30 s `: ping` | `text/event-stream` |
+| `GET` | `/api/events` | SSE-Stream: `snapshot` beim Verbinden, danach `values` (Array, gesammelt je Auslesezyklus); alle 30 s `: ping` | `text/event-stream` |
 | `GET` | `/api/config` | Aktuelle Konfiguration (ohne Secrets) | `ConfigDto` |
 | `PUT` | `/api/config` | Konfiguration ändern (reload) | `204` |
 | `GET` | `/api/config/serial-ports` | Erkannte serielle Ports (Hotplug) | `SerialPort[]` |
@@ -475,41 +475,68 @@ group.MapPost("/apply", async (ISetupService setup, CancellationToken ct) =>
 
 ## 4. SSE (Server-Sent Events) für Live-Werte
 
-Die UI soll Werte live sehen, ohne Polling-Bremse. SSE ist gegenüber WebSockets einfacher
-(one-way) und reicht hier.
+UI **und** HA-Integration sehen die Werte live, ohne Polling-Bremse. SSE ist gegenüber
+WebSockets einfacher (one-way) und reicht hier.
+
+### 4.1 Ein Strom, gesammelte Ereignisse
+
+Es gibt **einen** Strom je Client – nicht einen je Entität. 194 `EventSource`-Objekte
+scheiterten schon am Verbindungslimit des Browsers (~6 je Origin).
+
+Die Werte werden **gesammelt** ausgeliefert. Grund: ein Poll-Zyklus liest die Items
+nacheinander über den MS/TP-Bus. Ein Zyklus erzeugt 35 Änderungen, der Sekundärzyklus
+160 – sie gehören aber sachlich zusammen (ein Bild der Anlage). Ein Ereignis je Wert
+hieße, dass der Empfänger einen Zyklus in Dutzenden Runden verarbeitet: die
+HA-Integration benachrichtigt bei jeder Nachricht **alle** Entitäten
+(→ bis zu 25 000 Zustands-Aktualisierungen je Sekundärzyklus).
+
+| Ereignis | Nutzlast | Wann |
+|---|---|---|
+| `snapshot` | Array aller bekannten Werte | einmalig nach dem Verbinden |
+| `values` | Array der geänderten Werte | wenn das Sammelfenster abläuft |
+| `value` | ein einzelner Wert | nur ältere Gateways (der Client nimmt beides) |
+| `: ping` | – (Kommentarzeile) | alle `Api:SseHeartbeatSeconds` ohne Werte |
+
+Das Fenster schließt, wenn `Api:SseBatchQuietMs` (Standard 200 ms) lang kein neuer Wert
+kam – spätestens aber `Api:SseBatchMaxDelayMs` (Standard 1000 ms) nach dem ersten
+gesammelten Wert. Mehrfach gemeldete Ids innerhalb eines Fensters überschreiben sich
+(der letzte Stand gewinnt). Beide Optionen auf `0` stellen das Verhalten „ein Ereignis je
+Wert“ wieder her.
+
+> **Gemessen (2026-11-19, Simulation, 5-s-Zyklus, 24 s):** 300 Werte in **5** Ereignissen
+> (35/35/160/35/35) statt in 300. Übertragen wurden 81,5 kB statt 87,4 kB – der Gewinn
+> liegt bei Rahmen, Flushes und Empfänger-Runden, nicht bei der Nutzlast.
+
+### 4.2 Ablauf
 
 ````csharp
-// src/ComfoBox.Gateway/Api/EventsEndpoint.cs
-internal static class EventsEndpoint
+// src/ComfoBox.Gateway/Api/EventsEndpoints.cs
+app.MapGet("/api/events", async (HttpContext ctx, IValueCache cache,
+                                 IOptions<ApiOptions> options, TimeProvider clock,
+                                 CancellationToken ct) =>
 {
-    public static void MapEvents(this IEndpointRouteBuilder app)
-    {
-        app.MapGet("/api/events", async (HttpContext ctx, IValueCache cache,
-                                          IHealthReporter health, CancellationToken ct) =>
-        {
-            ctx.Response.Headers.ContentType = "text/event-stream";
-            ctx.Response.Headers.CacheControl = "no-cache";
-            ctx.Response.Headers["X-Accel-Buffering"] = "no";   // nur relevant, falls doch ein Reverse-Proxy davorsteht
+    // Abonnent ZUERST registrieren - sonst geht eine Änderung zwischen
+    // Snapshot und Registrierung verloren.
+    var enumerator = cache.SubscribeAsync(ct).GetAsyncEnumerator(ct);
+    var pending = enumerator.MoveNextAsync().AsTask();
 
-            await using var writer = new StreamWriter(ctx.Response.Body);
-            await writer.WriteAsync($"event: snapshot\ndata: {JsonSerializer.Serialize(cache.Snapshot())}\n\n");
-            await writer.FlushAsync(ct);
+    await SseWriter.PrepareAsync(ctx, ct);
+    await SseWriter.WriteAsync(ctx, "snapshot", snapshot, ct);   // flusht sofort
 
-            await foreach (var evt in cache.SubscribeAsync(ct))
-            {
-                await writer.WriteAsync($"event: value\ndata: {JsonSerializer.Serialize(evt)}\n\n");
-                await writer.FlushAsync(ct);
-            }
-        });
-    }
-}
+    // Danach: Werte sammeln, Fenster abwarten, als "values" schreiben.
+});
 ````
 
+> **`SseWriter` flusht nach jedem Ereignis.** Ohne den Flush bleibt der Snapshot im
+> Puffer, bis die Nutzlast eine Puffergrenze erreicht – der Client sähe ihn erst mit der
+> nächsten Wertänderung.
+>
 > **Kein Proxy dazwischen:** Der .NET-Host liefert UI **und** SSE direkt aus
 > (→ [ADR-007](../05-entscheidungen/adr-007-ein-container-image.md)). Es gibt daher kein
 > `proxy_buffering`-Problem. Steht doch einmal ein Reverse-Proxy davor, muss dort
 > `proxy_buffering off;` für `/api/events` gesetzt werden – sonst wartet der Browser auf
-> 4 KB und sieht keine Live-Werte.
+> 4 KB und sieht keine Live-Werte. Das Lebenszeichen (`: ping`) hält zusätzlich stille
+> Verbindungen offen.
 
 ## 5. Persistenter Schreibschutz (24 h)
 
