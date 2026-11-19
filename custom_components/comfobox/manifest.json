@@ -1,13 +1,13 @@
 {
   "domain": "comfobox",
   "name": "ComfoBox",
+  "after_dependencies": ["recorder"],
   "categories": ["climate"],
   "codeowners": ["@RF77"],
   "config_flow": true,
   "documentation": "https://github.com/RF77/comfobox-mqtt",
   "integration_type": "device",
   "iot_class": "local_push",
-  "after_dependencies": ["recorder"],
   "issue_tracker": "https://github.com/RF77/comfobox-mqtt/issues",
   "requirements": [],
   "version": "1.3.0"

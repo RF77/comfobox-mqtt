@@ -47,12 +47,11 @@
   "issues": {
     "legacy_entities": {
       "title": "Alte ComfoBox-Entitäten",
-      "description": "Nach dem Update gibt es noch {count} Entität(en) aus einer früheren Version. Sie werden nicht mehr geliefert und füllen mit ihren Aufzeichnungen die Datenbank.\n\nDie Reparatur entfernt sie samt Zustandsverlauf und Langzeitstatistik. Das lässt sich nicht rückgängig machen.\n\nWer einen Blick darauf werfen will: Einstellungen → Entitäten, Filter „ComfoBox ELESTA“, Spalte „Status“ zeigt „nicht verfügbar“.\n\nAlternativ steht der Dienst `comfobox.cleanup_legacy_entities` bereit.",
       "fix_flow": {
         "step": {
           "confirm": {
             "title": "Alte ComfoBox-Entitäten entfernen",
-            "description": "Es werden {count} Entität(en) entfernt, zusammen mit ihrem Zustandsverlauf und ihrer Langzeitstatistik.\n\nEntitäten, die es weiterhin gibt, bleiben unberührt.\n\nFortfahren?"
+            "description": "Es sind noch {count} Entität(en) aus einer früheren Version vorhanden. Sie werden nicht mehr geliefert und füllen mit ihren Aufzeichnungen die Datenbank.\n\nBestätigen entfernt sie samt Zustandsverlauf und Langzeitstatistik – das lässt sich nicht rückgängig machen.\n\nEntitäten, die es weiterhin gibt, bleiben unberührt.\n\nZum Nachsehen: Einstellungen → Entitäten, Filter „ComfoBox ELESTA“, Spalte „Status“ zeigt „nicht verfügbar“."
           }
         },
         "abort": {
