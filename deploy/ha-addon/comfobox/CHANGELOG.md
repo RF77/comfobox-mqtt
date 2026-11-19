@@ -1,5 +1,17 @@
 # Changelog – ComfoBox Gateway Add-on
 
+## 1.3.0
+
+- Image `ghcr.io/rf77/comfobox-gateway:1.3.0` (multi-arch: `amd64`, `aarch64`)
+- **Die Werte kommen als Push über Server-Sent Events** – die Integration pollt
+  nur noch den Gateway-Status (60 s). Ein Auslesezyklus wird als **ein** Ereignis
+  gesendet (vorher je Wert), das entlastet Home Assistant deutlich.
+- **Jeder Wert wird seiner Bedeutung nach abgebildet**: 0/1-Werte als Schalter
+  oder Meldung, Kodewerte wie „Kühlfunktion" als Auswahl mit lesbaren Namen,
+  Auslöser als Taster. Nur Messgrößen und Zähler erzeugen noch eine Statistik.
+- **Alte Entitäten lassen sich aufräumen** – als Reparatur-Hinweis in Home
+  Assistant, samt Zustandsverlauf und Langzeitstatistik.
+
 ## 1.1.0
 
 - Image `ghcr.io/rf77/comfobox-gateway:1.1.0` (multi-arch: `amd64`, `aarch64`)

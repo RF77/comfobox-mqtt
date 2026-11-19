@@ -11,6 +11,10 @@ die Versionierung an [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+_Nichts._
+
+## [1.3.0] – 2026-11-19
+
 ### Added
 
 - **Beschreibung, Bereich und Auswahlwerte an jedem Wert.** In der Web-Oberfläche
@@ -1578,7 +1582,9 @@ Aus **Phase 10** (Topics V2, [Aufgabenstellung](docs/06-aufgaben/phase-10-topics
 ### Changed
 - Legacy-Bestand von `src/` nach `src_old/` verschoben (Archiv, wird nicht gebaut)
 
-[Unreleased]: https://github.com/RF77/comfobox-mqtt/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/RF77/comfobox-mqtt/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.3.0
+[1.2.0]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.2.0
 [1.1.0]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.1.0
 [1.0.4]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.4
 [1.0.3]: https://github.com/RF77/comfobox-mqtt/releases/tag/v1.0.3
