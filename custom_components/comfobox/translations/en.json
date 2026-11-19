@@ -47,18 +47,18 @@
   "issues": {
     "legacy_entities": {
       "title": "Old ComfoBox entities",
-      "description": "After the update there are still {count} entities from an earlier version. They are no longer provided and fill the database with their recordings.\n\nThis repair removes them together with their history and long-term statistics. It cannot be undone.\n\nTo review them first: Settings → Entities, filter “ComfoBox ELESTA”, the status column shows “unavailable”.\n\nAlternatively use the service `comfobox.cleanup_legacy_entities`."
-    }
-  },
-  "fix_flow": {
-    "step": {
-      "confirm": {
-        "title": "Remove old ComfoBox entities",
-        "description": "{count} entities will be removed together with their history and long-term statistics.\n\nEntities that still exist are not touched.\n\nContinue?"
+      "description": "After the update there are still {count} entities from an earlier version. They are no longer provided and fill the database with their recordings.\n\nThis repair removes them together with their history and long-term statistics. It cannot be undone.\n\nTo review them first: Settings → Entities, filter “ComfoBox ELESTA”, the status column shows “unavailable”.\n\nAlternatively use the service `comfobox.cleanup_legacy_entities`.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Remove old ComfoBox entities",
+            "description": "{count} entities will be removed together with their history and long-term statistics.\n\nEntities that still exist are not touched.\n\nContinue?"
+          }
+        },
+        "abort": {
+          "not_loaded": "The ComfoBox integration is not loaded. Please reload the entry under “Devices & Services”."
+        }
       }
-    },
-    "abort": {
-      "not_loaded": "The ComfoBox integration is not loaded. Please reload the entry under “Devices & Services”."
     }
   },
   "services": {
